@@ -1,0 +1,77 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+*.orig
+
+# Local AI / automation workspace data
+.codebuddy/
+# Optional: ignore AI repo guidance if you do not want to publish it
+# CODEBUDDY.md
+
+# Design system docs (local reference only, not needed for build)
+design-system/
+
+# Dart / Flutter / Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+build/
+coverage/
+**/doc/api/
+**/.generated/
+
+# Generated Flutter platform files
+**/Flutter/.last_build_id
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+**/Flutter/ephemeral/
+**/flutter/ephemeral/
+**/.symlinks/
+**/.plugin_symlinks/
+**/GeneratedPluginRegistrant.*
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+**/*.jks
+**/*.keystore
+
+# Apple platforms
+# Keep Podfile.lock tracked for app reproducibility, but ignore Pods directories.
+ios/Pods/
+macos/Pods/
+**/DerivedData/
+**/xcuserdata/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+
+# Windows / Visual Studio
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+x64/
+x86/
+
+# Logs
+*.log
+sentry-debug.log
