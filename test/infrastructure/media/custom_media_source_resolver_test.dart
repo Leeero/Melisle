@@ -32,7 +32,10 @@ void main() {
       );
 
       expect(resolved.usingCustomSource, isTrue);
-      expect(resolved.primaryUrl, startsWith('https://img.example.com/cover/track-001'));
+      expect(
+        resolved.primaryUrl,
+        startsWith('https://img.example.com/cover/track-001'),
+      );
       expect(resolved.primaryUrl, contains('artist=Nova'));
       expect(
         resolved.primaryUrl,
@@ -69,74 +72,81 @@ void main() {
       expect(resolved.hasFallback, isFalse);
     });
 
-    test('falls back to built-in artwork when custom switch is on but address is empty', () {
-      final resolver = CustomMediaSourceResolver(
-        initialSettings: const AppSettingsSnapshot(
-          customArtworkSourceEnabled: true,
-          customArtworkSourceUrl: '   ',
-        ),
-      );
+    test(
+      'falls back to built-in artwork when custom switch is on but address is empty',
+      () {
+        final resolver = CustomMediaSourceResolver(
+          initialSettings: const AppSettingsSnapshot(
+            customArtworkSourceEnabled: true,
+            customArtworkSourceUrl: '   ',
+          ),
+        );
 
-      final resolved = resolver.resolveArtworkSource(
-        fallbackUrl: 'https://emby.example.com/items/track-001/art.jpg',
-      );
+        final resolved = resolver.resolveArtworkSource(
+          fallbackUrl: 'https://emby.example.com/items/track-001/art.jpg',
+        );
 
-      expect(resolved.usingCustomSource, isFalse);
-      expect(
-        resolved.primaryUrl,
-        'https://emby.example.com/items/track-001/art.jpg',
-      );
-    });
+        expect(resolved.usingCustomSource, isFalse);
+        expect(
+          resolved.primaryUrl,
+          'https://emby.example.com/items/track-001/art.jpg',
+        );
+      },
+    );
   });
 
   group('CustomMediaSourceResolver lyrics source', () {
-    test('uses built-in lyrics fallback when custom lyrics switch is disabled', () async {
-      final resolver = CustomMediaSourceResolver(
-        initialSettings: const AppSettingsSnapshot(
-          customLyricsSourceEnabled: false,
-          customLyricsSourceUrl: 'https://lyrics.example.com/{trackId}',
-        ),
-      );
-      var fallbackCalled = false;
+    test(
+      'uses built-in lyrics fallback when custom lyrics switch is disabled',
+      () async {
+        final resolver = CustomMediaSourceResolver(
+          initialSettings: const AppSettingsSnapshot(
+            customLyricsSourceEnabled: false,
+            customLyricsSourceUrl: 'https://lyrics.example.com/{trackId}',
+          ),
+        );
+        var fallbackCalled = false;
 
-      final lyrics = await resolver.fetchLyrics(
-        trackId: 'track-001',
-        fallback: () async {
-          fallbackCalled = true;
-          return const [
-            LyricLine(start: Duration.zero, text: 'hello world'),
-          ];
-        },
-      );
+        final lyrics = await resolver.fetchLyrics(
+          trackId: 'track-001',
+          fallback: () async {
+            fallbackCalled = true;
+            return const [LyricLine(start: Duration.zero, text: 'hello world')];
+          },
+        );
 
-      expect(fallbackCalled, isTrue);
-      expect(lyrics, isNotNull);
-      expect(lyrics, hasLength(1));
-      expect(lyrics!.first.text, 'hello world');
-    });
+        expect(fallbackCalled, isTrue);
+        expect(lyrics, isNotNull);
+        expect(lyrics, hasLength(1));
+        expect(lyrics!.first.text, 'hello world');
+      },
+    );
 
-    test('uses built-in lyrics fallback when custom lyrics address is empty', () async {
-      final resolver = CustomMediaSourceResolver(
-        initialSettings: const AppSettingsSnapshot(
-          customLyricsSourceEnabled: true,
-          customLyricsSourceUrl: ' ',
-        ),
-      );
-      var fallbackCalled = false;
+    test(
+      'uses built-in lyrics fallback when custom lyrics address is empty',
+      () async {
+        final resolver = CustomMediaSourceResolver(
+          initialSettings: const AppSettingsSnapshot(
+            customLyricsSourceEnabled: true,
+            customLyricsSourceUrl: ' ',
+          ),
+        );
+        var fallbackCalled = false;
 
-      final lyrics = await resolver.fetchLyrics(
-        trackId: 'track-001',
-        fallback: () async {
-          fallbackCalled = true;
-          return const [
-            LyricLine(start: Duration.zero, text: 'fallback lyric'),
-          ];
-        },
-      );
+        final lyrics = await resolver.fetchLyrics(
+          trackId: 'track-001',
+          fallback: () async {
+            fallbackCalled = true;
+            return const [
+              LyricLine(start: Duration.zero, text: 'fallback lyric'),
+            ];
+          },
+        );
 
-      expect(fallbackCalled, isTrue);
-      expect(lyrics, isNotNull);
-      expect(lyrics!.first.text, 'fallback lyric');
-    });
+        expect(fallbackCalled, isTrue);
+        expect(lyrics, isNotNull);
+        expect(lyrics!.first.text, 'fallback lyric');
+      },
+    );
   });
 }

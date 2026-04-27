@@ -27,9 +27,11 @@ GoRouter createRouter(AuthCubit authCubit) {
     initialLocation: '/home',
     refreshListenable: GoRouterRefreshStream(authCubit.stream),
     redirect: (context, state) {
-      final isAuthenticated = authCubit.state.status == AuthStatus.authenticated;
+      final isAuthenticated =
+          authCubit.state.status == AuthStatus.authenticated;
       final isLoginRoute = state.matchedLocation == '/login';
-      final isPending = authCubit.state.status == AuthStatus.unknown ||
+      final isPending =
+          authCubit.state.status == AuthStatus.unknown ||
           authCubit.state.status == AuthStatus.loading;
 
       if (isPending) {
@@ -44,10 +46,7 @@ GoRouter createRouter(AuthCubit authCubit) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -141,28 +140,30 @@ GoRouter createRouter(AuthCubit authCubit) {
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: const PlayerPage(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // iOS/Android: 从底部滑入的 Material 风格转场。
-              final tween = Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              );
-              return SlideTransition(
-                position: tween.animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                )),
-                child: child,
-              );
-            },
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  // iOS/Android: 从底部滑入的 Material 风格转场。
+                  final tween = Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  );
+                  return SlideTransition(
+                    position: tween.animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                    child: child,
+                  );
+                },
           );
         },
       ),
       GoRoute(
         path: '/search',
-        builder: (context, state) => SearchPage(
-          initialQuery: state.uri.queryParameters['q'],
-        ),
+        builder: (context, state) =>
+            SearchPage(initialQuery: state.uri.queryParameters['q']),
       ),
     ],
   );

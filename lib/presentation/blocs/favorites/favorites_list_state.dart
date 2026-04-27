@@ -12,7 +12,8 @@ class FavoritesListState {
     this.errorMessage,
   });
 
-  const FavoritesListState.initial() : this(status: FavoritesListStatus.initial);
+  const FavoritesListState.initial()
+    : this(status: FavoritesListStatus.initial);
 
   static const _sentinel = Object();
 

@@ -4,16 +4,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class PlaylistDetailCubit extends Cubit<PlaylistDetailState> {
   PlaylistDetailCubit(this._fetchPlaylistTracks)
-      : super(const PlaylistDetailState.initial());
+    : super(const PlaylistDetailState.initial());
 
   final FetchPlaylistTracks _fetchPlaylistTracks;
 
   Future<void> load(String playlistId) async {
-    emit(state.copyWith(status: PlaylistDetailStatus.loading, errorMessage: null));
+    emit(
+      state.copyWith(status: PlaylistDetailStatus.loading, errorMessage: null),
+    );
 
     try {
       final tracks = await _fetchPlaylistTracks(playlistId);
-      emit(state.copyWith(status: PlaylistDetailStatus.success, tracks: tracks));
+      emit(
+        state.copyWith(status: PlaylistDetailStatus.success, tracks: tracks),
+      );
     } catch (error) {
       emit(
         state.copyWith(

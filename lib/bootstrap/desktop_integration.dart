@@ -142,19 +142,18 @@ class DesktopIntegration with TrayListener, WindowListener {
         ? '当前没有播放'
         : '${track.title} — ${track.artistName}';
 
-    final menu = Menu(items: [
-      MenuItem(key: 'now_playing', label: titleLabel, disabled: true),
-      MenuItem.separator(),
-      MenuItem(
-        key: 'play_pause',
-        label: state.isPlaying ? '暂停' : '播放',
-      ),
-      MenuItem(key: 'next', label: '下一曲'),
-      MenuItem(key: 'previous', label: '上一曲'),
-      MenuItem.separator(),
-      MenuItem(key: 'show', label: '显示主窗口'),
-      MenuItem(key: 'quit', label: '退出'),
-    ]);
+    final menu = Menu(
+      items: [
+        MenuItem(key: 'now_playing', label: titleLabel, disabled: true),
+        MenuItem.separator(),
+        MenuItem(key: 'play_pause', label: state.isPlaying ? '暂停' : '播放'),
+        MenuItem(key: 'next', label: '下一曲'),
+        MenuItem(key: 'previous', label: '上一曲'),
+        MenuItem.separator(),
+        MenuItem(key: 'show', label: '显示主窗口'),
+        MenuItem(key: 'quit', label: '退出'),
+      ],
+    );
     await trayManager.setContextMenu(menu);
   }
 

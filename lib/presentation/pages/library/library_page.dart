@@ -331,10 +331,7 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text(
-                      '媒体库',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text('媒体库', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
@@ -381,7 +378,8 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
                   _FilterPill(
                     label: '歌曲',
                     icon: Icons.music_note_rounded,
-                    selected: widget.state.currentFilter == LibraryFilter.tracks,
+                    selected:
+                        widget.state.currentFilter == LibraryFilter.tracks,
                     onTap: () => context.read<LibraryCubit>().changeFilter(
                       LibraryFilter.tracks,
                     ),
@@ -389,7 +387,8 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
                   _FilterPill(
                     label: '专辑',
                     icon: Icons.album_rounded,
-                    selected: widget.state.currentFilter == LibraryFilter.albums,
+                    selected:
+                        widget.state.currentFilter == LibraryFilter.albums,
                     onTap: () => context.read<LibraryCubit>().changeFilter(
                       LibraryFilter.albums,
                     ),
@@ -397,7 +396,8 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
                   _FilterPill(
                     label: '艺术家',
                     icon: Icons.mic_external_on_rounded,
-                    selected: widget.state.currentFilter == LibraryFilter.artists,
+                    selected:
+                        widget.state.currentFilter == LibraryFilter.artists,
                     onTap: () => context.read<LibraryCubit>().changeFilter(
                       LibraryFilter.artists,
                     ),
@@ -439,8 +439,6 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
     };
   }
 }
-
-
 
 class _TrackCard extends StatefulWidget {
   const _TrackCard({
@@ -607,52 +605,52 @@ class _AlbumCardState extends State<_AlbumCard> {
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () => context.push('/album/${album.id}', extra: album),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh.withValues(
-                          alpha: 0.82,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHigh.withValues(
+                            alpha: 0.82,
+                          ),
+                          borderRadius: BorderRadius.circular(30),
                         ),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Center(
-                        child: CachedArtwork(
-                          imageUrl: album.artworkUrl,
-                          size: 162,
-                          borderRadius: 24,
+                        child: Center(
+                          child: CachedArtwork(
+                            imageUrl: album.artworkUrl,
+                            size: 162,
+                            borderRadius: 24,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    album.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    album.artistName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    const SizedBox(height: 14),
+                    Text(
+                      album.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  _MetaPill(
-                    label: '${album.trackCount} 首 · ${album.year ?? '未知年份'}',
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      album.artistName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _MetaPill(
+                      label: '${album.trackCount} 首 · ${album.year ?? '未知年份'}',
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ),
       ),

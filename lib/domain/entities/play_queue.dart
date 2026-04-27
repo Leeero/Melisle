@@ -25,11 +25,11 @@ final class PlayQueue {
 
   /// 空队列。
   const PlayQueue.empty()
-      : tracks = const [],
-        currentIndex = 0,
-        loopMode = QueueLoopMode.off,
-        shuffleEnabled = false,
-        shuffleOrder = const [];
+    : tracks = const [],
+      currentIndex = 0,
+      loopMode = QueueLoopMode.off,
+      shuffleEnabled = false,
+      shuffleOrder = const [];
 
   final List<MusicTrack> tracks;
 
@@ -249,8 +249,7 @@ final class PlayQueue {
       currentIndex: newCurrent,
       loopMode: loopMode,
       shuffleEnabled: shuffleEnabled,
-      shuffleOrder:
-          _buildShuffleOrder(newTracks.length, startAt: newCurrent),
+      shuffleOrder: _buildShuffleOrder(newTracks.length, startAt: newCurrent),
     );
   }
 

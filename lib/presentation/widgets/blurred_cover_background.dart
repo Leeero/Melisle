@@ -26,10 +26,12 @@ class BlurredCoverBackground extends StatelessWidget {
           a.customArtworkSourceUrl != b.customArtworkSourceUrl,
       builder: (context, _) {
         final fallbackUrl = imageUrl?.trim() ?? '';
-        final resolution = context.read<CustomMediaSourceResolver>().resolveArtworkSource(
-          fallbackUrl: fallbackUrl,
-          context: sourceContext,
-        );
+        final resolution = context
+            .read<CustomMediaSourceResolver>()
+            .resolveArtworkSource(
+              fallbackUrl: fallbackUrl,
+              context: sourceContext,
+            );
         return _ResolvedBlurredCoverBackground(
           primaryUrl: resolution.primaryUrl,
           fallbackUrl: resolution.hasFallback ? resolution.fallbackUrl : null,
@@ -130,7 +132,8 @@ class _ResolvedBlurredCoverBackgroundState
     final palette = _palette;
 
     final dominant = palette?.dominantColor?.color ?? colorScheme.primary;
-    final accent = palette?.vibrantColor?.color ??
+    final accent =
+        palette?.vibrantColor?.color ??
         palette?.lightMutedColor?.color ??
         colorScheme.secondary;
     final container =
@@ -197,10 +200,7 @@ class _ResolvedBlurredCoverBackgroundState
 }
 
 class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({
-    required this.color,
-    required this.size,
-  });
+  const _GlowOrb({required this.color, required this.size});
 
   final Color color;
   final double size;

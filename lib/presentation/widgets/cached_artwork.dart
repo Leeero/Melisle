@@ -31,15 +31,19 @@ class CachedArtwork extends StatelessWidget {
           a.customArtworkSourceEnabled != b.customArtworkSourceEnabled ||
           a.customArtworkSourceUrl != b.customArtworkSourceUrl,
       builder: (context, _) {
-        final resolution = context.read<CustomMediaSourceResolver>().resolveArtworkSource(
-          fallbackUrl: imageUrl,
-          context: sourceContext,
-          size: size.round(),
-        );
+        final resolution = context
+            .read<CustomMediaSourceResolver>()
+            .resolveArtworkSource(
+              fallbackUrl: imageUrl,
+              context: sourceContext,
+              size: size.round(),
+            );
         final placeholder = _ArtworkPlaceholder(
           seed: resolution.hasPrimary
               ? resolution.primaryUrl
-              : (resolution.fallbackUrl.isEmpty ? imageUrl : resolution.fallbackUrl),
+              : (resolution.fallbackUrl.isEmpty
+                    ? imageUrl
+                    : resolution.fallbackUrl),
           size: size,
           borderRadius: borderRadius,
         );
@@ -52,7 +56,9 @@ class CachedArtwork extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             child: _ArtworkNetworkImage(
               imageUrl: resolution.primaryUrl,
-              fallbackUrl: resolution.hasFallback ? resolution.fallbackUrl : null,
+              fallbackUrl: resolution.hasFallback
+                  ? resolution.fallbackUrl
+                  : null,
               size: size,
               placeholder: placeholder,
             ),

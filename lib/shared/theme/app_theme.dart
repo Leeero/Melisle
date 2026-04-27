@@ -248,16 +248,16 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusCard),
           side: BorderSide(
-            color: colorScheme.outlineVariant
-                .withValues(alpha: isDark ? 0.52 : 0.88),
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.52 : 0.88,
+            ),
           ),
         ),
       ),
 
       // ─── ListTile ───
       listTileTheme: ListTileThemeData(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         minLeadingWidth: 0,
         minVerticalPadding: 10,
         iconColor: colorScheme.onSurfaceVariant,
@@ -272,8 +272,9 @@ abstract final class AppTheme {
 
       // ─── Chip (MetaPill) ───
       chipTheme: ChipThemeData(
-        backgroundColor:
-            colorScheme.surface.withValues(alpha: isDark ? 0.46 : 1),
+        backgroundColor: colorScheme.surface.withValues(
+          alpha: isDark ? 0.46 : 1,
+        ),
         selectedColor: colorScheme.primaryContainer,
         secondarySelectedColor: colorScheme.secondaryContainer,
         shape: RoundedRectangleBorder(
@@ -283,8 +284,9 @@ abstract final class AppTheme {
         labelStyle: textTheme.labelLarge,
         secondaryLabelStyle: textTheme.labelLarge,
         side: BorderSide(
-          color: colorScheme.outlineVariant
-              .withValues(alpha: isDark ? 0.55 : 0.9),
+          color: colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.55 : 0.9,
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
@@ -295,8 +297,10 @@ abstract final class AppTheme {
         fillColor: isDark
             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.72)
             : colorScheme.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant,
         ),
@@ -313,8 +317,7 @@ abstract final class AppTheme {
           width: 1.25,
         ),
         errorBorder: _inputBorder(colorScheme.error.withValues(alpha: 0.78)),
-        focusedErrorBorder:
-            _inputBorder(colorScheme.error, width: 1.25),
+        focusedErrorBorder: _inputBorder(colorScheme.error, width: 1.25),
       ),
 
       // ─── FilledButton (Capsule) ───
@@ -339,8 +342,9 @@ abstract final class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
           foregroundColor: colorScheme.onSurface,
           side: BorderSide(
-            color: colorScheme.outlineVariant
-                .withValues(alpha: isDark ? 0.68 : 1),
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.68 : 1,
+            ),
           ),
           textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
@@ -371,8 +375,9 @@ abstract final class AppTheme {
           padding: const EdgeInsets.all(10),
           iconSize: 22,
           side: BorderSide(
-            color: colorScheme.outlineVariant
-                .withValues(alpha: isDark ? 0.5 : 0.9),
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.5 : 0.9,
+            ),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusIconButton),
@@ -387,8 +392,9 @@ abstract final class AppTheme {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: colorScheme.primaryContainer
-            .withValues(alpha: isDark ? 0.88 : 0.92),
+        indicatorColor: colorScheme.primaryContainer.withValues(
+          alpha: isDark ? 0.88 : 0.92,
+        ),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -443,8 +449,9 @@ abstract final class AppTheme {
       sliderTheme: SliderThemeData(
         trackHeight: 4.5,
         activeTrackColor: colorScheme.primary,
-        inactiveTrackColor: colorScheme.outlineVariant
-            .withValues(alpha: isDark ? 0.48 : 0.72),
+        inactiveTrackColor: colorScheme.outlineVariant.withValues(
+          alpha: isDark ? 0.48 : 0.72,
+        ),
         thumbColor: colorScheme.primary,
         overlayColor: colorScheme.primary.withValues(alpha: 0.12),
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
@@ -464,8 +471,7 @@ abstract final class AppTheme {
             ? colorScheme.surfaceContainerHighest
             : colorScheme.inverseSurface,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color:
-              isDark ? colorScheme.onSurface : colorScheme.onInverseSurface,
+          color: isDark ? colorScheme.onSurface : colorScheme.onInverseSurface,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusCard),

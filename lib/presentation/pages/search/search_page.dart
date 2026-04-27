@@ -162,12 +162,11 @@ class _SearchViewState extends State<_SearchView> {
                     items.add(
                       _TrackRow(
                         track: results.tracks[i],
-                        onTap: () =>
-                            PlayerNavigation.playTracksAndOpenPlayer(
-                              context,
-                              tracks: results.tracks,
-                              startIndex: i,
-                            ),
+                        onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                          context,
+                          tracks: results.tracks,
+                          startIndex: i,
+                        ),
                       ),
                     );
                   }
@@ -203,10 +202,7 @@ class _SearchViewState extends State<_SearchView> {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     // Staggered slide-in animation: 50ms delay per item
-                    return _StaggeredSlideIn(
-                      index: index,
-                      child: items[index],
-                    );
+                    return _StaggeredSlideIn(index: index, child: items[index]);
                   },
                 );
               },
@@ -259,9 +255,9 @@ class _RecentSearches extends StatelessWidget {
                 label: Text(q),
                 backgroundColor: Theme.of(context).colorScheme.surface,
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(
-                    alpha: 0.6,
-                  ),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.6),
                 ),
                 onPressed: () => context.read<SearchCubit>().submit(q),
               ),
@@ -403,9 +399,10 @@ class _StaggeredSlideInState extends State<_StaggeredSlideIn>
       begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     // Stagger: 50ms delay per item, max 500ms total delay
     final delay = Duration(milliseconds: (widget.index * 50).clamp(0, 500));
     Future.delayed(delay, () {
@@ -423,10 +420,7 @@ class _StaggeredSlideInState extends State<_StaggeredSlideIn>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: widget.child,
-      ),
+      child: SlideTransition(position: _slideAnimation, child: widget.child),
     );
   }
 }

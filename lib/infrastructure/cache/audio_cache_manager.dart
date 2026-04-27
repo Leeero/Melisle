@@ -44,9 +44,7 @@ class AudioCacheManager {
       tmpPath,
       cancelToken: cancelToken,
       options: Options(
-        headers: const {
-          'User-Agent': AppConstants.httpUserAgent,
-        },
+        headers: const {'User-Agent': AppConstants.httpUserAgent},
         responseType: ResponseType.stream,
       ),
       onReceiveProgress: onProgress,

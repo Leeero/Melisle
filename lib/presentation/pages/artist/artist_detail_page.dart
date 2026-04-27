@@ -472,10 +472,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SectionHeaderWithPlayAll extends StatelessWidget {
-  const _SectionHeaderWithPlayAll({
-    required this.title,
-    required this.tracks,
-  });
+  const _SectionHeaderWithPlayAll({required this.title, required this.tracks});
 
   final String title;
   final List<MusicTrack> tracks;

@@ -3,12 +3,7 @@ import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:just_audio/just_audio.dart';
 
-enum PlaybackModeOption {
-  sequence,
-  loopAll,
-  loopOne,
-  shuffle,
-}
+enum PlaybackModeOption { sequence, loopAll, loopOne, shuffle }
 
 class PlayerViewState {
   const PlayerViewState({

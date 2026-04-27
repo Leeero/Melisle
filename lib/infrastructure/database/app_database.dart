@@ -55,10 +55,7 @@ class AppDatabase extends _$AppDatabase {
         lastExpr,
       ])
       ..groupBy([playHistory.trackId])
-      ..orderBy([
-        OrderingTerm.desc(countExpr),
-        OrderingTerm.desc(lastExpr),
-      ])
+      ..orderBy([OrderingTerm.desc(countExpr), OrderingTerm.desc(lastExpr)])
       ..limit(limit);
 
     final rows = await query.get();
@@ -84,22 +81,24 @@ class AppDatabase extends _$AppDatabase {
     final q = query.trim();
     if (q.isEmpty) return;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final existing = await (select(searchHistory)
-          ..where((t) => t.query.equals(q))
-          ..limit(1))
-        .getSingleOrNull();
+    final existing =
+        await (select(searchHistory)
+              ..where((t) => t.query.equals(q))
+              ..limit(1))
+            .getSingleOrNull();
     if (existing == null) {
-      await into(searchHistory).insert(
-        SearchHistoryCompanion.insert(query: q, lastUsedAtMs: nowMs),
-      );
+      await into(
+        searchHistory,
+      ).insert(SearchHistoryCompanion.insert(query: q, lastUsedAtMs: nowMs));
     } else {
-      await (update(searchHistory)..where((t) => t.id.equals(existing.id)))
-          .write(
-            SearchHistoryCompanion(
-              lastUsedAtMs: Value(nowMs),
-              useCount: Value(existing.useCount + 1),
-            ),
-          );
+      await (update(
+        searchHistory,
+      )..where((t) => t.id.equals(existing.id))).write(
+        SearchHistoryCompanion(
+          lastUsedAtMs: Value(nowMs),
+          useCount: Value(existing.useCount + 1),
+        ),
+      );
     }
   }
 
@@ -115,10 +114,11 @@ class AppDatabase extends _$AppDatabase {
   // ---- App settings (key/value) -------------------------------------------
 
   Future<String?> readSetting(String key) async {
-    final row = await (select(appSettings)
-          ..where((t) => t.key.equals(key))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (select(appSettings)
+              ..where((t) => t.key.equals(key))
+              ..limit(1))
+            .getSingleOrNull();
     return row?.value;
   }
 
@@ -147,9 +147,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<Download>> allDownloads() {
-    return (select(downloads)
-          ..orderBy([(t) => OrderingTerm.desc(t.downloadedAtMs)]))
-        .get();
+    return (select(
+      downloads,
+    )..orderBy([(t) => OrderingTerm.desc(t.downloadedAtMs)])).get();
   }
 
   Future<int> deleteDownload(String trackId) {

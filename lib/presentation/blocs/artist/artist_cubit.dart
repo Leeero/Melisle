@@ -8,19 +8,21 @@ class ArtistCubit extends Cubit<ArtistState> {
   ArtistCubit({
     required FetchArtistAlbums fetchArtistAlbums,
     required FetchArtistTopTracks fetchArtistTopTracks,
-  })  : _fetchArtistAlbums = fetchArtistAlbums,
-        _fetchArtistTopTracks = fetchArtistTopTracks,
-        super(const ArtistState.initial());
+  }) : _fetchArtistAlbums = fetchArtistAlbums,
+       _fetchArtistTopTracks = fetchArtistTopTracks,
+       super(const ArtistState.initial());
 
   final FetchArtistAlbums _fetchArtistAlbums;
   final FetchArtistTopTracks _fetchArtistTopTracks;
 
   Future<void> load(String artistId, {MusicArtist? seed}) async {
-    emit(state.copyWith(
-      status: ArtistStatus.loading,
-      artist: seed ?? state.artist,
-      errorMessage: null,
-    ));
+    emit(
+      state.copyWith(
+        status: ArtistStatus.loading,
+        artist: seed ?? state.artist,
+        errorMessage: null,
+      ),
+    );
 
     try {
       final albumsFuture = _fetchArtistAlbums(artistId);
@@ -28,16 +30,20 @@ class ArtistCubit extends Cubit<ArtistState> {
       final albums = await albumsFuture;
       final topTracks = await tracksFuture;
 
-      emit(state.copyWith(
-        status: ArtistStatus.success,
-        albums: albums,
-        topTracks: topTracks,
-      ));
+      emit(
+        state.copyWith(
+          status: ArtistStatus.success,
+          albums: albums,
+          topTracks: topTracks,
+        ),
+      );
     } catch (error) {
-      emit(state.copyWith(
-        status: ArtistStatus.failure,
-        errorMessage: '加载艺术家失败：$error',
-      ));
+      emit(
+        state.copyWith(
+          status: ArtistStatus.failure,
+          errorMessage: '加载艺术家失败：$error',
+        ),
+      );
     }
   }
 }

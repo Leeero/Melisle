@@ -17,11 +17,9 @@ import 'package:just_audio/just_audio.dart';
 /// 再次复用同一个实例在某些平台会触发奇怪的状态（例如 duration 为 null）。每次播放
 /// 时现做现用更安全，也更符合主流播放器的做法。
 final class TrackResolver {
-  TrackResolver({
-    required MusicRepository repository,
-    AppDatabase? database,
-  })  : _repository = repository,
-        _database = database;
+  TrackResolver({required MusicRepository repository, AppDatabase? database})
+    : _repository = repository,
+      _database = database;
 
   final MusicRepository _repository;
   final AppDatabase? _database;

@@ -9,10 +9,10 @@ class AuthCubit extends Cubit<AuthState> {
     required LoginWithEmby loginWithEmby,
     required RestoreSession restoreSession,
     required Logout logout,
-  })  : _loginWithEmby = loginWithEmby,
-        _restoreSession = restoreSession,
-        _logout = logout,
-        super(const AuthState.unknown()) {
+  }) : _loginWithEmby = loginWithEmby,
+       _restoreSession = restoreSession,
+       _logout = logout,
+       super(const AuthState.unknown()) {
     restore();
   }
 

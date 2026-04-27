@@ -176,10 +176,7 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
       return '请先输入自定义地址。';
     }
 
-    final normalized = value.replaceAll(
-      RegExp(r'\{[a-zA-Z0-9_]+\}'),
-      'sample',
-    );
+    final normalized = value.replaceAll(RegExp(r'\{[a-zA-Z0-9_]+\}'), 'sample');
     final uri = Uri.tryParse(normalized);
     if (uri == null ||
         !(uri.scheme == 'http' || uri.scheme == 'https') ||

@@ -99,7 +99,8 @@ class ResolvedArtworkSource {
   bool get hasFallback {
     final normalizedFallback = fallbackUrl.trim();
     final normalizedPrimary = primaryUrl.trim();
-    return normalizedFallback.isNotEmpty && normalizedFallback != normalizedPrimary;
+    return normalizedFallback.isNotEmpty &&
+        normalizedFallback != normalizedPrimary;
   }
 }
 
@@ -107,14 +108,15 @@ class CustomMediaSourceResolver {
   CustomMediaSourceResolver({
     Dio? dio,
     AppSettingsSnapshot initialSettings = const AppSettingsSnapshot(),
-  })  : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 12),
-              ),
-            ),
-        _settings = initialSettings;
+  }) : _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               connectTimeout: const Duration(seconds: 10),
+               receiveTimeout: const Duration(seconds: 12),
+             ),
+           ),
+       _settings = initialSettings;
 
   final Dio _dio;
   AppSettingsSnapshot _settings;
@@ -182,7 +184,8 @@ class CustomMediaSourceResolver {
   }) {
     return resolveArtworkSource(
       fallbackUrl: fallbackUrl,
-      context: context ??
+      context:
+          context ??
           ArtworkSourceContext(
             itemId: itemId,
             trackId: trackId,
@@ -222,9 +225,7 @@ class CustomMediaSourceResolver {
             resolvedUrl,
             options: Options(
               responseType: ResponseType.plain,
-              headers: const {
-                'User-Agent': AppConstants.httpUserAgent,
-              },
+              headers: const {'User-Agent': AppConstants.httpUserAgent},
               validateStatus: (status) => status != null && status < 500,
             ),
           );
@@ -250,42 +251,36 @@ class CustomMediaSourceResolver {
   }
 
   Future<CustomSourceTestResult> testArtworkSource(String rawAddress) {
-    final resolvedUrl = _buildResolvedUrl(
-      rawAddress,
-      _sampleArtworkContext,
-    );
+    final resolvedUrl = _buildResolvedUrl(rawAddress, _sampleArtworkContext);
     return _testUrl(resolvedUrl, expectLyrics: false);
   }
 
   Future<CustomSourceTestResult> testLyricsSource(String rawAddress) {
-    final resolvedUrl = _buildResolvedUrl(
-      rawAddress,
-      _sampleLyricsContext,
-    );
+    final resolvedUrl = _buildResolvedUrl(rawAddress, _sampleLyricsContext);
     return _testUrl(resolvedUrl, expectLyrics: true);
   }
 
   Map<String, String> get _sampleArtworkContext => _buildContext(
-        fallbackUrl: 'https://example.com/assets/cover.jpg',
-        itemId: 'track-demo-001',
-        trackId: 'track-demo-001',
-        albumId: 'album-demo-001',
-        artistId: 'artist-demo-001',
-        title: 'Test Track',
-        artistName: 'Test Artist',
-        albumTitle: 'Test Album',
-        size: 480,
-      );
+    fallbackUrl: 'https://example.com/assets/cover.jpg',
+    itemId: 'track-demo-001',
+    trackId: 'track-demo-001',
+    albumId: 'album-demo-001',
+    artistId: 'artist-demo-001',
+    title: 'Test Track',
+    artistName: 'Test Artist',
+    albumTitle: 'Test Album',
+    size: 480,
+  );
 
   Map<String, String> get _sampleLyricsContext => _buildContext(
-        itemId: 'track-demo-001',
-        trackId: 'track-demo-001',
-        albumId: 'album-demo-001',
-        artistId: 'artist-demo-001',
-        title: 'Test Track',
-        artistName: 'Test Artist',
-        albumTitle: 'Test Album',
-      );
+    itemId: 'track-demo-001',
+    trackId: 'track-demo-001',
+    albumId: 'album-demo-001',
+    artistId: 'artist-demo-001',
+    title: 'Test Track',
+    artistName: 'Test Artist',
+    albumTitle: 'Test Album',
+  );
 
   Future<CustomSourceTestResult> _testUrl(
     String? resolvedUrl, {
@@ -303,9 +298,7 @@ class CustomMediaSourceResolver {
         resolvedUrl,
         options: Options(
           responseType: expectLyrics ? ResponseType.plain : ResponseType.bytes,
-          headers: const {
-            'User-Agent': AppConstants.httpUserAgent,
-          },
+          headers: const {'User-Agent': AppConstants.httpUserAgent},
           validateStatus: (status) => status != null && status < 500,
         ),
       );
@@ -335,10 +328,7 @@ class CustomMediaSourceResolver {
               (response.data as List<int>? ?? const <int>[]),
               allowMalformed: true,
             );
-      final parsed = _parseLyricsResponse(
-        body,
-        contentType: contentType,
-      );
+      final parsed = _parseLyricsResponse(body, contentType: contentType);
       if (parsed.isNotEmpty) {
         return CustomSourceTestResult(
           isSuccess: true,

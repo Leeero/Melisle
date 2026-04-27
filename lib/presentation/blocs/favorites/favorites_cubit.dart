@@ -53,17 +53,12 @@ class FavoritesCubit extends Cubit<FavoritesState> {
 class FavoritesState {
   const FavoritesState({required this.entries, required this.pending});
 
-  const FavoritesState.initial()
-    : entries = const {},
-      pending = const {};
+  const FavoritesState.initial() : entries = const {}, pending = const {};
 
   final Map<String, bool> entries;
   final Set<String> pending;
 
-  FavoritesState copyWith({
-    Map<String, bool>? entries,
-    Set<String>? pending,
-  }) {
+  FavoritesState copyWith({Map<String, bool>? entries, Set<String>? pending}) {
     return FavoritesState(
       entries: entries ?? this.entries,
       pending: pending ?? this.pending,

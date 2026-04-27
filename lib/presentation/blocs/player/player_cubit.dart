@@ -29,18 +29,22 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     required MusicRepository repository,
     required AudioPlayerHandler controller,
     AppDatabase? database,
-  })  : _resolver = TrackResolver(repository: repository, database: database),
-        _repository = repository,
-        _controller = controller,
-        _database = database,
-        super(const PlayerViewState()) {
+  }) : _resolver = TrackResolver(repository: repository, database: database),
+       _repository = repository,
+       _controller = controller,
+       _database = database,
+       super(const PlayerViewState()) {
     // 订阅底层 player 的事件流。
     _subscriptions.add(_controller.positionStream.listen(_onPositionChanged));
     _subscriptions.add(_controller.durationStream.listen(_onDurationChanged));
-    _subscriptions.add(_controller.playerStateStream.listen(_onPlayerStateChanged));
-    _subscriptions.add(_controller.trackCompletionStream.listen((_) {
-      _onTrackCompleted();
-    }));
+    _subscriptions.add(
+      _controller.playerStateStream.listen(_onPlayerStateChanged),
+    );
+    _subscriptions.add(
+      _controller.trackCompletionStream.listen((_) {
+        _onTrackCompleted();
+      }),
+    );
     _subscriptions.add(_controller.volumeStream.listen(_onVolumeChanged));
 
     // 让系统媒体键 / 锁屏按钮能调用我们的 next / previous / skipTo 逻辑。
@@ -98,10 +102,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   // ========= 对外 API =========
 
   /// 用一组新的曲目替换当前队列并开始播放。
-  Future<void> playTracks(
-    List<MusicTrack> tracks, {
-    int startIndex = 0,
-  }) {
+  Future<void> playTracks(List<MusicTrack> tracks, {int startIndex = 0}) {
     return _enqueueSerial(() async {
       if (tracks.isEmpty) return;
 
@@ -113,16 +114,18 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _playbackRevision++;
       _queue = _queue.replaceAll(effectiveTracks, startIndex: safeStart);
       _publishQueueToSystem();
-      emit(state.copyWith(
-        queue: _queue.tracks,
-        currentIndex: _queue.currentIndex,
-        isLoading: true,
-        errorMessage: null,
-        lyrics: const [],
-        currentLyricIndex: null,
-        position: Duration.zero,
-        duration: Duration.zero,
-      ));
+      emit(
+        state.copyWith(
+          queue: _queue.tracks,
+          currentIndex: _queue.currentIndex,
+          isLoading: true,
+          errorMessage: null,
+          lyrics: const [],
+          currentLyricIndex: null,
+          position: Duration.zero,
+          duration: Duration.zero,
+        ),
+      );
 
       await _playCurrentTrack();
     });
@@ -134,12 +137,14 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       if (_queue.isEmpty) {
         _queue = _queue.replaceAll([track], startIndex: 0);
         _publishQueueToSystem();
-        emit(state.copyWith(
-          queue: _queue.tracks,
-          currentIndex: 0,
-          isLoading: true,
-          errorMessage: null,
-        ));
+        emit(
+          state.copyWith(
+            queue: _queue.tracks,
+            currentIndex: 0,
+            isLoading: true,
+            errorMessage: null,
+          ),
+        );
         await _playCurrentTrack();
         return;
       }
@@ -199,15 +204,17 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       if (index < 0 || index >= _queue.tracks.length) return;
       _queue = _queue.moveTo(index);
       _publishQueueToSystem();
-      emit(state.copyWith(
-        currentIndex: _queue.currentIndex,
-        isLoading: true,
-        errorMessage: null,
-        position: Duration.zero,
-        duration: Duration.zero,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+      emit(
+        state.copyWith(
+          currentIndex: _queue.currentIndex,
+          isLoading: true,
+          errorMessage: null,
+          position: Duration.zero,
+          duration: Duration.zero,
+          lyrics: const [],
+          currentLyricIndex: null,
+        ),
+      );
       await _playCurrentTrack();
     });
   }
@@ -221,15 +228,17 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       }
       _queue = _queue.moveTo(nextIdx);
       _publishQueueToSystem();
-      emit(state.copyWith(
-        currentIndex: _queue.currentIndex,
-        isLoading: true,
-        errorMessage: null,
-        position: Duration.zero,
-        duration: Duration.zero,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+      emit(
+        state.copyWith(
+          currentIndex: _queue.currentIndex,
+          isLoading: true,
+          errorMessage: null,
+          position: Duration.zero,
+          duration: Duration.zero,
+          lyrics: const [],
+          currentLyricIndex: null,
+        ),
+      );
       await _playCurrentTrack();
     });
   }
@@ -243,15 +252,17 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       }
       _queue = _queue.moveTo(prevIdx);
       _publishQueueToSystem();
-      emit(state.copyWith(
-        currentIndex: _queue.currentIndex,
-        isLoading: true,
-        errorMessage: null,
-        position: Duration.zero,
-        duration: Duration.zero,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+      emit(
+        state.copyWith(
+          currentIndex: _queue.currentIndex,
+          isLoading: true,
+          errorMessage: null,
+          position: Duration.zero,
+          duration: Duration.zero,
+          lyrics: const [],
+          currentLyricIndex: null,
+        ),
+      );
       await _playCurrentTrack();
     });
   }
@@ -272,7 +283,8 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     // 通过重新 loadAndPlay 当前曲目来避免 just_audio 在 completed 状态下 play()
     // 立刻再次 complete 的问题。
     final dur = state.duration;
-    final hasReachedEnd = dur > Duration.zero &&
+    final hasReachedEnd =
+        dur > Duration.zero &&
         state.position + const Duration(milliseconds: 300) >= dur;
     if (hasReachedEnd || state.currentTrack == null) {
       await _enqueueSerial(() async => _playCurrentTrack());
@@ -300,10 +312,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     }
     _queue = _queue.move(oldIndex, targetIndex);
     _publishQueueToSystem();
-    emit(state.copyWith(
-      queue: _queue.tracks,
-      currentIndex: _queue.currentIndex,
-    ));
+    emit(
+      state.copyWith(queue: _queue.tracks, currentIndex: _queue.currentIndex),
+    );
   }
 
   Future<void> removeQueueItem(int index) async {
@@ -319,23 +330,27 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
     if (removingCurrent) {
       // 当前曲被删掉 → 立刻播新当前位置（moveAt 已经 clamp 过）。
-      emit(state.copyWith(
-        queue: _queue.tracks,
-        currentIndex: _queue.currentIndex,
-        position: Duration.zero,
-        duration: Duration.zero,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+      emit(
+        state.copyWith(
+          queue: _queue.tracks,
+          currentIndex: _queue.currentIndex,
+          position: Duration.zero,
+          duration: Duration.zero,
+          lyrics: const [],
+          currentLyricIndex: null,
+        ),
+      );
       await _enqueueSerial(() async => _playCurrentTrack());
       return;
     }
 
-    emit(state.copyWith(
-      queue: _queue.tracks,
-      currentIndex: _queue.currentIndex,
-      errorMessage: null,
-    ));
+    emit(
+      state.copyWith(
+        queue: _queue.tracks,
+        currentIndex: _queue.currentIndex,
+        errorMessage: null,
+      ),
+    );
   }
 
   Future<void> clearQueue() async {
@@ -347,17 +362,19 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _stopProgressReporting();
     _playSessionId = null;
     _reportedStartTrackId = null;
-    emit(state.copyWith(
-      queue: const [],
-      currentIndex: 0,
-      isPlaying: false,
-      isLoading: false,
-      position: Duration.zero,
-      duration: Duration.zero,
-      errorMessage: null,
-      lyrics: const [],
-      currentLyricIndex: null,
-    ));
+    emit(
+      state.copyWith(
+        queue: const [],
+        currentIndex: 0,
+        isPlaying: false,
+        isLoading: false,
+        position: Duration.zero,
+        duration: Duration.zero,
+        errorMessage: null,
+        lyrics: const [],
+        currentLyricIndex: null,
+      ),
+    );
   }
 
   // ========= 循环 / 随机 =========
@@ -402,10 +419,12 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         _queue = _queue.withLoopMode(QueueLoopMode.off).withShuffle(true);
         break;
     }
-    emit(state.copyWith(
-      loopMode: _toJustAudioLoop(_queue.loopMode),
-      shuffleEnabled: _queue.shuffleEnabled,
-    ));
+    emit(
+      state.copyWith(
+        loopMode: _toJustAudioLoop(_queue.loopMode),
+        shuffleEnabled: _queue.shuffleEnabled,
+      ),
+    );
   }
 
   LoopMode _toJustAudioLoop(QueueLoopMode mode) {
@@ -454,10 +473,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _reportStartForCurrent();
     } catch (error) {
       if (myToken != _playToken || isClosed) return;
-      emit(state.copyWith(
-        isLoading: false,
-        errorMessage: '播放失败：$error',
-      ));
+      emit(state.copyWith(isLoading: false, errorMessage: '播放失败：$error'));
     }
   }
 
@@ -470,19 +486,21 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   Future<T> _enqueueSerial<T>(Future<T> Function() action) {
     final completer = Completer<T>();
     final oldTail = _serialTail;
-    _serialTail = oldTail.then((_) async {
-      if (isClosed) {
-        completer.completeError(StateError('PlayerCubit is closed'));
-        return;
-      }
-      try {
-        completer.complete(await action());
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    }).catchError((_) {
-      // oldTail 的异常已经被处理过了，这里吞掉，不影响后续链条。
-    });
+    _serialTail = oldTail
+        .then((_) async {
+          if (isClosed) {
+            completer.completeError(StateError('PlayerCubit is closed'));
+            return;
+          }
+          try {
+            completer.complete(await action());
+          } catch (e, st) {
+            completer.completeError(e, st);
+          }
+        })
+        .catchError((_) {
+          // oldTail 的异常已经被处理过了，这里吞掉，不影响后续链条。
+        });
     return completer.future;
   }
 
@@ -509,13 +527,11 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final nowPlaying = playerState.playing;
     final wasPlaying = state.isPlaying;
 
-    final isBusy = playerState.processingState == ProcessingState.loading ||
+    final isBusy =
+        playerState.processingState == ProcessingState.loading ||
         playerState.processingState == ProcessingState.buffering;
 
-    emit(state.copyWith(
-      isLoading: isBusy,
-      isPlaying: nowPlaying,
-    ));
+    emit(state.copyWith(isLoading: isBusy, isPlaying: nowPlaying));
 
     if (nowPlaying && !wasPlaying) {
       _startProgressReporting();
@@ -557,15 +573,17 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       if (index < 0 || index >= _queue.tracks.length) return;
       _queue = _queue.moveTo(index);
       _publishQueueToSystem();
-      emit(state.copyWith(
-        currentIndex: _queue.currentIndex,
-        isLoading: true,
-        errorMessage: null,
-        position: Duration.zero,
-        duration: Duration.zero,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+      emit(
+        state.copyWith(
+          currentIndex: _queue.currentIndex,
+          isLoading: true,
+          errorMessage: null,
+          position: Duration.zero,
+          duration: Duration.zero,
+          lyrics: const [],
+          currentLyricIndex: null,
+        ),
+      );
       await _playCurrentTrack();
     });
   }
@@ -591,25 +609,31 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       final lyrics = await _repository.fetchLyrics(track.id);
       if (myToken != _playToken || isClosed) return;
       if (lyrics == null || lyrics.isEmpty) {
-        emit(state.copyWith(
+        emit(
+          state.copyWith(
+            isLyricsLoading: false,
+            lyrics: const [],
+            currentLyricIndex: null,
+          ),
+        );
+        return;
+      }
+      emit(
+        state.copyWith(
+          isLyricsLoading: false,
+          lyrics: lyrics,
+          currentLyricIndex: _findLyricIndex(lyrics, state.position),
+        ),
+      );
+    } catch (_) {
+      if (myToken != _playToken || isClosed) return;
+      emit(
+        state.copyWith(
           isLyricsLoading: false,
           lyrics: const [],
           currentLyricIndex: null,
-        ));
-        return;
-      }
-      emit(state.copyWith(
-        isLyricsLoading: false,
-        lyrics: lyrics,
-        currentLyricIndex: _findLyricIndex(lyrics, state.position),
-      ));
-    } catch (_) {
-      if (myToken != _playToken || isClosed) return;
-      emit(state.copyWith(
-        isLyricsLoading: false,
-        lyrics: const [],
-        currentLyricIndex: null,
-      ));
+        ),
+      );
     }
   }
 
@@ -648,10 +672,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   Future<void> startSleepTimer(Duration duration) async {
     _sleepTicker?.cancel();
     _sleepTimer.startCountdown(duration, _onSleepFired);
-    emit(state.copyWith(
-      sleepRemaining: duration,
-      sleepEndOfTrack: false,
-    ));
+    emit(state.copyWith(sleepRemaining: duration, sleepEndOfTrack: false));
     _sleepTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       final left = _sleepTimer.remaining;
       if (left == null) {
@@ -666,29 +687,20 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   Future<void> startSleepTimerEndOfTrack() async {
     _sleepTicker?.cancel();
     _sleepTimer.startEndOfTrack(_onSleepFired);
-    emit(state.copyWith(
-      sleepRemaining: null,
-      sleepEndOfTrack: true,
-    ));
+    emit(state.copyWith(sleepRemaining: null, sleepEndOfTrack: true));
   }
 
   Future<void> cancelSleepTimer() async {
     _sleepTicker?.cancel();
     _sleepTicker = null;
     _sleepTimer.cancel();
-    emit(state.copyWith(
-      sleepRemaining: null,
-      sleepEndOfTrack: false,
-    ));
+    emit(state.copyWith(sleepRemaining: null, sleepEndOfTrack: false));
   }
 
   Future<void> _onSleepFired() async {
     _sleepTicker?.cancel();
     _sleepTicker = null;
-    emit(state.copyWith(
-      sleepRemaining: null,
-      sleepEndOfTrack: false,
-    ));
+    emit(state.copyWith(sleepRemaining: null, sleepEndOfTrack: false));
     _pausingGuard = true;
     await _controller.pause();
     _pausingGuard = false;
@@ -791,13 +803,15 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     }
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final playedMs = (nowMs - startMs).clamp(0, 1 << 30);
-    db.customUpdate(
-      'UPDATE play_history SET duration_played_ms = ? WHERE id = ?',
-      variables: [Variable<int>(playedMs), Variable<int>(rowId)],
-      updates: {db.playHistory},
-    ).catchError((_) {
-      return 0;
-    });
+    db
+        .customUpdate(
+          'UPDATE play_history SET duration_played_ms = ? WHERE id = ?',
+          variables: [Variable<int>(playedMs), Variable<int>(rowId)],
+          updates: {db.playHistory},
+        )
+        .catchError((_) {
+          return 0;
+        });
     _currentHistoryRowId = null;
     _currentHistoryStartMs = null;
   }

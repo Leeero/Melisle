@@ -9,7 +9,8 @@ class PlaylistDetailState {
     this.errorMessage,
   });
 
-  const PlaylistDetailState.initial() : this(status: PlaylistDetailStatus.initial);
+  const PlaylistDetailState.initial()
+    : this(status: PlaylistDetailStatus.initial);
 
   final PlaylistDetailStatus status;
   final List<MusicTrack> tracks;

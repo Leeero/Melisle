@@ -49,10 +49,8 @@ class DriftSettingsRepository implements SettingsRepository {
       _db.writeSetting(_kDefaultQuality, quality.storageKey);
 
   @override
-  Future<void> saveGapBetweenTracks(Duration gap) => _db.writeSetting(
-    _kGapBetweenTracks,
-    gap.inMilliseconds.toString(),
-  );
+  Future<void> saveGapBetweenTracks(Duration gap) =>
+      _db.writeSetting(_kGapBetweenTracks, gap.inMilliseconds.toString());
 
   @override
   Future<void> saveCustomArtworkSourceEnabled(bool enabled) =>

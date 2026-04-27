@@ -1,9 +1,6 @@
 /// 单条同步歌词。
 class LyricLine {
-  const LyricLine({
-    required this.start,
-    required this.text,
-  });
+  const LyricLine({required this.start, required this.text});
 
   /// 该行歌词开始的相对时间。
   final Duration start;

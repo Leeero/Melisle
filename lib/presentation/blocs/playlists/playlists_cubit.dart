@@ -18,7 +18,9 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
   }
 
   Future<void> loadMore() async {
-    if (state.status != PlaylistsStatus.success || state.isLoadingMore || !state.hasMore) {
+    if (state.status != PlaylistsStatus.success ||
+        state.isLoadingMore ||
+        !state.hasMore) {
       return;
     }
 

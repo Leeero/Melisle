@@ -25,11 +25,13 @@ class SearchCubit extends Cubit<SearchState> {
     _debounce?.cancel();
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
-      emit(state.copyWith(
-        status: SearchStatus.idle,
-        results: SearchResults.empty,
-        errorMessage: null,
-      ));
+      emit(
+        state.copyWith(
+          status: SearchStatus.idle,
+          results: SearchResults.empty,
+          errorMessage: null,
+        ),
+      );
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 320), () => _run(trimmed));
@@ -57,10 +59,12 @@ class SearchCubit extends Cubit<SearchState> {
       }
     } catch (error) {
       if (id != _requestId) return;
-      emit(state.copyWith(
-        status: SearchStatus.failure,
-        errorMessage: '搜索失败：$error',
-      ));
+      emit(
+        state.copyWith(
+          status: SearchStatus.failure,
+          errorMessage: '搜索失败：$error',
+        ),
+      );
     }
   }
 

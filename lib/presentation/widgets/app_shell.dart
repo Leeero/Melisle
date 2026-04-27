@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
-  const AppShell({
-    super.key,
-    required this.navigationShell,
-  });
+  const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
@@ -22,8 +19,7 @@ class AppShell extends StatelessWidget {
     if (isDesktop) {
       // macOS 隐藏标题栏后，交通灯按钮会叠在左上角，
       // 需要为侧边栏/内容区顶部留出额外 padding。
-      final macOsTrafficLightPadding =
-          Platform.isMacOS ? 28.0 : 0.0;
+      final macOsTrafficLightPadding = Platform.isMacOS ? 28.0 : 0.0;
 
       return Scaffold(
         body: SafeArea(
@@ -38,10 +34,7 @@ class AppShell extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _ShellSidebar(
-                  selectedIndex: selectedIndex,
-                  onSelected: _go,
-                ),
+                _ShellSidebar(selectedIndex: selectedIndex, onSelected: _go),
                 const SizedBox(width: 14),
                 Expanded(
                   child: DecoratedBox(
@@ -49,7 +42,9 @@ class AppShell extends StatelessWidget {
                       color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.72,
+                        ),
                       ),
                     ),
                     child: ClipRRect(
@@ -81,10 +76,7 @@ class AppShell extends StatelessWidget {
             children: [
               const MiniPlayerBar(),
               const SizedBox(height: 8),
-              _ShellBottomBar(
-                selectedIndex: selectedIndex,
-                onSelected: _go,
-              ),
+              _ShellBottomBar(selectedIndex: selectedIndex, onSelected: _go),
             ],
           ),
         ),
@@ -101,10 +93,7 @@ class AppShell extends StatelessWidget {
 }
 
 class _ShellSidebar extends StatelessWidget {
-  const _ShellSidebar({
-    required this.selectedIndex,
-    required this.onSelected,
-  });
+  const _ShellSidebar({required this.selectedIndex, required this.onSelected});
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
@@ -354,8 +343,8 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
               color: widget.selected
                   ? colorScheme.primary.withValues(alpha: 0.10)
                   : (_hovered
-                      ? colorScheme.onSurface.withValues(alpha: 0.05)
-                      : Colors.transparent),
+                        ? colorScheme.onSurface.withValues(alpha: 0.05)
+                        : Colors.transparent),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(

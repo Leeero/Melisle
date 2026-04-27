@@ -174,10 +174,7 @@ class _FavoritesHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(
-                  '我的收藏',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('我的收藏', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
@@ -201,10 +198,9 @@ class _FavoritesHeader extends StatelessWidget {
                 context,
                 loadedTracks: tracks,
                 allLoaded: !hasMore,
-                fetchAll: () => context.read<MusicRepository>().fetchFavoriteTracks(
-                  limit: 500,
-                  startIndex: 0,
-                ),
+                fetchAll: () => context
+                    .read<MusicRepository>()
+                    .fetchFavoriteTracks(limit: 500, startIndex: 0),
               ),
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               label: const Text('播放全部'),

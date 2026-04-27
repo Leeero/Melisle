@@ -27,7 +27,9 @@ class LibraryCubit extends Cubit<LibraryState> {
   }
 
   Future<void> loadMore() async {
-    if (state.status != LibraryStatus.success || state.isLoadingMore || !state.hasMore) {
+    if (state.status != LibraryStatus.success ||
+        state.isLoadingMore ||
+        !state.hasMore) {
       return;
     }
 

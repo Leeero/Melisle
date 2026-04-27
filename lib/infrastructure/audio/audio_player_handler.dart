@@ -224,9 +224,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     final safeIndex = currentIndex.clamp(0, items.length - 1);
     mediaItem.add(items[safeIndex]);
     // 同时把 queueIndex 刷到 playbackState，让系统控件正确高亮当前项。
-    playbackState.add(
-      playbackState.value.copyWith(queueIndex: safeIndex),
-    );
+    playbackState.add(playbackState.value.copyWith(queueIndex: safeIndex));
   }
 
   Future<void> dispose() async {

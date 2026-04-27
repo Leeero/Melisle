@@ -36,18 +36,16 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                           track.title.isEmpty ? '未知歌曲' : track.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(sheetCtx).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(sheetCtx).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${track.artistName} · ${track.albumTitle}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(sheetCtx).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(sheetCtx).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -96,16 +94,18 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                 final isFav = favState.entries[track.id] ?? track.isFavorite;
                 return ListTile(
                   leading: Icon(
-                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: isFav ? colorScheme.primary : null,
                   ),
                   title: Text(isFav ? '取消收藏' : '收藏'),
                   onTap: () {
                     Navigator.of(sheetCtx).pop();
                     context.read<FavoritesCubit>().toggle(
-                          track.id,
-                          currentValue: isFav,
-                        );
+                      track.id,
+                      currentValue: isFav,
+                    );
                   },
                 );
               },

@@ -28,8 +28,7 @@ class WebDavMusicRepository implements MusicRepository {
     required String serverUrl,
     required String username,
     required String password,
-  }) async =>
-      _todo('login');
+  }) async => _todo('login');
 
   @override
   Future<void> logout() async => _todo('logout');
@@ -43,32 +42,28 @@ class WebDavMusicRepository implements MusicRepository {
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      _todo('fetchTracks');
+  }) async => _todo('fetchTracks');
 
   @override
   Future<List<MusicAlbum>> fetchAlbums({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      _todo('fetchAlbums');
+  }) async => _todo('fetchAlbums');
 
   @override
   Future<List<MusicArtist>> fetchArtists({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      _todo('fetchArtists');
+  }) async => _todo('fetchArtists');
 
   @override
   Future<List<MusicPlaylist>> fetchPlaylists({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      _todo('fetchPlaylists');
+  }) async => _todo('fetchPlaylists');
 
   @override
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async =>
@@ -82,8 +77,7 @@ class WebDavMusicRepository implements MusicRepository {
   Future<String> getStreamUrl(
     String trackId, {
     AudioQuality quality = AudioQuality.auto,
-  }) async =>
-      _todo('getStreamUrl');
+  }) async => _todo('getStreamUrl');
 
   @override
   Future<void> setFavorite(String itemId, bool value) async =>
@@ -94,8 +88,10 @@ class WebDavMusicRepository implements MusicRepository {
       _todo('fetchLyrics');
 
   @override
-  Future<void> reportPlaybackStart(String trackId, String playSessionId) async =>
-      _todo('reportPlaybackStart');
+  Future<void> reportPlaybackStart(
+    String trackId,
+    String playSessionId,
+  ) async => _todo('reportPlaybackStart');
 
   @override
   Future<void> reportPlaybackProgress(
@@ -103,16 +99,14 @@ class WebDavMusicRepository implements MusicRepository {
     String playSessionId,
     Duration position, {
     bool isPaused = false,
-  }) async =>
-      _todo('reportPlaybackProgress');
+  }) async => _todo('reportPlaybackProgress');
 
   @override
   Future<void> reportPlaybackStopped(
     String trackId,
     String playSessionId,
     Duration position,
-  ) async =>
-      _todo('reportPlaybackStopped');
+  ) async => _todo('reportPlaybackStopped');
 
   @override
   Future<List<MusicTrack>> fetchRecentlyPlayed({int limit = 30}) async =>
@@ -126,8 +120,7 @@ class WebDavMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchFavoriteTracks({
     int limit = 100,
     int startIndex = 0,
-  }) async =>
-      _todo('fetchFavoriteTracks');
+  }) async => _todo('fetchFavoriteTracks');
 
   @override
   Future<List<MusicAlbum>> fetchArtistAlbums(String artistId) async =>
@@ -137,8 +130,7 @@ class WebDavMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchArtistTopTracks(
     String artistId, {
     int limit = 20,
-  }) async =>
-      _todo('fetchArtistTopTracks');
+  }) async => _todo('fetchArtistTopTracks');
 
   @override
   Future<SearchResults> search(String query) async => _todo('search');

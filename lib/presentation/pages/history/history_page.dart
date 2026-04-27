@@ -37,7 +37,10 @@ class _HistoryView extends StatelessWidget {
         builder: (context, state) {
           return AppContentPage(
             topSafeArea: false,
-            header: _HistoryHeader(count: state.tracks.length, tracks: state.tracks),
+            header: _HistoryHeader(
+              count: state.tracks.length,
+              tracks: state.tracks,
+            ),
             body: _buildBody(context, state, horizontalPadding, currentTrackId),
           );
         },
@@ -114,10 +117,7 @@ class _HistoryHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(
-                  '播放历史',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('播放历史', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(

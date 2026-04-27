@@ -59,7 +59,9 @@ class FavoritesListCubit extends Cubit<FavoritesListState> {
         state.copyWith(
           status: FavoritesListStatus.success,
           tracks: reset ? tracks : [...state.tracks, ...tracks],
-          loadedCount: reset ? tracks.length : state.loadedCount + tracks.length,
+          loadedCount: reset
+              ? tracks.length
+              : state.loadedCount + tracks.length,
           hasMore: tracks.length == _pageSize,
           isLoadingMore: false,
           errorMessage: null,

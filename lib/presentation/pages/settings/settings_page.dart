@@ -21,10 +21,7 @@ class SettingsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(
-              '设置',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('设置', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(width: 10),
             Text(
               '偏好、外观和连接管理',
@@ -46,7 +43,10 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: AppPageLayout.sectionGap),
           const _SettingsSection(title: '播放', child: _PlaybackCard()),
           const SizedBox(height: AppPageLayout.sectionGap),
-          const _SettingsSection(title: '媒体来源', child: _CustomMediaSourcesCard()),
+          const _SettingsSection(
+            title: '媒体来源',
+            child: _CustomMediaSourcesCard(),
+          ),
           const SizedBox(height: AppPageLayout.sectionGap),
           _SettingsSection(
             title: '存储',
@@ -693,4 +693,3 @@ class _SourceTestBanner extends StatelessWidget {
     );
   }
 }
-

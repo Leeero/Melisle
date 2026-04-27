@@ -32,12 +32,14 @@ class _PlayerPageState extends State<PlayerPage> {
     if (Platform.isAndroid || Platform.isIOS) {
       // Edge-to-edge: 让状态栏和导航栏透明，内容延伸到系统 UI 下方。
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarContrastEnforced: false,
-      ));
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarContrastEnforced: false,
+        ),
+      );
     }
   }
 
@@ -46,12 +48,14 @@ class _PlayerPageState extends State<PlayerPage> {
     if (Platform.isAndroid || Platform.isIOS) {
       // 离开播放页后恢复默认系统 UI 模式。
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarContrastEnforced: false,
-      ));
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarContrastEnforced: false,
+        ),
+      );
     }
     super.dispose();
   }
@@ -1585,18 +1589,21 @@ class _ControlButtonState extends State<_ControlButton>
                     final pulseScale = _hovered || _pressed
                         ? 1.0
                         : _pulseAnimation.value;
-                    return Transform.scale(
-                      scale: pulseScale,
-                      child: child,
-                    );
+                    return Transform.scale(scale: pulseScale, child: child);
                   },
                   child: _buildButtonBody(
-                    btnSize, backgroundColor, foregroundColor, icnSize,
+                    btnSize,
+                    backgroundColor,
+                    foregroundColor,
+                    icnSize,
                     colorScheme,
                   ),
                 )
               : _buildButtonBody(
-                  btnSize, backgroundColor, foregroundColor, icnSize,
+                  btnSize,
+                  backgroundColor,
+                  foregroundColor,
+                  icnSize,
                   colorScheme,
                 ),
         ),
@@ -1775,17 +1782,19 @@ class _GlowingSliderTrackShape extends RoundedRectSliderTrackShape {
   }) {
     final canvas = context.canvas;
     final trackHeight = sliderTheme.trackHeight ?? 3.5;
-    final trackLeft = offset.dx +
-        (sliderTheme.trackShape?.getPreferredRect(
-              parentBox: parentBox,
-              sliderTheme: sliderTheme,
-              offset: offset,
-              isEnabled: isEnabled,
-              isDiscrete: isDiscrete,
-            ).left ??
+    final trackLeft =
+        offset.dx +
+        (sliderTheme.trackShape
+                ?.getPreferredRect(
+                  parentBox: parentBox,
+                  sliderTheme: sliderTheme,
+                  offset: offset,
+                  isEnabled: isEnabled,
+                  isDiscrete: isDiscrete,
+                )
+                .left ??
             14);
-    final trackTop = offset.dy +
-        (parentBox.size.height - trackHeight) / 2;
+    final trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
     final activeWidth = thumbCenter.dx - trackLeft;
 
     // Paint the glow behind the active track
@@ -1884,15 +1893,17 @@ class _EmptyPlayerState extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: colorScheme.surface.withValues(alpha: 0.18),
                           border: Border.all(
-                            color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.22),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.22,
+                            ),
                           ),
                         ),
                         child: Icon(
                           Icons.music_note_rounded,
                           size: 36,
-                          color: colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.6),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -1910,8 +1921,9 @@ class _EmptyPlayerState extends StatelessWidget {
                       Text(
                         '去媒体库挑一首喜欢的歌曲吧',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.6),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -1926,8 +1938,9 @@ class _EmptyPlayerState extends StatelessWidget {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: colorScheme.onSurface,
                           side: BorderSide(
-                            color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.52),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.52,
+                            ),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,

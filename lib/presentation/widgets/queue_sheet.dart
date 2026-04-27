@@ -103,19 +103,29 @@ class QueueSheet extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Card(
                             color: isCurrent
-                                ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-                                : colorScheme.surfaceContainerHigh.withValues(alpha: 0.74),
+                                ? colorScheme.primaryContainer.withValues(
+                                    alpha: 0.8,
+                                  )
+                                : colorScheme.surfaceContainerHigh.withValues(
+                                    alpha: 0.74,
+                                  ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
                                 color: isCurrent
-                                    ? colorScheme.primary.withValues(alpha: 0.28)
-                                    : colorScheme.outlineVariant.withValues(alpha: 0.45),
+                                    ? colorScheme.primary.withValues(
+                                        alpha: 0.28,
+                                      )
+                                    : colorScheme.outlineVariant.withValues(
+                                        alpha: 0.45,
+                                      ),
                               ),
                             ),
                             child: ListTile(
                               onTap: () async {
-                                await context.read<PlayerCubit>().playIndex(index);
+                                await context.read<PlayerCubit>().playIndex(
+                                  index,
+                                );
                                 if (context.mounted) {
                                   Navigator.of(context).pop();
                                 }
@@ -124,7 +134,9 @@ class QueueSheet extends StatelessWidget {
                                 imageUrl: track.artworkUrl,
                                 size: 52,
                                 borderRadius: 18,
-                                sourceContext: ArtworkSourceContext.track(track),
+                                sourceContext: ArtworkSourceContext.track(
+                                  track,
+                                ),
                               ),
                               title: Text(
                                 track.title,
@@ -145,13 +157,16 @@ class QueueSheet extends StatelessWidget {
                                       Icon(
                                         state.isPlaying
                                             ? Icons.graphic_eq_rounded
-                                            : Icons.pause_circle_outline_rounded,
+                                            : Icons
+                                                  .pause_circle_outline_rounded,
                                         color: colorScheme.onPrimaryContainer,
                                       )
                                     else
                                       const SizedBox(width: 24),
                                     IconButton(
-                                      onPressed: () => context.read<PlayerCubit>().removeQueueItem(index),
+                                      onPressed: () => context
+                                          .read<PlayerCubit>()
+                                          .removeQueueItem(index),
                                       tooltip: '移出队列',
                                       icon: const Icon(Icons.close_rounded),
                                     ),

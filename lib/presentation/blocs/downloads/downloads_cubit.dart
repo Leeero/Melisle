@@ -21,10 +21,10 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     required MusicRepository repository,
     required AppDatabase database,
     required AudioCacheManager cacheManager,
-  })  : _repository = repository,
-        _database = database,
-        _cacheManager = cacheManager,
-        super(const DownloadsState());
+  }) : _repository = repository,
+       _database = database,
+       _cacheManager = cacheManager,
+       super(const DownloadsState());
 
   final MusicRepository _repository;
   final AppDatabase _database;
@@ -38,12 +38,14 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   Future<void> load() async {
     try {
       final rows = await _database.allDownloads();
-      emit(state.copyWith(
-        completedTrackIds: {
-          for (final r in rows)
-            if (r.status == 0) r.trackId,
-        },
-      ));
+      emit(
+        state.copyWith(
+          completedTrackIds: {
+            for (final r in rows)
+              if (r.status == 0) r.trackId,
+          },
+        ),
+      );
     } catch (error, stack) {
       debugPrint('DownloadsCubit.load 失败：$error\n$stack');
     }
@@ -92,10 +94,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     final completed = Set<String>.from(state.completedTrackIds)
       ..remove(trackId);
     final jobs = Map<String, DownloadJob>.from(state.jobs)..remove(trackId);
-    emit(state.copyWith(
-      completedTrackIds: completed,
-      jobs: jobs,
-    ));
+    emit(state.copyWith(completedTrackIds: completed, jobs: jobs));
   }
 
   /// 查询某曲目的本地文件路径（若存在）。
@@ -149,10 +148,10 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         container: container,
         cancelToken: cancelToken,
         onProgress: (received, total) {
-          _updateJob(track.id, (j) => j.copyWith(
-                received: received,
-                total: total,
-              ));
+          _updateJob(
+            track.id,
+            (j) => j.copyWith(received: received, total: total),
+          );
         },
       );
 
@@ -175,8 +174,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
 
       final completed = Set<String>.from(state.completedTrackIds)
         ..add(track.id);
-      final jobs = Map<String, DownloadJob>.from(state.jobs)
-        ..remove(track.id);
+      final jobs = Map<String, DownloadJob>.from(state.jobs)..remove(track.id);
       emit(state.copyWith(jobs: jobs, completedTrackIds: completed));
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) {

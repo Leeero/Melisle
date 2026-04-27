@@ -6,10 +6,7 @@ class FetchFavoriteTracks {
 
   final MusicRepository _repository;
 
-  Future<List<MusicTrack>> call({
-    int limit = 100,
-    int startIndex = 0,
-  }) {
+  Future<List<MusicTrack>> call({int limit = 100, int startIndex = 0}) {
     return _repository.fetchFavoriteTracks(
       limit: limit,
       startIndex: startIndex,

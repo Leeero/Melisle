@@ -14,10 +14,12 @@ class AlbumCubit extends Cubit<AlbumState> {
       final tracks = await _fetchAlbumTracks(albumId);
       emit(state.copyWith(status: AlbumStatus.success, tracks: tracks));
     } catch (error) {
-      emit(state.copyWith(
-        status: AlbumStatus.failure,
-        errorMessage: '加载专辑失败：$error',
-      ));
+      emit(
+        state.copyWith(
+          status: AlbumStatus.failure,
+          errorMessage: '加载专辑失败：$error',
+        ),
+      );
     }
   }
 }

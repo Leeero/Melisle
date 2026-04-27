@@ -91,7 +91,9 @@ void main() {
       MultiRepositoryProvider(
         providers: [
           RepositoryProvider<MusicRepository>.value(value: repository),
-          RepositoryProvider<SettingsRepository>.value(value: settingsRepository),
+          RepositoryProvider<SettingsRepository>.value(
+            value: settingsRepository,
+          ),
           RepositoryProvider<CustomMediaSourceResolver>.value(
             value: mediaSourceResolver,
           ),
@@ -131,7 +133,9 @@ void main() {
       MultiRepositoryProvider(
         providers: [
           RepositoryProvider<AppDatabase>.value(value: database),
-          RepositoryProvider<SettingsRepository>.value(value: settingsRepository),
+          RepositoryProvider<SettingsRepository>.value(
+            value: settingsRepository,
+          ),
           RepositoryProvider<CustomMediaSourceResolver>.value(
             value: mediaSourceResolver,
           ),
@@ -162,32 +166,28 @@ class _FakeMusicRepository implements MusicRepository {
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<MusicAlbum>> fetchAlbums({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<MusicArtist>> fetchArtists({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<MusicPlaylist>> fetchPlaylists({
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async => [];
@@ -199,8 +199,7 @@ class _FakeMusicRepository implements MusicRepository {
   Future<String> getStreamUrl(
     String trackId, {
     AudioQuality quality = AudioQuality.auto,
-  }) async =>
-      '';
+  }) async => '';
 
   @override
   Future<AuthSession> login({
@@ -224,7 +223,10 @@ class _FakeMusicRepository implements MusicRepository {
   Future<List<LyricLine>?> fetchLyrics(String trackId) async => null;
 
   @override
-  Future<void> reportPlaybackStart(String trackId, String playSessionId) async {}
+  Future<void> reportPlaybackStart(
+    String trackId,
+    String playSessionId,
+  ) async {}
 
   @override
   Future<void> reportPlaybackProgress(
@@ -251,8 +253,7 @@ class _FakeMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchFavoriteTracks({
     int limit = 100,
     int startIndex = 0,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<List<MusicAlbum>> fetchArtistAlbums(String artistId) async => [];
@@ -261,8 +262,7 @@ class _FakeMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchArtistTopTracks(
     String artistId, {
     int limit = 20,
-  }) async =>
-      [];
+  }) async => [];
 
   @override
   Future<SearchResults> search(String query) async => SearchResults.empty;

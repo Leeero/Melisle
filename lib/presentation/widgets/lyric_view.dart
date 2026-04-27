@@ -47,7 +47,8 @@ class _LyricViewState extends State<LyricView> {
     if (!_scrollController.hasClients) return;
     final idx = widget.currentIndex;
     if (idx == null) return;
-    final target = (idx * _lineHeight) -
+    final target =
+        (idx * _lineHeight) -
         (_scrollController.position.viewportDimension / 2) +
         (_lineHeight / 2);
     final clamped = target.clamp(
@@ -106,7 +107,8 @@ class _LyricViewState extends State<LyricView> {
               alignment: Alignment.centerLeft,
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 220),
-                style: (isCurrent
+                style:
+                    (isCurrent
                         ? theme.textTheme.titleLarge
                         : theme.textTheme.titleMedium) ??
                     const TextStyle(),

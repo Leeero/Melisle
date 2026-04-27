@@ -75,8 +75,8 @@ class SleepTimerSheet extends StatelessWidget {
                 Text(
                   active
                       ? (state.sleepEndOfTrack
-                          ? '将在本曲结束后自动暂停'
-                          : '剩余 ${_formatRemaining(remaining!)}')
+                            ? '将在本曲结束后自动暂停'
+                            : '剩余 ${_formatRemaining(remaining!)}')
                       : '时间到后将自动暂停播放',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
