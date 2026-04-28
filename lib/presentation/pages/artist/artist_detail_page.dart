@@ -1,16 +1,18 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_top_tracks.dart';
-import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
-import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
-import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/section_header.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -98,9 +100,22 @@ class _ArtistDetailView extends StatelessWidget {
                     else ...[
                       if (state.topTracks.isNotEmpty) ...[
                         SliverToBoxAdapter(
-                          child: _SectionHeaderWithPlayAll(
+                          child: SectionHeader(
                             title: '热门曲目',
-                            tracks: state.topTracks,
+                            trailing: FilledButton.tonalIcon(
+                              onPressed: () =>
+                                  PlayerNavigation.playAllAndOpenPlayer(
+                                    context,
+                                    loadedTracks: state.topTracks,
+                                    allLoaded: true,
+                                    fetchAll: () async => state.topTracks,
+                                  ),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 18,
+                              ),
+                              label: const Text('播放全部'),
+                            ),
                           ),
                         ),
                         SliverPadding(
@@ -113,9 +128,8 @@ class _ArtistDetailView extends StatelessWidget {
                               final track = state.topTracks[index];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
-                                child: _TrackRow(
-                                  trackId: track.id,
-                                  currentTrackId: currentTrackId,
+                                child: MusicTrackTile.row(
+                                  isCurrent: track.id == currentTrackId,
                                   artworkUrl: track.artworkUrl,
                                   title: track.title,
                                   subtitle: track.albumTitle,
@@ -135,7 +149,7 @@ class _ArtistDetailView extends StatelessWidget {
                       ],
                       if (state.albums.isNotEmpty) ...[
                         const SliverToBoxAdapter(
-                          child: _SectionHeader(title: '专辑'),
+                          child: SectionHeader(title: '专辑'),
                         ),
                         SliverPadding(
                           padding: AppPageLayout.sectionPadding(
@@ -155,7 +169,13 @@ class _ArtistDetailView extends StatelessWidget {
                               index,
                             ) {
                               final album = state.albums[index];
-                              return _AlbumCard(album: album);
+                              return MusicAlbumCompactCard(
+                                album: album,
+                                onTap: () => context.push(
+                                  '/album/${album.id}',
+                                  extra: album,
+                                ),
+                              );
                             }, childCount: state.albums.length),
                           ),
                         ),
@@ -238,9 +258,15 @@ class _ArtistHero extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _MetaPill(label: '艺术家'),
-                  _MetaPill(label: '$effectiveAlbumCount 张专辑'),
-                  _MetaPill(label: '$effectiveTrackCount 首热门'),
+                  const MetaPill(label: '艺术家', size: MetaPillSize.compact),
+                  MetaPill(
+                    label: '$effectiveAlbumCount 张专辑',
+                    size: MetaPillSize.compact,
+                  ),
+                  MetaPill(
+                    label: '$effectiveTrackCount 首热门',
+                    size: MetaPillSize.compact,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -280,250 +306,6 @@ class _ArtistHero extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _AlbumCard extends StatelessWidget {
-  const _AlbumCard({required this.album});
-
-  final MusicAlbum album;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () => context.push('/album/${album.id}', extra: album),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: CachedArtwork(
-                    imageUrl: album.artworkUrl,
-                    size: 160,
-                    borderRadius: 18,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  album.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  album.year == null ? album.artistName : '${album.year}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Phase 4: Track row with hover shadow
-class _TrackRow extends StatefulWidget {
-  const _TrackRow({
-    required this.trackId,
-    required this.currentTrackId,
-    required this.artworkUrl,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.onLongPress,
-  });
-
-  final String trackId;
-  final String? currentTrackId;
-  final String artworkUrl;
-  final String title;
-  final String subtitle;
-  final Future<void> Function() onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  State<_TrackRow> createState() => _TrackRowState();
-}
-
-class _TrackRowState extends State<_TrackRow> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isCurrent = widget.trackId == widget.currentTrackId;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-              : colorScheme.surface.withValues(alpha: _hovered ? 0.82 : 0.62),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isCurrent
-                ? colorScheme.primary.withValues(alpha: 0.28)
-                : colorScheme.outlineVariant.withValues(alpha: 0.72),
-          ),
-          boxShadow: _hovered && !isCurrent
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.1),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : [],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: widget.onTap,
-            onLongPress: widget.onLongPress,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  CachedArtwork(
-                    imageUrl: widget.artworkUrl,
-                    size: 48,
-                    borderRadius: 14,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    isCurrent
-                        ? Icons.graphic_eq_rounded
-                        : Icons.play_arrow_rounded,
-                    color: isCurrent
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _SectionHeaderWithPlayAll extends StatelessWidget {
-  const _SectionHeaderWithPlayAll({required this.title, required this.tracks});
-
-  final String title;
-  final List<MusicTrack> tracks;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const Spacer(),
-          if (tracks.isNotEmpty)
-            FilledButton.tonalIcon(
-              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: tracks,
-                allLoaded: true, // 艺术家热门曲目一次加载完毕
-                fetchAll: () async => tracks,
-              ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 18),
-              label: const Text('播放全部'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.48),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }

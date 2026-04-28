@@ -6,8 +6,9 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
-import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -190,7 +191,7 @@ class _FavoritesHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _MetaPill(label: '$count 首'),
+          MetaPill(label: '$count 首'),
           if (count > 0) ...[
             const SizedBox(width: 10),
             FilledButton.tonalIcon(
@@ -212,7 +213,7 @@ class _FavoritesHeader extends StatelessWidget {
   }
 }
 
-class _FavoriteTrackCard extends StatefulWidget {
+class _FavoriteTrackCard extends StatelessWidget {
   const _FavoriteTrackCard({
     required this.track,
     required this.currentTrackId,
@@ -224,138 +225,42 @@ class _FavoriteTrackCard extends StatefulWidget {
   final Future<void> Function() onTap;
 
   @override
-  State<_FavoriteTrackCard> createState() => _FavoriteTrackCardState();
-}
-
-class _FavoriteTrackCardState extends State<_FavoriteTrackCard> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isCurrent = widget.track.id == widget.currentTrackId;
     final isFavorite = context.select<FavoritesCubit, bool>(
-      (cubit) =>
-          cubit.isFavorite(widget.track.id, fallback: widget.track.isFavorite),
+      (cubit) => cubit.isFavorite(track.id, fallback: track.isFavorite),
     );
     final isPending = context.select<FavoritesCubit, bool>(
-      (cubit) => cubit.state.pending.contains(widget.track.id),
+      (cubit) => cubit.state.pending.contains(track.id),
     );
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? colorScheme.primaryContainer.withValues(alpha: 0.82)
-              : colorScheme.surface.withValues(alpha: _hovered ? 0.92 : 0.72),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isCurrent
-                ? colorScheme.primary.withValues(alpha: 0.3)
-                : colorScheme.outlineVariant.withValues(alpha: 0.68),
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  CachedArtwork(
-                    imageUrl: widget.track.artworkUrl,
-                    size: 58,
-                    borderRadius: 20,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                widget.track.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            if (isCurrent) ...[
-                              const SizedBox(width: 8),
-                              const _MetaPill(label: '当前播放'),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          [
-                            widget.track.artistName,
-                            widget.track.albumTitle,
-                          ].where((item) => item.isNotEmpty).join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Phase 4: Favorite button pulse animation when pending
-                  _PulsingFavoriteButton(
-                    isPending: isPending,
-                    isFavorite: isFavorite,
-                    colorScheme: colorScheme,
-                    onPressed: isPending
-                        ? null
-                        : () async {
-                            final favoritesCubit = context
-                                .read<FavoritesCubit>();
-                            final listCubit = context
-                                .read<FavoritesListCubit>();
-                            await favoritesCubit.toggle(
-                              widget.track.id,
-                              currentValue: isFavorite,
-                            );
-                            final stillFavorite = favoritesCubit.isFavorite(
-                              widget.track.id,
-                              fallback: widget.track.isFavorite,
-                            );
-                            if (!stillFavorite) {
-                              listCubit.removeTrack(widget.track.id);
-                            }
-                          },
-                  ),
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isCurrent
-                          ? colorScheme.primary.withValues(alpha: 0.14)
-                          : colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      isCurrent
-                          ? Icons.graphic_eq_rounded
-                          : Icons.play_arrow_rounded,
-                      color: isCurrent
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return MusicTrackTile.card(
+      isCurrent: track.id == currentTrackId,
+      artworkUrl: track.artworkUrl,
+      title: track.title,
+      subtitle: [
+        track.artistName,
+        track.albumTitle,
+      ].where((item) => item.isNotEmpty).join(' · '),
+      onTap: onTap,
+      extraTrailing: _PulsingFavoriteButton(
+        isPending: isPending,
+        isFavorite: isFavorite,
+        colorScheme: colorScheme,
+        onPressed: isPending
+            ? null
+            : () async {
+                final favoritesCubit = context.read<FavoritesCubit>();
+                final listCubit = context.read<FavoritesListCubit>();
+                await favoritesCubit.toggle(track.id, currentValue: isFavorite);
+                final stillFavorite = favoritesCubit.isFavorite(
+                  track.id,
+                  fallback: track.isFavorite,
+                );
+                if (!stillFavorite) {
+                  listCubit.removeTrack(track.id);
+                }
+              },
       ),
     );
   }
@@ -440,24 +345,6 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
                     : widget.colorScheme.onSurfaceVariant,
               ),
       ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }

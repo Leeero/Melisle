@@ -8,6 +8,8 @@ import 'package:cross_platform_music_player/presentation/blocs/home/home_state.d
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -131,7 +133,10 @@ class _HomeView extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const Spacer(),
-                          _CounterPill(label: '${state.albums.length} 张专辑'),
+                          MetaPill(
+                            label: '${state.albums.length} 张专辑',
+                            size: MetaPillSize.compact,
+                          ),
                         ],
                       ),
                     ),
@@ -140,8 +145,37 @@ class _HomeView extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(0, 0, 0, 26),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) =>
-                            _AlbumCard(album: state.albums[index]),
+                        (context, index) => MusicAlbumGridCard(
+                          album: state.albums[index],
+                          onTap: () => context.push(
+                            '/album/${state.albums[index].id}',
+                            extra: state.albums[index],
+                          ),
+                          badgeLabel: '${state.albums[index].trackCount} 首',
+                          artworkSize: 170,
+                          artworkRadius: 24,
+                          scaleOnHover: 1.015,
+                          footer: Row(
+                            children: [
+                              Icon(
+                                Icons.graphic_eq_rounded,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  state.albums[index].year == null
+                                      ? '持续更新中'
+                                      : '${state.albums[index].year}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         childCount: state.albums.length,
                       ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -183,7 +217,7 @@ class _HomeView extends StatelessWidget {
               const Spacer(),
               if (onMoreTap != null)
                 TextButton(onPressed: onMoreTap, child: const Text('查看更多')),
-              _CounterPill(label: '${tracks.length} 首'),
+              MetaPill(label: '${tracks.length} 首'),
             ],
           ),
         ),
@@ -251,8 +285,8 @@ class _HeroStage extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  const _CounterPill(label: AppConstants.appEnglishName),
-                  _CounterPill(label: '$albumCount 张专辑已同步'),
+                  const MetaPill(label: AppConstants.appEnglishName),
+                  MetaPill(label: '$albumCount 张专辑已同步'),
                 ],
               ),
               const SizedBox(height: 18),
@@ -372,164 +406,6 @@ class _HeroStage extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _AlbumCard extends StatefulWidget {
-  const _AlbumCard({required this.album});
-
-  final MusicAlbum album;
-
-  @override
-  State<_AlbumCard> createState() => _AlbumCardState();
-}
-
-class _AlbumCardState extends State<_AlbumCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final album = widget.album;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 180),
-        scale: _hovered ? 1.015 : 1,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => context.push('/album/${album.id}', extra: album),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainer.withValues(
-                            alpha: 0.58,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Center(
-                              child: CachedArtwork(
-                                imageUrl: album.artworkUrl,
-                                size: 170,
-                                borderRadius: 24,
-                              ),
-                            ),
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 180),
-                                opacity: _hovered ? 1 : 0.75,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface.withValues(
-                                      alpha: 0.72,
-                                    ),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    '${album.trackCount} 首',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      album.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      album.artistName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.graphic_eq_rounded,
-                          size: 16,
-                          color: colorScheme.secondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            album.year == null ? '持续更新中' : '${album.year}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CounterPill extends StatelessWidget {
-  const _CounterPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }

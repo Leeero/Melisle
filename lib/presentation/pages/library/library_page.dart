@@ -1,7 +1,6 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
-import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
@@ -11,6 +10,9 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -174,9 +176,8 @@ class _LibraryViewState extends State<_LibraryView> {
           final track = state.tracks[index];
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _TrackCard(
-              trackId: track.id,
-              currentTrackId: currentTrackId,
+            child: MusicTrackTile.card(
+              isCurrent: track.id == currentTrackId,
               artworkUrl: track.artworkUrl,
               title: track.title,
               subtitle: '${track.artistName} · ${track.albumTitle}',
@@ -207,10 +208,20 @@ class _LibraryViewState extends State<_LibraryView> {
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
       sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => _AlbumCard(album: state.albums[index]),
-          childCount: state.albums.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final album = state.albums[index];
+          return MusicAlbumGridCard(
+            album: album,
+            onTap: () => context.push('/album/${album.id}', extra: album),
+            badgeLabel: '${album.trackCount} 首',
+            artworkSize: 162,
+            artworkRadius: 24,
+            footer: MetaPill(
+              label: '${album.trackCount} 首 · ${album.year ?? '未知年份'}',
+              size: MetaPillSize.compact,
+            ),
+          );
+        }, childCount: state.albums.length),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _albumGridCount(MediaQuery.sizeOf(context).width),
           mainAxisSpacing: 18,
@@ -345,7 +356,10 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
                 ),
               ),
               const SizedBox(width: 12),
-              _MetaPill(label: '${widget.state.currentFilterCount} 项'),
+              MetaPill(
+                label: '${widget.state.currentFilterCount} 项',
+                size: MetaPillSize.compact,
+              ),
             ],
           ),
         ),
@@ -438,224 +452,6 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
   }
 }
 
-class _TrackCard extends StatefulWidget {
-  const _TrackCard({
-    required this.trackId,
-    required this.currentTrackId,
-    required this.artworkUrl,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final String trackId;
-  final String? currentTrackId;
-  final String artworkUrl;
-  final String title;
-  final String subtitle;
-  final Future<void> Function() onTap;
-
-  @override
-  State<_TrackCard> createState() => _TrackCardState();
-}
-
-class _TrackCardState extends State<_TrackCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isCurrent = widget.trackId == widget.currentTrackId;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? colorScheme.primaryContainer.withValues(alpha: 0.82)
-              : colorScheme.surface.withValues(alpha: _hovered ? 0.92 : 0.72),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isCurrent
-                ? colorScheme.primary.withValues(alpha: 0.3)
-                : colorScheme.outlineVariant.withValues(alpha: 0.68),
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  CachedArtwork(
-                    imageUrl: widget.artworkUrl,
-                    size: 58,
-                    borderRadius: 20,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                widget.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            if (isCurrent) ...[
-                              const SizedBox(width: 8),
-                              _MetaPill(label: '当前播放'),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isCurrent
-                          ? colorScheme.primary.withValues(alpha: 0.14)
-                          : colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      isCurrent
-                          ? Icons.graphic_eq_rounded
-                          : Icons.play_arrow_rounded,
-                      color: isCurrent
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AlbumCard extends StatefulWidget {
-  const _AlbumCard({required this.album});
-
-  final MusicAlbum album;
-
-  @override
-  State<_AlbumCard> createState() => _AlbumCardState();
-}
-
-class _AlbumCardState extends State<_AlbumCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final album = widget.album;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 180),
-        scale: _hovered ? 1.012 : 1,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.1),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Card(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => context.push('/album/${album.id}', extra: album),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHigh.withValues(
-                            alpha: 0.82,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Center(
-                          child: CachedArtwork(
-                            imageUrl: album.artworkUrl,
-                            size: 162,
-                            borderRadius: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      album.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      album.artistName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _MetaPill(
-                      label: '${album.trackCount} 首 · ${album.year ?? '未知年份'}',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ArtistCard extends StatelessWidget {
   const _ArtistCard({required this.artist});
 
@@ -695,7 +491,7 @@ class _ArtistCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const _MetaPill(label: '艺术家档案'),
+                    const MetaPill(label: '艺术家档案', size: MetaPillSize.compact),
                   ],
                 ),
               ),
@@ -770,24 +566,6 @@ class _FilterPill extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.48),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }

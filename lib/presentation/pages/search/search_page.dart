@@ -1,7 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
-import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/search/search_cubit.dart';
@@ -9,6 +8,8 @@ import 'package:cross_platform_music_player/presentation/blocs/search/search_sta
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -157,11 +158,20 @@ class _SearchViewState extends State<_SearchView> {
                 // Phase 4: Build flat widget list for staggered animation
                 final items = <Widget>[];
                 if (results.tracks.isNotEmpty) {
-                  items.add(const _SectionHeader(label: '曲目'));
+                  items.add(
+                    const SectionHeader(
+                      title: '曲目',
+                      padding: EdgeInsets.only(bottom: 8, top: 6),
+                      bold: false,
+                    ),
+                  );
                   for (var i = 0; i < results.tracks.length; i++) {
                     items.add(
-                      _TrackRow(
-                        track: results.tracks[i],
+                      MusicTrackTile.list(
+                        artworkUrl: results.tracks[i].artworkUrl,
+                        title: results.tracks[i].title,
+                        subtitle:
+                            '${results.tracks[i].artistName} · ${results.tracks[i].albumTitle}',
                         onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
                           context,
                           tracks: results.tracks,
@@ -173,21 +183,39 @@ class _SearchViewState extends State<_SearchView> {
                   items.add(const SizedBox(height: 18));
                 }
                 if (results.albums.isNotEmpty) {
-                  items.add(const _SectionHeader(label: '专辑'));
+                  items.add(
+                    const SectionHeader(
+                      title: '专辑',
+                      padding: EdgeInsets.only(bottom: 8, top: 6),
+                      bold: false,
+                    ),
+                  );
                   for (final album in results.albums) {
                     items.add(_AlbumRow(album: album));
                   }
                   items.add(const SizedBox(height: 18));
                 }
                 if (results.artists.isNotEmpty) {
-                  items.add(const _SectionHeader(label: '艺术家'));
+                  items.add(
+                    const SectionHeader(
+                      title: '艺术家',
+                      padding: EdgeInsets.only(bottom: 8, top: 6),
+                      bold: false,
+                    ),
+                  );
                   for (final artist in results.artists) {
                     items.add(_ArtistRow(artist: artist));
                   }
                   items.add(const SizedBox(height: 18));
                 }
                 if (results.playlists.isNotEmpty) {
-                  items.add(const _SectionHeader(label: '歌单'));
+                  items.add(
+                    const SectionHeader(
+                      title: '歌单',
+                      padding: EdgeInsets.only(bottom: 8, top: 6),
+                      bold: false,
+                    ),
+                  );
                   for (final p in results.playlists) {
                     items.add(_PlaylistRow(playlist: p));
                   }
@@ -264,46 +292,6 @@ class _RecentSearches extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 6),
-      child: Text(label, style: Theme.of(context).textTheme.titleMedium),
-    );
-  }
-}
-
-class _TrackRow extends StatelessWidget {
-  const _TrackRow({required this.track, required this.onTap});
-
-  final MusicTrack track;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: CachedArtwork(
-        imageUrl: track.artworkUrl,
-        size: 48,
-        borderRadius: 14,
-      ),
-      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        '${track.artistName} · ${track.albumTitle}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.play_arrow_rounded),
-      onTap: onTap,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/presentation/blocs/playlists/playlis
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -171,7 +172,10 @@ class _PlaylistsHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              _MetaPill(label: '${state.playlists.length} 项'),
+              MetaPill(
+                label: '${state.playlists.length} 项',
+                size: MetaPillSize.compact,
+              ),
             ],
           ),
         ),
@@ -268,7 +272,10 @@ class _PlaylistCardState extends State<_PlaylistCard> {
                                 ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: 10),
-                          const _MetaPill(label: '沉浸播放'),
+                          const MetaPill(
+                            label: '沉浸播放',
+                            size: MetaPillSize.compact,
+                          ),
                         ],
                       ),
                     ),
@@ -292,24 +299,6 @@ class _PlaylistCardState extends State<_PlaylistCard> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.48),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }
