@@ -12,6 +12,7 @@ import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_b
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -214,7 +215,9 @@ class _ArtistHero extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 720;
+          final isWide = AppBreakpoints.usesWideContentWidth(
+            constraints.maxWidth,
+          );
 
           final cover = ClipOval(
             child: SizedBox(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
+
 /// Design-system tokens for the Melisle (乐岛) visual redesign v2.
 ///
 /// Colour palette, typography (Righteous + Poppins), border-radii, spacing
@@ -9,42 +11,43 @@ abstract final class AppTheme {
   // ──────────────────── Colour Palette ────────────────────
 
   // — Brand seed
-  static const _seedColor = Color(0xFF7C4DFF);
+  static const _seedColor = AppColorTokens.seed;
 
   // — Dark mode surfaces (deep-blue-black)
-  static const _darkScaffold = Color(0xFF0A0A16);
-  static const _darkSurface = Color(0xFF161D2D);
-  static const _darkSurfaceHigh = Color(0xFF1B2335);
-  static const _darkSurfaceHighest = Color(0xFF232D40);
+  static const _darkScaffold = AppColorTokens.darkScaffold;
+  static const _darkSurface = AppColorTokens.darkSurface;
+  static const _darkSurfaceHigh = AppColorTokens.darkSurfaceHigh;
+  static const _darkSurfaceHighest = AppColorTokens.darkSurfaceHighest;
 
   // — Light mode surfaces
-  static const _lightScaffold = Color(0xFFF5F7FB);
-  static const _lightSurface = Color(0xFFFFFFFF);
-  static const _lightSurfaceHigh = Color(0xFFF1F4FA);
-  static const _lightSurfaceHighest = Color(0xFFE5EBF5);
+  static const _lightScaffold = AppColorTokens.lightScaffold;
+  static const _lightSurface = AppColorTokens.lightSurface;
+  static const _lightSurfaceHigh = AppColorTokens.lightSurfaceHigh;
+  static const _lightSurfaceHighest = AppColorTokens.lightSurfaceHighest;
 
   // — Semantic colours (dark)
-  static const _darkPrimary = Color(0xFF7C4DFF);
-  static const _darkPrimaryContainer = Color(0xFF31175D);
-  static const _darkSecondary = Color(0xFF00E5A0);
-  static const _darkSecondaryContainer = Color(0xFF0D3D2F);
-  static const _darkOnSurface = Color(0xFFE8ECF4);
-  static const _darkOnSurfaceVariant = Color(0xFF94A3B8);
-  static const _darkOutline = Color(0xFF5A6478);
-  static const _darkOutlineVariant = Color(0xFF2A3342);
+  static const _darkPrimary = AppColorTokens.darkPrimary;
+  static const _darkPrimaryContainer = AppColorTokens.darkPrimaryContainer;
+  static const _darkSecondary = AppColorTokens.darkSecondary;
+  static const _darkSecondaryContainer = AppColorTokens.darkSecondaryContainer;
+  static const _darkOnSurface = AppColorTokens.darkOnSurface;
+  static const _darkOnSurfaceVariant = AppColorTokens.darkOnSurfaceVariant;
+  static const _darkOutline = AppColorTokens.darkOutline;
+  static const _darkOutlineVariant = AppColorTokens.darkOutlineVariant;
 
   // — Semantic colours (light)
-  static const _lightPrimary = Color(0xFF5B2EE6);
-  static const _lightPrimaryContainer = Color(0xFFE2D8FF);
-  static const _lightSecondary = Color(0xFF059669);
-  static const _lightSecondaryContainer = Color(0xFFD1FAE5);
-  static const _lightOnSurfaceVariant = Color(0xFF5E687C);
-  static const _lightOutline = Color(0xFF8A93A7);
-  static const _lightOutlineVariant = Color(0xFFD8DFEA);
+  static const _lightPrimary = AppColorTokens.lightPrimary;
+  static const _lightPrimaryContainer = AppColorTokens.lightPrimaryContainer;
+  static const _lightSecondary = AppColorTokens.lightSecondary;
+  static const _lightSecondaryContainer =
+      AppColorTokens.lightSecondaryContainer;
+  static const _lightOnSurfaceVariant = AppColorTokens.lightOnSurfaceVariant;
+  static const _lightOutline = AppColorTokens.lightOutline;
+  static const _lightOutlineVariant = AppColorTokens.lightOutlineVariant;
 
   // — Shared accents
-  static const accent = Color(0xFF22C55E);
-  static const lyricHighlight = Color(0xFFFFD43B);
+  static const accent = AppColorTokens.accent;
+  static const lyricHighlight = AppColorTokens.lyricHighlight;
 
   // ──────────────────── Typography ────────────────────
 
@@ -53,19 +56,20 @@ abstract final class AppTheme {
 
   // ──────────────────── Border Radii ────────────────────
 
-  static const double radiusCard = 20;
-  static const double radiusButton = 999; // capsule
-  static const double radiusInput = 16;
-  static const double radiusIconButton = 18;
-  static const double radiusCoverGrid = 16;
-  static const double radiusCoverDetail = 24;
+  static const double radiusCard = AppRadiusTokens.card;
+  static const double radiusButton = AppRadiusTokens.button; // capsule
+  static const double radiusInput = AppRadiusTokens.input;
+  static const double radiusIconButton = AppRadiusTokens.iconButton;
+  static const double radiusCoverGrid = AppRadiusTokens.coverGrid;
+  static const double radiusCoverDetail = AppRadiusTokens.coverDetail;
 
   // ──────────────────── Spacing ────────────────────
 
-  static const double sectionGap = 24;
-  static const double sectionTitleBottomGap = 16;
-  static const double cardPadding = 16;
-  static const double headerPadding = 22;
+  static const double sectionGap = AppSpacingTokens.sectionGap;
+  static const double sectionTitleBottomGap =
+      AppSpacingTokens.sectionTitleBottomGap;
+  static const double cardPadding = AppSpacingTokens.cardPadding;
+  static const double headerPadding = AppSpacingTokens.headerPadding;
 
   // ──────────────────── Public API ────────────────────
 

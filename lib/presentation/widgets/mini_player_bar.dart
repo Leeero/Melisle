@@ -3,6 +3,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -22,18 +23,25 @@ class MiniPlayerBar extends StatelessWidget {
         }
 
         final width = MediaQuery.sizeOf(context).width;
-        final isWide = width >= 960;
+        final isWide = AppBreakpoints.usesWideContentWidth(width);
         final colorScheme = Theme.of(context).colorScheme;
         final artworkSourceContext = ArtworkSourceContext.track(track);
 
         return SafeArea(
           top: false,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(12, 8, 12, isWide ? 12 : 8),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacingTokens.miniPlayerOuterHorizontal,
+              AppSpacingTokens.miniPlayerOuterTop,
+              AppSpacingTokens.miniPlayerOuterHorizontal,
+              isWide
+                  ? AppSpacingTokens.miniPlayerOuterBottomWide
+                  : AppSpacingTokens.miniPlayerOuterBottomCompact,
+            ),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: colorScheme.surface.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppRadiusTokens.card),
                 border: Border.all(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.75),
                 ),
@@ -46,7 +54,14 @@ class MiniPlayerBar extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: EdgeInsets.fromLTRB(14, isWide ? 12 : 10, 14, 12),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacingTokens.miniPlayerInnerHorizontal,
+                  isWide
+                      ? AppSpacingTokens.miniPlayerInnerVerticalWide
+                      : AppSpacingTokens.miniPlayerInnerVerticalCompact,
+                  AppSpacingTokens.miniPlayerInnerHorizontal,
+                  AppSpacingTokens.miniPlayerInnerVerticalWide,
+                ),
                 child: isWide
                     ? _WideMiniPlayer(
                         trackTitle: track.title,
@@ -94,7 +109,7 @@ class _CompactMiniPlayer extends StatelessWidget {
                 label: '展开全屏播放器',
                 button: true,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.card),
                   onTap: () => PlayerNavigation.openPlayerPage(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -137,13 +152,13 @@ class _CompactMiniPlayer extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacingTokens.miniPlayerControlGap),
             _MiniControlButton(
               icon: Icons.skip_previous_rounded,
               onPressed: context.read<PlayerCubit>().previous,
               tooltip: '上一曲',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacingTokens.miniPlayerControlGap),
             BlocBuilder<PlayerCubit, PlayerViewState>(
               buildWhen: (prev, next) => prev.isPlaying != next.isPlaying,
               builder: (context, s) => _MiniControlButton(
@@ -155,7 +170,7 @@ class _CompactMiniPlayer extends StatelessWidget {
                 tooltip: s.isPlaying ? '暂停' : '播放',
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacingTokens.miniPlayerControlGap),
             _MiniControlButton(
               icon: Icons.skip_next_rounded,
               onPressed: context.read<PlayerCubit>().next,
@@ -163,11 +178,11 @@ class _CompactMiniPlayer extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacingTokens.miniPlayerSectionGap),
         const Row(
           children: [
             Expanded(child: _MiniTimeline()),
-            SizedBox(width: 10),
+            SizedBox(width: AppSpacingTokens.miniPlayerSectionGap),
             _MiniPlaybackModeButton(compact: true),
           ],
         ),

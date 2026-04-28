@@ -1,18 +1,25 @@
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 final class AppPageLayout {
   const AppPageLayout._();
 
-  static const double topInset = 20;
-  static const double headerBottomGap = 14;
-  static const double contentBottomInset = 24;
-  static const double compactTopInset = 12;
-  static const double compactFieldBottomGap = 12;
-  static const double sectionGap = 24;
-  static const double sectionTitleBottomGap = 16;
+  static const double topInset = AppSpacingTokens.pageTop;
+  static const double headerBottomGap = AppSpacingTokens.headerBottomGap;
+  static const double contentBottomInset = AppSpacingTokens.contentBottom;
+  static const double compactTopInset = AppSpacingTokens.pageTopCompact;
+  static const double compactFieldBottomGap =
+      AppSpacingTokens.compactFieldBottomGap;
+  static const double sectionGap = AppSpacingTokens.sectionGap;
+  static const double sectionTitleBottomGap =
+      AppSpacingTokens.sectionTitleBottomGap;
 
   static double horizontalPadding(BuildContext context) {
-    return MediaQuery.sizeOf(context).width >= 960 ? 24 : 16;
+    return switch (AppBreakpoints.of(context)) {
+      AppLayoutSize.compact => AppSpacingTokens.pageHorizontalCompact,
+      AppLayoutSize.medium => AppSpacingTokens.pageHorizontalMedium,
+      AppLayoutSize.expanded => AppSpacingTokens.pageHorizontalExpanded,
+    };
   }
 
   static EdgeInsets pagePadding(
@@ -70,11 +77,11 @@ class _AppContentPageState extends State<AppContentPage>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: AppMotion.medium,
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
-      curve: Curves.easeOut,
+      curve: AppMotion.enter,
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.02),
@@ -122,10 +129,10 @@ class AppPageHeaderCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(AppSpacingTokens.headerPadding),
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.shellContainer),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.7),
         ),

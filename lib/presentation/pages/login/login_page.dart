@@ -1,6 +1,7 @@
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -119,7 +120,9 @@ class _LoginPageState extends State<LoginPage> {
                     constraints: const BoxConstraints(maxWidth: 980),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final isWide = constraints.maxWidth >= 820;
+                        final isWide = AppBreakpoints.usesWideContentWidth(
+                          constraints.maxWidth,
+                        );
                         final intro = _LoginIntro();
                         final form = _LoginForm(
                           formKey: _formKey,

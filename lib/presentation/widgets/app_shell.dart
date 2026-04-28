@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,12 +15,14 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedIndex = navigationShell.currentIndex;
     final colorScheme = Theme.of(context).colorScheme;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 1080;
+    final isDesktop = AppBreakpoints.usesWideContent(context);
 
     if (isDesktop) {
       // macOS 隐藏标题栏后，交通灯按钮会叠在左上角，
       // 需要为侧边栏/内容区顶部留出额外 padding。
-      final macOsTrafficLightPadding = Platform.isMacOS ? 28.0 : 0.0;
+      final macOsTrafficLightPadding = Platform.isMacOS
+          ? AppSpacingTokens.macOsTrafficLightInset
+          : 0.0;
 
       return Scaffold(
         body: SafeArea(
@@ -27,20 +30,24 @@ class AppShell extends StatelessWidget {
           top: !Platform.isMacOS,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              14,
-              Platform.isMacOS ? macOsTrafficLightPadding : 14,
-              14,
-              10,
+              AppSpacingTokens.shellOuterPadding,
+              Platform.isMacOS
+                  ? macOsTrafficLightPadding
+                  : AppSpacingTokens.shellOuterPadding,
+              AppSpacingTokens.shellOuterPadding,
+              AppSpacingTokens.shellBottomInset,
             ),
             child: Row(
               children: [
                 _ShellSidebar(selectedIndex: selectedIndex, onSelected: _go),
-                const SizedBox(width: 14),
+                const SizedBox(width: AppSpacingTokens.shellGap),
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(
+                        AppRadiusTokens.shellContainer,
+                      ),
                       border: Border.all(
                         color: colorScheme.outlineVariant.withValues(
                           alpha: 0.72,
@@ -48,7 +55,9 @@ class AppShell extends StatelessWidget {
                       ),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(
+                        AppRadiusTokens.shellContainer,
+                      ),
                       child: Column(
                         children: [
                           Expanded(child: navigationShell),
@@ -70,12 +79,17 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacingTokens.shellBottomInset,
+            6,
+            AppSpacingTokens.shellBottomInset,
+            AppSpacingTokens.shellBottomInset,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const MiniPlayerBar(),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacingTokens.miniPlayerOuterTop),
               _ShellBottomBar(selectedIndex: selectedIndex, onSelected: _go),
             ],
           ),
@@ -103,9 +117,14 @@ class _ShellSidebar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
-      width: 80,
+      width: AppSpacingTokens.desktopSidebarWidth,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, 12, 0, 18),
+        padding: const EdgeInsets.fromLTRB(
+          0,
+          AppSpacingTokens.desktopSidebarTopGap,
+          0,
+          AppSpacingTokens.desktopSidebarBottomGap,
+        ),
         child: Column(
           children: [
             // macOS：交通灯按钮区域（关闭/最小化/最大化）在左上角，
@@ -186,7 +205,7 @@ class _ShellBottomBar extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.card),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.72),
         ),
@@ -262,15 +281,15 @@ class _ShellBottomButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.card),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: AppMotion.short,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: selected
                   ? colorScheme.primaryContainer.withValues(alpha: 0.9)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppRadiusTokens.card),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -335,8 +354,8 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
+            duration: AppMotion.short,
+            curve: AppMotion.enter,
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
             decoration: BoxDecoration(

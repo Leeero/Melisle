@@ -14,6 +14,7 @@ import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/sleep_timer_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -94,7 +95,9 @@ class _PlayerPageState extends State<PlayerPage> {
                 bottom: false,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final isWide = constraints.maxWidth >= 860;
+                    final isWide = AppBreakpoints.usesWideContentWidth(
+                      constraints.maxWidth,
+                    );
                     if (isWide) {
                       return _DesktopLayout(state: state, track: track);
                     }
@@ -897,7 +900,9 @@ class _PlayerTopBar extends StatelessWidget {
               final running = dlState.jobs.containsKey(track.id);
 
               // Only show in desktop top bar
-              if (MediaQuery.of(context).size.width < 860) {
+              if (AppBreakpoints.isCompactWidth(
+                MediaQuery.sizeOf(context).width,
+              )) {
                 return const SizedBox.shrink();
               }
 
