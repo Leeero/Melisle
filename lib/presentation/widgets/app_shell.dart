@@ -14,87 +14,19 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = navigationShell.currentIndex;
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDesktop = AppBreakpoints.usesWideContent(context);
 
-    if (isDesktop) {
-      // macOS 隐藏标题栏后，交通灯按钮会叠在左上角，
-      // 需要为侧边栏/内容区顶部留出额外 padding。
-      final macOsTrafficLightPadding = Platform.isMacOS
-          ? AppSpacingTokens.macOsTrafficLightInset
-          : 0.0;
-
-      return Scaffold(
-        body: SafeArea(
-          // macOS 隐藏标题栏后 SafeArea.top 已失效，我们手动管理。
-          top: !Platform.isMacOS,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacingTokens.shellOuterPadding,
-              Platform.isMacOS
-                  ? macOsTrafficLightPadding
-                  : AppSpacingTokens.shellOuterPadding,
-              AppSpacingTokens.shellOuterPadding,
-              AppSpacingTokens.shellBottomInset,
-            ),
-            child: Row(
-              children: [
-                _ShellSidebar(selectedIndex: selectedIndex, onSelected: _go),
-                const SizedBox(width: AppSpacingTokens.shellGap),
-                Expanded(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(
-                        AppRadiusTokens.shellContainer,
-                      ),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.72,
-                        ),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppRadiusTokens.shellContainer,
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(child: navigationShell),
-                          const MiniPlayerBar(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    if (AppBreakpoints.usesWideContent(context)) {
+      return _DesktopShellScaffold(
+        navigationShell: navigationShell,
+        selectedIndex: selectedIndex,
+        onSelected: _go,
       );
     }
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacingTokens.shellBottomInset,
-            6,
-            AppSpacingTokens.shellBottomInset,
-            AppSpacingTokens.shellBottomInset,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const MiniPlayerBar(),
-              const SizedBox(height: AppSpacingTokens.miniPlayerOuterTop),
-              _ShellBottomBar(selectedIndex: selectedIndex, onSelected: _go),
-            ],
-          ),
-        ),
-      ),
+    return _CompactShellScaffold(
+      navigationShell: navigationShell,
+      selectedIndex: selectedIndex,
+      onSelected: _go,
     );
   }
 
@@ -102,6 +34,148 @@ class AppShell extends StatelessWidget {
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
+    );
+  }
+}
+
+class _DesktopShellScaffold extends StatelessWidget {
+  const _DesktopShellScaffold({
+    required this.navigationShell,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final StatefulNavigationShell navigationShell;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final macOsTrafficLightPadding = Platform.isMacOS
+        ? AppSpacingTokens.macOsTrafficLightInset
+        : 0.0;
+
+    return Scaffold(
+      body: SafeArea(
+        top: !Platform.isMacOS,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacingTokens.shellOuterPadding,
+            Platform.isMacOS
+                ? macOsTrafficLightPadding
+                : AppSpacingTokens.shellOuterPadding,
+            AppSpacingTokens.shellOuterPadding,
+            AppSpacingTokens.shellBottomInset,
+          ),
+          child: Row(
+            children: [
+              _ShellSidebar(
+                selectedIndex: selectedIndex,
+                onSelected: onSelected,
+              ),
+              const SizedBox(width: AppSpacingTokens.shellGap),
+              Expanded(
+                child: _ShellContentSurface(
+                  body: navigationShell,
+                  footer: const MiniPlayerBar(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactShellScaffold extends StatelessWidget {
+  const _CompactShellScaffold({
+    required this.navigationShell,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final StatefulNavigationShell navigationShell;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: _ShellBottomDock(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const MiniPlayerBar(),
+            const SizedBox(height: AppSpacingTokens.miniPlayerOuterTop),
+            _ShellBottomBar(
+              selectedIndex: selectedIndex,
+              onSelected: onSelected,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShellBottomDock extends StatelessWidget {
+  const _ShellBottomDock({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacingTokens.shellBottomInset,
+          6,
+          AppSpacingTokens.shellBottomInset,
+          AppSpacingTokens.shellBottomInset,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _ShellContentSurface extends StatelessWidget {
+  const _ShellContentSurface({required this.body, this.footer});
+
+  final Widget body;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final children = <Widget>[Expanded(child: body)];
+    final footer = this.footer;
+    if (footer != null) {
+      children.add(footer);
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.shellContainer),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 36,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadiusTokens.shellContainer),
+        child: Column(children: children),
+      ),
     );
   }
 }
@@ -116,72 +190,89 @@ class _ShellSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      width: AppSpacingTokens.desktopSidebarWidth,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          0,
-          AppSpacingTokens.desktopSidebarTopGap,
-          0,
-          AppSpacingTokens.desktopSidebarBottomGap,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.64),
         ),
-        child: Column(
-          children: [
-            // macOS：交通灯按钮区域（关闭/最小化/最大化）在左上角，
-            // 预留额外空间避免 logo 被遮挡。
-            if (Platform.isMacOS) const SizedBox(height: 8),
-            Container(
-              width: 44,
-              height: 44,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: AppSpacingTokens.desktopSidebarWidth,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            10,
+            AppSpacingTokens.desktopSidebarTopGap,
+            10,
+            AppSpacingTokens.desktopSidebarBottomGap,
+          ),
+          child: Column(
+            children: [
+              if (Platform.isMacOS) const SizedBox(height: 8),
+              Container(
+                width: 48,
+                height: 48,
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Image.asset(
+                  'assets/icons/logo.png',
+                  fit: BoxFit.contain,
+                  semanticLabel: '乐岛图标',
+                ),
               ),
-              child: Image.asset(
-                'assets/icons/logo.png',
-                fit: BoxFit.contain,
-                semanticLabel: '乐岛图标',
+              const SizedBox(height: 8),
+              Text(
+                AppConstants.appName,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              AppConstants.appName,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
+              const SizedBox(height: 28),
+              _ShellNavButton(
+                icon: Icons.home_rounded,
+                label: '首页',
+                selected: selectedIndex == 0,
+                onTap: () => onSelected(0),
               ),
-            ),
-            const SizedBox(height: 24),
-            _ShellNavButton(
-              icon: Icons.home_rounded,
-              label: '首页',
-              selected: selectedIndex == 0,
-              onTap: () => onSelected(0),
-            ),
-            const SizedBox(height: 4),
-            _ShellNavButton(
-              icon: Icons.library_music_rounded,
-              label: '媒体库',
-              selected: selectedIndex == 1,
-              onTap: () => onSelected(1),
-            ),
-            const SizedBox(height: 4),
-            _ShellNavButton(
-              icon: Icons.queue_music_rounded,
-              label: '歌单',
-              selected: selectedIndex == 2,
-              onTap: () => onSelected(2),
-            ),
-            const Spacer(),
-            _ShellNavButton(
-              icon: Icons.settings_rounded,
-              label: '设置',
-              selected: selectedIndex == 3,
-              onTap: () => onSelected(3),
-            ),
-          ],
+              const SizedBox(height: 6),
+              _ShellNavButton(
+                icon: Icons.library_music_rounded,
+                label: '媒体库',
+                selected: selectedIndex == 1,
+                onTap: () => onSelected(1),
+              ),
+              const SizedBox(height: 6),
+              _ShellNavButton(
+                icon: Icons.queue_music_rounded,
+                label: '歌单',
+                selected: selectedIndex == 2,
+                onTap: () => onSelected(2),
+              ),
+              const Spacer(),
+              _ShellNavButton(
+                icon: Icons.settings_rounded,
+                label: '设置',
+                selected: selectedIndex == 3,
+                onTap: () => onSelected(3),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -204,16 +295,21 @@ class _ShellBottomBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.94),
+        color: colorScheme.surface.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(AppRadiusTokens.card),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.72),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 24,
             offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -290,6 +386,11 @@ class _ShellBottomButton extends StatelessWidget {
                   ? colorScheme.primaryContainer.withValues(alpha: 0.9)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+              border: Border.all(
+                color: selected
+                    ? colorScheme.primary.withValues(alpha: 0.12)
+                    : Colors.transparent,
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -365,6 +466,20 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                         ? colorScheme.onSurface.withValues(alpha: 0.05)
                         : Colors.transparent),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: widget.selected
+                    ? colorScheme.primary.withValues(alpha: 0.12)
+                    : Colors.transparent,
+              ),
+              boxShadow: widget.selected
+                  ? [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.08),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : const [],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

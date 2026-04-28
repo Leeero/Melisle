@@ -100,22 +100,65 @@ class _AppContentPageState extends State<AppContentPage>
   Widget build(BuildContext context) {
     return SafeArea(
       top: widget.topSafeArea,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: Column(
-            children: [
-              Padding(
-                padding: AppPageLayout.headerPadding(context),
-                child: widget.header,
-              ),
-              Expanded(child: widget.body),
-            ],
-          ),
+      child: _AppContentViewport(
+        header: widget.header,
+        body: widget.body,
+        fadeAnimation: _fadeAnimation,
+        slideAnimation: _slideAnimation,
+      ),
+    );
+  }
+}
+
+class _AppContentViewport extends StatelessWidget {
+  const _AppContentViewport({
+    required this.header,
+    required this.body,
+    required this.fadeAnimation,
+    required this.slideAnimation,
+  });
+
+  final Widget header;
+  final Widget body;
+  final Animation<double> fadeAnimation;
+  final Animation<Offset> slideAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: SlideTransition(
+        position: slideAnimation,
+        child: Column(
+          children: [
+            _AppContentHeader(child: header),
+            Expanded(child: _AppContentBody(child: body)),
+          ],
         ),
       ),
     );
+  }
+}
+
+class _AppContentHeader extends StatelessWidget {
+  const _AppContentHeader({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(padding: AppPageLayout.headerPadding(context), child: child);
+  }
+}
+
+class _AppContentBody extends StatelessWidget {
+  const _AppContentBody({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return child;
   }
 }
 
