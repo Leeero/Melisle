@@ -22,6 +22,7 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +113,8 @@ void main() {
 
     expect(find.text('我的收藏'), findsWidgets);
     expect(find.text('还没有收藏歌曲，去媒体库挑几首喜欢的吧。'), findsOneWidget);
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+    expect(find.byType(AppContentPage), findsOneWidget);
   });
 
   testWidgets('renders empty history page', (tester) async {
@@ -153,7 +155,8 @@ void main() {
 
     expect(find.text('播放历史'), findsWidgets);
     expect(find.text('还没有播放历史，先放一首歌吧。'), findsOneWidget);
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+    expect(find.byType(AppContentPage), findsOneWidget);
   });
 }
 

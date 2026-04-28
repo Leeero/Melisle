@@ -15,23 +15,7 @@ class SettingsPage extends StatelessWidget {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
     return AppContentPage(
-      header: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text('设置', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(width: 10),
-            Text(
-              '偏好、外观和连接管理',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
+      header: const AppPageTitleRow(title: '设置', description: '偏好、外观和连接管理'),
       body: ListView(
         padding: EdgeInsets.only(
           left: horizontalPadding,
@@ -89,7 +73,11 @@ class _SettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        AppSectionTitleRow(
+          title: title,
+          padding: EdgeInsets.zero,
+          titleStyle: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: AppPageLayout.sectionTitleBottomGap),
         child,
       ],

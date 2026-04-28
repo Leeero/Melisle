@@ -12,9 +12,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/section_header.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
-import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -83,43 +81,43 @@ class _ArtistDetailView extends StatelessWidget {
                       ),
                     ),
                     if (state.status == ArtistStatus.loading)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(child: CircularProgressIndicator()),
-                      )
+                      const AppSliverStateView.loading()
                     else if (state.status == ArtistStatus.failure)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(state.errorMessage ?? '加载艺术家失败'),
-                          ),
-                        ),
+                      AppSliverStateView.message(
+                        message: state.errorMessage ?? '加载艺术家失败',
                       )
                     else ...[
                       if (state.topTracks.isNotEmpty) ...[
-                        SliverToBoxAdapter(
-                          child: SectionHeader(
-                            title: '热门曲目',
-                            trailing: FilledButton.tonalIcon(
-                              onPressed: () =>
-                                  PlayerNavigation.playAllAndOpenPlayer(
-                                    context,
-                                    loadedTracks: state.topTracks,
-                                    allLoaded: true,
-                                    fetchAll: () async => state.topTracks,
-                                  ),
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 18,
+                        SliverPadding(
+                          padding: AppPageLayout.sectionPadding(
+                            context,
+                            bottom: 0,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: AppSectionTitleRow(
+                              title: '热门曲目',
+                              action: FilledButton.tonalIcon(
+                                onPressed: () =>
+                                    PlayerNavigation.playAllAndOpenPlayer(
+                                      context,
+                                      loadedTracks: state.topTracks,
+                                      allLoaded: true,
+                                      fetchAll: () async => state.topTracks,
+                                    ),
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('播放全部'),
                               ),
-                              label: const Text('播放全部'),
                             ),
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          padding: AppPageLayout.sectionPadding(
+                            context,
+                            bottom: 16,
+                          ),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate((
                               context,
@@ -148,8 +146,14 @@ class _ArtistDetailView extends StatelessWidget {
                         ),
                       ],
                       if (state.albums.isNotEmpty) ...[
-                        const SliverToBoxAdapter(
-                          child: SectionHeader(title: '专辑'),
+                        SliverPadding(
+                          padding: AppPageLayout.sectionPadding(
+                            context,
+                            bottom: 0,
+                          ),
+                          sliver: const SliverToBoxAdapter(
+                            child: AppSectionTitleRow(title: '专辑'),
+                          ),
                         ),
                         SliverPadding(
                           padding: AppPageLayout.sectionPadding(
@@ -181,15 +185,7 @@ class _ArtistDetailView extends StatelessWidget {
                         ),
                       ],
                       if (state.albums.isEmpty && state.topTracks.isEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Text('这位艺术家暂无内容。'),
-                            ),
-                          ),
-                        ),
+                        const AppSliverStateView.message(message: '这位艺术家暂无内容。'),
                     ],
                   ],
                 ),
@@ -223,89 +219,57 @@ class _ArtistHero extends StatelessWidget {
         ? topTrackCount
         : (artist?.trackCount ?? 0);
 
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        // Phase 4: Hero background surfaceContainerHighest alpha: 0.4
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-        ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = AppBreakpoints.usesWideContentWidth(
-            constraints.maxWidth,
-          );
-
-          final cover = ClipOval(
-            child: SizedBox(
-              width: isWide ? 180 : 150,
-              height: isWide ? 180 : 150,
-              child: CachedArtwork(
-                imageUrl: artist?.artworkUrl ?? '',
-                size: isWide ? 180 : 150,
-                borderRadius: 999,
+    return AppDetailHeroFrame(
+      compactGap: 18,
+      coverBuilder: (context, isWide) {
+        return ClipOval(
+          child: SizedBox(
+            width: isWide ? 180 : 150,
+            height: isWide ? 180 : 150,
+            child: CachedArtwork(
+              imageUrl: artist?.artworkUrl ?? '',
+              size: isWide ? 180 : 150,
+              borderRadius: 999,
+            ),
+          ),
+        );
+      },
+      contentBuilder: (context, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                const MetaPill(label: '艺术家', size: MetaPillSize.compact),
+                MetaPill(
+                  label: '$effectiveAlbumCount 张专辑',
+                  size: MetaPillSize.compact,
+                ),
+                MetaPill(
+                  label: '$effectiveTrackCount 首热门',
+                  size: MetaPillSize.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              artist?.name ?? '艺术家',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '来自媒体库的全部作品',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
-          );
-
-          final meta = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  const MetaPill(label: '艺术家', size: MetaPillSize.compact),
-                  MetaPill(
-                    label: '$effectiveAlbumCount 张专辑',
-                    size: MetaPillSize.compact,
-                  ),
-                  MetaPill(
-                    label: '$effectiveTrackCount 首热门',
-                    size: MetaPillSize.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                artist?.name ?? '艺术家',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '来自媒体库的全部作品',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          );
-
-          if (!isWide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(child: cover),
-                const SizedBox(height: 18),
-                meta,
-              ],
-            );
-          }
-
-          return Row(
-            children: [
-              cover,
-              const SizedBox(width: 24),
-              Expanded(child: meta),
-            ],
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
   }
 }

@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
@@ -522,6 +523,8 @@ class _DesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding = AppPageLayout.horizontalPadding(context);
+
     return Column(
       children: [
         _PlayerTopBar(track: track, state: state),
@@ -530,8 +533,8 @@ class _DesktopLayout extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1280),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 48,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
                   vertical: 10,
                 ),
                 child: Row(
@@ -652,169 +655,178 @@ class _DesktopBottomBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final artworkSourceContext = ArtworkSourceContext.track(track);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-      decoration: BoxDecoration(
-        // Phase 4: Desktop bottom bar with surface alpha: 0.92
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
-        border: Border(
-          top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+        decoration: BoxDecoration(
+          // Phase 4: Desktop bottom bar with floating surface treatment
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.24),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            // Left: track info
-            Expanded(
-              flex: 1,
-              child: Row(
-                children: [
-                  CachedArtwork(
-                    imageUrl: track.artworkUrl,
-                    size: 52,
-                    borderRadius: 18,
-                    sourceContext: artworkSourceContext,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          track.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          track.artistName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              // Left: track info
+              Expanded(
+                flex: 1,
+                child: Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: track.artworkUrl,
+                      size: 52,
+                      borderRadius: 18,
+                      sourceContext: artworkSourceContext,
                     ),
-                  ),
-                  BlocBuilder<FavoritesCubit, FavoritesState>(
-                    builder: (context, favState) {
-                      final isFav =
-                          favState.entries[track.id] ?? track.isFavorite;
-                      return IconButton(
-                        onPressed: () => context.read<FavoritesCubit>().toggle(
-                          track.id,
-                          currentValue: isFav,
-                        ),
-                        icon: Icon(
-                          isFav
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: isFav ? colorScheme.primary : null,
-                        ),
-                        tooltip: isFav ? '取消收藏' : '收藏',
-                        style: IconButton.styleFrom(
-                          side: BorderSide.none,
-                          backgroundColor: Colors.transparent,
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            track.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            track.artistName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    BlocBuilder<FavoritesCubit, FavoritesState>(
+                      builder: (context, favState) {
+                        final isFav =
+                            favState.entries[track.id] ?? track.isFavorite;
+                        return IconButton(
+                          onPressed: () => context
+                              .read<FavoritesCubit>()
+                              .toggle(track.id, currentValue: isFav),
+                          icon: Icon(
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFav ? colorScheme.primary : null,
+                          ),
+                          tooltip: isFav ? '取消收藏' : '收藏',
+                          style: IconButton.styleFrom(
+                            side: BorderSide.none,
+                            backgroundColor: Colors.transparent,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(width: 24),
+              const SizedBox(width: 24),
 
-            // Center: controls + timeline
-            Expanded(
-              flex: 2,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const _PlaybackControls(),
-                  const SizedBox(height: 4),
-                  _ProgressTimeline(),
-                ],
+              // Center: controls + timeline
+              Expanded(
+                flex: 2,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _PlaybackControls(),
+                    const SizedBox(height: 4),
+                    _ProgressTimeline(),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(width: 24),
+              const SizedBox(width: 24),
 
-            // Right: secondary actions + volume
-            Expanded(
-              flex: 1,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final showInlineVolume = constraints.maxWidth >= 260;
-                  final sliderWidth = (constraints.maxWidth - 116)
-                      .clamp(104.0, 160.0)
-                      .toDouble();
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (showInlineVolume) ...[
-                        SizedBox(
-                          width: sliderWidth,
-                          child: const _DesktopVolumeControl(),
+              // Right: secondary actions + volume
+              Expanded(
+                flex: 1,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showInlineVolume = constraints.maxWidth >= 260;
+                    final sliderWidth = (constraints.maxWidth - 116)
+                        .clamp(104.0, 160.0)
+                        .toDouble();
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (showInlineVolume) ...[
+                          SizedBox(
+                            width: sliderWidth,
+                            child: const _DesktopVolumeControl(),
+                          ),
+                          const SizedBox(width: 8),
+                        ] else
+                          BlocBuilder<PlayerCubit, PlayerViewState>(
+                            buildWhen: (prev, next) =>
+                                prev.volume != next.volume,
+                            builder: (context, playerState) {
+                              return IconButton(
+                                onPressed: () => _showVolumeSheet(context),
+                                icon: Icon(_volumeIcon(playerState.volume)),
+                                tooltip:
+                                    '音量 ${_volumePercent(playerState.volume)}%',
+                                style: IconButton.styleFrom(
+                                  side: BorderSide.none,
+                                  backgroundColor: Colors.transparent,
+                                ),
+                              );
+                            },
+                          ),
+                        IconButton(
+                          onPressed: () => QualityPickerSheet.show(context),
+                          icon: const Icon(Icons.high_quality_rounded),
+                          tooltip: '音质',
+                          style: IconButton.styleFrom(
+                            side: BorderSide.none,
+                            backgroundColor: Colors.transparent,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                      ] else
-                        BlocBuilder<PlayerCubit, PlayerViewState>(
-                          buildWhen: (prev, next) => prev.volume != next.volume,
-                          builder: (context, playerState) {
-                            return IconButton(
-                              onPressed: () => _showVolumeSheet(context),
-                              icon: Icon(_volumeIcon(playerState.volume)),
-                              tooltip:
-                                  '音量 ${_volumePercent(playerState.volume)}%',
-                              style: IconButton.styleFrom(
-                                side: BorderSide.none,
-                                backgroundColor: Colors.transparent,
+                        IconButton(
+                          onPressed: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<PlayerCubit>(),
+                                child: const QueueSheet(),
                               ),
                             );
                           },
-                        ),
-                      IconButton(
-                        onPressed: () => QualityPickerSheet.show(context),
-                        icon: const Icon(Icons.high_quality_rounded),
-                        tooltip: '音质',
-                        style: IconButton.styleFrom(
-                          side: BorderSide.none,
-                          backgroundColor: Colors.transparent,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
+                          icon: const Icon(Icons.queue_music_rounded),
+                          tooltip: '播放队列',
+                          style: IconButton.styleFrom(
+                            side: BorderSide.none,
                             backgroundColor: Colors.transparent,
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<PlayerCubit>(),
-                              child: const QueueSheet(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.queue_music_rounded),
-                        tooltip: '播放队列',
-                        style: IconButton.styleFrom(
-                          side: BorderSide.none,
-                          backgroundColor: Colors.transparent,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -834,61 +846,29 @@ class _PlayerTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final needsTrafficLightPadding = Platform.isMacOS;
+    final edgePadding = _playerTopBarEdgePadding(context);
 
     return Padding(
       padding: EdgeInsets.only(
-        left: needsTrafficLightPadding ? 78 : 8,
-        right: 8,
-        top: 4,
-        bottom: 4,
+        left: edgePadding,
+        right: edgePadding,
+        top: 6,
+        bottom: 6,
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
-            onPressed: () => Navigator.of(context).pop(),
-            tooltip: '收起',
-            style: IconButton.styleFrom(
-              side: BorderSide.none,
-              backgroundColor: Colors.transparent,
-            ),
-          ),
-          const Spacer(),
-          // Sleep timer indicator
+      child: _PlayerTopChrome(
+        leading: _PlayerTopBarIconButton(
+          icon: Icons.keyboard_arrow_down_rounded,
+          tooltip: '收起',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        center: _PlayerTopBarStatus(track: track),
+        trailing: [
           if (state.sleepRemaining != null || state.sleepEndOfTrack)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.bedtime_rounded,
-                      size: 14,
-                      color: colorScheme.primary,
-                    ),
-                    if (state.sleepRemaining != null) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatSleep(state.sleepRemaining!),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontFeatures: [const ui.FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            _PlayerTopBarBadge(
+              icon: Icons.bedtime_rounded,
+              label: state.sleepRemaining != null
+                  ? _formatSleep(state.sleepRemaining!)
+                  : '本曲结束后',
             ),
           BlocBuilder<DownloadsCubit, DownloadsState>(
             buildWhen: (p, c) =>
@@ -899,14 +879,13 @@ class _PlayerTopBar extends StatelessWidget {
               final downloaded = dlState.completedTrackIds.contains(track.id);
               final running = dlState.jobs.containsKey(track.id);
 
-              // Only show in desktop top bar
               if (AppBreakpoints.isCompactWidth(
                 MediaQuery.sizeOf(context).width,
               )) {
                 return const SizedBox.shrink();
               }
 
-              return IconButton(
+              return _PlayerTopBarIconButton(
                 tooltip: downloaded
                     ? '已下载'
                     : running
@@ -915,42 +894,244 @@ class _PlayerTopBar extends StatelessWidget {
                 onPressed: downloaded || running
                     ? null
                     : () => context.read<DownloadsCubit>().enqueue(track),
-                icon: Icon(
-                  downloaded
-                      ? Icons.download_done_rounded
-                      : running
-                      ? Icons.downloading_rounded
-                      : Icons.download_rounded,
-                  color: downloaded ? colorScheme.primary : null,
-                ),
-                style: IconButton.styleFrom(
-                  side: BorderSide.none,
-                  backgroundColor: Colors.transparent,
-                ),
+                icon: downloaded
+                    ? Icons.download_done_rounded
+                    : running
+                    ? Icons.downloading_rounded
+                    : Icons.download_rounded,
+                active: downloaded,
               );
             },
           ),
-          IconButton(
+          _PlayerTopBarIconButton(
             onPressed: () => SleepTimerSheet.show(context),
             tooltip: '睡眠定时',
-            icon: Icon(
-              state.sleepRemaining != null || state.sleepEndOfTrack
-                  ? Icons.bedtime_rounded
-                  : Icons.bedtime_outlined,
-              color: state.sleepRemaining != null || state.sleepEndOfTrack
-                  ? colorScheme.primary
-                  : null,
-            ),
-            style: IconButton.styleFrom(
-              side: BorderSide.none,
-              backgroundColor: Colors.transparent,
+            icon: state.sleepRemaining != null || state.sleepEndOfTrack
+                ? Icons.bedtime_rounded
+                : Icons.bedtime_outlined,
+            active: state.sleepRemaining != null || state.sleepEndOfTrack,
+          ),
+        ],
+        colorScheme: colorScheme,
+      ),
+    );
+  }
+}
+
+class _PlayerTopChrome extends StatelessWidget {
+  const _PlayerTopChrome({
+    required this.leading,
+    required this.center,
+    required this.trailing,
+    required this.colorScheme,
+  });
+
+  final Widget leading;
+  final Widget center;
+  final List<Widget> trailing;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final trailingWidgets = trailing
+        .where((widget) => widget is! SizedBox)
+        .toList();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.42),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: 10),
+            Expanded(child: center),
+            if (trailingWidgets.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: trailingWidgets,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerTopBarStatus extends StatelessWidget {
+  const _PlayerTopBarStatus({required this.track});
+
+  final MusicTrack track;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final subtitle = [
+      track.artistName,
+      track.albumTitle,
+    ].where((item) => item.isNotEmpty).join(' · ');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '正在播放',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
+            letterSpacing: 0.3,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle.isEmpty ? track.title : '${track.title} · $subtitle',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerTopBarBadge extends StatelessWidget {
+  const _PlayerTopBarBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: colorScheme.primary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.primary,
+              fontFeatures: [const ui.FontFeature.tabularFigures()],
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 4),
         ],
       ),
     );
   }
+}
+
+class _PlayerEmptyTopBarStatus extends StatelessWidget {
+  const _PlayerEmptyTopBarStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '播放器',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
+            letterSpacing: 0.3,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '等待开始播放',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerTopBarIconButton extends StatelessWidget {
+  const _PlayerTopBarIconButton({
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return IconButton(
+      icon: Icon(icon, size: 22),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      color: active ? colorScheme.primary : colorScheme.onSurface,
+      style: IconButton.styleFrom(
+        side: BorderSide.none,
+        backgroundColor: active
+            ? colorScheme.primaryContainer.withValues(alpha: 0.56)
+            : colorScheme.surface.withValues(alpha: 0.16),
+        disabledBackgroundColor: colorScheme.surface.withValues(alpha: 0.12),
+        disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
+          alpha: 0.56,
+        ),
+      ),
+    );
+  }
+}
+
+double _playerTopBarEdgePadding(BuildContext context) {
+  final needsTrafficLightPadding = Platform.isMacOS;
+  final basePadding = AppPageLayout.horizontalPadding(
+    context,
+  ).clamp(12.0, 24.0).toDouble();
+  return basePadding + (needsTrafficLightPadding ? 42 : 0);
 }
 
 class _PlaybackControls extends StatelessWidget {
@@ -1842,8 +2023,6 @@ class _EmptyPlayerState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // macOS 使用隐藏标题栏，红绿灯悬浮在左上角，需要额外左侧间距避让
-    final needsTrafficLightPadding = Platform.isMacOS;
 
     return Stack(
       fit: StackFit.expand,
@@ -1857,30 +2036,22 @@ class _EmptyPlayerState extends StatelessWidget {
           bottom: false,
           child: Column(
             children: [
-              // -- 顶部栏：与 _PlayerTopBar 保持一致的间距和按钮风格 --
               Padding(
                 padding: EdgeInsets.only(
-                  left: needsTrafficLightPadding ? 78 : 8,
-                  right: 8,
-                  top: 4,
-                  bottom: 4,
+                  left: _playerTopBarEdgePadding(context),
+                  right: _playerTopBarEdgePadding(context),
+                  top: 6,
+                  bottom: 6,
                 ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 32,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      tooltip: '收起',
-                      style: IconButton.styleFrom(
-                        side: BorderSide.none,
-                        backgroundColor: Colors.transparent,
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
+                child: _PlayerTopChrome(
+                  leading: _PlayerTopBarIconButton(
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    tooltip: '收起',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  center: const _PlayerEmptyTopBarStatus(),
+                  trailing: const [],
+                  colorScheme: colorScheme,
                 ),
               ),
 

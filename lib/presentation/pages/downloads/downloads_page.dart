@@ -33,8 +33,8 @@ class _DownloadsPageState extends State<DownloadsPage> {
   Widget build(BuildContext context) {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('下载管理')),
+    return AppContentPage(
+      header: const _DownloadsHeader(),
       body: BlocListener<DownloadsCubit, DownloadsState>(
         listenWhen: (prev, curr) =>
             prev.completedTrackIds.length != curr.completedTrackIds.length,
@@ -43,14 +43,11 @@ class _DownloadsPageState extends State<DownloadsPage> {
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const AppBodyStateView.loading();
             }
             if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('加载失败：${snapshot.error}'),
-                ),
+              return AppBodyStateView.message(
+                message: '加载失败：${snapshot.error}',
               );
             }
             final rows = snapshot.data ?? const <Download>[];
@@ -58,12 +55,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
               builder: (context, state) {
                 final pendingJobs = state.jobs.values.toList();
                 if (rows.isEmpty && pendingJobs.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('还没有下载内容。'),
-                    ),
-                  );
+                  return const AppBodyStateView.message(message: '还没有下载内容。');
                 }
 
                 return ListView(
@@ -75,12 +67,12 @@ class _DownloadsPageState extends State<DownloadsPage> {
                   ),
                   children: [
                     if (pendingJobs.isNotEmpty) ...[
-                      const _SectionLabel('进行中'),
+                      _DownloadsSectionTitle(label: '进行中'),
                       for (final job in pendingJobs) _JobRow(job: job),
                       const SizedBox(height: 24),
                     ],
                     if (rows.isNotEmpty) ...[
-                      const _SectionLabel('已下载'),
+                      _DownloadsSectionTitle(label: '已下载'),
                       for (final row in rows)
                         _DownloadRow(
                           record: row,
@@ -103,20 +95,48 @@ class _DownloadsPageState extends State<DownloadsPage> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
+class _DownloadsHeader extends StatelessWidget {
+  const _DownloadsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+
+    return Row(
+      children: [
+        if (canPop) ...[
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: '返回',
+          ),
+          const SizedBox(width: 8),
+        ],
+        const Expanded(
+          child: AppPageTitleRow(
+            title: '下载管理',
+            description: '查看进行中与已下载的离线曲目',
+            padding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DownloadsSectionTitle extends StatelessWidget {
+  const _DownloadsSectionTitle({required this.label});
+
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return AppSectionTitleRow(
+      title: label,
       padding: const EdgeInsets.only(left: 4, bottom: 8, top: 4),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-      ),
+      titleStyle: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }

@@ -86,20 +86,15 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
     double horizontalPadding,
   ) {
     if (state.status == PlaylistsStatus.loading && state.playlists.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppBodyStateView.loading();
     }
 
     if (state.status == PlaylistsStatus.failure && state.playlists.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(state.errorMessage ?? '加载歌单失败'),
-        ),
-      );
+      return AppBodyStateView.message(message: state.errorMessage ?? '加载歌单失败');
     }
 
     if (state.playlists.isEmpty) {
-      return const Center(child: Text('当前没有匹配的歌单。'));
+      return const AppBodyStateView.message(message: '当前没有匹配的歌单。');
     }
 
     return ListView.builder(
@@ -141,46 +136,18 @@ class _PlaylistsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Title row ──
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text('歌单', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        '把收藏、主题和场景整理成轻盈的入口',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              MetaPill(
-                label: '${state.playlists.length} 项',
-                size: MetaPillSize.compact,
-              ),
-            ],
+        AppPageTitleRow(
+          title: '歌单',
+          description: '把收藏、主题和场景整理成轻盈的入口',
+          badge: MetaPill(
+            label: '${state.playlists.length} 项',
+            size: MetaPillSize.compact,
           ),
         ),
         const SizedBox(height: 14),
-        // ── Search field ──
         TextField(
           controller: controller,
           onChanged: context.read<PlaylistsCubit>().search,

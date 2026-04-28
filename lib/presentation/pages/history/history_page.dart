@@ -9,6 +9,7 @@ import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -32,20 +33,16 @@ class _HistoryView extends StatelessWidget {
       (cubit) => cubit.state.currentTrack?.id,
     );
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('播放历史')),
-      body: BlocBuilder<HistoryCubit, HistoryState>(
-        builder: (context, state) {
-          return AppContentPage(
-            topSafeArea: false,
-            header: _HistoryHeader(
-              count: state.tracks.length,
-              tracks: state.tracks,
-            ),
-            body: _buildBody(context, state, horizontalPadding, currentTrackId),
-          );
-        },
-      ),
+    return BlocBuilder<HistoryCubit, HistoryState>(
+      builder: (context, state) {
+        return AppContentPage(
+          header: _HistoryHeader(
+            count: state.tracks.length,
+            tracks: state.tracks,
+          ),
+          body: _buildBody(context, state, horizontalPadding, currentTrackId),
+        );
+      },
     );
   }
 
@@ -56,25 +53,15 @@ class _HistoryView extends StatelessWidget {
     String? currentTrackId,
   ) {
     if (state.status == HistoryStatus.loading && state.tracks.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppBodyStateView.loading();
     }
 
     if (state.status == HistoryStatus.failure && state.tracks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(state.errorMessage ?? '加载历史失败'),
-        ),
-      );
+      return AppBodyStateView.message(message: state.errorMessage ?? '加载历史失败');
     }
 
     if (state.tracks.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('还没有播放历史，先放一首歌吧。'),
-        ),
-      );
+      return const AppBodyStateView.message(message: '还没有播放历史，先放一首歌吧。');
     }
 
     return ListView.builder(
@@ -107,49 +94,35 @@ class _HistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text('播放历史', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    '回到最近听过的内容，接着上次的节奏',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.home_rounded),
+          tooltip: '回到首页',
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: AppPageTitleRow(
+            title: '播放历史',
+            description: '回到最近听过的内容，接着上次的节奏',
+            badge: MetaPill(label: '$count 条', size: MetaPillSize.compact),
+            action: count > 0
+                ? FilledButton.tonalIcon(
+                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                      context,
+                      loadedTracks: tracks,
+                      allLoaded: true,
+                      fetchAll: () async => tracks,
                     ),
-                  ),
-                ),
-              ],
-            ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                    label: const Text('播放全部'),
+                  )
+                : null,
+            padding: EdgeInsets.zero,
           ),
-          const SizedBox(width: 12),
-          MetaPill(label: '$count 条'),
-          if (count > 0) ...[
-            const SizedBox(width: 10),
-            FilledButton.tonalIcon(
-              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: tracks,
-                allLoaded: true, // 历史记录一次加载所有
-                fetchAll: () async => tracks,
-              ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: const Text('播放全部'),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

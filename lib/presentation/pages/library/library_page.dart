@@ -104,28 +104,16 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppBodyStateView.loading();
     }
 
     if (state.status == LibraryStatus.failure && state.isCurrentFilterEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                state.errorMessage ?? '加载媒体库失败',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: () => context.read<LibraryCubit>().load(),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重新加载'),
-              ),
-            ],
-          ),
+      return AppBodyStateView.message(
+        message: state.errorMessage ?? '加载媒体库失败',
+        action: FilledButton.icon(
+          onPressed: () => context.read<LibraryCubit>().load(),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('重新加载'),
         ),
       );
     }
@@ -163,10 +151,7 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.tracks.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(child: Text('当前没有匹配的歌曲。')),
-      );
+      return const AppSliverStateView.message(message: '当前没有匹配的歌曲。');
     }
 
     return SliverPadding(
@@ -199,10 +184,7 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
   ) {
     if (state.albums.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(child: Text('当前没有匹配的专辑。')),
-      );
+      return const AppSliverStateView.message(message: '当前没有匹配的专辑。');
     }
 
     return SliverPadding(
@@ -238,10 +220,7 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
   ) {
     if (state.artists.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(child: Text('当前没有匹配的艺术家。')),
-      );
+      return const AppSliverStateView.message(message: '当前没有匹配的艺术家。');
     }
 
     return SliverPadding(
@@ -325,43 +304,36 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Title row ──
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text('媒体库', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        '在歌曲、专辑和艺术家之间快速切换',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              MetaPill(
-                label: '${widget.state.currentFilterCount} 项',
-                size: MetaPillSize.compact,
-              ),
-            ],
+        AppPageTitleRow(
+          title: '媒体库',
+          description: '在歌曲、专辑和艺术家之间快速切换',
+          badge: MetaPill(
+            label: '${widget.state.currentFilterCount} 项',
+            size: MetaPillSize.compact,
           ),
+          action:
+              widget.state.currentFilter == LibraryFilter.tracks &&
+                  widget.tracks.isNotEmpty
+              ? FilledButton.tonalIcon(
+                  onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                    context,
+                    loadedTracks: widget.tracks,
+                    allLoaded: !widget.state.hasMore,
+                    fetchAll: () => context.read<MusicRepository>().fetchTracks(
+                      limit: 500,
+                      startIndex: 0,
+                      searchQuery: widget.state.searchQuery.trim().isEmpty
+                          ? null
+                          : widget.state.searchQuery.trim(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: const Text('播放全部'),
+                )
+              : null,
         ),
         const SizedBox(height: 14),
         // ── Search field ──
@@ -379,64 +351,35 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
           ),
         ),
         const SizedBox(height: 12),
-        // ── Filter pills + Play All ──
-        Row(
+        // ── Filter pills ──
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
           children: [
-            Expanded(
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _FilterPill(
-                    label: '歌曲',
-                    icon: Icons.music_note_rounded,
-                    selected:
-                        widget.state.currentFilter == LibraryFilter.tracks,
-                    onTap: () => context.read<LibraryCubit>().changeFilter(
-                      LibraryFilter.tracks,
-                    ),
-                  ),
-                  _FilterPill(
-                    label: '专辑',
-                    icon: Icons.album_rounded,
-                    selected:
-                        widget.state.currentFilter == LibraryFilter.albums,
-                    onTap: () => context.read<LibraryCubit>().changeFilter(
-                      LibraryFilter.albums,
-                    ),
-                  ),
-                  _FilterPill(
-                    label: '艺术家',
-                    icon: Icons.mic_external_on_rounded,
-                    selected:
-                        widget.state.currentFilter == LibraryFilter.artists,
-                    onTap: () => context.read<LibraryCubit>().changeFilter(
-                      LibraryFilter.artists,
-                    ),
-                  ),
-                ],
+            _FilterPill(
+              label: '歌曲',
+              icon: Icons.music_note_rounded,
+              selected: widget.state.currentFilter == LibraryFilter.tracks,
+              onTap: () => context.read<LibraryCubit>().changeFilter(
+                LibraryFilter.tracks,
               ),
             ),
-            if (widget.state.currentFilter == LibraryFilter.tracks &&
-                widget.tracks.isNotEmpty) ...[
-              const SizedBox(width: 12),
-              FilledButton.tonalIcon(
-                onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                  context,
-                  loadedTracks: widget.tracks,
-                  allLoaded: !widget.state.hasMore,
-                  fetchAll: () => context.read<MusicRepository>().fetchTracks(
-                    limit: 500,
-                    startIndex: 0,
-                    searchQuery: widget.state.searchQuery.trim().isEmpty
-                        ? null
-                        : widget.state.searchQuery.trim(),
-                  ),
-                ),
-                icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text('播放全部'),
+            _FilterPill(
+              label: '专辑',
+              icon: Icons.album_rounded,
+              selected: widget.state.currentFilter == LibraryFilter.albums,
+              onTap: () => context.read<LibraryCubit>().changeFilter(
+                LibraryFilter.albums,
               ),
-            ],
+            ),
+            _FilterPill(
+              label: '艺术家',
+              icon: Icons.mic_external_on_rounded,
+              selected: widget.state.currentFilter == LibraryFilter.artists,
+              onTap: () => context.read<LibraryCubit>().changeFilter(
+                LibraryFilter.artists,
+              ),
+            ),
           ],
         ),
       ],

@@ -11,6 +11,7 @@ import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
@@ -66,21 +67,17 @@ class _FavoritesViewState extends State<_FavoritesView> {
       (cubit) => cubit.state.currentTrack?.id,
     );
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('我的收藏')),
-      body: BlocBuilder<FavoritesListCubit, FavoritesListState>(
-        builder: (context, state) {
-          return AppContentPage(
-            topSafeArea: false,
-            header: _FavoritesHeader(
-              count: state.tracks.length,
-              tracks: state.tracks,
-              hasMore: state.hasMore,
-            ),
-            body: _buildBody(context, state, horizontalPadding, currentTrackId),
-          );
-        },
-      ),
+    return BlocBuilder<FavoritesListCubit, FavoritesListState>(
+      builder: (context, state) {
+        return AppContentPage(
+          header: _FavoritesHeader(
+            count: state.tracks.length,
+            tracks: state.tracks,
+            hasMore: state.hasMore,
+          ),
+          body: _buildBody(context, state, horizontalPadding, currentTrackId),
+        );
+      },
     );
   }
 
@@ -91,25 +88,15 @@ class _FavoritesViewState extends State<_FavoritesView> {
     String? currentTrackId,
   ) {
     if (state.status == FavoritesListStatus.loading && state.tracks.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppBodyStateView.loading();
     }
 
     if (state.status == FavoritesListStatus.failure && state.tracks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(state.errorMessage ?? '加载收藏失败'),
-        ),
-      );
+      return AppBodyStateView.message(message: state.errorMessage ?? '加载收藏失败');
     }
 
     if (state.tracks.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('还没有收藏歌曲，去媒体库挑几首喜欢的吧。'),
-        ),
-      );
+      return const AppBodyStateView.message(message: '还没有收藏歌曲，去媒体库挑几首喜欢的吧。');
     }
 
     return ListView.builder(
@@ -164,51 +151,37 @@ class _FavoritesHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text('我的收藏', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    '把喜欢的歌曲留在一个随时可回到的入口',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.home_rounded),
+          tooltip: '回到首页',
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: AppPageTitleRow(
+            title: '我的收藏',
+            description: '把喜欢的歌曲留在一个随时可回到的入口',
+            badge: MetaPill(label: '$count 首', size: MetaPillSize.compact),
+            action: count > 0
+                ? FilledButton.tonalIcon(
+                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                      context,
+                      loadedTracks: tracks,
+                      allLoaded: !hasMore,
+                      fetchAll: () => context
+                          .read<MusicRepository>()
+                          .fetchFavoriteTracks(limit: 500, startIndex: 0),
                     ),
-                  ),
-                ),
-              ],
-            ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                    label: const Text('播放全部'),
+                  )
+                : null,
+            padding: EdgeInsets.zero,
           ),
-          const SizedBox(width: 12),
-          MetaPill(label: '$count 首'),
-          if (count > 0) ...[
-            const SizedBox(width: 10),
-            FilledButton.tonalIcon(
-              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: tracks,
-                allLoaded: !hasMore,
-                fetchAll: () => context
-                    .read<MusicRepository>()
-                    .fetchFavoriteTracks(limit: 500, startIndex: 0),
-              ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: const Text('播放全部'),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

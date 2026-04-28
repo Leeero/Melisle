@@ -9,7 +9,6 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -83,161 +82,194 @@ class _SearchViewState extends State<_SearchView> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('搜索'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.of(context).maybePop(),
+      body: AppContentPage(
+        header: _SearchHeader(
+          controller: _controller,
+          focusNode: _focusNode,
+          focused: _focused,
+        ),
+        body: BlocBuilder<SearchCubit, SearchState>(
+          builder: (context, state) {
+            if (state.query.trim().isEmpty) {
+              return _RecentSearches(queries: state.recentQueries);
+            }
+            if (state.status == SearchStatus.loading) {
+              return const AppBodyStateView.loading();
+            }
+            if (state.status == SearchStatus.failure) {
+              return AppBodyStateView.message(
+                message: state.errorMessage ?? '搜索失败',
+              );
+            }
+            final results = state.results;
+            if (results.isEmpty) {
+              return const AppBodyStateView.message(message: '没有找到结果');
+            }
+            final sectionTitleStyle = Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600);
+            // Phase 4: Build flat widget list for staggered animation
+            final items = <Widget>[];
+            if (results.tracks.isNotEmpty) {
+              items.add(
+                AppSectionTitleRow(
+                  title: '曲目',
+                  padding: const EdgeInsets.only(bottom: 8, top: 6),
+                  titleStyle: sectionTitleStyle,
+                ),
+              );
+              for (var i = 0; i < results.tracks.length; i++) {
+                items.add(
+                  MusicTrackTile.list(
+                    artworkUrl: results.tracks[i].artworkUrl,
+                    title: results.tracks[i].title,
+                    subtitle:
+                        '${results.tracks[i].artistName} · ${results.tracks[i].albumTitle}',
+                    onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: results.tracks,
+                      startIndex: i,
+                    ),
+                  ),
+                );
+              }
+              items.add(const SizedBox(height: 18));
+            }
+            if (results.albums.isNotEmpty) {
+              items.add(
+                AppSectionTitleRow(
+                  title: '专辑',
+                  padding: const EdgeInsets.only(bottom: 8, top: 6),
+                  titleStyle: sectionTitleStyle,
+                ),
+              );
+              for (final album in results.albums) {
+                items.add(_AlbumRow(album: album));
+              }
+              items.add(const SizedBox(height: 18));
+            }
+            if (results.artists.isNotEmpty) {
+              items.add(
+                AppSectionTitleRow(
+                  title: '艺术家',
+                  padding: const EdgeInsets.only(bottom: 8, top: 6),
+                  titleStyle: sectionTitleStyle,
+                ),
+              );
+              for (final artist in results.artists) {
+                items.add(_ArtistRow(artist: artist));
+              }
+              items.add(const SizedBox(height: 18));
+            }
+            if (results.playlists.isNotEmpty) {
+              items.add(
+                AppSectionTitleRow(
+                  title: '歌单',
+                  padding: const EdgeInsets.only(bottom: 8, top: 6),
+                  titleStyle: sectionTitleStyle,
+                ),
+              );
+              for (final p in results.playlists) {
+                items.add(_PlaylistRow(playlist: p));
+              }
+            }
+            return ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                0,
+                horizontalPadding,
+                AppPageLayout.contentBottomInset,
+              ),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                // Staggered slide-in animation: 50ms delay per item
+                return _StaggeredSlideIn(index: index, child: items[index]);
+              },
+            );
+          },
         ),
       ),
-      body: Column(
-        children: [
-          // Phase 4: Search box focus scale 1.0→1.02
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: AnimatedScale(
-              scale: _focused ? 1.02 : 1.0,
-              duration: const Duration(milliseconds: 100),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: '搜索曲目 / 专辑 / 艺术家 / 歌单',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _controller,
-                    builder: (context, value, _) {
-                      if (value.text.isEmpty) return const SizedBox.shrink();
-                      return IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () {
-                          _controller.clear();
-                          context.read<SearchCubit>().onQueryChanged('');
-                        },
-                      );
-                    },
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHigh,
-                ),
-                onChanged: context.read<SearchCubit>().onQueryChanged,
-                onSubmitted: context.read<SearchCubit>().submit,
+    );
+  }
+}
+
+class _SearchHeader extends StatelessWidget {
+  const _SearchHeader({
+    required this.controller,
+    required this.focusNode,
+    required this.focused,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool focused;
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (canPop) ...[
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).maybePop(),
+                tooltip: '返回',
+              ),
+              const SizedBox(width: 8),
+            ],
+            const Expanded(
+              child: AppPageTitleRow(
+                title: '搜索',
+                description: '在曲目、专辑、艺术家和歌单之间快速查找',
+                padding: EdgeInsets.zero,
               ),
             ),
-          ),
-          Expanded(
-            child: BlocBuilder<SearchCubit, SearchState>(
-              builder: (context, state) {
-                if (state.query.trim().isEmpty) {
-                  return _RecentSearches(queries: state.recentQueries);
-                }
-                if (state.status == SearchStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (state.status == SearchStatus.failure) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(state.errorMessage ?? '搜索失败'),
-                    ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        AnimatedScale(
+          scale: focused ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: '搜索曲目 / 专辑 / 艺术家 / 歌单',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (context, value, _) {
+                  if (value.text.isEmpty) return const SizedBox.shrink();
+                  return IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      controller.clear();
+                      context.read<SearchCubit>().onQueryChanged('');
+                    },
                   );
-                }
-                final results = state.results;
-                if (results.isEmpty) {
-                  return const Center(child: Text('没有找到结果'));
-                }
-                // Phase 4: Build flat widget list for staggered animation
-                final items = <Widget>[];
-                if (results.tracks.isNotEmpty) {
-                  items.add(
-                    const SectionHeader(
-                      title: '曲目',
-                      padding: EdgeInsets.only(bottom: 8, top: 6),
-                      bold: false,
-                    ),
-                  );
-                  for (var i = 0; i < results.tracks.length; i++) {
-                    items.add(
-                      MusicTrackTile.list(
-                        artworkUrl: results.tracks[i].artworkUrl,
-                        title: results.tracks[i].title,
-                        subtitle:
-                            '${results.tracks[i].artistName} · ${results.tracks[i].albumTitle}',
-                        onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                          context,
-                          tracks: results.tracks,
-                          startIndex: i,
-                        ),
-                      ),
-                    );
-                  }
-                  items.add(const SizedBox(height: 18));
-                }
-                if (results.albums.isNotEmpty) {
-                  items.add(
-                    const SectionHeader(
-                      title: '专辑',
-                      padding: EdgeInsets.only(bottom: 8, top: 6),
-                      bold: false,
-                    ),
-                  );
-                  for (final album in results.albums) {
-                    items.add(_AlbumRow(album: album));
-                  }
-                  items.add(const SizedBox(height: 18));
-                }
-                if (results.artists.isNotEmpty) {
-                  items.add(
-                    const SectionHeader(
-                      title: '艺术家',
-                      padding: EdgeInsets.only(bottom: 8, top: 6),
-                      bold: false,
-                    ),
-                  );
-                  for (final artist in results.artists) {
-                    items.add(_ArtistRow(artist: artist));
-                  }
-                  items.add(const SizedBox(height: 18));
-                }
-                if (results.playlists.isNotEmpty) {
-                  items.add(
-                    const SectionHeader(
-                      title: '歌单',
-                      padding: EdgeInsets.only(bottom: 8, top: 6),
-                      bold: false,
-                    ),
-                  );
-                  for (final p in results.playlists) {
-                    items.add(_PlaylistRow(playlist: p));
-                  }
-                }
-                return ListView.builder(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    0,
-                    horizontalPadding,
-                    AppPageLayout.contentBottomInset,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    // Staggered slide-in animation: 50ms delay per item
-                    return _StaggeredSlideIn(index: index, child: items[index]);
-                  },
-                );
-              },
+                },
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              filled: true,
+              fillColor: colorScheme.surfaceContainerHigh,
             ),
+            onChanged: context.read<SearchCubit>().onQueryChanged,
+            onSubmitted: context.read<SearchCubit>().submit,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -250,7 +282,7 @@ class _RecentSearches extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (queries.isEmpty) {
-      return const Center(child: Text('输入关键词开始搜索'));
+      return const AppBodyStateView.message(message: '输入关键词开始搜索');
     }
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
@@ -262,15 +294,16 @@ class _RecentSearches extends StatelessWidget {
         AppPageLayout.contentBottomInset,
       ),
       children: [
-        Row(
-          children: [
-            Text('最近搜索', style: Theme.of(context).textTheme.titleMedium),
-            const Spacer(),
-            TextButton(
-              onPressed: () => context.read<SearchCubit>().clearRecent(),
-              child: const Text('清空'),
-            ),
-          ],
+        AppSectionTitleRow(
+          title: '最近搜索',
+          padding: EdgeInsets.zero,
+          titleStyle: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          action: TextButton(
+            onPressed: () => context.read<SearchCubit>().clearRecent(),
+            child: const Text('清空'),
+          ),
         ),
         const SizedBox(height: 6),
         Wrap(

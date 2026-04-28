@@ -162,6 +162,168 @@ class _AppContentBody extends StatelessWidget {
   }
 }
 
+class AppPageTitleRow extends StatelessWidget {
+  const AppPageTitleRow({
+    super.key,
+    required this.title,
+    this.description,
+    this.badge,
+    this.action,
+    this.padding = const EdgeInsets.symmetric(vertical: 4),
+  });
+
+  final String title;
+  final String? description;
+  final Widget? badge;
+  final Widget? action;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                if (description != null) ...[
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      description!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (badge != null) ...[const SizedBox(width: 12), badge!],
+          if (action != null) ...[const SizedBox(width: 10), action!],
+        ],
+      ),
+    );
+  }
+}
+
+class AppSectionTitleRow extends StatelessWidget {
+  const AppSectionTitleRow({
+    super.key,
+    required this.title,
+    this.badge,
+    this.action,
+    this.padding = const EdgeInsets.fromLTRB(0, 6, 0, 10),
+    this.titleStyle,
+  });
+
+  final String title;
+  final Widget? badge;
+  final Widget? action;
+  final EdgeInsetsGeometry padding;
+  final TextStyle? titleStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final trailingChildren = <Widget>[];
+    final action = this.action;
+    if (action != null) {
+      trailingChildren.addAll([action, const SizedBox(width: 10)]);
+    }
+    final badge = this.badge;
+    if (badge != null) {
+      trailingChildren.add(badge);
+    }
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: titleStyle ?? Theme.of(context).textTheme.titleLarge,
+          ),
+          const Spacer(),
+          ...trailingChildren,
+        ],
+      ),
+    );
+  }
+}
+
+class AppBodyStateView extends StatelessWidget {
+  const AppBodyStateView.loading({super.key})
+    : message = null,
+      action = null,
+      _isLoading = true;
+
+  const AppBodyStateView.message({
+    super.key,
+    required this.message,
+    this.action,
+  }) : _isLoading = false;
+
+  final String? message;
+  final Widget? action;
+  final bool _isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message!, textAlign: TextAlign.center),
+            if (action != null) ...[const SizedBox(height: 12), action!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppSliverStateView extends StatelessWidget {
+  const AppSliverStateView.loading({super.key})
+    : message = null,
+      action = null,
+      _isLoading = true;
+
+  const AppSliverStateView.message({
+    super.key,
+    required this.message,
+    this.action,
+  }) : _isLoading = false;
+
+  final String? message;
+  final Widget? action;
+  final bool _isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: _isLoading
+          ? const AppBodyStateView.loading()
+          : AppBodyStateView.message(message: message!, action: action),
+    );
+  }
+}
+
 class AppPageHeaderCard extends StatelessWidget {
   const AppPageHeaderCard({super.key, required this.child});
 
@@ -181,6 +343,66 @@ class AppPageHeaderCard extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+class AppDetailHeroFrame extends StatelessWidget {
+  const AppDetailHeroFrame({
+    super.key,
+    required this.coverBuilder,
+    required this.contentBuilder,
+    this.padding = const EdgeInsets.all(22),
+    this.spacing = 24,
+    this.compactGap = 20,
+  });
+
+  final Widget Function(BuildContext context, bool isWide) coverBuilder;
+  final Widget Function(BuildContext context, bool isWide) contentBuilder;
+  final EdgeInsetsGeometry padding;
+  final double spacing;
+  final double compactGap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = AppBreakpoints.usesWideContentWidth(
+            constraints.maxWidth,
+          );
+          final cover = coverBuilder(context, isWide);
+          final content = contentBuilder(context, isWide);
+          if (!isWide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: cover),
+                SizedBox(height: compactGap),
+                content,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              cover,
+              SizedBox(width: spacing),
+              Expanded(child: content),
+            ],
+          );
+        },
+      ),
     );
   }
 }

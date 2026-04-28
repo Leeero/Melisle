@@ -81,32 +81,14 @@ class _HomeView extends StatelessWidget {
                   ),
                 ),
                 if (state.status == HomeStatus.loading)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
+                  const AppSliverStateView.loading()
                 else if (state.status == HomeStatus.failure)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              state.errorMessage ?? '加载失败',
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: () => context.read<HomeCubit>().load(),
-                              icon: const Icon(Icons.refresh_rounded),
-                              label: const Text('重新加载'),
-                            ),
-                          ],
-                        ),
-                      ),
+                  AppSliverStateView.message(
+                    message: state.errorMessage ?? '加载失败',
+                    action: FilledButton.icon(
+                      onPressed: () => context.read<HomeCubit>().load(),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('重新加载'),
                     ),
                   )
                 else ...[
@@ -126,18 +108,13 @@ class _HomeView extends StatelessWidget {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(0, 6, 0, 12),
                     sliver: SliverToBoxAdapter(
-                      child: Row(
-                        children: [
-                          Text(
-                            '最近加入',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Spacer(),
-                          MetaPill(
-                            label: '${state.albums.length} 张专辑',
-                            size: MetaPillSize.compact,
-                          ),
-                        ],
+                      child: AppSectionTitleRow(
+                        title: '最近加入',
+                        badge: MetaPill(
+                          label: '${state.albums.length} 张专辑',
+                          size: MetaPillSize.compact,
+                        ),
+                        padding: EdgeInsets.zero,
                       ),
                     ),
                   ),
@@ -211,14 +188,13 @@ class _HomeView extends StatelessWidget {
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(0, 6, 0, 10),
         sliver: SliverToBoxAdapter(
-          child: Row(
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const Spacer(),
-              if (onMoreTap != null)
-                TextButton(onPressed: onMoreTap, child: const Text('查看更多')),
-              MetaPill(label: '${tracks.length} 首'),
-            ],
+          child: AppSectionTitleRow(
+            title: title,
+            action: onMoreTap != null
+                ? TextButton(onPressed: onMoreTap, child: const Text('查看更多'))
+                : null,
+            badge: MetaPill(label: '${tracks.length} 首'),
+            padding: EdgeInsets.zero,
           ),
         ),
       ),
