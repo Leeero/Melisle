@@ -245,6 +245,7 @@ class _HeroStage extends StatelessWidget {
             colorScheme.primaryContainer.withValues(alpha: 0.58),
             colorScheme.secondaryContainer.withValues(alpha: 0.42),
           ],
+          stops: const [0.0, 0.5, 1.0],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
