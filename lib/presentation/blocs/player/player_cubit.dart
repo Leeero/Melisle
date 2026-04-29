@@ -286,7 +286,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final hasReachedEnd =
         dur > Duration.zero &&
         state.position + const Duration(milliseconds: 300) >= dur;
-    if (hasReachedEnd || state.currentTrack == null) {
+    // handler 处于 idle 时说明 source 未加载（例如切歌后加载失败，或刚启动），
+    // 此时直接 play() 无效，需要重新走 loadAndPlay 流程。
+    final handlerIsIdle = !_controller.isPlaying && _controller.isIdle;
+    if (hasReachedEnd || state.currentTrack == null || handlerIsIdle) {
       await _enqueueSerial(() async => _playCurrentTrack());
       return;
     }

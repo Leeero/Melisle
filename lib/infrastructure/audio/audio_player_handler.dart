@@ -50,6 +50,9 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   bool get isPlaying => _audioPlayer.playing;
 
+  bool get isIdle =>
+      _audioPlayer.processingState == ProcessingState.idle;
+
   Duration get position => _audioPlayer.position;
 
   final StreamController<void> _completionController =
@@ -81,6 +84,18 @@ class AudioPlayerHandler extends BaseAudioHandler
         // 首次播放 / 已经 idle 时 stop 失败可忽略。
       }
       await _audioPlayer.setAudioSource(source);
+      // 等待 ready 后再 play，避免在 loading/idle 中间态调用 play 无效。
+      await _audioPlayer
+          .playerStateStream
+          .firstWhere(
+            (s) =>
+                s.processingState == ProcessingState.ready ||
+                s.processingState == ProcessingState.completed,
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => _audioPlayer.playerState,
+          );
       unawaited(_audioPlayer.play());
     });
   }
