@@ -64,6 +64,10 @@ abstract final class AppSpacingTokens {
   static const double shellBottomInset = 10;
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 80;
+
+  static const double playerHorizontalPadding = 28;
+  static const double playerControlGap = 14;
+  static const double playerToolbarGap = 10;
   static const double desktopSidebarTopGap = 12;
   static const double desktopSidebarBottomGap = 18;
 
