@@ -17,6 +17,10 @@ class LyricView extends StatefulWidget {
     required this.currentIndex,
     this.onLineTap,
     this.empty,
+    this.textAlign = TextAlign.left,
+    this.alignment = Alignment.centerLeft,
+    this.maxTextWidth,
+    this.currentScale = 1.05,
   });
 
   final List<LyricLine> lines;
@@ -25,6 +29,10 @@ class LyricView extends StatefulWidget {
 
   /// 无歌词时的占位。null 时使用默认文案。
   final Widget? empty;
+  final TextAlign textAlign;
+  final Alignment alignment;
+  final double? maxTextWidth;
+  final double currentScale;
 
   @override
   State<LyricView> createState() => _LyricViewState();
@@ -93,39 +101,50 @@ class _LyricViewState extends State<LyricView> {
       itemExtent: _lineHeight,
       itemBuilder: (context, index) {
         final isCurrent = index == widget.currentIndex;
+        final text = AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 220),
+          style:
+              (isCurrent
+                  ? theme.textTheme.titleLarge
+                  : theme.textTheme.titleMedium) ??
+              const TextStyle(),
+          child: Text(
+            widget.lines[index].text,
+            textAlign: widget.textAlign,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+              color: isCurrent
+                  ? kLyricHighlightColor
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+          ),
+        );
+
+        Widget content = AnimatedScale(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          scale: isCurrent ? widget.currentScale : 1.0,
+          alignment: Alignment.center,
+          child: text,
+        );
+
+        if (widget.maxTextWidth != null) {
+          content = SizedBox(
+            width: widget.maxTextWidth,
+            child: content,
+          );
+        }
+
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onLineTap == null
               ? null
               : () => widget.onLineTap!(index),
           child: Align(
-            alignment: Alignment.centerLeft,
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutCubic,
-              scale: isCurrent ? 1.05 : 1.0,
-              alignment: Alignment.centerLeft,
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 220),
-                style:
-                    (isCurrent
-                        ? theme.textTheme.titleLarge
-                        : theme.textTheme.titleMedium) ??
-                    const TextStyle(),
-                child: Text(
-                  widget.lines[index].text,
-                  textAlign: TextAlign.left,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
-                    color: isCurrent
-                        ? kLyricHighlightColor
-                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-            ),
+            alignment: widget.alignment,
+            child: content,
           ),
         );
       },
