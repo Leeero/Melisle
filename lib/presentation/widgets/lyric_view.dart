@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 /// 同步歌词视图：
@@ -7,8 +8,6 @@ import 'package:flutter/material.dart';
 /// - 当前行居中 + 高亮
 /// - 其他行半透明
 /// - 点击任意一行 → 调用 [onLineTap] 跳转到该行开始时间
-/// Design spec: Lyric Highlight color — warm golden-yellow for focal contrast on cool backgrounds.
-const kLyricHighlightColor = Color(0xFFFFD43B);
 
 class LyricView extends StatefulWidget {
   const LyricView({
@@ -41,21 +40,35 @@ class LyricView extends StatefulWidget {
 class _LyricViewState extends State<LyricView> {
   final _scrollController = ScrollController();
   static const double _lineHeight = 56;
+  static const double _verticalPadding = 120;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+  }
 
   @override
   void didUpdateWidget(covariant LyricView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.currentIndex != null &&
-        widget.currentIndex != oldWidget.currentIndex) {
+        (widget.currentIndex != oldWidget.currentIndex ||
+            widget.lines != oldWidget.lines)) {
       _scrollToCurrent();
     }
   }
 
   void _scrollToCurrent() {
-    if (!_scrollController.hasClients) return;
     final idx = widget.currentIndex;
     if (idx == null) return;
+
+    if (!_scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+      return;
+    }
+
     final target =
+        _verticalPadding +
         (idx * _lineHeight) -
         (_scrollController.position.viewportDimension / 2) +
         (_lineHeight / 2);
@@ -96,7 +109,7 @@ class _LyricViewState extends State<LyricView> {
     return ListView.builder(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 120),
+      padding: const EdgeInsets.symmetric(vertical: _verticalPadding),
       itemCount: widget.lines.length,
       itemExtent: _lineHeight,
       itemBuilder: (context, index) {
@@ -116,7 +129,7 @@ class _LyricViewState extends State<LyricView> {
             style: TextStyle(
               fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
               color: isCurrent
-                  ? kLyricHighlightColor
+                  ? theme.lyricHighlight
                   : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             ),
           ),

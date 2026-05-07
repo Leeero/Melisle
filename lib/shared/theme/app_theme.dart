@@ -47,7 +47,8 @@ abstract final class AppTheme {
 
   // — Shared accents
   static const accent = AppColorTokens.accent;
-  static const lyricHighlight = AppColorTokens.lyricHighlight;
+  static const darkLyricHighlight = AppColorTokens.darkLyricHighlight;
+  static const lightLyricHighlight = AppColorTokens.lightLyricHighlight;
 
   // ──────────────────── Typography ────────────────────
 
@@ -508,6 +509,8 @@ extension MelisleThemeX on ThemeData {
   /// Playback-green for CTA buttons and active progress segments.
   Color get accentGreen => AppTheme.accent;
 
-  /// Warm yellow for the current lyric line highlight.
-  Color get lyricHighlight => AppTheme.lyricHighlight;
+  /// Lyric highlight tuned for Melisle's deep-blue / purple palette.
+  Color get lyricHighlight => brightness == Brightness.dark
+      ? AppTheme.darkLyricHighlight
+      : AppTheme.lightLyricHighlight;
 }

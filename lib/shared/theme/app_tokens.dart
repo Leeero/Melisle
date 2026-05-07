@@ -31,7 +31,8 @@ abstract final class AppColorTokens {
   static const lightOutlineVariant = Color(0xFFD8DFEA);
 
   static const accent = Color(0xFF22C55E);
-  static const lyricHighlight = Color(0xFFFFD43B);
+  static const darkLyricHighlight = Color(0xFFB8A6FF);
+  static const lightLyricHighlight = Color(0xFF5B2EE6);
 }
 
 abstract final class AppRadiusTokens {
