@@ -4,7 +4,6 @@ import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
-import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:just_audio/just_audio.dart';
 
 /// 把 [MusicTrack] 解析为可供 `just_audio` 消费的 [AudioSource]。
@@ -38,7 +37,8 @@ final class TrackResolver {
     );
     return AudioSource.uri(
       Uri.parse(streamUrl),
-      headers: const {'User-Agent': AppConstants.httpUserAgent},
+      // Emby / Subsonic 的鉴权信息已经内嵌在 URL 中，额外 headers 只会让
+      // just_audio 走本地代理链路，提升 HTTPS / 重定向场景下的握手失败概率。
       tag: track,
     );
   }

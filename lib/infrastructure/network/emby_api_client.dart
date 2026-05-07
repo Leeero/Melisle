@@ -62,8 +62,14 @@ class EmbyApiClient {
       throw const FormatException('Emby 登录响应缺少必要字段。');
     }
 
+    final resolvedServerUrl = _resolveServerUrlFromResponse(
+      fallbackServerUrl: normalizedServerUrl,
+      responseUri: response.realUri,
+      endpointPath: '/Users/AuthenticateByName',
+    );
+
     return AuthSession(
-      serverUrl: normalizedServerUrl,
+      serverUrl: resolvedServerUrl,
       userId: userId,
       userName: userName,
       accessToken: accessToken,
@@ -286,7 +292,7 @@ class EmbyApiClient {
       'Container': profile.container,
       'AudioCodec': profile.audioCodec,
       'TranscodingContainer': profile.container,
-      'TranscodingProtocol': 'http',
+      'TranscodingProtocol': _transcodingProtocolFor(session),
     };
 
     final uri = Uri.parse(
@@ -665,6 +671,36 @@ class EmbyApiClient {
     }
 
     return trimmed;
+  }
+
+  String _resolveServerUrlFromResponse({
+    required String fallbackServerUrl,
+    required Uri responseUri,
+    required String endpointPath,
+  }) {
+    final normalizedEndpoint = endpointPath.startsWith('/')
+        ? endpointPath
+        : '/$endpointPath';
+    final responsePath = responseUri.path;
+    if (!responsePath.endsWith(normalizedEndpoint)) {
+      return fallbackServerUrl;
+    }
+
+    final basePath = responsePath.substring(
+      0,
+      responsePath.length - normalizedEndpoint.length,
+    );
+    final resolved = responseUri.replace(
+      path: basePath,
+      query: null,
+      fragment: null,
+    );
+    return _normalizeServerUrl(resolved.toString());
+  }
+
+  String _transcodingProtocolFor(AuthSession session) {
+    final scheme = Uri.tryParse(session.normalizedServerUrl)?.scheme;
+    return scheme == 'https' ? 'https' : 'http';
   }
 
   Map<String, dynamic> _buildQueryParameters({
