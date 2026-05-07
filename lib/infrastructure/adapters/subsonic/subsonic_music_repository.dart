@@ -333,6 +333,7 @@ class SubsonicMusicRepository implements MusicRepository {
   List<LyricLine> _parseLrcLyrics(String raw) {
     final lines = <LyricLine>[];
     final rows = raw.split(RegExp(r'\r?\n'));
+    final offset = _parseLrcOffset(rows);
     for (final row in rows) {
       final matches = _lrcTimestampPattern.allMatches(row).toList();
       if (matches.isEmpty) continue;
@@ -342,11 +343,38 @@ class SubsonicMusicRepository implements MusicRepository {
         final timestamp = match.group(1);
         final duration = timestamp == null ? null : _parseTimestamp(timestamp);
         if (duration == null) continue;
-        lines.add(LyricLine(start: duration, text: text));
+        lines.add(
+          LyricLine(
+            start: _applyLrcOffset(duration, offset),
+            text: text,
+          ),
+        );
       }
     }
     lines.sort((a, b) => a.start.compareTo(b.start));
     return lines;
+  }
+
+  Duration _applyLrcOffset(Duration duration, Duration offset) {
+    final shifted = duration + offset;
+    if (shifted.isNegative) {
+      return Duration.zero;
+    }
+    return shifted;
+  }
+
+  Duration _parseLrcOffset(List<String> rows) {
+    for (final row in rows) {
+      final match = _lrcOffsetPattern.firstMatch(row);
+      if (match == null) continue;
+      final rawOffset = match.group(1);
+      if (rawOffset == null) continue;
+      final offsetMs = int.tryParse(rawOffset.trim());
+      if (offsetMs != null) {
+        return Duration(milliseconds: offsetMs);
+      }
+    }
+    return Duration.zero;
   }
 
   Duration? _parseTimestamp(String raw) {
@@ -385,6 +413,10 @@ class SubsonicMusicRepository implements MusicRepository {
 
   static final RegExp _lrcTimestampPattern = RegExp(
     r'\[(\d{1,2}:\d{1,2}(?:[\.:]\d{1,3})?)\]',
+  );
+  static final RegExp _lrcOffsetPattern = RegExp(
+    r'^\s*\[offset:([+-]?\d+)]\s*$',
+    caseSensitive: false,
   );
   static final RegExp _timestampPattern = RegExp(
     r'^(\d{1,2}):(\d{1,2})(?:[\.:](\d{1,3}))?$',
