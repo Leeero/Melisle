@@ -4,9 +4,11 @@ This file provides guidance to CodeBuddy Code when working with code in this rep
 
 ## Project Overview
 
-A Flutter cross-platform music player for self-hosted music libraries, targeting Android, iOS, macOS, and Windows. UI-facing text is in Simplified Chinese, and the visual direction is dark-first and minimalist (see `design.md`).
+A Flutter cross-platform music player for self-hosted music libraries, targeting Android, iOS, macOS, and Windows. UI-facing text is in Simplified Chinese, and the visual direction is dark-first and minimalist (see `design.md`). Read `design.md` before making UI changes that affect layout, spacing, hierarchy, animation, or cross-platform behavior.
 
-The repository is structured so the app can support multiple backends behind one domain contract. `AppBootstrap` currently wires Emby and Subsonic/OpenSubsonic repositories behind auto-detection and caching. A WebDAV adapter exists in `lib/infrastructure/adapters/webdav/` but is not currently wired into the bootstrap path.
+The repository is structured so the app can support multiple backends behind one domain contract. `AppBootstrap` currently wires Emby and Subsonic/OpenSubsonic repositories behind auto-detection and caching. A WebDAV adapter exists in `lib/infrastructure/adapters/webdav/` but is not currently wired into the bootstrap path. The README may describe backend availability from a product/status perspective; prefer the current bootstrap code when deciding what is actually wired at runtime.
+
+The project is source-available under PolyForm Noncommercial 1.0.0. If changing release, packaging, or redistribution-related text, preserve the `LICENSE` and `NOTICE` requirements described in the README.
 
 ## Common Commands
 
@@ -29,7 +31,7 @@ flutter test
 flutter test test/widget_test.dart
 flutter test --plain-name "renders login page when session is missing"
 
-# Code generation (drift and other generators)
+# Code generation (currently Drift; build_runner is also configured for other generators)
 dart run build_runner build --delete-conflicting-outputs
 dart run build_runner watch --delete-conflicting-outputs
 
@@ -40,7 +42,13 @@ flutter build macos
 flutter build windows
 ```
 
-Dart SDK constraint: `^3.11.5` (see `pubspec.yaml`). Use a Flutter stable version compatible with that SDK.
+Dart SDK constraint: `^3.11.5` (see `pubspec.yaml`). Use a Flutter stable version compatible with that SDK. CI release builds currently pin Flutter `3.41.7` in `.github/workflows/master-release.yml`.
+
+Generated code currently includes Drift output such as `lib/infrastructure/database/app_database.g.dart`. Run build_runner after changing Drift tables/database definitions or any annotated source that participates in generation.
+
+## Release Workflow
+
+`.github/workflows/master-release.yml` builds release artifacts when a tag is pushed. The workflow verifies that the tagged commit belongs to `master`, then builds Android `.apk`, unsigned iOS `.ipa`, macOS `.dmg`, and Windows `.exe` artifacts and publishes them to GitHub Releases. Asset names use the pattern `melisle-平台-tag.后缀`, with unsupported filename characters in tags replaced by `-`.
 
 ## High-Level Architecture
 
