@@ -24,6 +24,7 @@ class PlayerViewState {
     this.sleepRemaining,
     this.sleepEndOfTrack = false,
     this.gapBetweenTracks = Duration.zero,
+    this.lyricSyncOffset = Duration.zero,
   });
 
   final List<MusicTrack> queue;
@@ -57,6 +58,9 @@ class PlayerViewState {
 
   /// 曲目间插入的静音时长。
   final Duration gapBetweenTracks;
+
+  /// 歌词高亮使用的整体偏移。正值表示歌词提前显示，负值表示歌词延后显示。
+  final Duration lyricSyncOffset;
 
   MusicTrack? get currentTrack {
     if (queue.isEmpty || currentIndex < 0 || currentIndex >= queue.length) {
@@ -96,6 +100,7 @@ class PlayerViewState {
     Object? sleepRemaining = _noChange,
     bool? sleepEndOfTrack,
     Duration? gapBetweenTracks,
+    Duration? lyricSyncOffset,
   }) {
     return PlayerViewState(
       queue: queue ?? this.queue,
@@ -119,6 +124,7 @@ class PlayerViewState {
           : sleepRemaining as Duration?,
       sleepEndOfTrack: sleepEndOfTrack ?? this.sleepEndOfTrack,
       gapBetweenTracks: gapBetweenTracks ?? this.gapBetweenTracks,
+      lyricSyncOffset: lyricSyncOffset ?? this.lyricSyncOffset,
     );
   }
 }

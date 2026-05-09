@@ -74,6 +74,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   /// 替换（= 用户又点了新歌），则丢弃这次结果、不影响新播放。
   int _playToken = 0;
 
+  /// 发起的最新一次歌词加载 token。设置变更或切歌时用于丢弃旧歌词请求。
+  int _lyricsToken = 0;
+
   /// 串行化所有"会改变当前播放"的操作（playTracks / playIndex / next / previous /
   /// onTrackCompleted），避免并发打架。
   Future<void> _serialTail = Future<void>.value();
@@ -91,6 +94,20 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   void setGapBetweenTracks(Duration gap) {
     _gapBetweenTracks = gap < Duration.zero ? Duration.zero : gap;
     emit(state.copyWith(gapBetweenTracks: _gapBetweenTracks));
+  }
+
+  /// 外部（AppSettingsCubit）通知歌词整体同步偏移；立即重新计算当前高亮行。
+  /// 正值表示歌词提前显示，负值表示歌词延后显示。
+  void setLyricSyncOffset(Duration offset) {
+    emit(
+      state.copyWith(
+        lyricSyncOffset: offset,
+        currentLyricIndex: _findLyricIndex(
+          state.lyrics,
+          _lyricLookupPosition(state.position, offset),
+        ),
+      ),
+    );
   }
 
   /// 每次播放上报使用的会话 ID（全程保持，直到切歌）。
@@ -298,9 +315,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   Future<void> seek(Duration position) async {
     await _controller.seek(position);
-    if (!state.isPlaying) {
-      emit(state.copyWith(position: position));
-    }
+    emit(state.copyWith(position: position));
+    // seek 后立即更新歌词高亮，避免被旧播放位置的 _onPositionChanged 覆盖。
+    _updateLyricHighlight(position);
   }
 
   Future<void> moveQueueItem(int oldIndex, int newIndex) async {
@@ -602,15 +619,24 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   // ========= 歌词 =========
 
+  Future<void> reloadLyricsForCurrent() {
+    return _loadLyricsForCurrent();
+  }
+
   Future<void> _loadLyricsForCurrent() async {
     final track = _queue.currentTrack;
     if (track == null) return;
-    final myToken = _playToken;
+    final trackId = track.id;
+    final myToken = ++_lyricsToken;
 
     emit(state.copyWith(isLyricsLoading: true));
     try {
-      final lyrics = await _repository.fetchLyrics(track.id);
-      if (myToken != _playToken || isClosed) return;
+      final lyrics = await _repository.fetchLyrics(trackId);
+      if (myToken != _lyricsToken ||
+          _queue.currentTrack?.id != trackId ||
+          isClosed) {
+        return;
+      }
       if (lyrics == null || lyrics.isEmpty) {
         emit(
           state.copyWith(
@@ -625,11 +651,18 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         state.copyWith(
           isLyricsLoading: false,
           lyrics: lyrics,
-          currentLyricIndex: _findLyricIndex(lyrics, state.position),
+          currentLyricIndex: _findLyricIndex(
+            lyrics,
+            _lyricLookupPosition(state.position, state.lyricSyncOffset),
+          ),
         ),
       );
     } catch (_) {
-      if (myToken != _playToken || isClosed) return;
+      if (myToken != _lyricsToken ||
+          _queue.currentTrack?.id != trackId ||
+          isClosed) {
+        return;
+      }
       emit(
         state.copyWith(
           isLyricsLoading: false,
@@ -643,7 +676,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   void _updateLyricHighlight(Duration position) {
     final lyrics = state.lyrics;
     if (lyrics.isEmpty) return;
-    final idx = _findLyricIndex(lyrics, position);
+    final idx = _findLyricIndex(
+      lyrics,
+      _lyricLookupPosition(position, state.lyricSyncOffset),
+    );
     if (idx != state.currentLyricIndex) {
       emit(state.copyWith(currentLyricIndex: idx));
     }
@@ -667,7 +703,13 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   Future<void> seekToLyricIndex(int index) async {
     if (index < 0 || index >= state.lyrics.length) return;
-    await _controller.seek(state.lyrics[index].start);
+    final target = state.lyrics[index].start - state.lyricSyncOffset;
+    await seek(target.isNegative ? Duration.zero : target);
+  }
+
+  Duration _lyricLookupPosition(Duration position, Duration offset) {
+    final shifted = position + offset;
+    return shifted.isNegative ? Duration.zero : shifted;
   }
 
   // ========= 睡眠定时器 =========

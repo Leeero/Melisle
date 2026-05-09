@@ -11,8 +11,8 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/flutter_lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
-import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/sleep_timer_sheet.dart';
@@ -231,9 +231,7 @@ class _MobileLyricView extends StatelessWidget {
       ),
       child: BlocBuilder<PlayerCubit, PlayerViewState>(
         buildWhen: (p, c) =>
-            p.lyrics != c.lyrics ||
-            p.currentLyricIndex != c.currentLyricIndex ||
-            p.isLyricsLoading != c.isLyricsLoading,
+            p.lyrics != c.lyrics || p.isLyricsLoading != c.isLyricsLoading,
         builder: (context, state) {
           if (state.isLyricsLoading && state.lyrics.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -250,9 +248,8 @@ class _MobileLyricView extends StatelessWidget {
             );
           }
 
-          return LyricView(
+          return FlutterLyricView(
             lines: state.lyrics,
-            currentIndex: state.currentLyricIndex,
             onLineTap: (i) => context.read<PlayerCubit>().seekToLyricIndex(i),
           );
         },
@@ -561,10 +558,7 @@ class _DesktopLayout extends StatelessWidget {
                       child: _DesktopArtworkStage(track: track),
                     ),
                     const SizedBox(width: 48),
-                    Expanded(
-                      flex: 6,
-                      child: _DesktopLyricStage(track: track),
-                    ),
+                    Expanded(flex: 6, child: _DesktopLyricStage(track: track)),
                   ],
                 ),
               ),
@@ -664,7 +658,6 @@ class _DesktopLyricStage extends StatelessWidget {
         child: BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (p, c) =>
               p.lyrics != c.lyrics ||
-              p.currentLyricIndex != c.currentLyricIndex ||
               p.isLyricsLoading != c.isLyricsLoading ||
               p.currentIndex != c.currentIndex,
           builder: (context, state) {
@@ -722,16 +715,16 @@ class _DesktopLyricStage extends StatelessWidget {
                                   const SizedBox(height: 12),
                                   Text(
                                     '暂无歌词',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
                                   ),
                                 ],
                               ),
                             )
-                          : LyricView(
+                          : FlutterLyricView(
                               lines: state.lyrics,
-                              currentIndex: state.currentLyricIndex,
                               onLineTap: (i) => context
                                   .read<PlayerCubit>()
                                   .seekToLyricIndex(i),
@@ -1016,9 +1009,9 @@ class _DesktopUtilityBar extends StatelessWidget {
                           active: downloaded || running,
                           onPressed: downloaded || running
                               ? null
-                              : () => context
-                                    .read<DownloadsCubit>()
-                                    .enqueue(track),
+                              : () => context.read<DownloadsCubit>().enqueue(
+                                  track,
+                                ),
                           child: Icon(
                             downloaded
                                 ? Icons.download_done_rounded
@@ -1034,8 +1027,8 @@ class _DesktopUtilityBar extends StatelessWidget {
                     PopupMenuButton<_DesktopSleepAction>(
                       tooltip: sleepActive
                           ? state.sleepRemaining != null
-                              ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
-                              : '睡眠定时：本曲结束后'
+                                ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
+                                : '睡眠定时：本曲结束后'
                           : '睡眠定时',
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
@@ -1127,7 +1120,10 @@ class _DesktopUtilityBar extends StatelessWidget {
                           tooltip: '播放音质：${playerState.quality.label}',
                           active: playerState.quality != AudioQuality.auto,
                           onPressed: () => _showDesktopQualityDialog(context),
-                          child: const Icon(Icons.high_quality_rounded, size: 20),
+                          child: const Icon(
+                            Icons.high_quality_rounded,
+                            size: 20,
+                          ),
                         );
                       },
                     ),
@@ -1154,10 +1150,7 @@ class _DesktopUtilityBar extends StatelessWidget {
                       return _DesktopUtilityIconButton(
                         tooltip: '音量 ${_volumePercent(playerState.volume)}%',
                         onPressed: () => _showDesktopVolumeDialog(context),
-                        child: Icon(
-                          _volumeIcon(playerState.volume),
-                          size: 20,
-                        ),
+                        child: Icon(_volumeIcon(playerState.volume), size: 20),
                       );
                     },
                   ),
@@ -1379,7 +1372,8 @@ class _PlayerTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktopMac =
-        Platform.isMacOS && !AppBreakpoints.isCompactWidth(MediaQuery.sizeOf(context).width);
+        Platform.isMacOS &&
+        !AppBreakpoints.isCompactWidth(MediaQuery.sizeOf(context).width);
     final leftPadding = _playerTopBarEdgePadding(context);
     final rightPadding = AppPageLayout.horizontalPadding(
       context,
@@ -1709,7 +1703,9 @@ class _DesktopVolumeControl extends StatelessWidget {
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 3.2,
-                    activeTrackColor: colorScheme.primary.withValues(alpha: 0.92),
+                    activeTrackColor: colorScheme.primary.withValues(
+                      alpha: 0.92,
+                    ),
                     inactiveTrackColor: colorScheme.onSurface.withValues(
                       alpha: 0.14,
                     ),
@@ -1815,7 +1811,9 @@ class _VolumeSheet extends StatelessWidget {
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
                         trackHeight: 4,
-                        activeTrackColor: colorScheme.primary.withValues(alpha: 0.94),
+                        activeTrackColor: colorScheme.primary.withValues(
+                          alpha: 0.94,
+                        ),
                         inactiveTrackColor: colorScheme.onSurface.withValues(
                           alpha: 0.14,
                         ),
@@ -1826,7 +1824,9 @@ class _VolumeSheet extends StatelessWidget {
                           glowColor: colorScheme.primary,
                           glowAlpha: 0.16,
                         ),
-                        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+                        overlayColor: colorScheme.primary.withValues(
+                          alpha: 0.12,
+                        ),
                         overlayShape: const RoundSliderOverlayShape(
                           overlayRadius: 16,
                         ),
@@ -1882,13 +1882,7 @@ void _showVolumeSheet(BuildContext context) {
   );
 }
 
-enum _DesktopSleepAction {
-  minutes15,
-  minutes30,
-  minutes60,
-  endOfTrack,
-  cancel,
-}
+enum _DesktopSleepAction { minutes15, minutes30, minutes60, endOfTrack, cancel }
 
 Future<void> _showDesktopPopover(BuildContext context, Widget child) {
   return showGeneralDialog<void>(
@@ -2081,10 +2075,7 @@ class _DesktopPopoverHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 10),
-            trailing!,
-          ],
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
         ],
       ),
     );
@@ -2106,9 +2097,7 @@ class _DesktopPopoverBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.14),
-        ),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.14)),
       ),
       child: Text(
         label,
@@ -2212,7 +2201,9 @@ class _DesktopVolumeDialog extends StatelessWidget {
                           color: colorScheme.surface.withValues(alpha: 0.26),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.16),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.16,
+                            ),
                           ),
                         ),
                         child: Column(
@@ -2220,10 +2211,10 @@ class _DesktopVolumeDialog extends StatelessWidget {
                             SliderTheme(
                               data: SliderTheme.of(context).copyWith(
                                 trackHeight: 3.4,
-                                activeTrackColor: colorScheme.primary.withValues(alpha: 0.94),
-                                inactiveTrackColor: colorScheme.onSurface.withValues(
-                                  alpha: 0.14,
-                                ),
+                                activeTrackColor: colorScheme.primary
+                                    .withValues(alpha: 0.94),
+                                inactiveTrackColor: colorScheme.onSurface
+                                    .withValues(alpha: 0.14),
                                 thumbShape: _PlayerSliderThumbShape(
                                   radius: 5.2,
                                   fillColor: colorScheme.surface,
@@ -2231,7 +2222,9 @@ class _DesktopVolumeDialog extends StatelessWidget {
                                   glowColor: colorScheme.primary,
                                   glowAlpha: 0.14,
                                 ),
-                                overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+                                overlayColor: colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                ),
                                 overlayShape: const RoundSliderOverlayShape(
                                   overlayRadius: 15,
                                 ),
@@ -2243,7 +2236,9 @@ class _DesktopVolumeDialog extends StatelessWidget {
                               ),
                               child: Slider(
                                 value: state.volume,
-                                onChanged: context.read<PlayerCubit>().setVolume,
+                                onChanged: context
+                                    .read<PlayerCubit>()
+                                    .setVolume,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -2329,27 +2324,34 @@ class _DesktopQualityDialog extends StatelessWidget {
                             },
                             child: AnimatedContainer(
                               duration: AppMotion.micro,
-                              padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+                              padding: const EdgeInsets.fromLTRB(
+                                14,
+                                13,
+                                14,
+                                13,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: quality == state.quality
                                     ? LinearGradient(
                                         colors: [
-                                          colorScheme.primaryContainer.withValues(
-                                            alpha: 0.82,
-                                          ),
-                                          colorScheme.primaryContainer.withValues(
-                                            alpha: 0.56,
-                                          ),
+                                          colorScheme.primaryContainer
+                                              .withValues(alpha: 0.82),
+                                          colorScheme.primaryContainer
+                                              .withValues(alpha: 0.56),
                                         ],
                                       )
                                     : null,
                                 color: quality == state.quality
                                     ? null
-                                    : colorScheme.surface.withValues(alpha: 0.24),
+                                    : colorScheme.surface.withValues(
+                                        alpha: 0.24,
+                                      ),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: quality == state.quality
-                                      ? colorScheme.primary.withValues(alpha: 0.3)
+                                      ? colorScheme.primary.withValues(
+                                          alpha: 0.3,
+                                        )
                                       : colorScheme.outlineVariant.withValues(
                                           alpha: 0.2,
                                         ),
@@ -2359,22 +2361,27 @@ class _DesktopQualityDialog extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           quality.label,
-                                          style: theme.textTheme.titleSmall?.copyWith(
-                                            fontWeight: quality == state.quality
-                                                ? FontWeight.w700
-                                                : FontWeight.w600,
-                                          ),
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight:
+                                                    quality == state.quality
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w600,
+                                              ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           _qualityDescription(quality),
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -2385,7 +2392,9 @@ class _DesktopQualityDialog extends StatelessWidget {
                                       width: 26,
                                       height: 26,
                                       decoration: BoxDecoration(
-                                        color: colorScheme.primary.withValues(alpha: 0.14),
+                                        color: colorScheme.primary.withValues(
+                                          alpha: 0.14,
+                                        ),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
@@ -2458,7 +2467,9 @@ class _DesktopQueueDialog extends StatelessWidget {
                                 label: '清空',
                                 icon: Icons.delete_sweep_rounded,
                                 onPressed: () async {
-                                  await context.read<PlayerCubit>().clearQueue();
+                                  await context
+                                      .read<PlayerCubit>()
+                                      .clearQueue();
                                   if (context.mounted) {
                                     Navigator.of(context).pop();
                                   }
@@ -2507,12 +2518,16 @@ class _DesktopQueueDialog extends StatelessWidget {
                                         colorScheme.primaryContainer.withValues(
                                           alpha: 0.5,
                                         ),
-                                        colorScheme.surface.withValues(alpha: 0.24),
+                                        colorScheme.surface.withValues(
+                                          alpha: 0.24,
+                                        ),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: colorScheme.primary.withValues(alpha: 0.12),
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
                                     ),
                                   ),
                                   child: Row(
@@ -2521,9 +2536,10 @@ class _DesktopQueueDialog extends StatelessWidget {
                                         imageUrl: currentTrack.artworkUrl,
                                         size: 46,
                                         borderRadius: 14,
-                                        sourceContext: ArtworkSourceContext.track(
-                                          currentTrack,
-                                        ),
+                                        sourceContext:
+                                            ArtworkSourceContext.track(
+                                              currentTrack,
+                                            ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -2533,12 +2549,15 @@ class _DesktopQueueDialog extends StatelessWidget {
                                           children: [
                                             Row(
                                               children: [
-                                                _DesktopPopoverBadge(label: '当前播放'),
+                                                _DesktopPopoverBadge(
+                                                  label: '当前播放',
+                                                ),
                                                 const SizedBox(width: 8),
                                                 Icon(
                                                   state.isPlaying
                                                       ? Icons.graphic_eq_rounded
-                                                      : Icons.pause_circle_outline_rounded,
+                                                      : Icons
+                                                            .pause_circle_outline_rounded,
                                                   size: 18,
                                                   color: colorScheme.primary,
                                                 ),
@@ -2549,9 +2568,10 @@ class _DesktopQueueDialog extends StatelessWidget {
                                               currentTrack.title,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.titleSmall?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                              style: theme.textTheme.titleSmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -2562,29 +2582,42 @@ class _DesktopQueueDialog extends StatelessWidget {
                               ),
                             Expanded(
                               child: ReorderableListView.builder(
-                                padding: const EdgeInsets.fromLTRB(0, 16, 0, 20),
+                                padding: const EdgeInsets.fromLTRB(
+                                  0,
+                                  16,
+                                  0,
+                                  20,
+                                ),
                                 buildDefaultDragHandles: false,
                                 itemCount: state.queue.length,
-                                onReorder: context.read<PlayerCubit>().moveQueueItem,
+                                onReorder: context
+                                    .read<PlayerCubit>()
+                                    .moveQueueItem,
                                 itemBuilder: (context, index) {
                                   final track = state.queue[index];
                                   final isCurrent = index == state.currentIndex;
-                                  final subtitle = [
-                                    track.artistName,
-                                    if (track.albumTitle.isNotEmpty) track.albumTitle,
-                                  ].where((value) => value.isNotEmpty).join(' · ');
+                                  final subtitle =
+                                      [
+                                            track.artistName,
+                                            if (track.albumTitle.isNotEmpty)
+                                              track.albumTitle,
+                                          ]
+                                          .where((value) => value.isNotEmpty)
+                                          .join(' · ');
 
                                   return Padding(
-                                    key: ValueKey('desktop-queue-${track.id}-$index'),
+                                    key: ValueKey(
+                                      'desktop-queue-${track.id}-$index',
+                                    ),
                                     padding: const EdgeInsets.only(bottom: 10),
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(22),
                                         onTap: () async {
-                                          await context.read<PlayerCubit>().playIndex(
-                                            index,
-                                          );
+                                          await context
+                                              .read<PlayerCubit>()
+                                              .playIndex(index);
                                           if (context.mounted) {
                                             Navigator.of(context).pop();
                                           }
@@ -2594,27 +2627,34 @@ class _DesktopQueueDialog extends StatelessWidget {
                                             gradient: isCurrent
                                                 ? LinearGradient(
                                                     colors: [
-                                                      colorScheme.primaryContainer
-                                                          .withValues(alpha: 0.82),
-                                                      colorScheme.primaryContainer
-                                                          .withValues(alpha: 0.56),
+                                                      colorScheme
+                                                          .primaryContainer
+                                                          .withValues(
+                                                            alpha: 0.82,
+                                                          ),
+                                                      colorScheme
+                                                          .primaryContainer
+                                                          .withValues(
+                                                            alpha: 0.56,
+                                                          ),
                                                     ],
                                                   )
                                                 : null,
                                             color: isCurrent
                                                 ? null
-                                                : colorScheme.surface.withValues(
-                                                    alpha: 0.22,
-                                                  ),
-                                            borderRadius: BorderRadius.circular(22),
+                                                : colorScheme.surface
+                                                      .withValues(alpha: 0.22),
+                                            borderRadius: BorderRadius.circular(
+                                              22,
+                                            ),
                                             border: Border.all(
                                               color: isCurrent
-                                                  ? colorScheme.primary.withValues(
-                                                      alpha: 0.24,
-                                                    )
-                                                  : colorScheme.outlineVariant.withValues(
-                                                      alpha: 0.18,
-                                                    ),
+                                                  ? colorScheme.primary
+                                                        .withValues(alpha: 0.24)
+                                                  : colorScheme.outlineVariant
+                                                        .withValues(
+                                                          alpha: 0.18,
+                                                        ),
                                             ),
                                           ),
                                           child: Padding(
@@ -2631,12 +2671,18 @@ class _DesktopQueueDialog extends StatelessWidget {
                                                   child: Text(
                                                     '${index + 1}',
                                                     textAlign: TextAlign.center,
-                                                    style: theme.textTheme.labelMedium?.copyWith(
-                                                      color: isCurrent
-                                                          ? colorScheme.primary
-                                                          : colorScheme.onSurfaceVariant,
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
+                                                    style: theme
+                                                        .textTheme
+                                                        .labelMedium
+                                                        ?.copyWith(
+                                                          color: isCurrent
+                                                              ? colorScheme
+                                                                    .primary
+                                                              : colorScheme
+                                                                    .onSurfaceVariant,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 10),
@@ -2644,36 +2690,52 @@ class _DesktopQueueDialog extends StatelessWidget {
                                                   imageUrl: track.artworkUrl,
                                                   size: 52,
                                                   borderRadius: 18,
-                                                  sourceContext: ArtworkSourceContext.track(
-                                                    track,
-                                                  ),
+                                                  sourceContext:
+                                                      ArtworkSourceContext.track(
+                                                        track,
+                                                      ),
                                                 ),
                                                 const SizedBox(width: 12),
                                                 Expanded(
                                                   child: Column(
                                                     crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
                                                       Text(
                                                         track.title,
                                                         maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                        style: theme.textTheme.titleSmall?.copyWith(
-                                                          fontWeight: isCurrent
-                                                              ? FontWeight.w700
-                                                              : FontWeight.w600,
-                                                        ),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: theme
+                                                            .textTheme
+                                                            .titleSmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  isCurrent
+                                                                  ? FontWeight
+                                                                        .w700
+                                                                  : FontWeight
+                                                                        .w600,
+                                                            ),
                                                       ),
-                                                      if (subtitle.isNotEmpty) ...[
-                                                        const SizedBox(height: 4),
+                                                      if (subtitle
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
                                                         Text(
                                                           subtitle,
                                                           maxLines: 1,
-                                                          overflow: TextOverflow.ellipsis,
-                                                          style: theme.textTheme.bodySmall?.copyWith(
-                                                            color: colorScheme
-                                                                .onSurfaceVariant,
-                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
+                                                                color: colorScheme
+                                                                    .onSurfaceVariant,
+                                                              ),
                                                         ),
                                                       ],
                                                     ],
@@ -2683,8 +2745,10 @@ class _DesktopQueueDialog extends StatelessWidget {
                                                 if (isCurrent)
                                                   Icon(
                                                     state.isPlaying
-                                                        ? Icons.graphic_eq_rounded
-                                                        : Icons.pause_circle_outline_rounded,
+                                                        ? Icons
+                                                              .graphic_eq_rounded
+                                                        : Icons
+                                                              .pause_circle_outline_rounded,
                                                     color: colorScheme.primary,
                                                   )
                                                 else
@@ -2699,7 +2763,9 @@ class _DesktopQueueDialog extends StatelessWidget {
                                                     foregroundColor: colorScheme
                                                         .onSurfaceVariant,
                                                   ),
-                                                  icon: const Icon(Icons.close_rounded),
+                                                  icon: const Icon(
+                                                    Icons.close_rounded,
+                                                  ),
                                                 ),
                                                 Tooltip(
                                                   message: '拖拽排序',
@@ -2707,9 +2773,12 @@ class _DesktopQueueDialog extends StatelessWidget {
                                                     index: index,
                                                     child: Padding(
                                                       padding:
-                                                          const EdgeInsets.all(4),
+                                                          const EdgeInsets.all(
+                                                            4,
+                                                          ),
                                                       child: Icon(
-                                                        Icons.drag_handle_rounded,
+                                                        Icons
+                                                            .drag_handle_rounded,
                                                         color: colorScheme
                                                             .onSurfaceVariant,
                                                       ),
@@ -2938,9 +3007,7 @@ class _VinylArtworkStage extends StatelessWidget {
                 ],
                 stops: const [0.0, 0.72, 1.0],
               ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
           ),
           _RotatingArtwork(
@@ -3047,11 +3114,7 @@ class _StylusPainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         Offset(w * 0.5, h * 0.08),
         Offset(w * 0.25, h * 0.92),
-        const [
-          Color(0xFFF4F4F4),
-          Color(0xFFCFCFCF),
-          Color(0xFF8E8E8E),
-        ],
+        const [Color(0xFFF4F4F4), Color(0xFFCFCFCF), Color(0xFF8E8E8E)],
         const [0.0, 0.55, 1.0],
       )
       ..style = PaintingStyle.fill
@@ -3113,11 +3176,7 @@ class _StylusPainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         Offset(w * 0.36, h * 0.072),
         Offset(w * 0.5, h * 0.132),
-        const [
-          Color(0xFFE9E9E9),
-          Color(0xFFADADAD),
-          Color(0xFF6C6C6C),
-        ],
+        const [Color(0xFFE9E9E9), Color(0xFFADADAD), Color(0xFF6C6C6C)],
         const [0.0, 0.5, 1.0],
       )
       ..isAntiAlias = true;
@@ -3144,11 +3203,7 @@ class _StylusPainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         Offset(-w * 0.13, -h * 0.03),
         Offset(w * 0.14, h * 0.135),
-        const [
-          Color(0xFFCACACA),
-          Color(0xFF999999),
-          Color(0xFF5F5F5F),
-        ],
+        const [Color(0xFFCACACA), Color(0xFF999999), Color(0xFF5F5F5F)],
         const [0.0, 0.5, 1.0],
       )
       ..isAntiAlias = true;
@@ -3199,11 +3254,7 @@ class _StylusPainter extends CustomPainter {
       ..shader = ui.Gradient.radial(
         Offset(pivotX - w * 0.03, pivotY - h * 0.018),
         pivotR,
-        const [
-          Color(0xFFF3F3F3),
-          Color(0xFFBEBEBE),
-          Color(0xFF787878),
-        ],
+        const [Color(0xFFF3F3F3), Color(0xFFBEBEBE), Color(0xFF787878)],
         const [0.0, 0.58, 1.0],
       )
       ..isAntiAlias = true;
@@ -3220,10 +3271,7 @@ class _StylusPainter extends CustomPainter {
       ..shader = ui.Gradient.radial(
         Offset(pivotX, pivotY),
         pivotR * 0.34,
-        const [
-          Color(0xFFD8D8D8),
-          Color(0xFF8D8D8D),
-        ],
+        const [Color(0xFFD8D8D8), Color(0xFF8D8D8D)],
       )
       ..isAntiAlias = true;
     canvas.drawCircle(Offset(pivotX, pivotY), pivotR * 0.34, pivotCenter);
@@ -3522,9 +3570,7 @@ class _RotatingArtworkState extends State<_RotatingArtwork>
               height: widget.size * 0.92,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
             ),
             Container(
@@ -3532,9 +3578,7 @@ class _RotatingArtworkState extends State<_RotatingArtwork>
               height: widget.size * 0.82,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.04),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
               ),
             ),
             Positioned.fill(
@@ -3561,9 +3605,7 @@ class _RotatingArtworkState extends State<_RotatingArtwork>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFF111111),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.26),

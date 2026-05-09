@@ -293,6 +293,11 @@ class _FakeSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> saveLyricSyncOffset(Duration offset) async {
+    _snap = _snap.copyWith(lyricSyncOffset: offset);
+  }
+
+  @override
   Future<void> saveCustomArtworkSourceEnabled(bool enabled) async {
     _snap = _snap.copyWith(customArtworkSourceEnabled: enabled);
   }

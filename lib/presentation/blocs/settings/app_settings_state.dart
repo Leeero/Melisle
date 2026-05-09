@@ -22,6 +22,7 @@ class AppSettingsState {
     required this.themeMode,
     required this.defaultQuality,
     required this.gapBetweenTracks,
+    required this.lyricSyncOffset,
     required this.customArtworkSourceEnabled,
     required this.customArtworkSourceUrl,
     required this.customLyricsSourceEnabled,
@@ -35,6 +36,7 @@ class AppSettingsState {
     : themeMode = ThemeMode.system,
       defaultQuality = AudioQuality.auto,
       gapBetweenTracks = Duration.zero,
+      lyricSyncOffset = Duration.zero,
       customArtworkSourceEnabled = false,
       customArtworkSourceUrl = '',
       customLyricsSourceEnabled = false,
@@ -46,6 +48,7 @@ class AppSettingsState {
   final ThemeMode themeMode;
   final AudioQuality defaultQuality;
   final Duration gapBetweenTracks;
+  final Duration lyricSyncOffset;
   final bool customArtworkSourceEnabled;
   final String customArtworkSourceUrl;
   final bool customLyricsSourceEnabled;
@@ -59,6 +62,7 @@ class AppSettingsState {
       themeMode: themeMode,
       defaultQuality: defaultQuality,
       gapBetweenTracks: gapBetweenTracks,
+      lyricSyncOffset: lyricSyncOffset,
       customArtworkSourceEnabled: customArtworkSourceEnabled,
       customArtworkSourceUrl: customArtworkSourceUrl,
       customLyricsSourceEnabled: customLyricsSourceEnabled,
@@ -70,6 +74,7 @@ class AppSettingsState {
     ThemeMode? themeMode,
     AudioQuality? defaultQuality,
     Duration? gapBetweenTracks,
+    Duration? lyricSyncOffset,
     bool? customArtworkSourceEnabled,
     String? customArtworkSourceUrl,
     bool? customLyricsSourceEnabled,
@@ -82,6 +87,7 @@ class AppSettingsState {
       themeMode: themeMode ?? this.themeMode,
       defaultQuality: defaultQuality ?? this.defaultQuality,
       gapBetweenTracks: gapBetweenTracks ?? this.gapBetweenTracks,
+      lyricSyncOffset: lyricSyncOffset ?? this.lyricSyncOffset,
       customArtworkSourceEnabled:
           customArtworkSourceEnabled ?? this.customArtworkSourceEnabled,
       customArtworkSourceUrl:

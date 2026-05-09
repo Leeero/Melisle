@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/bootstrap/desktop_integration.dart';
 import 'package:cross_platform_music_player/bootstrap/router.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
+import 'package:cross_platform_music_player/presentation/widgets/local_keyboard_shortcuts.dart';
 import 'package:cross_platform_music_player/infrastructure/adapters/adapters.dart';
 import 'package:cross_platform_music_player/infrastructure/audio/audio_player_handler.dart';
 import 'package:cross_platform_music_player/infrastructure/cache/audio_cache_manager.dart';
@@ -120,12 +121,24 @@ final class AppBootstrap {
             database: database,
           )
           ..setQuality(settingsCubit.state.defaultQuality)
-          ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks);
+          ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
+          ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
 
     // 设置变更时同步推到 PlayerCubit。
+    var previousSettings = settingsCubit.state;
     settingsCubit.stream.listen((s) {
+      final lyricsSourceChanged =
+          previousSettings.customLyricsSourceEnabled !=
+              s.customLyricsSourceEnabled ||
+          previousSettings.customLyricsSourceUrl != s.customLyricsSourceUrl;
+
       playerCubit.setQuality(s.defaultQuality);
       playerCubit.setGapBetweenTracks(s.gapBetweenTracks);
+      playerCubit.setLyricSyncOffset(s.lyricSyncOffset);
+      if (lyricsSourceChanged) {
+        unawaited(playerCubit.reloadLyricsForCurrent());
+      }
+      previousSettings = s;
     });
 
     final favoritesCubit = FavoritesCubit(repository);
@@ -263,13 +276,16 @@ class _MusicPlayerAppState extends State<MusicPlayerApp> {
         child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
           buildWhen: (a, b) => a.themeMode != b.themeMode,
           builder: (context, settings) {
-            return MaterialApp.router(
-              title: AppConstants.appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.light(),
-              darkTheme: AppTheme.dark(),
-              themeMode: settings.themeMode,
-              routerConfig: _router,
+            return LocalKeyboardShortcuts(
+              playerCubit: widget.playerCubit,
+              child: MaterialApp.router(
+                title: AppConstants.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light(),
+                darkTheme: AppTheme.dark(),
+                themeMode: settings.themeMode,
+                routerConfig: _router,
+              ),
             );
           },
         ),

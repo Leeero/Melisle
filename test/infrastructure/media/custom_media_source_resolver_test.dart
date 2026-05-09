@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -93,6 +96,32 @@ void main() {
         );
       },
     );
+
+    test('uses api.lrc.cx cover endpoint with title query only', () {
+      final resolver = CustomMediaSourceResolver(
+        initialSettings: const AppSettingsSnapshot(
+          customArtworkSourceEnabled: true,
+          customArtworkSourceUrl: 'https://api.lrc.cx/cover',
+        ),
+      );
+      final track = MusicTrack(
+        id: 'track-001',
+        title: '海阔天空',
+        artistName: 'Beyond',
+        albumTitle: '海阔天空',
+        artworkUrl: 'https://emby.example.com/items/track-001/art.jpg',
+        duration: const Duration(minutes: 3),
+      );
+
+      final resolved = resolver.resolveArtworkSource(
+        fallbackUrl: track.artworkUrl,
+        context: ArtworkSourceContext.track(track),
+      );
+
+      final uri = Uri.parse(resolved.primaryUrl);
+      expect(uri.path, '/cover');
+      expect(uri.queryParameters, {'title': '海阔天空'});
+    });
   });
 
   group('CustomMediaSourceResolver lyrics source', () {
@@ -148,5 +177,96 @@ void main() {
         expect(lyrics!.first.text, 'fallback lyric');
       },
     );
+
+    test('uses api.lrc.cx lyrics endpoint with title query only', () async {
+      final adapter = _RecordingHttpClientAdapter(
+        onFetch: (_) => ResponseBody.fromString(
+          '[00:01.00]海阔天空',
+          200,
+          headers: const {
+            Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+          },
+        ),
+      );
+      final dio = Dio()..httpClientAdapter = adapter;
+      final resolver = CustomMediaSourceResolver(
+        dio: dio,
+        initialSettings: const AppSettingsSnapshot(
+          customLyricsSourceEnabled: true,
+          customLyricsSourceUrl: 'https://api.lrc.cx/lyrics',
+        ),
+      );
+
+      final lyrics = await resolver.fetchLyrics(
+        trackId: 'track-001',
+        title: '海阔天空',
+        artistName: 'Beyond',
+        albumTitle: '海阔天空',
+      );
+
+      expect(lyrics, isNotNull);
+      expect(lyrics, isNotEmpty);
+      final uri = adapter.lastRequestOptions?.uri;
+      expect(uri, isNotNull);
+      expect(uri!.path, '/lyrics');
+      expect(uri.queryParameters, {'title': '海阔天空'});
+    });
+
+    test(
+      'keeps generic lyrics endpoint path and documented query params',
+      () async {
+        final adapter = _RecordingHttpClientAdapter(
+          onFetch: (_) => ResponseBody.fromString(
+            '[00:01.00]Test line',
+            200,
+            headers: const {
+              Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+            },
+          ),
+        );
+        final dio = Dio()..httpClientAdapter = adapter;
+        final resolver = CustomMediaSourceResolver(
+          dio: dio,
+          initialSettings: const AppSettingsSnapshot(
+            customLyricsSourceEnabled: true,
+            customLyricsSourceUrl: 'https://lyrics.example.com/api/lyrics',
+          ),
+        );
+
+        await resolver.fetchLyrics(
+          trackId: 'track-001',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          albumTitle: 'Test Album',
+        );
+
+        final uri = adapter.lastRequestOptions?.uri;
+        expect(uri, isNotNull);
+        expect(uri!.path, '/api/lyrics');
+        expect(uri.queryParameters['title'], 'Test Track');
+        expect(uri.queryParameters['artist'], 'Test Artist');
+        expect(uri.queryParameters['album'], 'Test Album');
+      },
+    );
   });
+}
+
+class _RecordingHttpClientAdapter implements HttpClientAdapter {
+  _RecordingHttpClientAdapter({required this.onFetch});
+
+  final ResponseBody Function(RequestOptions options) onFetch;
+  RequestOptions? lastRequestOptions;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastRequestOptions = options;
+    return onFetch(options);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

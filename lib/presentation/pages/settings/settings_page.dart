@@ -368,12 +368,12 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                   icon: Icons.image_search_rounded,
                   title: '歌曲封面来源',
                   description:
-                      '适合接入封面代理、图床转发或统一压缩服务。若地址里没有模板变量，应用会自动补上 sourceUrl、trackId、albumId、artistId、title、artist、album、size 等查询参数。',
+                      '适合接入封面代理、图床转发或统一压缩服务。若地址里没有模板变量，应用会自动补上 sourceUrl、trackId、albumId、artistId、title、artist、album、size 等查询参数；api.lrc.cx/cover 会仅补 title。',
                   enabled: state.customArtworkSourceEnabled,
                   onToggle: cubit.setCustomArtworkSourceEnabled,
                   controller: _artworkController,
                   hintText:
-                      '例如：https://example.com/cover?source={sourceUrl}&size={size}',
+                      '例如：https://api.lrc.cx/cover 或 https://example.com/cover?source={sourceUrl}&size={size}',
                   testState: state.artworkSourceTest,
                   testingLabel: '正在测试封面地址…',
                   customEnabledLabel: '当前生效：自定义封面地址优先',
@@ -389,12 +389,11 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                   icon: Icons.lyrics_rounded,
                   title: '歌词来源',
                   description:
-                      '适合接入歌词服务或自建接口。若地址里没有模板变量，应用会自动补上 trackId、title、artist、album 等查询参数。当前支持 LRC 文本，以及常见 JSON 歌词结构。',
+                      '适合接入歌词服务或自建接口。若地址里没有模板变量，应用会自动补上 trackId、title、artist、album 等查询参数；api.lrc.cx/lyrics 会仅补 title。当前支持 LRC 文本，以及常见 JSON 歌词结构。',
                   enabled: state.customLyricsSourceEnabled,
                   onToggle: cubit.setCustomLyricsSourceEnabled,
                   controller: _lyricsController,
-                  hintText:
-                      '例如：https://example.com/lyrics?trackId={trackId}&title={title}&artist={artist}',
+                  hintText: '例如：https://api.lrc.cx/lyrics',
                   testState: state.lyricsSourceTest,
                   testingLabel: '正在测试歌词地址…',
                   customEnabledLabel: '当前生效：自定义歌词地址优先',

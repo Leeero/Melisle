@@ -153,6 +153,7 @@ class CustomMediaSourceResolver {
         albumTitle: context?.albumTitle,
         size: size,
       ),
+      queryParameterKeys: _queryParameterKeysFor(address, isLyrics: false),
     );
 
     if (resolved == null || resolved.trim().isEmpty) {
@@ -208,7 +209,7 @@ class CustomMediaSourceResolver {
   }) async {
     final address = _settings.customLyricsSourceUrl.trim();
     if (_settings.customLyricsSourceEnabled && address.isNotEmpty) {
-      final resolvedUrl = _buildResolvedUrl(
+      final resolvedUrl = _buildResolvedLyricsUrl(
         address,
         _buildContext(
           trackId: trackId,
@@ -251,12 +252,19 @@ class CustomMediaSourceResolver {
   }
 
   Future<CustomSourceTestResult> testArtworkSource(String rawAddress) {
-    final resolvedUrl = _buildResolvedUrl(rawAddress, _sampleArtworkContext);
+    final resolvedUrl = _buildResolvedUrl(
+      rawAddress,
+      _sampleArtworkContext,
+      queryParameterKeys: _queryParameterKeysFor(rawAddress, isLyrics: false),
+    );
     return _testUrl(resolvedUrl, expectLyrics: false);
   }
 
   Future<CustomSourceTestResult> testLyricsSource(String rawAddress) {
-    final resolvedUrl = _buildResolvedUrl(rawAddress, _sampleLyricsContext);
+    final resolvedUrl = _buildResolvedLyricsUrl(
+      rawAddress,
+      _sampleLyricsContext,
+    );
     return _testUrl(resolvedUrl, expectLyrics: true);
   }
 
@@ -398,7 +406,11 @@ class CustomMediaSourceResolver {
     };
   }
 
-  String? _buildResolvedUrl(String rawAddress, Map<String, String> context) {
+  String? _buildResolvedUrl(
+    String rawAddress,
+    Map<String, String> context, {
+    Iterable<String>? queryParameterKeys,
+  }) {
     final trimmed = rawAddress.trim();
     if (trimmed.isEmpty) {
       return null;
@@ -423,15 +435,48 @@ class CustomMediaSourceResolver {
     }
 
     final queryParameters = Map<String, String>.from(uri!.queryParameters);
-    for (final entry in context.entries) {
-      final value = entry.value.trim();
-      if (value.isEmpty || queryParameters.containsKey(entry.key)) {
+    final queryKeys = queryParameterKeys ?? context.keys;
+    for (final key in queryKeys) {
+      final value = context[key]?.trim() ?? '';
+      if (value.isEmpty || queryParameters.containsKey(key)) {
         continue;
       }
-      queryParameters[entry.key] = value;
+      queryParameters[key] = value;
     }
 
     return uri.replace(queryParameters: queryParameters).toString();
+  }
+
+  String? _buildResolvedLyricsUrl(
+    String rawAddress,
+    Map<String, String> context,
+  ) {
+    return _buildResolvedUrl(
+      rawAddress,
+      context,
+      queryParameterKeys: _queryParameterKeysFor(rawAddress, isLyrics: true),
+    );
+  }
+
+  Iterable<String>? _queryParameterKeysFor(
+    String rawAddress, {
+    required bool isLyrics,
+  }) {
+    final uri = Uri.tryParse(rawAddress.trim());
+    final expectedPath = isLyrics ? 'lyrics' : 'cover';
+    if (_isLrcCxEndpoint(uri, expectedPath)) {
+      return const ['title'];
+    }
+    return null;
+  }
+
+  bool _isLrcCxEndpoint(Uri? uri, String expectedPath) {
+    if (!_isSupportedHttpUri(uri) || uri!.host.toLowerCase() != 'api.lrc.cx') {
+      return false;
+    }
+    final pathSegments = uri.pathSegments;
+    return pathSegments.isNotEmpty &&
+        pathSegments.last.toLowerCase() == expectedPath;
   }
 
   bool _isSupportedHttpUri(Uri? uri) {
@@ -594,10 +639,7 @@ class CustomMediaSourceResolver {
         final duration = timestamp == null ? null : _parseTimestamp(timestamp);
         if (duration == null) continue;
         lines.add(
-          LyricLine(
-            start: _applyLrcOffset(duration, offset),
-            text: text,
-          ),
+          LyricLine(start: _applyLrcOffset(duration, offset), text: text),
         );
       }
     }
@@ -672,7 +714,7 @@ class CustomMediaSourceResolver {
     r'\[(\d{1,2}:\d{1,2}(?:[\.:]\d{1,3})?)\]',
   );
   static final RegExp _lrcOffsetPattern = RegExp(
-    r'^\s*\[offset:([+-]?\d+)]\s*$',
+    r'^\s*\[offset:\s*([+-]?\d+)\s*\]\s*$',
     caseSensitive: false,
   );
   static final RegExp _timestampPattern = RegExp(

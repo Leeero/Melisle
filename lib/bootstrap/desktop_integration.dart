@@ -84,22 +84,66 @@ class DesktopIntegration with TrayListener, WindowListener {
   // --- Hotkeys ---
 
   Future<void> _registerHotkeys() async {
-    // macOS 上 hotkey_manager 对 media keys (PhysicalKeyboardKey.mediaPlayPause 等)
-    // 没有 Carbon keyCode 映射，插件 Swift 层会 `as! UInt32` 强转 nil 触发 SIGABRT，
-    // 连 try/catch 都挡不住。因此 macOS 只注册普通字母快捷键；真正的媒体键路径由
-    // audio_service → NowPlaying / MPRemoteCommandCenter 接管。
-    //
-    // Windows 侧 media keys 可走 hotkey_manager（虚拟键码映射存在），这里统一处理。
-    final bindings = <HotKey, Future<void> Function()>{};
+    // macOS: hotkey_manager 的 Swift 层在注册任意普通键时触发 NSNull/NSArray 崩溃，
+    // 连 try/catch 都无法拦截；媒体键走 audio_service → MPRemoteCommandCenter。
+    // Linux: hotkey_manager 暂未适配。完全跳过这两个平台。
+    if (!Platform.isWindows) return;
 
-    if (Platform.isWindows) {
-      bindings[HotKey(key: PhysicalKeyboardKey.mediaPlayPause)] =
-          playerCubit.togglePlayback;
-      bindings[HotKey(key: PhysicalKeyboardKey.mediaTrackNext)] =
-          playerCubit.next;
-      bindings[HotKey(key: PhysicalKeyboardKey.mediaTrackPrevious)] =
-          playerCubit.previous;
-    }
+    // Windows: media keys + 普通键均可走 hotkey_manager。
+    final bindings = <HotKey, Future<void> Function()>{
+      // --- 播放控制 ---
+      HotKey(key: PhysicalKeyboardKey.mediaPlayPause):
+          playerCubit.togglePlayback,
+      HotKey(key: PhysicalKeyboardKey.space): playerCubit.togglePlayback,
+
+      // --- 切歌 ---
+      HotKey(key: PhysicalKeyboardKey.arrowRight): playerCubit.next,
+      HotKey(key: PhysicalKeyboardKey.arrowLeft): playerCubit.previous,
+
+      // --- 音量调节（步进 10%） ---
+      HotKey(key: PhysicalKeyboardKey.arrowUp): () async {
+        final vol = (playerCubit.state.volume + 0.1).clamp(0.0, 1.0);
+        await playerCubit.setVolume(vol);
+      },
+      HotKey(key: PhysicalKeyboardKey.arrowDown): () async {
+        final vol = (playerCubit.state.volume - 0.1).clamp(0.0, 1.0);
+        await playerCubit.setVolume(vol);
+      },
+
+      // --- 随机 / 循环 ---
+      HotKey(key: PhysicalKeyboardKey.keyS): playerCubit.toggleShuffle,
+      HotKey(key: PhysicalKeyboardKey.keyR): playerCubit.toggleLoopMode,
+      HotKey(key: PhysicalKeyboardKey.keyL): () async {
+        final modes = PlaybackModeOption.values;
+        final idx = (modes.indexOf(playerCubit.state.playbackMode) + 1) %
+            modes.length;
+        await playerCubit.setPlaybackMode(modes[idx]);
+      },
+
+      // --- 歌词偏移微调（每次 ±100ms） ---
+      HotKey(
+        key: PhysicalKeyboardKey.keyK,
+        modifiers: [HotKeyModifier.control],
+      ): () async {
+        final current = playerCubit.state.lyricSyncOffset;
+        playerCubit.setLyricSyncOffset(
+          current + const Duration(milliseconds: 100),
+        );
+      },
+      HotKey(
+        key: PhysicalKeyboardKey.keyJ,
+        modifiers: [HotKeyModifier.control],
+      ): () async {
+        final current = playerCubit.state.lyricSyncOffset;
+        playerCubit.setLyricSyncOffset(
+          current - const Duration(milliseconds: 100),
+        );
+      },
+
+      // --- Windows 专用媒体键 ---
+      HotKey(key: PhysicalKeyboardKey.mediaTrackNext): playerCubit.next,
+      HotKey(key: PhysicalKeyboardKey.mediaTrackPrevious): playerCubit.previous,
+    };
 
     for (final entry in bindings.entries) {
       try {

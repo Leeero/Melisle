@@ -16,6 +16,8 @@ abstract class SettingsRepository {
 
   Future<void> saveGapBetweenTracks(Duration gap);
 
+  Future<void> saveLyricSyncOffset(Duration offset);
+
   Future<void> saveCustomArtworkSourceEnabled(bool enabled);
 
   Future<void> saveCustomArtworkSourceUrl(String url);
@@ -31,6 +33,7 @@ class AppSettingsSnapshot {
     this.themeMode = ThemeMode.system,
     this.defaultQuality = AudioQuality.auto,
     this.gapBetweenTracks = Duration.zero,
+    this.lyricSyncOffset = Duration.zero,
     this.customArtworkSourceEnabled = false,
     this.customArtworkSourceUrl = '',
     this.customLyricsSourceEnabled = false,
@@ -40,6 +43,7 @@ class AppSettingsSnapshot {
   final ThemeMode themeMode;
   final AudioQuality defaultQuality;
   final Duration gapBetweenTracks;
+  final Duration lyricSyncOffset;
   final bool customArtworkSourceEnabled;
   final String customArtworkSourceUrl;
   final bool customLyricsSourceEnabled;
@@ -49,6 +53,7 @@ class AppSettingsSnapshot {
     ThemeMode? themeMode,
     AudioQuality? defaultQuality,
     Duration? gapBetweenTracks,
+    Duration? lyricSyncOffset,
     bool? customArtworkSourceEnabled,
     String? customArtworkSourceUrl,
     bool? customLyricsSourceEnabled,
@@ -58,6 +63,7 @@ class AppSettingsSnapshot {
       themeMode: themeMode ?? this.themeMode,
       defaultQuality: defaultQuality ?? this.defaultQuality,
       gapBetweenTracks: gapBetweenTracks ?? this.gapBetweenTracks,
+      lyricSyncOffset: lyricSyncOffset ?? this.lyricSyncOffset,
       customArtworkSourceEnabled:
           customArtworkSourceEnabled ?? this.customArtworkSourceEnabled,
       customArtworkSourceUrl:
