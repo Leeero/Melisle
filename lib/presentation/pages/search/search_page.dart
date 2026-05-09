@@ -348,7 +348,7 @@ class _AlbumRow extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      onTap: () => context.push('/album/${album.id}', extra: album),
+      onTap: () => context.go('/album/${album.id}', extra: album),
     );
   }
 }
