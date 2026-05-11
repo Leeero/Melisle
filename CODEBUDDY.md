@@ -10,6 +10,17 @@ The repository is structured so the app can support multiple backends behind one
 
 The project is source-available under PolyForm Noncommercial 1.0.0. If changing release, packaging, or redistribution-related text, preserve the `LICENSE` and `NOTICE` requirements described in the README.
 
+## Harness Engineering Workflow
+
+For feature development, bug fixes, code reviews, refactors, testing work, or UI changes, use the project Harness workflow before implementing. Prefer the `harness-workflow` skill; if it is not loaded, read `.codebuddy/skills/harness-workflow/SKILL.md` or ask the user to run `/harness <task>`.
+
+Harness execution rules:
+
+- Choose the matching workflow from `.codebuddy/workflows/feature-development.yaml`, `.codebuddy/workflows/bug-fix.yaml`, or `.codebuddy/workflows/code-review.yaml`.
+- Track workflow stages with TaskCreate/TaskUpdate and complete each task as soon as the stage is done.
+- Use the project agents in `.codebuddy/agents/*.md` for orchestration, architecture, implementation, testing, review, and documentation.
+- Keep workflow execution compatible with the architecture, testing, coding-style, and commit rules under `.codebuddy/rules/`.
+
 ## Common Commands
 
 ```bash
