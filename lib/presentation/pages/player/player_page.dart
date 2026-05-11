@@ -119,11 +119,22 @@ class _PlayerPageState extends State<PlayerPage> {
 // Mobile layout — stacked vertically: AppBar → Artwork → TrackInfo → Controls
 // ---------------------------------------------------------------------------
 
-class _MobileLayout extends StatelessWidget {
+class _MobileLayout extends StatefulWidget {
   const _MobileLayout({required this.state, required this.track});
 
   final PlayerViewState state;
   final MusicTrack track;
+
+  @override
+  State<_MobileLayout> createState() => _MobileLayoutState();
+}
+
+class _MobileLayoutState extends State<_MobileLayout> {
+  static const _horizontalSwipeThreshold = 72.0;
+  static const _verticalDismissThreshold = 80.0;
+  static const _axisDominance = 1.35;
+
+  Offset _dragOffset = Offset.zero;
 
   @override
   Widget build(BuildContext context) {
@@ -133,55 +144,90 @@ class _MobileLayout extends StatelessWidget {
       builder: (context, constraints) {
         final artworkHeight = (constraints.maxHeight * 0.3).clamp(180.0, 320.0);
 
-        return Column(
-          children: [
-            const _PlayerTopBar(),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: artworkHeight,
-                      child: _MobileArtworkStage(track: track),
-                    ),
-                    const SizedBox(height: 12),
-                    _MobileTrackInfo(track: track),
-                    const SizedBox(height: 14),
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.2,
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanStart: (_) => _dragOffset = Offset.zero,
+          onPanUpdate: (details) => _dragOffset += details.delta,
+          onPanCancel: () => _dragOffset = Offset.zero,
+          onPanEnd: (details) => _handleSwipe(context, details),
+          child: Column(
+            children: [
+              const _PlayerTopBar(),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: artworkHeight,
+                        child: _MobileArtworkStage(track: widget.track),
+                      ),
+                      const SizedBox(height: 12),
+                      _MobileTrackInfo(track: widget.track),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant.withValues(
+                                alpha: 0.2,
+                              ),
                             ),
                           ),
+                          child: const _MobileLyricView(),
                         ),
-                        child: const _MobileLyricView(),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacingTokens.playerHorizontalPadding,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacingTokens.playerHorizontalPadding,
+                ),
+                child: _ProgressTimeline(),
               ),
-              child: _ProgressTimeline(),
-            ),
-            const SizedBox(height: 12),
-            const _PlaybackControls(),
-            const SizedBox(height: AppSpacingTokens.playerToolbarGap),
-            _MobileSecondaryActions(state: state, track: track),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
-          ],
+              const SizedBox(height: 12),
+              const _PlaybackControls(),
+              const SizedBox(height: AppSpacingTokens.playerToolbarGap),
+              _MobileSecondaryActions(state: widget.state, track: widget.track),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+            ],
+          ),
         );
       },
     );
+  }
+
+  void _handleSwipe(BuildContext context, DragEndDetails details) {
+    final offset = _dragOffset;
+    _dragOffset = Offset.zero;
+
+    final horizontalDistance = offset.dx.abs();
+    final verticalDistance = offset.dy.abs();
+
+    final isHorizontalSwipe =
+        horizontalDistance >= _horizontalSwipeThreshold &&
+        horizontalDistance > verticalDistance * _axisDominance;
+    if (isHorizontalSwipe) {
+      final playerCubit = context.read<PlayerCubit>();
+      if (offset.dx < 0) {
+        playerCubit.next();
+      } else {
+        playerCubit.previous();
+      }
+      return;
+    }
+
+    final isDownwardDismiss =
+        offset.dy >= _verticalDismissThreshold &&
+        verticalDistance > horizontalDistance * _axisDominance;
+    if (isDownwardDismiss) {
+      Navigator.of(context).maybePop();
+    }
   }
 }
 
