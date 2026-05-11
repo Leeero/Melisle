@@ -186,7 +186,7 @@ class _MobileLayout extends StatelessWidget {
 }
 
 class _MobileArtworkStage extends StatelessWidget {
-  const _MobileArtworkStage({super.key, required this.track});
+  const _MobileArtworkStage({required this.track});
 
   final MusicTrack track;
 
@@ -221,7 +221,7 @@ class _MobileArtworkStage extends StatelessWidget {
 }
 
 class _MobileLyricView extends StatelessWidget {
-  const _MobileLyricView({super.key});
+  const _MobileLyricView();
 
   @override
   Widget build(BuildContext context) {
@@ -740,44 +740,6 @@ class _DesktopLyricStage extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-class _DesktopInfoBadge extends StatelessWidget {
-  const _DesktopInfoBadge({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.24),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1497,13 +1459,11 @@ class _PlayerTopBarIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     this.onPressed,
-    this.active = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
-  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -1513,12 +1473,10 @@ class _PlayerTopBarIconButton extends StatelessWidget {
       icon: Icon(icon, size: 22),
       onPressed: onPressed,
       tooltip: tooltip,
-      color: active ? colorScheme.primary : colorScheme.onSurface,
+      color: colorScheme.onSurface,
       style: IconButton.styleFrom(
         side: BorderSide.none,
-        backgroundColor: active
-            ? colorScheme.primaryContainer.withValues(alpha: 0.56)
-            : colorScheme.surface.withValues(alpha: 0.16),
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.16),
         disabledBackgroundColor: colorScheme.surface.withValues(alpha: 0.12),
         disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
           alpha: 0.56,
@@ -1550,44 +1508,64 @@ class _PlaybackControls extends StatelessWidget {
       builder: (context, s) {
         final playbackMode = s.playbackMode;
         const controlGap = 12.0;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _PlaybackModeButton(
-              mode: playbackMode,
-              onTap: context.read<PlayerCubit>().cyclePlaybackMode,
-            ),
-            const SizedBox(width: controlGap),
-            _ControlButton(
-              icon: Icons.skip_previous_rounded,
-              onTap: context.read<PlayerCubit>().previous,
-              tooltip: '上一曲',
-              size: 46,
-              iconSize: 24,
-            ),
-            const SizedBox(width: controlGap),
-            _ControlButton(
-              icon: s.isLoading
-                  ? Icons.downloading_rounded
-                  : (s.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded),
-              isPrimary: true,
-              size: 54,
-              iconSize: 26,
-              onTap: context.read<PlayerCubit>().togglePlayback,
-              tooltip: s.isPlaying ? '暂停' : '播放',
-            ),
-            const SizedBox(width: controlGap),
-            _ControlButton(
-              icon: Icons.skip_next_rounded,
-              onTap: context.read<PlayerCubit>().next,
-              tooltip: '下一曲',
-              size: 46,
-              iconSize: 24,
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.hasBoundedWidth
+                ? math.min(constraints.maxWidth, 292.0)
+                : 292.0;
+            return SizedBox(
+              width: width,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _PlaybackModeButton(
+                          mode: playbackMode,
+                          onTap: context.read<PlayerCubit>().cyclePlaybackMode,
+                        ),
+                        const SizedBox(width: controlGap),
+                        _ControlButton(
+                          icon: Icons.skip_previous_rounded,
+                          onTap: context.read<PlayerCubit>().previous,
+                          tooltip: '上一曲',
+                          size: 46,
+                          iconSize: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: controlGap),
+                  _ControlButton(
+                    icon: s.isLoading
+                        ? Icons.downloading_rounded
+                        : (s.isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded),
+                    isPrimary: true,
+                    size: 56,
+                    iconSize: 28,
+                    onTap: context.read<PlayerCubit>().togglePlayback,
+                    tooltip: s.isPlaying ? '暂停' : '播放',
+                  ),
+                  const SizedBox(width: controlGap),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _ControlButton(
+                        icon: Icons.skip_next_rounded,
+                        onTap: context.read<PlayerCubit>().next,
+                        tooltip: '下一曲',
+                        size: 46,
+                        iconSize: 24,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -1891,7 +1869,7 @@ Future<void> _showDesktopPopover(BuildContext context, Widget child) {
     barrierDismissible: true,
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 180),
-    pageBuilder: (_, __, ___) => child,
+    pageBuilder: (context, animation, secondaryAnimation) => child,
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -2811,7 +2789,7 @@ class _DesktopQueueDialog extends StatelessWidget {
 }
 
 class _ProgressTimeline extends StatefulWidget {
-  const _ProgressTimeline({super.key});
+  const _ProgressTimeline();
 
   @override
   State<_ProgressTimeline> createState() => _ProgressTimelineState();

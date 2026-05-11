@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
@@ -101,14 +103,19 @@ class _CompactShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasMiniPlayer = context.select<PlayerCubit, bool>(
+      (cubit) => cubit.state.currentTrack != null,
+    );
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: _ShellBottomDock(
+        hasMiniPlayer: hasMiniPlayer,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const MiniPlayerBar(),
-            const SizedBox(height: AppSpacingTokens.miniPlayerOuterTop),
+            SizedBox(height: hasMiniPlayer ? 2 : 0),
             _ShellBottomBar(
               selectedIndex: selectedIndex,
               onSelected: onSelected,
@@ -121,18 +128,19 @@ class _CompactShellScaffold extends StatelessWidget {
 }
 
 class _ShellBottomDock extends StatelessWidget {
-  const _ShellBottomDock({required this.child});
+  const _ShellBottomDock({required this.child, required this.hasMiniPlayer});
 
   final Widget child;
+  final bool hasMiniPlayer;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacingTokens.shellBottomInset,
-          6,
+          hasMiniPlayer ? 2 : 6,
           AppSpacingTokens.shellBottomInset,
           AppSpacingTokens.shellBottomInset,
         ),
@@ -293,7 +301,7 @@ class _ShellBottomBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(AppRadiusTokens.card),
@@ -380,7 +388,8 @@ class _ShellBottomButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadiusTokens.card),
           child: AnimatedContainer(
             duration: AppMotion.short,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            height: 44,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               color: selected
                   ? colorScheme.primaryContainer.withValues(alpha: 0.9)
@@ -392,27 +401,12 @@ class _ShellBottomButton extends StatelessWidget {
                     : Colors.transparent,
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 22,
-                  color: selected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ],
+            child: Icon(
+              icon,
+              size: 24,
+              color: selected
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -440,20 +434,24 @@ class _ShellNavButton extends StatefulWidget {
 
 class _ShellNavButtonState extends State<_ShellNavButton> {
   bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final highlighted = _hovered || _focused;
 
     return Semantics(
       label: widget.label,
       button: true,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
+      selected: widget.selected,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
+          onHover: (value) => setState(() => _hovered = value),
+          onFocusChange: (value) => setState(() => _focused = value),
+          borderRadius: BorderRadius.circular(16),
           child: AnimatedContainer(
             duration: AppMotion.short,
             curve: AppMotion.enter,
@@ -462,19 +460,23 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
             decoration: BoxDecoration(
               color: widget.selected
                   ? colorScheme.primary.withValues(alpha: 0.10)
-                  : (_hovered
+                  : (highlighted
                         ? colorScheme.onSurface.withValues(alpha: 0.05)
                         : Colors.transparent),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: widget.selected
                     ? colorScheme.primary.withValues(alpha: 0.12)
-                    : Colors.transparent,
+                    : (_focused
+                          ? colorScheme.primary.withValues(alpha: 0.42)
+                          : Colors.transparent),
               ),
-              boxShadow: widget.selected
+              boxShadow: widget.selected || _focused
                   ? [
                       BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.08),
+                        color: colorScheme.primary.withValues(
+                          alpha: _focused ? 0.12 : 0.08,
+                        ),
                         blurRadius: 14,
                         offset: const Offset(0, 6),
                       ),
@@ -487,7 +489,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                 Icon(
                   widget.icon,
                   size: 22,
-                  color: widget.selected
+                  color: widget.selected || _focused
                       ? colorScheme.primary
                       : colorScheme.onSurfaceVariant,
                 ),
@@ -495,7 +497,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                 Text(
                   widget.label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: widget.selected
+                    color: widget.selected || _focused
                         ? colorScheme.primary
                         : colorScheme.onSurfaceVariant,
                     fontWeight: widget.selected
