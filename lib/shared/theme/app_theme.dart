@@ -92,13 +92,13 @@ abstract final class AppTheme {
     final colorScheme = isDark
         ? baseScheme.copyWith(
             primary: _darkPrimary,
-            onPrimary: Colors.white,
+            onPrimary: const Color(0xFF182040),
             primaryContainer: _darkPrimaryContainer,
-            onPrimaryContainer: const Color(0xFFE2D8FF),
+            onPrimaryContainer: const Color(0xFFE1E5FF),
             secondary: _darkSecondary,
-            onSecondary: const Color(0xFF003823),
+            onSecondary: const Color(0xFF073A39),
             secondaryContainer: _darkSecondaryContainer,
-            onSecondaryContainer: const Color(0xFF99F6E4),
+            onSecondaryContainer: const Color(0xFFC4F4F1),
             surface: _darkSurface,
             surfaceContainer: _darkSurfaceHigh,
             surfaceContainerHigh: _darkSurfaceHigh,
@@ -112,9 +112,13 @@ abstract final class AppTheme {
           )
         : baseScheme.copyWith(
             primary: _lightPrimary,
+            onPrimary: Colors.white,
             primaryContainer: _lightPrimaryContainer,
+            onPrimaryContainer: const Color(0xFF192253),
             secondary: _lightSecondary,
+            onSecondary: Colors.white,
             secondaryContainer: _lightSecondaryContainer,
+            onSecondaryContainer: const Color(0xFF173F3D),
             surface: _lightSurface,
             surfaceContainer: _lightSurfaceHigh,
             surfaceContainerHigh: _lightSurfaceHigh,

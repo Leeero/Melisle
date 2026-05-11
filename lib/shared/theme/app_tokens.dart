@@ -1,38 +1,38 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColorTokens {
-  static const seed = Color(0xFF7C4DFF);
+  static const seed = Color(0xFF9CA6FF);
 
-  static const darkScaffold = Color(0xFF0A0A16);
-  static const darkSurface = Color(0xFF161D2D);
-  static const darkSurfaceHigh = Color(0xFF1B2335);
-  static const darkSurfaceHighest = Color(0xFF232D40);
+  static const darkScaffold = Color(0xFF090C12);
+  static const darkSurface = Color(0xFF121723);
+  static const darkSurfaceHigh = Color(0xFF171E2B);
+  static const darkSurfaceHighest = Color(0xFF212A3B);
 
   static const lightScaffold = Color(0xFFF5F7FB);
   static const lightSurface = Color(0xFFFFFFFF);
   static const lightSurfaceHigh = Color(0xFFF1F4FA);
   static const lightSurfaceHighest = Color(0xFFE5EBF5);
 
-  static const darkPrimary = Color(0xFF7C4DFF);
-  static const darkPrimaryContainer = Color(0xFF31175D);
-  static const darkSecondary = Color(0xFF00E5A0);
-  static const darkSecondaryContainer = Color(0xFF0D3D2F);
+  static const darkPrimary = Color(0xFF9CA6FF);
+  static const darkPrimaryContainer = Color(0xFF2B3150);
+  static const darkSecondary = Color(0xFF86D3D0);
+  static const darkSecondaryContainer = Color(0xFF1D333C);
   static const darkOnSurface = Color(0xFFE8ECF4);
-  static const darkOnSurfaceVariant = Color(0xFF94A3B8);
+  static const darkOnSurfaceVariant = Color(0xFFACB6C7);
   static const darkOutline = Color(0xFF5A6478);
   static const darkOutlineVariant = Color(0xFF2A3342);
 
-  static const lightPrimary = Color(0xFF5B2EE6);
-  static const lightPrimaryContainer = Color(0xFFE2D8FF);
-  static const lightSecondary = Color(0xFF059669);
-  static const lightSecondaryContainer = Color(0xFFD1FAE5);
+  static const lightPrimary = Color(0xFF6172E3);
+  static const lightPrimaryContainer = Color(0xFFE0E4FF);
+  static const lightSecondary = Color(0xFF4BA9A4);
+  static const lightSecondaryContainer = Color(0xFFD4F3F0);
   static const lightOnSurfaceVariant = Color(0xFF5E687C);
   static const lightOutline = Color(0xFF8A93A7);
   static const lightOutlineVariant = Color(0xFFD8DFEA);
 
-  static const accent = Color(0xFF22C55E);
-  static const darkLyricHighlight = Color(0xFFB8A6FF);
-  static const lightLyricHighlight = Color(0xFF5B2EE6);
+  static const accent = Color(0xFF4BA9A4);
+  static const darkLyricHighlight = Color(0xFFECA35B);
+  static const lightLyricHighlight = Color(0xFFECA35B);
 }
 
 abstract final class AppRadiusTokens {

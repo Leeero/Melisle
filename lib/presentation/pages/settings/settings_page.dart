@@ -3,6 +3,7 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -144,8 +145,8 @@ class _ThemeCard extends StatelessWidget {
     // Phase 4: Theme preview color dot
     final Color previewColor = switch (mode) {
       ThemeMode.system => Theme.of(context).colorScheme.primary,
-      ThemeMode.light => const Color(0xFF7C4DFF),
-      ThemeMode.dark => const Color(0xFF9CA6FF),
+      ThemeMode.light => AppColorTokens.lightPrimary,
+      ThemeMode.dark => AppColorTokens.darkPrimary,
     };
 
     return _HoverableListTile(

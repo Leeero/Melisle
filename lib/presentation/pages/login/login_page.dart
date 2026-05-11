@@ -51,15 +51,17 @@ class _LoginPageState extends State<LoginPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark
-                      ? const [
-                          Color(0xFF0A0A16),
-                          Color(0xFF121723),
-                          Color(0xFF0F0F23),
+                      ? [
+                          Theme.of(context).scaffoldBackgroundColor,
+                          colorScheme.surface,
+                          colorScheme.secondaryContainer.withValues(
+                            alpha: 0.28,
+                          ),
                         ]
-                      : const [
-                          Color(0xFFEEF1F8),
-                          Color(0xFFE4E9F4),
-                          Color(0xFFF0F2FA),
+                      : [
+                          colorScheme.surfaceContainerHigh,
+                          Theme.of(context).scaffoldBackgroundColor,
+                          colorScheme.surface,
                         ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
