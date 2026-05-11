@@ -144,67 +144,90 @@ class _MobileLayoutState extends State<_MobileLayout> {
       builder: (context, constraints) {
         final artworkHeight = (constraints.maxHeight * 0.3).clamp(180.0, 320.0);
 
-        return GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onPanStart: (_) => _dragOffset = Offset.zero,
-          onPanUpdate: (details) => _dragOffset += details.delta,
-          onPanCancel: () => _dragOffset = Offset.zero,
-          onPanEnd: (details) => _handleSwipe(context, details),
-          child: Column(
-            children: [
-              const _PlayerTopBar(),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
-                  child: Column(
-                    children: [
-                      SizedBox(
+        return Column(
+          children: [
+            const _PlayerTopBar(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+                child: Column(
+                  children: [
+                    _MobileSwipeGestureRegion(
+                      onSwipeEnd: (details) => _handleSwipe(context, details),
+                      onSwipeCancel: _resetSwipe,
+                      onSwipeUpdate: _updateSwipe,
+                      child: SizedBox(
                         height: artworkHeight,
                         child: _MobileArtworkStage(track: widget.track),
                       ),
-                      const SizedBox(height: 12),
-                      _MobileTrackInfo(track: widget.track),
-                      const SizedBox(height: 14),
-                      Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surface.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color: colorScheme.outlineVariant.withValues(
-                                alpha: 0.2,
-                              ),
+                    ),
+                    const SizedBox(height: 12),
+                    _MobileSwipeGestureRegion(
+                      onSwipeEnd: (details) => _handleSwipe(context, details),
+                      onSwipeCancel: _resetSwipe,
+                      onSwipeUpdate: _updateSwipe,
+                      child: _MobileTrackInfo(track: widget.track),
+                    ),
+                    const SizedBox(height: 14),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.2,
                             ),
                           ),
-                          child: const _MobileLyricView(),
                         ),
+                        child: const _MobileLyricView(),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _MobileSwipeGestureRegion(
+              onSwipeEnd: (details) => _handleSwipe(context, details),
+              onSwipeCancel: _resetSwipe,
+              onSwipeUpdate: _updateSwipe,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacingTokens.playerHorizontalPadding,
+                    ),
+                    child: _ProgressTimeline(),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  const _PlaybackControls(),
+                  const SizedBox(height: AppSpacingTokens.playerToolbarGap),
+                  _MobileSecondaryActions(
+                    state: widget.state,
+                    track: widget.track,
+                  ),
+                  SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacingTokens.playerHorizontalPadding,
-                ),
-                child: _ProgressTimeline(),
-              ),
-              const SizedBox(height: 12),
-              const _PlaybackControls(),
-              const SizedBox(height: AppSpacingTokens.playerToolbarGap),
-              _MobileSecondaryActions(state: widget.state, track: widget.track),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
+  void _resetSwipe() {
+    _dragOffset = Offset.zero;
+  }
+
+  void _updateSwipe(DragUpdateDetails details) {
+    _dragOffset += details.delta;
+  }
+
   void _handleSwipe(BuildContext context, DragEndDetails details) {
     final offset = _dragOffset;
-    _dragOffset = Offset.zero;
+    _resetSwipe();
 
     final horizontalDistance = offset.dx.abs();
     final verticalDistance = offset.dy.abs();
@@ -213,6 +236,7 @@ class _MobileLayoutState extends State<_MobileLayout> {
         horizontalDistance >= _horizontalSwipeThreshold &&
         horizontalDistance > verticalDistance * _axisDominance;
     if (isHorizontalSwipe) {
+      HapticFeedback.selectionClick();
       final playerCubit = context.read<PlayerCubit>();
       if (offset.dx < 0) {
         playerCubit.next();
@@ -226,8 +250,35 @@ class _MobileLayoutState extends State<_MobileLayout> {
         offset.dy >= _verticalDismissThreshold &&
         verticalDistance > horizontalDistance * _axisDominance;
     if (isDownwardDismiss) {
+      HapticFeedback.lightImpact();
       Navigator.of(context).maybePop();
     }
+  }
+}
+
+class _MobileSwipeGestureRegion extends StatelessWidget {
+  const _MobileSwipeGestureRegion({
+    required this.child,
+    required this.onSwipeUpdate,
+    required this.onSwipeEnd,
+    required this.onSwipeCancel,
+  });
+
+  final Widget child;
+  final ValueChanged<DragUpdateDetails> onSwipeUpdate;
+  final ValueChanged<DragEndDetails> onSwipeEnd;
+  final VoidCallback onSwipeCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanStart: (_) => onSwipeCancel(),
+      onPanUpdate: onSwipeUpdate,
+      onPanCancel: onSwipeCancel,
+      onPanEnd: onSwipeEnd,
+      child: child,
+    );
   }
 }
 
