@@ -50,7 +50,11 @@ abstract class MusicRepository {
 
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId);
 
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId);
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  });
 
   /// 根据指定音质返回可直播的流媒体 URL。
   ///

@@ -70,8 +70,11 @@ class WebDavMusicRepository implements MusicRepository {
       _todo('fetchAlbumTracks');
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async =>
-      _todo('fetchPlaylistTracks');
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async => _todo('fetchPlaylistTracks');
 
   @override
   Future<String> getStreamUrl(

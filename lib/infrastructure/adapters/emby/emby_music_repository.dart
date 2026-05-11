@@ -133,8 +133,17 @@ class EmbyMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async {
-    return _client.fetchPlaylistTracks(await _requireSession(), playlistId);
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async {
+    return _client.fetchPlaylistTracks(
+      await _requireSession(),
+      playlistId,
+      limit: limit,
+      startIndex: startIndex,
+    );
   }
 
   @override

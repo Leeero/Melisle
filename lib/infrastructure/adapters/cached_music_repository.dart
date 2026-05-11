@@ -164,12 +164,24 @@ class CachedMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) {
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) {
     return _cached(
       'playlistTracks',
       ttl: _policy.detailTtl,
-      params: {'playlistId': playlistId},
-      loader: () => _delegate.fetchPlaylistTracks(playlistId),
+      params: {
+        'playlistId': playlistId,
+        'limit': limit,
+        'startIndex': startIndex,
+      },
+      loader: () => _delegate.fetchPlaylistTracks(
+        playlistId,
+        limit: limit,
+        startIndex: startIndex,
+      ),
     );
   }
 

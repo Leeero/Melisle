@@ -6,7 +6,15 @@ class FetchPlaylistTracks {
 
   final MusicRepository _repository;
 
-  Future<List<MusicTrack>> call(String playlistId) {
-    return _repository.fetchPlaylistTracks(playlistId);
+  Future<List<MusicTrack>> call(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) {
+    return _repository.fetchPlaylistTracks(
+      playlistId,
+      limit: limit,
+      startIndex: startIndex,
+    );
   }
 }

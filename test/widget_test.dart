@@ -196,7 +196,11 @@ class _FakeMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async => [];
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async => [];
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async => [];
 
   @override
   Future<String> getStreamUrl(

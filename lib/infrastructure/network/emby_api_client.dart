@@ -238,14 +238,18 @@ class EmbyApiClient {
 
   Future<List<MusicTrack>> fetchPlaylistTracks(
     AuthSession session,
-    String playlistId,
-  ) async {
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Playlists/$playlistId/Items',
       queryParameters: {
         'UserId': session.userId,
         'Fields': _trackDetailFields,
         'ImageTypeLimit': 1,
+        'Limit': ?limit,
+        if (startIndex > 0) 'StartIndex': startIndex,
       },
       options: _authorizedOptions(session),
     );

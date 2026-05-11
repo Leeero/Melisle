@@ -135,8 +135,17 @@ class SubsonicMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async {
-    return _client.fetchPlaylistTracks(await _requireSession(), playlistId);
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async {
+    return _client.fetchPlaylistTracks(
+      await _requireSession(),
+      playlistId,
+      limit: limit,
+      startIndex: startIndex,
+    );
   }
 
   @override
@@ -344,10 +353,7 @@ class SubsonicMusicRepository implements MusicRepository {
         final duration = timestamp == null ? null : _parseTimestamp(timestamp);
         if (duration == null) continue;
         lines.add(
-          LyricLine(
-            start: _applyLrcOffset(duration, offset),
-            text: text,
-          ),
+          LyricLine(start: _applyLrcOffset(duration, offset), text: text),
         );
       }
     }

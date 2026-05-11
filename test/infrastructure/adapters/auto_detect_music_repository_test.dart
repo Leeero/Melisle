@@ -205,8 +205,11 @@ class _StubMusicRepository implements MusicRepository {
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async => const [];
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async =>
-      const [];
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async => const [];
 
   @override
   Future<String> getStreamUrl(

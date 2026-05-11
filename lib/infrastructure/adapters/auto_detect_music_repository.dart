@@ -146,8 +146,16 @@ class AutoDetectMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchPlaylistTracks(String playlistId) async {
-    return (await _requireActiveRepository()).fetchPlaylistTracks(playlistId);
+  Future<List<MusicTrack>> fetchPlaylistTracks(
+    String playlistId, {
+    int? limit,
+    int startIndex = 0,
+  }) async {
+    return (await _requireActiveRepository()).fetchPlaylistTracks(
+      playlistId,
+      limit: limit,
+      startIndex: startIndex,
+    );
   }
 
   @override
