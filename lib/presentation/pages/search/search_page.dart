@@ -184,10 +184,7 @@ class _SearchViewState extends State<_SearchView> {
                 AppPageLayout.contentBottomInset,
               ),
               itemCount: items.length,
-              itemBuilder: (context, index) {
-                // Staggered slide-in animation: 50ms delay per item
-                return _StaggeredSlideIn(index: index, child: items[index]);
-              },
+              itemBuilder: (context, index) => items[index],
             );
           },
         ),
@@ -252,6 +249,7 @@ class _SearchHeader extends StatelessWidget {
                   if (value.text.isEmpty) return const SizedBox.shrink();
                   return IconButton(
                     icon: const Icon(Icons.close_rounded),
+                    tooltip: '清空搜索',
                     onPressed: () {
                       controller.clear();
                       context.read<SearchCubit>().onQueryChanged('');
@@ -341,6 +339,7 @@ class _AlbumRow extends StatelessWidget {
         imageUrl: album.artworkUrl,
         size: 48,
         borderRadius: 14,
+        semanticLabel: '《${album.title}》专辑封面',
       ),
       title: Text(album.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
@@ -365,6 +364,7 @@ class _ArtistRow extends StatelessWidget {
         imageUrl: artist.artworkUrl,
         size: 48,
         borderRadius: 24,
+        semanticLabel: '${artist.name} 头像',
       ),
       title: Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () => context.push('/artist/${artist.id}', extra: artist),
@@ -384,64 +384,11 @@ class _PlaylistRow extends StatelessWidget {
         imageUrl: playlist.artworkUrl,
         size: 48,
         borderRadius: 14,
+        semanticLabel: '${playlist.name} 歌单封面',
       ),
       title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text('${playlist.trackCount} 首'),
       onTap: () => context.push('/playlists/${playlist.id}', extra: playlist),
-    );
-  }
-}
-
-// Phase 4: Staggered slide-in animation for search results (50ms/item)
-class _StaggeredSlideIn extends StatefulWidget {
-  const _StaggeredSlideIn({required this.index, required this.child});
-
-  final int index;
-  final Widget child;
-
-  @override
-  State<_StaggeredSlideIn> createState() => _StaggeredSlideInState();
-}
-
-class _StaggeredSlideInState extends State<_StaggeredSlideIn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<Offset> _slideAnimation;
-  late final Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    // Stagger: 50ms delay per item, max 500ms total delay
-    final delay = Duration(milliseconds: (widget.index * 50).clamp(0, 500));
-    Future.delayed(delay, () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(position: _slideAnimation, child: widget.child),
     );
   }
 }

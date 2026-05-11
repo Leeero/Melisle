@@ -86,6 +86,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                                 imageUrl: album.artworkUrl,
                                 size: widget.artworkSize,
                                 borderRadius: widget.artworkRadius,
+                                semanticLabel: '《${album.title}》专辑封面',
                               ),
                             ),
                             if (widget.badgeLabel != null)
@@ -174,6 +175,7 @@ class MusicAlbumCompactCard extends StatelessWidget {
                     imageUrl: album.artworkUrl,
                     size: 160,
                     borderRadius: 18,
+                    semanticLabel: '《${album.title}》专辑封面',
                   ),
                 ),
                 const SizedBox(height: 10),

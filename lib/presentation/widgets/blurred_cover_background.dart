@@ -161,23 +161,31 @@ class _ResolvedBlurredCoverBackgroundState
         Positioned(
           top: -140,
           left: -80,
-          child: _GlowOrb(color: dominant.withValues(alpha: 0.32), size: 320),
+          child: RepaintBoundary(
+            child: _GlowOrb(color: dominant.withValues(alpha: 0.32), size: 320),
+          ),
         ),
         Positioned(
           right: -120,
           top: 120,
-          child: _GlowOrb(color: accent.withValues(alpha: 0.22), size: 280),
+          child: RepaintBoundary(
+            child: _GlowOrb(color: accent.withValues(alpha: 0.22), size: 280),
+          ),
         ),
         if (hasImage)
-          Opacity(
-            opacity: 0.42,
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 42, sigmaY: 42),
-              child: Image.network(
-                resolvedImageUrl,
-                fit: BoxFit.cover,
-                headers: const {'User-Agent': AppConstants.httpUserAgent},
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          RepaintBoundary(
+            child: Opacity(
+              opacity: 0.42,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+                child: Image.network(
+                  resolvedImageUrl,
+                  fit: BoxFit.cover,
+                  headers: const {'User-Agent': AppConstants.httpUserAgent},
+                  cacheWidth: 320,
+                  cacheHeight: 320,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
               ),
             ),
           ),
@@ -211,7 +219,7 @@ class _GlowOrb extends StatelessWidget {
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 48, sigmaY: 48),
+        imageFilter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
         child: Container(
           width: size,
           height: size,

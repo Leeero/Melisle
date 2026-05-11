@@ -5,7 +5,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_vie
 
 /// 在 App 窗口活跃期间捕获键盘快捷键.
 ///
-/// 与平台原生全局热键不同，这里完全在 Dart 层实现，依赖 [RawKeyboardListener] ，
+/// 与平台原生全局热键不同，这里完全在 Dart 层实现，依赖 [KeyboardListener]，
 /// 无第三方插件，没有 macOS 上的崩溃风险.
 ///
 /// 限制：App 窗口不在前台或未聚焦时无法捕获。
@@ -32,34 +32,32 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
     super.dispose();
   }
 
-  void _handle(RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return;
+  void _handle(KeyEvent event) {
+    if (event is! KeyDownEvent) return;
 
     final player = widget.playerCubit;
     final logical = event.logicalKey;
+    final keyboard = HardwareKeyboard.instance;
+    final isControlPressed = keyboard.isControlPressed;
+    final hasModifier =
+        isControlPressed || keyboard.isMetaPressed || keyboard.isAltPressed;
 
     // Ctrl+J / Ctrl+K — 歌词偏移
-    if (event.isControlPressed) {
+    if (isControlPressed) {
       if (logical == LogicalKeyboardKey.keyJ) {
         final offset = player.state.lyricSyncOffset;
-        player.setLyricSyncOffset(
-          offset - const Duration(milliseconds: 100),
-        );
+        player.setLyricSyncOffset(offset - const Duration(milliseconds: 100));
         return;
       }
       if (logical == LogicalKeyboardKey.keyK) {
         final offset = player.state.lyricSyncOffset;
-        player.setLyricSyncOffset(
-          offset + const Duration(milliseconds: 100),
-        );
+        player.setLyricSyncOffset(offset + const Duration(milliseconds: 100));
         return;
       }
     }
 
     // 无修饰键的基本播放控制
-    if (!event.isControlPressed &&
-        !event.isMetaPressed &&
-        !event.isAltPressed) {
+    if (!hasModifier) {
       if (logical == LogicalKeyboardKey.space) {
         player.togglePlayback();
         return;
@@ -92,8 +90,8 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
       }
       if (logical == LogicalKeyboardKey.keyL) {
         final modes = PlaybackModeOption.values;
-        final idx = (modes.indexOf(player.state.playbackMode) + 1) %
-            modes.length;
+        final idx =
+            (modes.indexOf(player.state.playbackMode) + 1) % modes.length;
         player.setPlaybackMode(modes[idx]);
         return;
       }
@@ -102,10 +100,10 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
-      onKey: _handle,
+      onKeyEvent: _handle,
       child: widget.child,
     );
   }

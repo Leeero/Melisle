@@ -122,6 +122,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                     imageUrl: widget.artworkUrl,
                     size: artworkSize,
                     borderRadius: artworkRadius,
+                    semanticLabel: '《${widget.title}》封面',
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -179,6 +180,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         imageUrl: widget.artworkUrl,
         size: 48,
         borderRadius: 14,
+        semanticLabel: '《${widget.title}》封面',
       ),
       title: _buildTitle(context),
       subtitle: Text(

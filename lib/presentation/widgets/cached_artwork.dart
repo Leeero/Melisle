@@ -65,11 +65,12 @@ class CachedArtwork extends StatelessWidget {
           );
         }
 
-        return Semantics(
-          image: true,
-          label: semanticLabel ?? '',
-          child: artwork,
-        );
+        final label = semanticLabel?.trim();
+        if (label == null || label.isEmpty) {
+          return ExcludeSemantics(child: artwork);
+        }
+
+        return Semantics(image: true, label: label, child: artwork);
       },
     );
   }
