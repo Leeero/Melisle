@@ -314,10 +314,20 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   }
 
   Future<void> seek(Duration position) async {
-    await _controller.seek(position);
-    emit(state.copyWith(position: position));
+    final target = _clampSeekPosition(position);
+    await _controller.seek(target);
+
+    final actualPosition = _controller.position;
+    final effectivePosition = actualPosition.isNegative
+        ? Duration.zero
+        : actualPosition;
+    final effectiveDuration = _durationCoveringPosition(effectivePosition);
+
+    emit(
+      state.copyWith(position: effectivePosition, duration: effectiveDuration),
+    );
     // seek 后立即更新歌词高亮，避免被旧播放位置的 _onPositionChanged 覆盖。
-    _updateLyricHighlight(position);
+    _updateLyricHighlight(effectivePosition);
   }
 
   Future<void> moveQueueItem(int oldIndex, int newIndex) async {
@@ -535,12 +545,33 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   void _onPositionChanged(Duration position) {
     if (_pausingGuard) return;
-    emit(state.copyWith(position: position));
+    final effectiveDuration = _durationCoveringPosition(position);
+    emit(state.copyWith(position: position, duration: effectiveDuration));
     _updateLyricHighlight(position);
   }
 
   void _onDurationChanged(Duration? duration) {
-    emit(state.copyWith(duration: duration ?? Duration.zero));
+    final resolvedDuration = duration ?? Duration.zero;
+    emit(
+      state.copyWith(duration: _maxDuration(resolvedDuration, state.position)),
+    );
+  }
+
+  Duration _clampSeekPosition(Duration position) {
+    if (position.isNegative) return Duration.zero;
+    final duration = state.duration;
+    if (duration > Duration.zero && position > duration) {
+      return duration;
+    }
+    return position;
+  }
+
+  Duration _durationCoveringPosition(Duration position) {
+    return _maxDuration(state.duration, position);
+  }
+
+  Duration _maxDuration(Duration a, Duration b) {
+    return a >= b ? a : b;
   }
 
   void _onPlayerStateChanged(PlayerState playerState) {
