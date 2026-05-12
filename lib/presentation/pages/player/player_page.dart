@@ -444,13 +444,14 @@ class _MobileSecondaryActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final sleepActive = state.sleepRemaining != null || state.sleepEndOfTrack;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacingTokens.playerHorizontalPadding,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: colorScheme.surface.withValues(alpha: 0.28),
           borderRadius: BorderRadius.circular(AppRadiusTokens.button),
@@ -458,90 +459,105 @@ class _MobileSecondaryActions extends StatelessWidget {
             color: colorScheme.outlineVariant.withValues(alpha: 0.26),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _SecondaryAction(
-              icon: Icons.queue_music_rounded,
-              label: '队列',
-              tooltip: '播放队列',
-              showLabel: false,
-              onTap: () {
-                showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<PlayerCubit>(),
-                    child: const QueueSheet(),
-                  ),
-                );
-              },
-            ),
-            _SecondaryAction(
-              icon: Icons.high_quality_rounded,
-              label: '音质',
-              tooltip: '音质',
-              showLabel: false,
-              onTap: () => QualityPickerSheet.show(context),
-            ),
-            BlocBuilder<PlayerCubit, PlayerViewState>(
-              buildWhen: (prev, next) => prev.volume != next.volume,
-              builder: (context, playerState) {
-                return _SecondaryAction(
-                  icon: _volumeIcon(playerState.volume),
-                  label: '音量',
-                  tooltip: '音量 ${_volumePercent(playerState.volume)}%',
-                  active: playerState.volume > 0,
-                  showLabel: false,
-                  onTap: () => _showVolumeSheet(context),
-                );
-              },
-            ),
-            _SecondaryAction(
-              icon: state.sleepRemaining != null || state.sleepEndOfTrack
-                  ? Icons.bedtime_rounded
-                  : Icons.bedtime_outlined,
-              label: '睡眠',
-              tooltip: '睡眠定时',
-              active: state.sleepRemaining != null || state.sleepEndOfTrack,
-              showLabel: false,
-              onTap: () => SleepTimerSheet.show(context),
-            ),
-            BlocBuilder<DownloadsCubit, DownloadsState>(
-              buildWhen: (p, c) =>
-                  p.completedTrackIds.contains(track.id) !=
-                      c.completedTrackIds.contains(track.id) ||
-                  p.jobs.containsKey(track.id) != c.jobs.containsKey(track.id),
-              builder: (context, dlState) {
-                final downloaded = dlState.completedTrackIds.contains(track.id);
-                final running = dlState.jobs.containsKey(track.id);
-                return _SecondaryAction(
-                  icon: downloaded
-                      ? Icons.download_done_rounded
-                      : running
-                      ? Icons.downloading_rounded
-                      : Icons.download_rounded,
-                  label: downloaded
-                      ? '已下载'
-                      : running
-                      ? '下载中'
-                      : '下载',
-                  tooltip: downloaded
-                      ? '已下载'
-                      : running
-                      ? '下载中'
-                      : '下载',
-                  active: downloaded || running,
-                  showLabel: false,
-                  onTap: downloaded || running
-                      ? null
-                      : () => context.read<DownloadsCubit>().enqueue(track),
-                );
-              },
-            ),
-          ],
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              _SecondaryAction(
+                icon: Icons.queue_music_rounded,
+                label: '队列',
+                tooltip: '播放队列',
+                onTap: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<PlayerCubit>(),
+                      child: const QueueSheet(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              BlocBuilder<PlayerCubit, PlayerViewState>(
+                buildWhen: (prev, next) => prev.quality != next.quality,
+                builder: (context, playerState) {
+                  return _SecondaryAction(
+                    icon: Icons.high_quality_rounded,
+                    label: playerState.quality.label,
+                    tooltip: '播放音质：${playerState.quality.label}',
+                    active: playerState.quality != AudioQuality.auto,
+                    onTap: () => QualityPickerSheet.show(context),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              BlocBuilder<PlayerCubit, PlayerViewState>(
+                buildWhen: (prev, next) => prev.volume != next.volume,
+                builder: (context, playerState) {
+                  return _SecondaryAction(
+                    icon: _volumeIcon(playerState.volume),
+                    label: '音量',
+                    tooltip: '音量 ${_volumePercent(playerState.volume)}%',
+                    active: playerState.volume > 0,
+                    onTap: () => _showVolumeSheet(context),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              _SecondaryAction(
+                icon: sleepActive
+                    ? Icons.bedtime_rounded
+                    : Icons.bedtime_outlined,
+                label: sleepActive ? '已定时' : '睡眠',
+                tooltip: state.sleepRemaining != null
+                    ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
+                    : state.sleepEndOfTrack
+                    ? '睡眠定时：本曲结束后'
+                    : '睡眠定时',
+                active: sleepActive,
+                onTap: () => SleepTimerSheet.show(context),
+              ),
+              const SizedBox(width: 8),
+              BlocBuilder<DownloadsCubit, DownloadsState>(
+                buildWhen: (p, c) =>
+                    p.completedTrackIds.contains(track.id) !=
+                        c.completedTrackIds.contains(track.id) ||
+                    p.jobs.containsKey(track.id) !=
+                        c.jobs.containsKey(track.id),
+                builder: (context, dlState) {
+                  final downloaded = dlState.completedTrackIds.contains(
+                    track.id,
+                  );
+                  final running = dlState.jobs.containsKey(track.id);
+                  return _SecondaryAction(
+                    icon: downloaded
+                        ? Icons.download_done_rounded
+                        : running
+                        ? Icons.downloading_rounded
+                        : Icons.download_rounded,
+                    label: downloaded
+                        ? '已下载'
+                        : running
+                        ? '下载中'
+                        : '下载',
+                    tooltip: downloaded
+                        ? '已下载'
+                        : running
+                        ? '下载中'
+                        : '下载',
+                    active: downloaded || running,
+                    onTap: downloaded || running
+                        ? null
+                        : () => context.read<DownloadsCubit>().enqueue(track),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -554,7 +570,6 @@ class _SecondaryAction extends StatelessWidget {
     required this.tooltip,
     required this.label,
     this.active = false,
-    this.showLabel = true,
     this.onTap,
   });
 
@@ -562,7 +577,6 @@ class _SecondaryAction extends StatelessWidget {
   final String tooltip;
   final String label;
   final bool active;
-  final bool showLabel;
   final VoidCallback? onTap;
 
   @override
@@ -585,9 +599,8 @@ class _SecondaryAction extends StatelessWidget {
           onTap: onTap,
           child: AnimatedContainer(
             duration: AppMotion.micro,
-            padding: showLabel
-                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
-                : const EdgeInsets.all(10),
+            constraints: const BoxConstraints(minWidth: 64, minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: active
                   ? colorScheme.primaryContainer.withValues(alpha: 0.34)
@@ -599,22 +612,20 @@ class _SecondaryAction extends StatelessWidget {
                     : Colors.transparent,
               ),
             ),
-            child: showLabel
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 20, color: foregroundColor),
-                      const SizedBox(height: 4),
-                      Text(
-                        label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: foregroundColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(icon, size: 20, color: foregroundColor),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 20, color: foregroundColor),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: foregroundColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
