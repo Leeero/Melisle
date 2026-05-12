@@ -116,8 +116,10 @@ class _PlayerPageState extends State<PlayerPage> {
 }
 
 // ---------------------------------------------------------------------------
-// Mobile layout — stacked vertically: AppBar → Artwork → TrackInfo → Controls
+// Mobile layout — focused modes: artwork or lyrics, with compact quick actions
 // ---------------------------------------------------------------------------
+
+enum _MobilePlayerContentMode { artwork, lyrics }
 
 class _MobileLayout extends StatefulWidget {
   const _MobileLayout({required this.state, required this.track});
@@ -135,59 +137,52 @@ class _MobileLayoutState extends State<_MobileLayout> {
   static const _axisDominance = 1.35;
 
   Offset _dragOffset = Offset.zero;
+  _MobilePlayerContentMode _contentMode = _MobilePlayerContentMode.artwork;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final showingLyrics = _contentMode == _MobilePlayerContentMode.lyrics;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkHeight = (constraints.maxHeight * 0.3).clamp(180.0, 320.0);
-
         return Column(
           children: [
-            const _PlayerTopBar(),
+            _PlayerTopBar(
+              onMorePressed: () =>
+                  _showMobileMoreActionsSheet(context, track: widget.track),
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
-                child: Column(
-                  children: [
-                    _MobileSwipeGestureRegion(
-                      onSwipeEnd: (details) => _handleSwipe(context, details),
-                      onSwipeCancel: _resetSwipe,
-                      onSwipeUpdate: _updateSwipe,
-                      child: SizedBox(
-                        height: artworkHeight,
-                        child: _MobileArtworkStage(track: widget.track),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _MobileSwipeGestureRegion(
-                      onSwipeEnd: (details) => _handleSwipe(context, details),
-                      onSwipeCancel: _resetSwipe,
-                      onSwipeUpdate: _updateSwipe,
-                      child: _MobileTrackInfo(track: widget.track),
-                    ),
-                    const SizedBox(height: 14),
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.2,
-                            ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: showingLyrics
+                      ? _MobileLyricsStage(
+                          key: const ValueKey('lyrics'),
+                          onShowArtwork: () => setState(
+                            () =>
+                                _contentMode = _MobilePlayerContentMode.artwork,
                           ),
+                        )
+                      : _MobileSwipeGestureRegion(
+                          key: const ValueKey('artwork'),
+                          onTap: () => setState(
+                            () =>
+                                _contentMode = _MobilePlayerContentMode.lyrics,
+                          ),
+                          onSwipeEnd: (details) =>
+                              _handleSwipe(context, details),
+                          onSwipeCancel: _resetSwipe,
+                          onSwipeUpdate: _updateSwipe,
+                          child: _MobileArtworkStage(track: widget.track),
                         ),
-                        child: const _MobileLyricView(),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
+            _MobileTrackInfo(track: widget.track),
+            const SizedBox(height: 12),
             _MobileSwipeGestureRegion(
               onSwipeEnd: (details) => _handleSwipe(context, details),
               onSwipeCancel: _resetSwipe,
@@ -201,16 +196,15 @@ class _MobileLayoutState extends State<_MobileLayout> {
                     child: _ProgressTimeline(),
                   ),
                   const SizedBox(height: 12),
-                  const _PlaybackControls(),
-                  const SizedBox(height: AppSpacingTokens.playerToolbarGap),
-                  _MobileSecondaryActions(
-                    state: widget.state,
-                    track: widget.track,
+                  const _PlaybackControls(
+                    showQueueButton: true,
+                    subtleModeButton: true,
                   ),
-                  SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacingTokens.playerToolbarGap),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
           ],
         );
       },
@@ -233,6 +227,7 @@ class _MobileLayoutState extends State<_MobileLayout> {
     final verticalDistance = offset.dy.abs();
 
     final isHorizontalSwipe =
+        _contentMode == _MobilePlayerContentMode.artwork &&
         horizontalDistance >= _horizontalSwipeThreshold &&
         horizontalDistance > verticalDistance * _axisDominance;
     if (isHorizontalSwipe) {
@@ -258,21 +253,25 @@ class _MobileLayoutState extends State<_MobileLayout> {
 
 class _MobileSwipeGestureRegion extends StatelessWidget {
   const _MobileSwipeGestureRegion({
+    super.key,
     required this.child,
     required this.onSwipeUpdate,
     required this.onSwipeEnd,
     required this.onSwipeCancel,
+    this.onTap,
   });
 
   final Widget child;
   final ValueChanged<DragUpdateDetails> onSwipeUpdate;
   final ValueChanged<DragEndDetails> onSwipeEnd;
   final VoidCallback onSwipeCancel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
+      onTap: onTap,
       onPanStart: (_) => onSwipeCancel(),
       onPanUpdate: onSwipeUpdate,
       onPanCancel: onSwipeCancel,
@@ -296,7 +295,7 @@ class _MobileArtworkStage extends StatelessWidget {
           builder: (context, constraints) {
             final size = math
                 .min(constraints.maxWidth, constraints.maxHeight * 0.88)
-                .clamp(200.0, 380.0);
+                .clamp(240.0, 390.0);
             return BlocBuilder<PlayerCubit, PlayerViewState>(
               buildWhen: (prev, next) =>
                   prev.isPlaying != next.isPlaying ||
@@ -312,6 +311,52 @@ class _MobileArtworkStage extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _MobileLyricsStage extends StatelessWidget {
+  const _MobileLyricsStage({super.key, required this.onShowArtwork});
+
+  final VoidCallback onShowArtwork;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Stack(
+        children: [
+          const Positioned.fill(child: _MobileLyricView()),
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Tooltip(
+              message: '切回封面',
+              child: FilledButton.tonalIcon(
+                onPressed: onShowArtwork,
+                icon: const Icon(Icons.album_rounded, size: 18),
+                label: const Text('封面'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -424,210 +469,12 @@ class _MobileTrackInfo extends StatelessWidget {
                 tooltip: isFav ? '取消收藏' : '收藏',
                 style: IconButton.styleFrom(
                   side: BorderSide.none,
-                  backgroundColor: Colors.transparent,
+                  backgroundColor: colorScheme.surface.withValues(alpha: 0.16),
                 ),
               );
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MobileSecondaryActions extends StatelessWidget {
-  const _MobileSecondaryActions({required this.state, required this.track});
-
-  final PlayerViewState state;
-  final MusicTrack track;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final sleepActive = state.sleepRemaining != null || state.sleepEndOfTrack;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacingTokens.playerHorizontalPadding,
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(AppRadiusTokens.button),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.26),
-          ),
-        ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              _SecondaryAction(
-                icon: Icons.queue_music_rounded,
-                label: '队列',
-                tooltip: '播放队列',
-                onTap: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<PlayerCubit>(),
-                      child: const QueueSheet(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              BlocBuilder<PlayerCubit, PlayerViewState>(
-                buildWhen: (prev, next) => prev.quality != next.quality,
-                builder: (context, playerState) {
-                  return _SecondaryAction(
-                    icon: Icons.high_quality_rounded,
-                    label: playerState.quality.label,
-                    tooltip: '播放音质：${playerState.quality.label}',
-                    active: playerState.quality != AudioQuality.auto,
-                    onTap: () => QualityPickerSheet.show(context),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              BlocBuilder<PlayerCubit, PlayerViewState>(
-                buildWhen: (prev, next) => prev.volume != next.volume,
-                builder: (context, playerState) {
-                  return _SecondaryAction(
-                    icon: _volumeIcon(playerState.volume),
-                    label: '音量',
-                    tooltip: '音量 ${_volumePercent(playerState.volume)}%',
-                    active: playerState.volume > 0,
-                    onTap: () => _showVolumeSheet(context),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              _SecondaryAction(
-                icon: sleepActive
-                    ? Icons.bedtime_rounded
-                    : Icons.bedtime_outlined,
-                label: sleepActive ? '已定时' : '睡眠',
-                tooltip: state.sleepRemaining != null
-                    ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
-                    : state.sleepEndOfTrack
-                    ? '睡眠定时：本曲结束后'
-                    : '睡眠定时',
-                active: sleepActive,
-                onTap: () => SleepTimerSheet.show(context),
-              ),
-              const SizedBox(width: 8),
-              BlocBuilder<DownloadsCubit, DownloadsState>(
-                buildWhen: (p, c) =>
-                    p.completedTrackIds.contains(track.id) !=
-                        c.completedTrackIds.contains(track.id) ||
-                    p.jobs.containsKey(track.id) !=
-                        c.jobs.containsKey(track.id),
-                builder: (context, dlState) {
-                  final downloaded = dlState.completedTrackIds.contains(
-                    track.id,
-                  );
-                  final running = dlState.jobs.containsKey(track.id);
-                  return _SecondaryAction(
-                    icon: downloaded
-                        ? Icons.download_done_rounded
-                        : running
-                        ? Icons.downloading_rounded
-                        : Icons.download_rounded,
-                    label: downloaded
-                        ? '已下载'
-                        : running
-                        ? '下载中'
-                        : '下载',
-                    tooltip: downloaded
-                        ? '已下载'
-                        : running
-                        ? '下载中'
-                        : '下载',
-                    active: downloaded || running,
-                    onTap: downloaded || running
-                        ? null
-                        : () => context.read<DownloadsCubit>().enqueue(track),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryAction extends StatelessWidget {
-  const _SecondaryAction({
-    required this.icon,
-    required this.tooltip,
-    required this.label,
-    this.active = false,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final String label;
-  final bool active;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final enabled = onTap != null;
-    final foregroundColor = active
-        ? colorScheme.primary
-        : enabled
-        ? colorScheme.onSurfaceVariant
-        : colorScheme.onSurfaceVariant.withValues(alpha: 0.4);
-
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: AppMotion.micro,
-            constraints: const BoxConstraints(minWidth: 64, minHeight: 44),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: active
-                  ? colorScheme.primaryContainer.withValues(alpha: 0.34)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: active
-                    ? colorScheme.primary.withValues(alpha: 0.2)
-                    : Colors.transparent,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 20, color: foregroundColor),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: foregroundColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1345,7 +1192,9 @@ class _DesktopQueueGlyph extends StatelessWidget {
 }
 
 class _PlayerTopBar extends StatelessWidget {
-  const _PlayerTopBar();
+  const _PlayerTopBar({this.onMorePressed});
+
+  final VoidCallback? onMorePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1356,6 +1205,7 @@ class _PlayerTopBar extends StatelessWidget {
     final rightPadding = AppPageLayout.horizontalPadding(
       context,
     ).clamp(12.0, 24.0).toDouble();
+    final morePressed = onMorePressed;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1364,14 +1214,32 @@ class _PlayerTopBar extends StatelessWidget {
         top: 6,
         bottom: 6,
       ),
-      child: Align(
-        alignment: isDesktopMac ? Alignment.centerRight : Alignment.centerLeft,
-        child: _PlayerTopBarIconButton(
-          icon: Icons.keyboard_arrow_down_rounded,
-          tooltip: '收起',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+      child: morePressed == null
+          ? Align(
+              alignment: isDesktopMac
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: _PlayerTopBarIconButton(
+                icon: Icons.keyboard_arrow_down_rounded,
+                tooltip: '收起',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            )
+          : Row(
+              children: [
+                _PlayerTopBarIconButton(
+                  icon: Icons.keyboard_arrow_down_rounded,
+                  tooltip: '收起',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const Spacer(),
+                _PlayerTopBarIconButton(
+                  icon: Icons.more_horiz_rounded,
+                  tooltip: '更多操作',
+                  onPressed: morePressed,
+                ),
+              ],
+            ),
     );
   }
 }
@@ -1511,7 +1379,13 @@ double _playerTopBarEdgePadding(BuildContext context) {
 }
 
 class _PlaybackControls extends StatelessWidget {
-  const _PlaybackControls();
+  const _PlaybackControls({
+    this.showQueueButton = false,
+    this.subtleModeButton = false,
+  });
+
+  final bool showQueueButton;
+  final bool subtleModeButton;
 
   @override
   Widget build(BuildContext context) {
@@ -1526,9 +1400,10 @@ class _PlaybackControls extends StatelessWidget {
         const controlGap = 12.0;
         return LayoutBuilder(
           builder: (context, constraints) {
+            final maxWidth = showQueueButton ? 350.0 : 292.0;
             final width = constraints.hasBoundedWidth
-                ? math.min(constraints.maxWidth, 292.0)
-                : 292.0;
+                ? math.min(constraints.maxWidth, maxWidth)
+                : maxWidth;
             return SizedBox(
               width: width,
               child: Row(
@@ -1539,6 +1414,7 @@ class _PlaybackControls extends StatelessWidget {
                       children: [
                         _PlaybackModeButton(
                           mode: playbackMode,
+                          subtle: subtleModeButton,
                           onTap: context.read<PlayerCubit>().cyclePlaybackMode,
                         ),
                         const SizedBox(width: controlGap),
@@ -1567,15 +1443,38 @@ class _PlaybackControls extends StatelessWidget {
                   ),
                   const SizedBox(width: controlGap),
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _ControlButton(
-                        icon: Icons.skip_next_rounded,
-                        onTap: context.read<PlayerCubit>().next,
-                        tooltip: '下一曲',
-                        size: 46,
-                        iconSize: 24,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        _ControlButton(
+                          icon: Icons.skip_next_rounded,
+                          onTap: context.read<PlayerCubit>().next,
+                          tooltip: '下一曲',
+                          size: 46,
+                          iconSize: 24,
+                        ),
+                        if (showQueueButton) ...[
+                          const SizedBox(width: controlGap),
+                          _ControlButton(
+                            icon: Icons.queue_music_rounded,
+                            onTap: () {
+                              showModalBottomSheet<void>(
+                                context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => BlocProvider.value(
+                                  value: context.read<PlayerCubit>(),
+                                  child: const QueueSheet(),
+                                ),
+                              );
+                            },
+                            tooltip: '播放队列',
+                            size: 46,
+                            iconSize: 22,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
@@ -1589,10 +1488,15 @@ class _PlaybackControls extends StatelessWidget {
 }
 
 class _PlaybackModeButton extends StatefulWidget {
-  const _PlaybackModeButton({required this.mode, required this.onTap});
+  const _PlaybackModeButton({
+    required this.mode,
+    required this.onTap,
+    this.subtle = false,
+  });
 
   final PlaybackModeOption mode;
   final VoidCallback onTap;
+  final bool subtle;
 
   @override
   State<_PlaybackModeButton> createState() => _PlaybackModeButtonState();
@@ -1604,7 +1508,8 @@ class _PlaybackModeButtonState extends State<_PlaybackModeButton> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isActiveMode = widget.mode != PlaybackModeOption.sequence;
+    final isActiveMode =
+        !widget.subtle && widget.mode != PlaybackModeOption.sequence;
     final foregroundColor = isActiveMode
         ? colorScheme.primary
         : (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant);
@@ -1874,6 +1779,280 @@ void _showVolumeSheet(BuildContext context) {
       child: const _VolumeSheet(),
     ),
   );
+}
+
+Future<void> _showMobileMoreActionsSheet(
+  BuildContext context, {
+  required MusicTrack track,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: context.read<PlayerCubit>()),
+        BlocProvider.value(value: context.read<DownloadsCubit>()),
+      ],
+      child: _MobileMoreActionsSheet(parentContext: context, track: track),
+    ),
+  );
+}
+
+class _MobileMoreActionsSheet extends StatelessWidget {
+  const _MobileMoreActionsSheet({
+    required this.parentContext,
+    required this.track,
+  });
+
+  final BuildContext parentContext;
+  final MusicTrack track;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '更多操作',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '管理当前曲目的下载、音质、音量和睡眠定时。',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            BlocBuilder<DownloadsCubit, DownloadsState>(
+              buildWhen: (p, c) =>
+                  p.completedTrackIds.contains(track.id) !=
+                      c.completedTrackIds.contains(track.id) ||
+                  p.jobs.containsKey(track.id) != c.jobs.containsKey(track.id),
+              builder: (context, downloadState) {
+                final downloaded = downloadState.completedTrackIds.contains(
+                  track.id,
+                );
+                final running = downloadState.jobs.containsKey(track.id);
+                return _MobileMoreActionTile(
+                  icon: downloaded
+                      ? Icons.download_done_rounded
+                      : running
+                      ? Icons.downloading_rounded
+                      : Icons.download_rounded,
+                  title: downloaded
+                      ? '已下载'
+                      : running
+                      ? '下载中'
+                      : '下载当前曲目',
+                  subtitle: downloaded
+                      ? '这首歌已经可离线播放'
+                      : running
+                      ? '正在加入离线缓存'
+                      : '保存到本地，离线时优先播放',
+                  enabled: !downloaded && !running,
+                  onTap: () async {
+                    await context.read<DownloadsCubit>().enqueue(track);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+            BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) => prev.quality != next.quality,
+              builder: (context, state) => _MobileMoreActionTile(
+                icon: Icons.high_quality_rounded,
+                title: '播放音质：${state.quality.label}',
+                subtitle: '下一首起生效；无损取决于源文件',
+                onTap: () => _openNestedSheet(
+                  context,
+                  () => QualityPickerSheet.show(parentContext),
+                ),
+              ),
+            ),
+            BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) =>
+                  prev.sleepRemaining != next.sleepRemaining ||
+                  prev.sleepEndOfTrack != next.sleepEndOfTrack,
+              builder: (context, state) {
+                final remaining = state.sleepRemaining;
+                final subtitle = state.sleepEndOfTrack
+                    ? '将在本曲结束后暂停'
+                    : remaining != null
+                    ? '剩余 ${_formatSleep(remaining)}'
+                    : '时间到后自动暂停播放';
+                return _MobileMoreActionTile(
+                  icon: remaining != null || state.sleepEndOfTrack
+                      ? Icons.bedtime_rounded
+                      : Icons.bedtime_outlined,
+                  title: '睡眠定时',
+                  subtitle: subtitle,
+                  onTap: () => _openNestedSheet(
+                    context,
+                    () => SleepTimerSheet.show(parentContext),
+                  ),
+                );
+              },
+            ),
+            BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) => prev.volume != next.volume,
+              builder: (context, state) => _MobileMoreActionTile(
+                icon: _volumeIcon(state.volume),
+                title: '音量 ${_volumePercent(state.volume)}%',
+                subtitle: '调节当前输出强度',
+                onTap: () => _openNestedSheet(
+                  context,
+                  () async => _showVolumeSheet(parentContext),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openNestedSheet(BuildContext context, Future<void> Function() open) {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (parentContext.mounted) {
+        open();
+      }
+    });
+  }
+}
+
+class _MobileMoreActionTile extends StatelessWidget {
+  const _MobileMoreActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.enabled = true,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = enabled
+        ? colorScheme.onSurface
+        : colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.58),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(
+                      alpha: enabled ? 0.58 : 0.24,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: enabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: enabled
+                              ? colorScheme.onSurfaceVariant
+                              : colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.45,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colorScheme.onSurfaceVariant.withValues(
+                    alpha: enabled ? 0.72 : 0.32,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> _showDesktopPopover(BuildContext context, Widget child) {
