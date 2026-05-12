@@ -1028,8 +1028,6 @@ class _DesktopUtilityBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final showInlineVolume = constraints.maxWidth >= 420;
@@ -1083,80 +1081,20 @@ class _DesktopUtilityBar extends StatelessWidget {
                       },
                     ),
                     const SizedBox(width: 6),
-                    PopupMenuButton<_DesktopSleepAction>(
+                    _DesktopUtilityIconButton(
                       tooltip: sleepActive
                           ? state.sleepRemaining != null
                                 ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
                                 : '睡眠定时：本曲结束后'
                           : '睡眠定时',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 42,
-                        minHeight: 42,
+                      active: sleepActive,
+                      onPressed: () => _showDesktopSleepTimerDialog(context),
+                      child: Icon(
+                        sleepActive
+                            ? Icons.bedtime_rounded
+                            : Icons.bedtime_outlined,
+                        size: 20,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      color: colorScheme.surface,
-                      child: _DesktopUtilityButtonFace(
-                        active: sleepActive,
-                        child: Icon(
-                          sleepActive
-                              ? Icons.bedtime_rounded
-                              : Icons.bedtime_outlined,
-                          size: 20,
-                        ),
-                      ),
-                      onSelected: (action) async {
-                        final cubit = context.read<PlayerCubit>();
-                        switch (action) {
-                          case _DesktopSleepAction.minutes15:
-                            await cubit.startSleepTimer(
-                              const Duration(minutes: 15),
-                            );
-                            break;
-                          case _DesktopSleepAction.minutes30:
-                            await cubit.startSleepTimer(
-                              const Duration(minutes: 30),
-                            );
-                            break;
-                          case _DesktopSleepAction.minutes60:
-                            await cubit.startSleepTimer(
-                              const Duration(minutes: 60),
-                            );
-                            break;
-                          case _DesktopSleepAction.endOfTrack:
-                            await cubit.startSleepTimerEndOfTrack();
-                            break;
-                          case _DesktopSleepAction.cancel:
-                            await cubit.cancelSleepTimer();
-                            break;
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: _DesktopSleepAction.minutes15,
-                          child: Text('15 分钟后暂停'),
-                        ),
-                        const PopupMenuItem(
-                          value: _DesktopSleepAction.minutes30,
-                          child: Text('30 分钟后暂停'),
-                        ),
-                        const PopupMenuItem(
-                          value: _DesktopSleepAction.minutes60,
-                          child: Text('60 分钟后暂停'),
-                        ),
-                        const PopupMenuItem(
-                          value: _DesktopSleepAction.endOfTrack,
-                          child: Text('本曲结束后暂停'),
-                        ),
-                        if (sleepActive) const PopupMenuDivider(),
-                        if (sleepActive)
-                          const PopupMenuItem(
-                            value: _DesktopSleepAction.cancel,
-                            child: Text('取消睡眠定时'),
-                          ),
-                      ],
                     ),
                   ],
                 ),
@@ -1271,36 +1209,6 @@ class _DesktopUtilitySegment extends StatelessWidget {
         ),
       ),
       child: Padding(padding: padding, child: child),
-    );
-  }
-}
-
-class _DesktopUtilityButtonFace extends StatelessWidget {
-  const _DesktopUtilityButtonFace({required this.child, this.active = false});
-
-  final Widget child;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return AnimatedContainer(
-      duration: AppMotion.micro,
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: active
-            ? colorScheme.primaryContainer.withValues(alpha: 0.62)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: IconTheme(
-        data: IconThemeData(
-          color: active ? colorScheme.primary : colorScheme.onSurfaceVariant,
-        ),
-        child: Center(child: child),
-      ),
     );
   }
 }
@@ -1957,8 +1865,6 @@ void _showVolumeSheet(BuildContext context) {
   );
 }
 
-enum _DesktopSleepAction { minutes15, minutes30, minutes60, endOfTrack, cancel }
-
 Future<void> _showDesktopPopover(BuildContext context, Widget child) {
   return showGeneralDialog<void>(
     context: context,
@@ -1993,6 +1899,16 @@ Future<void> _showDesktopVolumeDialog(BuildContext context) {
     BlocProvider.value(
       value: context.read<PlayerCubit>(),
       child: const _DesktopVolumeDialog(),
+    ),
+  );
+}
+
+Future<void> _showDesktopSleepTimerDialog(BuildContext context) {
+  return _showDesktopPopover(
+    context,
+    BlocProvider.value(
+      value: context.read<PlayerCubit>(),
+      child: const _DesktopSleepTimerDialog(),
     ),
   );
 }
@@ -2337,6 +2253,120 @@ class _DesktopVolumeDialog extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopSleepTimerDialog extends StatelessWidget {
+  const _DesktopSleepTimerDialog();
+
+  static const _presets = <Duration>[
+    Duration(minutes: 15),
+    Duration(minutes: 30),
+    Duration(minutes: 60),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 108),
+          child: Material(
+            color: Colors.transparent,
+            child: BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) =>
+                  prev.sleepRemaining != next.sleepRemaining ||
+                  prev.sleepEndOfTrack != next.sleepEndOfTrack,
+              builder: (context, state) {
+                final remaining = state.sleepRemaining;
+                final active = remaining != null || state.sleepEndOfTrack;
+                final cubit = context.read<PlayerCubit>();
+
+                return _DesktopPopoverSurface(
+                  width: 360,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _DesktopPopoverHeader(
+                        icon: active
+                            ? Icons.bedtime_rounded
+                            : Icons.bedtime_outlined,
+                        title: '睡眠定时',
+                        subtitle: '启用后将在指定时间或本曲结束后暂停播放。',
+                        meta: state.sleepEndOfTrack
+                            ? '本曲结束后'
+                            : remaining != null
+                            ? '剩余 ${_formatSleep(remaining)}'
+                            : '未启用',
+                        trailing: _DesktopPopoverCloseButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          for (final preset in _presets)
+                            FilledButton.tonal(
+                              onPressed: () async {
+                                await cubit.startSleepTimer(preset);
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              },
+                              child: Text('${preset.inMinutes} 分钟'),
+                            ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await cubit.startSleepTimerEndOfTrack();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            icon: const Icon(Icons.skip_next_rounded),
+                            label: const Text('本曲结束后'),
+                          ),
+                        ],
+                      ),
+                      if (active) ...[
+                        const SizedBox(height: 12),
+                        Divider(
+                          height: 1,
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              await cubit.cancelSleepTimer();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            icon: const Icon(Icons.alarm_off_rounded),
+                            label: const Text('取消睡眠定时'),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );
