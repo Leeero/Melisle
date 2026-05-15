@@ -69,12 +69,25 @@ class _PlaylistDetailView extends StatelessWidget {
                         padding: AppPageLayout.sectionPadding(
                           context,
                           top: 10,
-                          bottom: 18,
+                          bottom: 10,
                         ),
                         sliver: SliverToBoxAdapter(
                           child: _PlaylistHero(
                             playlist: playlist,
                             tracksCount: state.tracks.length,
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: _PlaylistTracksHeader(
+                          tracksCount: state.tracks.length,
+                          totalTracksCount: playlist?.trackCount,
+                          isLoading:
+                              state.status == PlaylistDetailStatus.loading ||
+                                  state.isLoadingAll,
+                          onPlayAll: () => _playPlaylistFromIndex(
+                            context,
+                            0,
                           ),
                         ),
                       ),
@@ -100,25 +113,11 @@ class _PlaylistDetailView extends StatelessWidget {
                                       context,
                                       index,
                                     ) {
-                                      if (index == 0) {
-                                        return _PlaylistTracksHeader(
-                                          tracksCount: state.tracks.length,
-                                          totalTracksCount:
-                                              playlist?.trackCount,
-                                          onPlayAll: () =>
-                                              _playPlaylistFromIndex(
-                                                context,
-                                                0,
-                                              ),
-                                        );
-                                      }
-
-                                      final trackIndex = index - 1;
-                                      final track = state.tracks[trackIndex];
+                                      final track = state.tracks[index];
                                       return _PlaylistTrackRow(
-                                        isFirst: false,
+                                        isFirst: index == 0,
                                         isLast:
-                                            trackIndex ==
+                                            index ==
                                                 state.tracks.length - 1 &&
                                             !state.isLoadingMore,
                                         child: MusicTrackTile.row(
@@ -129,11 +128,11 @@ class _PlaylistDetailView extends StatelessWidget {
                                               '${track.artistName} · ${track.albumTitle}',
                                           onTap: () => _playPlaylistFromIndex(
                                             context,
-                                            trackIndex,
+                                            index,
                                           ),
                                         ),
                                       );
-                                    }, childCount: state.tracks.length + 1),
+                                    }, childCount: state.tracks.length),
                                   ),
                                 ),
                       },
@@ -178,10 +177,12 @@ class _PlaylistTracksHeader extends StatelessWidget {
     required this.tracksCount,
     required this.onPlayAll,
     this.totalTracksCount,
+    this.isLoading = false,
   });
 
   final int tracksCount;
   final int? totalTracksCount;
+  final bool isLoading;
   final VoidCallback onPlayAll;
 
   @override
@@ -203,14 +204,23 @@ class _PlaylistTracksHeader extends StatelessWidget {
               width: 54,
               height: 54,
               child: FilledButton(
-                onPressed: tracksCount == 0 ? null : onPlayAll,
+                onPressed: tracksCount == 0 || isLoading ? null : onPlayAll,
                 style: FilledButton.styleFrom(
                   padding: EdgeInsets.zero,
                   shape: const CircleBorder(),
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
                 ),
-                child: const Icon(Icons.play_arrow_rounded, size: 30),
+                child: isLoading
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.play_arrow_rounded, size: 30),
               ),
             ),
             const SizedBox(width: 16),
@@ -234,16 +244,6 @@ class _PlaylistTracksHeader extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              onPressed: null,
-              tooltip: '筛选',
-              icon: const Icon(Icons.filter_list_rounded),
-            ),
-            IconButton(
-              onPressed: null,
-              tooltip: '排序',
-              icon: const Icon(Icons.sort_rounded),
             ),
           ],
         ),
