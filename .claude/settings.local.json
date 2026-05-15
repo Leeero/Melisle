@@ -35,7 +35,9 @@
       "Bash(export PATH=\"/Users/lero/Documents/MyData/Code/melisle/bin:$PATH\")",
       "Bash(git restore *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)"
     ]
   }
 }
