@@ -8,6 +8,7 @@ class PlaylistDetailState {
     this.tracks = const [],
     this.hasMore = true,
     this.isLoadingMore = false,
+    this.isLoadingAll = false,
     this.errorMessage,
   });
 
@@ -18,6 +19,7 @@ class PlaylistDetailState {
   final List<MusicTrack> tracks;
   final bool hasMore;
   final bool isLoadingMore;
+  final bool isLoadingAll;
   final String? errorMessage;
 
   PlaylistDetailState copyWith({
@@ -25,6 +27,7 @@ class PlaylistDetailState {
     List<MusicTrack>? tracks,
     bool? hasMore,
     bool? isLoadingMore,
+    bool? isLoadingAll,
     String? errorMessage,
   }) {
     return PlaylistDetailState(
@@ -32,6 +35,7 @@ class PlaylistDetailState {
       tracks: tracks ?? this.tracks,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isLoadingAll: isLoadingAll ?? this.isLoadingAll,
       errorMessage: errorMessage,
     );
   }

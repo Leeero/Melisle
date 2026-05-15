@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:dio/dio.dart';
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -136,21 +139,38 @@ class CachedMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) {
-    return _cached(
-      'playlists',
-      ttl: _policy.listTtl,
-      params: {
-        'limit': limit,
-        'startIndex': startIndex,
-        'searchQuery': searchQuery,
-      },
+  }) async {
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      return _cached(
+        'playlists',
+        ttl: _policy.listTtl,
+        params: {
+          'limit': limit,
+          'startIndex': startIndex,
+          'searchQuery': searchQuery,
+        },
+        loader: () => _delegate.fetchPlaylists(
+          limit: limit,
+          startIndex: startIndex,
+          searchQuery: searchQuery,
+        ),
+      );
+    }
+
+    const fullListLimit = 10000;
+    final fullList = await _cached(
+      'playlists_full',
+      ttl: _policy.fullListTtl,
+      params: const <String, Object?>{},
       loader: () => _delegate.fetchPlaylists(
-        limit: limit,
-        startIndex: startIndex,
-        searchQuery: searchQuery,
+        limit: fullListLimit,
+        startIndex: 0,
       ),
     );
+
+    if (startIndex >= fullList.length) return [];
+    final end = min(startIndex + limit, fullList.length);
+    return fullList.sublist(startIndex, end);
   }
 
   @override
@@ -318,26 +338,54 @@ class CachedMusicRepository implements MusicRepository {
       return await inFlight as T;
     }
 
-    final future = loader().then<Object?>(
-      (value) {
+    final future = _loadWithRetry(key, loader, cached, ttl);
+    _inFlightRequests[key] = future;
+
+    try {
+      final result = await future;
+      return result as T;
+    } finally {
+      _inFlightRequests.remove(key);
+    }
+  }
+
+  Future<Object?> _loadWithRetry<T>(
+    String key,
+    Future<T> Function() loader,
+    _CacheEntry<Object?>? cached,
+    Duration ttl,
+  ) async {
+    const maxRetries = 1;
+    Object? lastError;
+
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        final value = await loader();
         _memoryCache[key] = _CacheEntry(
           value: value,
           expiresAt: _now().add(ttl),
         );
-        _inFlightRequests.remove(key);
         return value;
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        _inFlightRequests.remove(key);
-        if (cached != null) {
-          return cached.value;
+      } catch (e) {
+        lastError = e;
+        if (attempt < maxRetries && _isTimeout(e)) {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        } else {
+          break;
         }
-        throw error;
-      },
-    );
+      }
+    }
 
-    _inFlightRequests[key] = future;
-    return await future as T;
+    if (cached != null) return cached.value;
+    throw lastError!;
+  }
+
+  bool _isTimeout(Object error) {
+    if (error is! DioException) return false;
+    final type = error.type;
+    return type == DioExceptionType.connectionTimeout ||
+        type == DioExceptionType.sendTimeout ||
+        type == DioExceptionType.receiveTimeout;
   }
 
   void _syncSessionScope(AuthSession? session) {
@@ -376,16 +424,18 @@ class CachedMusicRepository implements MusicRepository {
 
 class MusicRepositoryCachePolicy {
   const MusicRepositoryCachePolicy({
-    this.listTtl = const Duration(seconds: 45),
-    this.detailTtl = const Duration(minutes: 3),
+    this.listTtl = const Duration(minutes: 5),
+    this.detailTtl = const Duration(minutes: 10),
     this.searchTtl = const Duration(seconds: 20),
     this.homeFeedTtl = const Duration(minutes: 2),
+    this.fullListTtl = const Duration(minutes: 5),
   });
 
   final Duration listTtl;
   final Duration detailTtl;
   final Duration searchTtl;
   final Duration homeFeedTtl;
+  final Duration fullListTtl;
 }
 
 class _CacheEntry<T> {

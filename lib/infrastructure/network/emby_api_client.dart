@@ -246,7 +246,7 @@ class EmbyApiClient {
       '${session.normalizedServerUrl}/Playlists/$playlistId/Items',
       queryParameters: {
         'UserId': session.userId,
-        'Fields': _trackDetailFields,
+        'Fields': _trackListFields,
         'ImageTypeLimit': 1,
         'Limit': ?limit,
         if (startIndex > 0) 'StartIndex': startIndex,

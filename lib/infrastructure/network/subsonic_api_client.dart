@@ -15,16 +15,12 @@ class SubsonicApiClient {
   SubsonicApiClient(this._dio);
 
   final Dio _dio;
-  final _playlistsCache =
-      <String, _SubsonicCacheEntry<List<Map<String, dynamic>>>>{};
-  final _playlistTracksCache =
-      <String, _SubsonicCacheEntry<List<Map<String, dynamic>>>>{};
+  final _playlistEntryCache = <String, _CacheEntry<List<Map<String, dynamic>>>>{};
 
   static const _apiVersion = '1.16.1';
   static const _clientName = AppConstants.apiClientName;
   static const _artistImageSize = 600;
-  static const _playlistsCacheTtl = Duration(seconds: 45);
-  static const _playlistTracksCacheTtl = Duration(minutes: 3);
+  static const _playlistEntryCacheTtl = Duration(minutes: 3);
 
   Future<AuthSession> login({
     required String serverUrl,
@@ -264,30 +260,17 @@ class SubsonicApiClient {
   Future<List<Map<String, dynamic>>> _fetchPlaylistMaps(
     AuthSession session,
   ) async {
-    final key = _sessionCacheKey(session);
-    final cached = _playlistsCache[key];
-    final now = DateTime.now();
-    if (cached != null && cached.expiresAt.isAfter(now)) {
-      return cached.value;
-    }
-
     final payload = await _request(session, 'getPlaylists');
-    final playlists = _readMaps(_asMap(payload['playlists'])?['playlist']);
-    _playlistsCache[key] = _SubsonicCacheEntry(
-      value: playlists,
-      expiresAt: now.add(_playlistsCacheTtl),
-    );
-    return playlists;
+    return _readMaps(_asMap(payload['playlists'])?['playlist']);
   }
 
   Future<List<Map<String, dynamic>>> _fetchPlaylistEntryMaps(
     AuthSession session,
     String playlistId,
   ) async {
-    final key = '${_sessionCacheKey(session)}|$playlistId';
-    final cached = _playlistTracksCache[key];
-    final now = DateTime.now();
-    if (cached != null && cached.expiresAt.isAfter(now)) {
+    final key = '${session.normalizedServerUrl}|${session.userId}|$playlistId';
+    final cached = _playlistEntryCache[key];
+    if (cached != null && cached.expiresAt.isAfter(DateTime.now())) {
       return cached.value;
     }
 
@@ -297,15 +280,11 @@ class SubsonicApiClient {
       queryParameters: {'id': playlistId},
     );
     final entries = _readMaps(_asMap(payload['playlist'])?['entry']);
-    _playlistTracksCache[key] = _SubsonicCacheEntry(
+    _playlistEntryCache[key] = _CacheEntry(
       value: entries,
-      expiresAt: now.add(_playlistTracksCacheTtl),
+      expiresAt: DateTime.now().add(_playlistEntryCacheTtl),
     );
     return entries;
-  }
-
-  String _sessionCacheKey(AuthSession session) {
-    return '${session.normalizedServerUrl}|${session.userId}';
   }
 
   String buildStreamUrl(
@@ -904,8 +883,8 @@ class SubsonicApiClient {
   }
 }
 
-class _SubsonicCacheEntry<T> {
-  const _SubsonicCacheEntry({required this.value, required this.expiresAt});
+class _CacheEntry<T> {
+  const _CacheEntry({required this.value, required this.expiresAt});
 
   final T value;
   final DateTime expiresAt;
