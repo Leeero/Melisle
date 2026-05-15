@@ -84,6 +84,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   /// 暂停过程中屏蔽 positionStream 的虚假归零。
   bool _pausingGuard = false;
 
+  /// seek 后的最新位置，用于屏蔽 positionStream 中过期的旧位置事件。
+  /// 在 [seek] 中设置，在收到有效位置事件或切歌时清空。
+  Duration? _lastSeekPosition;
+
   /// 两首之间的静音间隔，默认为 0（无间隔）。
   Duration _gapBetweenTracks = Duration.zero;
 
@@ -322,6 +326,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         ? Duration.zero
         : actualPosition;
     final effectiveDuration = _durationCoveringPosition(effectivePosition);
+    _lastSeekPosition = effectivePosition;
 
     emit(
       state.copyWith(position: effectivePosition, duration: effectiveDuration),
@@ -490,6 +495,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final track = _queue.currentTrack;
     if (track == null) return;
 
+    // 切歌时清除 seek 过期位置守卫，避免新曲目首个 position 事件被误屏蔽。
+    _lastSeekPosition = null;
+
     final myToken = ++_playToken;
     try {
       final source = await _resolver.resolve(track, quality: state.quality);
@@ -545,6 +553,16 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   void _onPositionChanged(Duration position) {
     if (_pausingGuard) return;
+
+    // seek 后 positionStream 可能投递过期位置，与 seek 目标偏差 >500ms 则屏蔽。
+    if (_lastSeekPosition != null) {
+      if ((position - _lastSeekPosition!).abs() >
+          const Duration(milliseconds: 500)) {
+        return;
+      }
+      _lastSeekPosition = null;
+    }
+
     final effectiveDuration = _durationCoveringPosition(position);
     emit(state.copyWith(position: position, duration: effectiveDuration));
     _updateLyricHighlight(position);

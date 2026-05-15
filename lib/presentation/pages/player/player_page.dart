@@ -1457,18 +1457,7 @@ class _PlaybackControls extends StatelessWidget {
                           const SizedBox(width: controlGap),
                           _ControlButton(
                             icon: Icons.queue_music_rounded,
-                            onTap: () {
-                              showModalBottomSheet<void>(
-                                context: context,
-                                isScrollControlled: true,
-                                useSafeArea: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (_) => BlocProvider.value(
-                                  value: context.read<PlayerCubit>(),
-                                  child: const QueueSheet(),
-                                ),
-                              );
-                            },
+                            onTap: () => QueueSheet.show(context),
                             tooltip: '播放队列',
                             size: 46,
                             iconSize: 22,

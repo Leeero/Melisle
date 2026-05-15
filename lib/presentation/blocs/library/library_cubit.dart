@@ -136,21 +136,29 @@ class LibraryCubit extends Cubit<LibraryState> {
           break;
       }
     } on TimeoutException {
-      emit(
-        state.copyWith(
-          status: LibraryStatus.failure,
-          isLoadingMore: false,
-          errorMessage: '加载媒体库超时，请稍后重试。',
-        ),
-      );
+      if (reset) {
+        emit(
+          state.copyWith(
+            status: LibraryStatus.failure,
+            isLoadingMore: false,
+            errorMessage: '加载媒体库超时，请稍后重试。',
+          ),
+        );
+      } else {
+        emit(state.copyWith(isLoadingMore: false, errorMessage: '加载超时，请稍后重试。'));
+      }
     } catch (error) {
-      emit(
-        state.copyWith(
-          status: LibraryStatus.failure,
-          isLoadingMore: false,
-          errorMessage: '加载媒体库失败：$error',
-        ),
-      );
+      if (reset) {
+        emit(
+          state.copyWith(
+            status: LibraryStatus.failure,
+            isLoadingMore: false,
+            errorMessage: '加载媒体库失败：$error',
+          ),
+        );
+      } else {
+        emit(state.copyWith(isLoadingMore: false, errorMessage: '加载失败：$error'));
+      }
     }
   }
 

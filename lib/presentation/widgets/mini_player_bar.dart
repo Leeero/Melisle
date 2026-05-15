@@ -262,15 +262,7 @@ class _WideMiniPlayer extends StatelessWidget {
 }
 
 void _showMiniQueueSheet(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => BlocProvider.value(
-      value: context.read<PlayerCubit>(),
-      child: const QueueSheet(),
-    ),
-  );
+  QueueSheet.show(context);
 }
 
 class _MiniTrackButton extends StatelessWidget {
