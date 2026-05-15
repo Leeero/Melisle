@@ -103,7 +103,11 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
     String? currentTrackId,
   ) {
-    if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
+    // 初始加载（所有列表都空时显示全屏加载）
+    if (state.status == LibraryStatus.loading &&
+        state.tracks.isEmpty &&
+        state.albums.isEmpty &&
+        state.artists.isEmpty) {
       return const AppBodyStateView.loading();
     }
 
@@ -118,10 +122,13 @@ class _LibraryViewState extends State<_LibraryView> {
       );
     }
 
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        switch (state.currentFilter) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: CustomScrollView(
+        key: ValueKey('filter-${state.currentFilter.index}'),
+        controller: _scrollController,
+        slivers: [
+          switch (state.currentFilter) {
           LibraryFilter.tracks => _buildTrackSliver(
             context,
             state,
@@ -139,8 +146,9 @@ class _LibraryViewState extends State<_LibraryView> {
             horizontalPadding,
           ),
         },
-        _buildFooterSliver(state),
-      ],
+          _buildFooterSliver(state),
+        ],
+      ),
     );
   }
 
@@ -151,7 +159,7 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.tracks.isEmpty) {
-      return const AppSliverStateView.message(message: '当前没有匹配的歌曲。');
+      return const AppSliverStateView.message(message: '当前没有匹配的歌曲。试试其他关键词吧。');
     }
 
     return SliverPadding(
@@ -184,7 +192,38 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
   ) {
     if (state.albums.isEmpty) {
-      return const AppSliverStateView.message(message: '当前没有匹配的专辑。');
+      return const AppSliverStateView.message(message: '当前没有匹配的专辑。试试其他关键词吧。');
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isNarrow = screenWidth < 380;
+
+    if (isNarrow) {
+      return SliverPadding(
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final album = state.albums[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: CachedArtwork(
+                  imageUrl: album.artworkUrl,
+                  size: 48,
+                  borderRadius: 14,
+                ),
+                title: Text(album.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  [album.artistName, if (album.year != null) '${album.year}', '${album.trackCount} 首'].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () => context.push('/album/${album.id}', extra: album),
+              ),
+            );
+          }, childCount: state.albums.length),
+        ),
+      );
     }
 
     return SliverPadding(
@@ -220,7 +259,7 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
   ) {
     if (state.artists.isEmpty) {
-      return const AppSliverStateView.message(message: '当前没有匹配的艺术家。');
+      return const AppSliverStateView.message(message: '当前没有匹配的艺术家。试试其他关键词吧。');
     }
 
     return SliverPadding(
@@ -241,6 +280,25 @@ class _LibraryViewState extends State<_LibraryView> {
     if (state.isCurrentFilterEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
+
+    // loadMore 失败的 inline 提示
+    if (state.errorMessage != null && !state.isLoadingMore && state.status == LibraryStatus.success) {
+      final colorScheme = Theme.of(context).colorScheme;
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+          child: Center(
+            child: Text(
+              state.errorMessage!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.error,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (state.isLoadingMore) {
       return const SliverToBoxAdapter(
         child: Padding(
@@ -250,10 +308,19 @@ class _LibraryViewState extends State<_LibraryView> {
       );
     }
     if (!state.hasMore) {
-      return const SliverToBoxAdapter(
+      final colorScheme = Theme.of(context).colorScheme;
+      return SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 30),
-          child: Center(child: Text('已经到底了')),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 30),
+          child: Center(
+            child: Text(
+              '— · — · —',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                letterSpacing: 4,
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -309,7 +376,6 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
       children: [
         AppPageTitleRow(
           title: '媒体库',
-          description: '在歌曲、专辑和艺术家之间快速切换',
           badge: MetaPill(
             label: '${widget.state.currentFilterCount} 项',
             size: MetaPillSize.compact,
@@ -317,21 +383,28 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
           action:
               widget.state.currentFilter == LibraryFilter.tracks &&
                   widget.tracks.isNotEmpty
-              ? FilledButton.tonalIcon(
-                  onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                    context,
-                    loadedTracks: widget.tracks,
-                    allLoaded: !widget.state.hasMore,
-                    fetchAll: () => context.read<MusicRepository>().fetchTracks(
-                      limit: 500,
-                      startIndex: 0,
-                      searchQuery: widget.state.searchQuery.trim().isEmpty
-                          ? null
-                          : widget.state.searchQuery.trim(),
+              ? SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                      context,
+                      loadedTracks: widget.tracks,
+                      allLoaded: !widget.state.hasMore,
+                      fetchAll: () => context.read<MusicRepository>().fetchTracks(
+                        limit: 500,
+                        startIndex: 0,
+                        searchQuery: widget.state.searchQuery.trim().isEmpty
+                            ? null
+                            : widget.state.searchQuery.trim(),
+                      ),
                     ),
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: const CircleBorder(),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded, size: 26),
                   ),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: const Text('播放全部'),
                 )
               : null,
         ),
@@ -437,10 +510,6 @@ class _ArtistCard extends StatelessWidget {
                     const MetaPill(label: '艺术家档案', size: MetaPillSize.compact),
                   ],
                 ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: colorScheme.onSurfaceVariant,
               ),
             ],
           ),

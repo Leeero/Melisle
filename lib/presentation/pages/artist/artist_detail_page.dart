@@ -96,19 +96,26 @@ class _ArtistDetailView extends StatelessWidget {
                           sliver: SliverToBoxAdapter(
                             child: AppSectionTitleRow(
                               title: '热门曲目',
-                              action: FilledButton.tonalIcon(
-                                onPressed: () =>
-                                    PlayerNavigation.playAllAndOpenPlayer(
-                                      context,
-                                      loadedTracks: state.topTracks,
-                                      allLoaded: true,
-                                      fetchAll: () async => state.topTracks,
-                                    ),
-                                icon: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 18,
+                              action: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: FilledButton(
+                                  onPressed: () =>
+                                      PlayerNavigation.playAllAndOpenPlayer(
+                                        context,
+                                        loadedTracks: state.topTracks,
+                                        allLoaded: true,
+                                        fetchAll: () async => state.topTracks,
+                                      ),
+                                  style: FilledButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    shape: const CircleBorder(),
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 22,
+                                  ),
                                 ),
-                                label: const Text('播放全部'),
                               ),
                             ),
                           ),

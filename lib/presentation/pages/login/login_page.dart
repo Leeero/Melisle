@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -42,7 +43,11 @@ class _LoginPageState extends State<LoginPage> {
           if (message == null) return;
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(message)));
+            ..showSnackBar(SnackBar(
+              content: Text(message),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: colorScheme.errorContainer,
+            ));
         },
         child: Stack(
           children: [
@@ -131,22 +136,24 @@ class _LoginPageState extends State<LoginPage> {
                           serverUrlController: _serverUrlController,
                           usernameController: _usernameController,
                           passwordController: _passwordController,
+                          obscurePassword: _obscurePassword,
                           onSubmit: _submit,
+                          onToggleObscure: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
                         );
 
                         if (!isWide) {
                           return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [intro, const SizedBox(height: 18), form],
+                            children: [intro, const SizedBox(height: 16), form],
                           );
                         }
 
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const Expanded(flex: 5, child: _LoginIntro()),
+                            Expanded(flex: 4, child: intro),
                             const SizedBox(width: 22),
-                            Expanded(flex: 4, child: form),
+                            Expanded(flex: 5, child: form),
                           ],
                         );
                       },
@@ -163,6 +170,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     context.read<AuthCubit>().login(
       serverUrl: _serverUrlController.text.trim(),
       username: _usernameController.text.trim(),
@@ -178,100 +186,55 @@ class _LoginIntro extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(36),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.92,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Image.asset(
+                'assets/icons/logo.png',
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppConstants.appName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Image.asset(
-                  'assets/icons/logo.png',
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppConstants.appName,
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        height: 1.02,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    AppConstants.appEnglishName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      AppConstants.appEnglishName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          _Badge(label: AppConstants.appSlogan),
-          const SizedBox(height: 18),
-          Text(
-            '连接你的音乐库',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              height: 1.02,
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '连接你的音乐库',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(height: 12),
-          Text(
-            '使用你的 Emby 或 Navidrome 服务器账号登录乐岛，应用会自动识别当前数据源。',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 22),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: const [
-              _Badge(label: '深色优先'),
-              _Badge(label: '迷你播放条'),
-              _Badge(label: '跨端统一'),
-            ],
-          ),
-          const SizedBox(height: 22),
-          const _FeatureRow(
-            icon: Icons.blur_on_rounded,
-            title: '沉浸式播放页',
-            subtitle: '封面主色、模糊氛围和更轻的交互反馈会持续跟进。',
-          ),
-          const SizedBox(height: 14),
-          const _FeatureRow(
-            icon: Icons.queue_music_rounded,
-            title: '多视图媒体库',
-            subtitle: '歌曲、专辑、艺术家与歌单会共享同一套轻盈的视觉语言。',
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -282,14 +245,18 @@ class _LoginForm extends StatelessWidget {
     required this.serverUrlController,
     required this.usernameController,
     required this.passwordController,
+    required this.obscurePassword,
     required this.onSubmit,
+    required this.onToggleObscure,
   });
 
   final GlobalKey<FormState> formKey;
   final TextEditingController serverUrlController;
   final TextEditingController usernameController;
   final TextEditingController passwordController;
+  final bool obscurePassword;
   final VoidCallback onSubmit;
+  final VoidCallback onToggleObscure;
 
   @override
   Widget build(BuildContext context) {
@@ -305,10 +272,10 @@ class _LoginForm extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('登录乐岛', style: Theme.of(context).textTheme.headlineSmall),
+              Text('登录', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
-                '使用你的 Emby 或 Navidrome 服务器地址和账号登录乐岛。',
+                '连接到你的私有音乐库',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -339,10 +306,31 @@ class _LoginForm extends StatelessWidget {
               const SizedBox(height: 16),
               TextFormField(
                 controller: passwordController,
-                decoration: const InputDecoration(labelText: '密码'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: '密码',
+                  suffixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  suffixIcon: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: onToggleObscure,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        obscurePassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        key: ValueKey(obscurePassword),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                obscureText: obscurePassword,
                 validator: (value) =>
                     value == null || value.isEmpty ? '请输入密码' : null,
+                onFieldSubmitted: (_) => onSubmit(),
               ),
               const SizedBox(height: 22),
               // Phase 4: Capsule login button with Primary glow shadow
@@ -370,12 +358,19 @@ class _LoginForm extends StatelessWidget {
                         ),
                         onPressed: isLoading ? null : onSubmit,
                         child: isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                            ? const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text('正在连接…'),
+                                ],
                               )
                             : const Text('登录并进入乐岛'),
                       ),
@@ -387,72 +382,6 @@ class _LoginForm extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.58),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Icon(icon, color: colorScheme.onSurface),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.56),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }

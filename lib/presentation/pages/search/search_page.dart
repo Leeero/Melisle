@@ -225,7 +225,6 @@ class _SearchHeader extends StatelessWidget {
             const Expanded(
               child: AppPageTitleRow(
                 title: '搜索',
-                description: '在曲目、专辑、艺术家和歌单之间快速查找',
                 padding: EdgeInsets.zero,
               ),
             ),

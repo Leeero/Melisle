@@ -115,7 +115,6 @@ class _DownloadsHeader extends StatelessWidget {
         const Expanded(
           child: AppPageTitleRow(
             title: '下载管理',
-            description: '查看进行中与已下载的离线曲目',
             padding: EdgeInsets.zero,
           ),
         ),

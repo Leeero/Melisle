@@ -141,7 +141,6 @@ class _PlaylistsHeader extends StatelessWidget {
       children: [
         AppPageTitleRow(
           title: '歌单',
-          description: '把收藏、主题和场景整理成轻盈的入口',
           badge: MetaPill(
             label: '${state.playlists.length} 项',
             size: MetaPillSize.compact,

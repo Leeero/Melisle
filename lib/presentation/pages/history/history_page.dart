@@ -105,18 +105,24 @@ class _HistoryHeader extends StatelessWidget {
         Expanded(
           child: AppPageTitleRow(
             title: '播放历史',
-            description: '回到最近听过的内容，接着上次的节奏',
             badge: MetaPill(label: '$count 条', size: MetaPillSize.compact),
             action: count > 0
-                ? FilledButton.tonalIcon(
-                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                      context,
-                      loadedTracks: tracks,
-                      allLoaded: true,
-                      fetchAll: () async => tracks,
+                ? SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                        context,
+                        loadedTracks: tracks,
+                        allLoaded: true,
+                        fetchAll: () async => tracks,
+                      ),
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Icon(Icons.play_arrow_rounded, size: 26),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                    label: const Text('播放全部'),
                   )
                 : null,
             padding: EdgeInsets.zero,

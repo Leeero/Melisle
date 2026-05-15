@@ -162,20 +162,26 @@ class _FavoritesHeader extends StatelessWidget {
         Expanded(
           child: AppPageTitleRow(
             title: '我的收藏',
-            description: '把喜欢的歌曲留在一个随时可回到的入口',
             badge: MetaPill(label: '$count 首', size: MetaPillSize.compact),
             action: count > 0
-                ? FilledButton.tonalIcon(
-                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                      context,
-                      loadedTracks: tracks,
-                      allLoaded: !hasMore,
-                      fetchAll: () => context
-                          .read<MusicRepository>()
-                          .fetchFavoriteTracks(limit: 500, startIndex: 0),
+                ? SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                        context,
+                        loadedTracks: tracks,
+                        allLoaded: !hasMore,
+                        fetchAll: () => context
+                            .read<MusicRepository>()
+                            .fetchFavoriteTracks(limit: 500, startIndex: 0),
+                      ),
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Icon(Icons.play_arrow_rounded, size: 26),
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                    label: const Text('播放全部'),
                   )
                 : null,
             padding: EdgeInsets.zero,
