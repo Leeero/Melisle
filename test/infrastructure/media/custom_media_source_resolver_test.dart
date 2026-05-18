@@ -178,7 +178,7 @@ void main() {
       },
     );
 
-    test('uses api.lrc.cx lyrics endpoint with title query only', () async {
+    test('uses api.lrc.cx lyrics endpoint with precise query params', () async {
       final adapter = _RecordingHttpClientAdapter(
         onFetch: (_) => ResponseBody.fromString(
           '[00:01.00]海阔天空',
@@ -209,7 +209,11 @@ void main() {
       final uri = adapter.lastRequestOptions?.uri;
       expect(uri, isNotNull);
       expect(uri!.path, '/lyrics');
-      expect(uri.queryParameters, {'title': '海阔天空'});
+      expect(uri.queryParameters, {
+        'title': '海阔天空',
+        'album': '海阔天空',
+        'artist': 'Beyond',
+      });
     });
 
     test(
@@ -243,11 +247,87 @@ void main() {
         final uri = adapter.lastRequestOptions?.uri;
         expect(uri, isNotNull);
         expect(uri!.path, '/api/lyrics');
-        expect(uri.queryParameters['title'], 'Test Track');
-        expect(uri.queryParameters['artist'], 'Test Artist');
-        expect(uri.queryParameters['album'], 'Test Album');
+        expect(uri.queryParameters, {
+          'title': 'Test Track',
+          'album': 'Test Album',
+          'artist': 'Test Artist',
+        });
+        expect(uri.queryParameters.containsKey('trackId'), isFalse);
+        expect(uri.queryParameters.containsKey('itemId'), isFalse);
+        expect(uri.queryParameters.containsKey('albumTitle'), isFalse);
+        expect(uri.queryParameters.containsKey('artistName'), isFalse);
       },
     );
+
+    test('skips unknown album when resolving lyrics query params', () async {
+      final adapter = _RecordingHttpClientAdapter(
+        onFetch: (_) => ResponseBody.fromString(
+          '[00:01.00]Test line',
+          200,
+          headers: const {
+            Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+          },
+        ),
+      );
+      final dio = Dio()..httpClientAdapter = adapter;
+      final resolver = CustomMediaSourceResolver(
+        dio: dio,
+        initialSettings: const AppSettingsSnapshot(
+          customLyricsSourceEnabled: true,
+          customLyricsSourceUrl: 'https://lyrics.example.com/api/lyrics',
+        ),
+      );
+
+      await resolver.fetchLyrics(
+        trackId: 'track-001',
+        title: 'Test Track',
+        artistName: 'Test Artist',
+        albumTitle: '[Unknown Album]',
+      );
+
+      final uri = adapter.lastRequestOptions?.uri;
+      expect(uri, isNotNull);
+      expect(uri!.queryParameters, {
+        'title': 'Test Track',
+        'artist': 'Test Artist',
+      });
+      expect(uri.queryParameters.containsKey('album'), isFalse);
+    });
+
+    test('skips empty artist when resolving lyrics query params', () async {
+      final adapter = _RecordingHttpClientAdapter(
+        onFetch: (_) => ResponseBody.fromString(
+          '[00:01.00]Test line',
+          200,
+          headers: const {
+            Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+          },
+        ),
+      );
+      final dio = Dio()..httpClientAdapter = adapter;
+      final resolver = CustomMediaSourceResolver(
+        dio: dio,
+        initialSettings: const AppSettingsSnapshot(
+          customLyricsSourceEnabled: true,
+          customLyricsSourceUrl: 'https://lyrics.example.com/api/lyrics',
+        ),
+      );
+
+      await resolver.fetchLyrics(
+        trackId: 'track-001',
+        title: 'Test Track',
+        artistName: ' ',
+        albumTitle: 'Test Album',
+      );
+
+      final uri = adapter.lastRequestOptions?.uri;
+      expect(uri, isNotNull);
+      expect(uri!.queryParameters, {
+        'title': 'Test Track',
+        'album': 'Test Album',
+      });
+      expect(uri.queryParameters.containsKey('artist'), isFalse);
+    });
   });
 }
 

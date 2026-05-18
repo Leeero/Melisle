@@ -500,7 +500,7 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                   title: '歌词来源',
                   description: '用于歌词服务或自建接口。',
                   tooltipMessage:
-                      '若地址不含模板变量，应用会自动补上 trackId、title、artist、album 等查询参数；api.lrc.cx/lyrics 会仅补 title。当前支持 LRC 文本及常见 JSON 歌词结构。',
+                      '若地址不含模板变量，应用会自动补上 title、album、artist 查询参数；album/artist 可能为空，album 为 [Unknown Album] 时会按空值处理。当前支持 LRC 文本及常见 JSON 歌词结构。',
                   enabled: state.customLyricsSourceEnabled,
                   onToggle: cubit.setCustomLyricsSourceEnabled,
                   controller: _lyricsController,

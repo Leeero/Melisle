@@ -389,6 +389,7 @@ class CustomMediaSourceResolver {
     String? albumTitle,
     int? size,
   }) {
+    final normalizedAlbumTitle = _normalizeAlbumTitle(albumTitle);
     return {
       'sourceUrl': fallbackUrl ?? '',
       'fallbackUrl': fallbackUrl ?? '',
@@ -400,10 +401,18 @@ class CustomMediaSourceResolver {
       'title': title ?? '',
       'artist': artistName ?? '',
       'artistName': artistName ?? '',
-      'album': albumTitle ?? '',
-      'albumTitle': albumTitle ?? '',
+      'album': normalizedAlbumTitle,
+      'albumTitle': normalizedAlbumTitle,
       'size': size?.toString() ?? '',
     };
+  }
+
+  String _normalizeAlbumTitle(String? albumTitle) {
+    final trimmed = albumTitle?.trim() ?? '';
+    if (trimmed == '[Unknown Album]') {
+      return '';
+    }
+    return trimmed;
   }
 
   String? _buildResolvedUrl(
@@ -463,8 +472,10 @@ class CustomMediaSourceResolver {
     required bool isLyrics,
   }) {
     final uri = Uri.tryParse(rawAddress.trim());
-    final expectedPath = isLyrics ? 'lyrics' : 'cover';
-    if (_isLrcCxEndpoint(uri, expectedPath)) {
+    if (isLyrics) {
+      return const ['title', 'album', 'artist'];
+    }
+    if (_isLrcCxEndpoint(uri, 'cover')) {
       return const ['title'];
     }
     return null;
