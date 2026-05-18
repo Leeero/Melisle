@@ -2710,8 +2710,15 @@ class _DesktopQualityDialog extends StatelessWidget {
   }
 }
 
-class _DesktopQueueDialog extends StatelessWidget {
+class _DesktopQueueDialog extends StatefulWidget {
   const _DesktopQueueDialog();
+
+  @override
+  State<_DesktopQueueDialog> createState() => _DesktopQueueDialogState();
+}
+
+class _DesktopQueueDialogState extends State<_DesktopQueueDialog> {
+  bool _confirmingClear = false;
 
   @override
   Widget build(BuildContext context) {
@@ -2726,364 +2733,439 @@ class _DesktopQueueDialog extends StatelessWidget {
         alignment: Alignment.bottomRight,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 108),
-          child: Material(
-            color: Colors.transparent,
-            child: _DesktopPopoverSurface(
-              width: 468,
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
-                children: [
-                  BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) =>
-                        prev.queue.length != next.queue.length,
+          child: _DesktopQueueSurface(
+            width: 408,
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Column(
+              children: [
+                BlocBuilder<PlayerCubit, PlayerViewState>(
+                  buildWhen: (prev, next) =>
+                      prev.queue.length != next.queue.length ||
+                      prev.currentIndex != next.currentIndex ||
+                      prev.isPlaying != next.isPlaying,
+                  builder: (context, state) {
+                    return _DesktopQueueHeader(
+                      count: state.queue.length,
+                      confirmingClear: _confirmingClear,
+                      onClearPressed: state.queue.isEmpty
+                          ? null
+                          : () {
+                              if (_confirmingClear) {
+                                context.read<PlayerCubit>().clearQueue();
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                                return;
+                              }
+
+                              setState(() => _confirmingClear = true);
+                            },
+                      onCancelClear: _confirmingClear
+                          ? () => setState(() => _confirmingClear = false)
+                          : null,
+                      onClosePressed: () => Navigator.of(context).pop(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                Divider(
+                  height: 1,
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                ),
+                Expanded(
+                  child: BlocBuilder<PlayerCubit, PlayerViewState>(
                     builder: (context, state) {
-                      return _DesktopPopoverHeader(
-                        icon: Icons.queue_music_rounded,
-                        title: '播放队列',
-                        subtitle: '拖拽调整顺序，点按列表项可立即切换播放。',
-                        meta: '${state.queue.length} 首',
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (state.queue.isNotEmpty) ...[
-                              _DesktopPopoverActionButton(
-                                label: '清空',
-                                icon: Icons.delete_sweep_rounded,
-                                onPressed: () async {
-                                  await context
-                                      .read<PlayerCubit>()
-                                      .clearQueue();
-                                  if (context.mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            _DesktopPopoverCloseButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        ),
+                      if (state.queue.isEmpty) {
+                        return const _DesktopQueueEmptyState();
+                      }
+
+                      return ReorderableListView.builder(
+                        padding: const EdgeInsets.fromLTRB(4, 12, 4, 12),
+                        buildDefaultDragHandles: false,
+                        itemExtent: 72,
+                        proxyDecorator: _desktopQueueProxyDecorator,
+                        itemCount: state.queue.length,
+                        onReorder: context.read<PlayerCubit>().moveQueueItem,
+                        itemBuilder: (context, index) {
+                          final track = state.queue[index];
+                          final isCurrent = index == state.currentIndex;
+                          return _DesktopQueueItem(
+                            key: ValueKey('desktop-queue-${track.id}-$index'),
+                            index: index,
+                            track: track,
+                            isCurrent: isCurrent,
+                            isPlaying: state.isPlaying,
+                          );
+                        },
                       );
                     },
                   ),
-                  const SizedBox(height: 14),
-                  Divider(
-                    height: 1,
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _desktopQueueProxyDecorator(
+    Widget child,
+    int index,
+    Animation<double> animation,
+  ) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final t = Curves.easeOutCubic.transform(animation.value);
+        return Transform.translate(
+          offset: Offset(0, -2 * t),
+          child: Transform.scale(
+            scale: 1.0 + 0.01 * t,
+            child: Material(
+              color: Colors.transparent,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withValues(
+                          alpha: 0.18,
+                        ),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+class _DesktopQueueSurface extends StatelessWidget {
+  const _DesktopQueueSurface({
+    required this.width,
+    required this.child,
+    this.constraints,
+  });
+
+  final double width;
+  final Widget child;
+  final BoxConstraints? constraints;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: width,
+      constraints: constraints,
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DesktopQueueHeader extends StatelessWidget {
+  const _DesktopQueueHeader({
+    required this.count,
+    required this.confirmingClear,
+    required this.onClearPressed,
+    required this.onCancelClear,
+    required this.onClosePressed,
+  });
+
+  final int count;
+  final bool confirmingClear;
+  final VoidCallback? onClearPressed;
+  final VoidCallback? onCancelClear;
+  final VoidCallback onClosePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.queue_music_rounded,
+              size: 20,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '播放队列',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _DesktopQueueBadge(label: '$count 首'),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  confirmingClear
+                      ? '再次点击将清空整个队列'
+                      : '点按切歌，拖拽排序，移除后可撤销',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (confirmingClear)
+            TextButton(
+              onPressed: onCancelClear,
+              child: const Text('取消'),
+            ),
+          if (count > 0)
+            TextButton(
+              onPressed: onClearPressed,
+              child: Text(confirmingClear ? '确认清空' : '清空'),
+            ),
+          const SizedBox(width: 4),
+          _DesktopPopoverCloseButton(onPressed: onClosePressed),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopQueueBadge extends StatelessWidget {
+  const _DesktopQueueBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
+class _DesktopQueueItem extends StatefulWidget {
+  const _DesktopQueueItem({
+    super.key,
+    required this.index,
+    required this.track,
+    required this.isCurrent,
+    required this.isPlaying,
+  });
+
+  final int index;
+  final MusicTrack track;
+  final bool isCurrent;
+  final bool isPlaying;
+
+  @override
+  State<_DesktopQueueItem> createState() => _DesktopQueueItemState();
+}
+
+class _DesktopQueueItemState extends State<_DesktopQueueItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final subtitle = [
+      widget.track.artistName,
+      if (widget.track.albumTitle.isNotEmpty) widget.track.albumTitle,
+    ].where((value) => value.isNotEmpty).join(' · ');
+
+    final baseColor = widget.isCurrent
+        ? colorScheme.primaryContainer.withValues(alpha: 0.62)
+        : colorScheme.surface.withValues(alpha: _hovered ? 0.7 : 0.24);
+    final borderColor = widget.isCurrent
+        ? colorScheme.primary.withValues(alpha: 0.22)
+        : colorScheme.outlineVariant.withValues(alpha: _hovered ? 0.28 : 0.14);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () async {
+              await context.read<PlayerCubit>().playIndex(widget.index);
+            },
+            child: AnimatedContainer(
+              duration: AppMotion.micro,
+              curve: Curves.easeOutQuart,
+              decoration: BoxDecoration(
+                color: baseColor,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: borderColor),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      '${widget.index + 1}',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: widget.isCurrent
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  CachedArtwork(
+                    imageUrl: widget.track.artworkUrl,
+                    size: 44,
+                    borderRadius: 14,
+                    sourceContext: ArtworkSourceContext.track(widget.track),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: BlocBuilder<PlayerCubit, PlayerViewState>(
-                      builder: (context, state) {
-                        if (state.queue.isEmpty) {
-                          return Center(
-                            child: Text(
-                              '当前播放队列为空。',
-                              style: theme.textTheme.bodyLarge?.copyWith(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.track.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: widget.isCurrent
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (widget.isCurrent)
+                    Icon(
+                      widget.isPlaying
+                          ? Icons.graphic_eq_rounded
+                          : Icons.pause_circle_outline_rounded,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
+                  const SizedBox(width: 8),
+                  AnimatedOpacity(
+                    opacity: _hovered ? 1 : 0,
+                    duration: AppMotion.micro,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => context
+                              .read<PlayerCubit>()
+                              .removeQueueItem(widget.index),
+                          tooltip: '移出队列',
+                          style: IconButton.styleFrom(
+                            side: BorderSide.none,
+                            foregroundColor: colorScheme.onSurfaceVariant,
+                          ),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                        Tooltip(
+                          message: '拖拽排序',
+                          child: ReorderableDragStartListener(
+                            index: widget.index,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.drag_handle_rounded,
                                 color: colorScheme.onSurfaceVariant,
                               ),
                             ),
-                          );
-                        }
-
-                        final currentTrack = state.currentTrack;
-                        return Column(
-                          children: [
-                            if (currentTrack != null)
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(0, 14, 0, 0),
-                                child: Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        colorScheme.primaryContainer.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                        colorScheme.surface.withValues(
-                                          alpha: 0.24,
-                                        ),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(22),
-                                    border: Border.all(
-                                      color: colorScheme.primary.withValues(
-                                        alpha: 0.12,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      CachedArtwork(
-                                        imageUrl: currentTrack.artworkUrl,
-                                        size: 46,
-                                        borderRadius: 14,
-                                        sourceContext:
-                                            ArtworkSourceContext.track(
-                                              currentTrack,
-                                            ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                _DesktopPopoverBadge(
-                                                  label: '当前播放',
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Icon(
-                                                  state.isPlaying
-                                                      ? Icons.graphic_eq_rounded
-                                                      : Icons
-                                                            .pause_circle_outline_rounded,
-                                                  size: 18,
-                                                  color: colorScheme.primary,
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              currentTrack.title,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.titleSmall
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: ReorderableListView.builder(
-                                padding: const EdgeInsets.fromLTRB(
-                                  0,
-                                  16,
-                                  0,
-                                  20,
-                                ),
-                                buildDefaultDragHandles: false,
-                                itemCount: state.queue.length,
-                                onReorder: context
-                                    .read<PlayerCubit>()
-                                    .moveQueueItem,
-                                itemBuilder: (context, index) {
-                                  final track = state.queue[index];
-                                  final isCurrent = index == state.currentIndex;
-                                  final subtitle =
-                                      [
-                                            track.artistName,
-                                            if (track.albumTitle.isNotEmpty)
-                                              track.albumTitle,
-                                          ]
-                                          .where((value) => value.isNotEmpty)
-                                          .join(' · ');
-
-                                  return Padding(
-                                    key: ValueKey(
-                                      'desktop-queue-${track.id}-$index',
-                                    ),
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(22),
-                                        onTap: () async {
-                                          await context
-                                              .read<PlayerCubit>()
-                                              .playIndex(index);
-                                          if (context.mounted) {
-                                            Navigator.of(context).pop();
-                                          }
-                                        },
-                                        child: Ink(
-                                          decoration: BoxDecoration(
-                                            gradient: isCurrent
-                                                ? LinearGradient(
-                                                    colors: [
-                                                      colorScheme
-                                                          .primaryContainer
-                                                          .withValues(
-                                                            alpha: 0.82,
-                                                          ),
-                                                      colorScheme
-                                                          .primaryContainer
-                                                          .withValues(
-                                                            alpha: 0.56,
-                                                          ),
-                                                    ],
-                                                  )
-                                                : null,
-                                            color: isCurrent
-                                                ? null
-                                                : colorScheme.surface
-                                                      .withValues(alpha: 0.22),
-                                            borderRadius: BorderRadius.circular(
-                                              22,
-                                            ),
-                                            border: Border.all(
-                                              color: isCurrent
-                                                  ? colorScheme.primary
-                                                        .withValues(alpha: 0.24)
-                                                  : colorScheme.outlineVariant
-                                                        .withValues(
-                                                          alpha: 0.18,
-                                                        ),
-                                            ),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              12,
-                                              10,
-                                              12,
-                                              10,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                SizedBox(
-                                                  width: 28,
-                                                  child: Text(
-                                                    '${index + 1}',
-                                                    textAlign: TextAlign.center,
-                                                    style: theme
-                                                        .textTheme
-                                                        .labelMedium
-                                                        ?.copyWith(
-                                                          color: isCurrent
-                                                              ? colorScheme
-                                                                    .primary
-                                                              : colorScheme
-                                                                    .onSurfaceVariant,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                        ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                CachedArtwork(
-                                                  imageUrl: track.artworkUrl,
-                                                  size: 52,
-                                                  borderRadius: 18,
-                                                  sourceContext:
-                                                      ArtworkSourceContext.track(
-                                                        track,
-                                                      ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        track.title,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: theme
-                                                            .textTheme
-                                                            .titleSmall
-                                                            ?.copyWith(
-                                                              fontWeight:
-                                                                  isCurrent
-                                                                  ? FontWeight
-                                                                        .w700
-                                                                  : FontWeight
-                                                                        .w600,
-                                                            ),
-                                                      ),
-                                                      if (subtitle
-                                                          .isNotEmpty) ...[
-                                                        const SizedBox(
-                                                          height: 4,
-                                                        ),
-                                                        Text(
-                                                          subtitle,
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style: theme
-                                                              .textTheme
-                                                              .bodySmall
-                                                              ?.copyWith(
-                                                                color: colorScheme
-                                                                    .onSurfaceVariant,
-                                                              ),
-                                                        ),
-                                                      ],
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                if (isCurrent)
-                                                  Icon(
-                                                    state.isPlaying
-                                                        ? Icons
-                                                              .graphic_eq_rounded
-                                                        : Icons
-                                                              .pause_circle_outline_rounded,
-                                                    color: colorScheme.primary,
-                                                  )
-                                                else
-                                                  const SizedBox(width: 24),
-                                                IconButton(
-                                                  onPressed: () => context
-                                                      .read<PlayerCubit>()
-                                                      .removeQueueItem(index),
-                                                  tooltip: '移出队列',
-                                                  style: IconButton.styleFrom(
-                                                    side: BorderSide.none,
-                                                    foregroundColor: colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
-                                                  icon: const Icon(
-                                                    Icons.close_rounded,
-                                                  ),
-                                                ),
-                                                Tooltip(
-                                                  message: '拖拽排序',
-                                                  child: ReorderableDragStartListener(
-                                                    index: index,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            4,
-                                                          ),
-                                                      child: Icon(
-                                                        Icons
-                                                            .drag_handle_rounded,
-                                                        color: colorScheme
-                                                            .onSurfaceVariant,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  if (!_hovered)
+                    const SizedBox(
+                      width: 48,
+                    ),
                 ],
               ),
             ),
@@ -3093,6 +3175,48 @@ class _DesktopQueueDialog extends StatelessWidget {
     );
   }
 }
+
+class _DesktopQueueEmptyState extends StatelessWidget {
+  const _DesktopQueueEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.queue_music_rounded,
+              size: 46,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.42),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '当前播放队列为空',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '从音乐库选择歌曲后，队列会在这里持续显示。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class _ProgressTimeline extends StatefulWidget {
   const _ProgressTimeline();

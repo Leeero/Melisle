@@ -181,6 +181,23 @@ final class PlayQueue {
     );
   }
 
+  PlayQueue insertAt(int index, MusicTrack track, {bool makeCurrent = false}) {
+    final safeIndex = index.clamp(0, tracks.length);
+    final newTracks = List<MusicTrack>.of(tracks)..insert(safeIndex, track);
+    final newCurrent = makeCurrent
+        ? safeIndex
+        : (safeIndex <= currentIndex ? currentIndex + 1 : currentIndex);
+    return PlayQueue._(
+      tracks: List.unmodifiable(newTracks),
+      currentIndex: newCurrent.clamp(0, newTracks.length - 1),
+      loopMode: loopMode,
+      shuffleEnabled: shuffleEnabled,
+      shuffleOrder: shuffleEnabled
+          ? _buildShuffleOrder(newTracks.length, startAt: newCurrent)
+          : const [],
+    );
+  }
+
   /// 移除指定位置的曲目。若删掉的是当前曲，[currentIndex] 会被 clamp 到新边界，
   /// 调用方应自行判断是否需要立即切歌。
   PlayQueue removeAt(int index) {
