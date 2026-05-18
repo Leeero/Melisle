@@ -37,7 +37,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git tag *)",
+      "WebFetch(domain:document.lrc.cx)",
+      "Skill(feature)",
+      "Skill(impeccable)"
     ]
   }
 }
