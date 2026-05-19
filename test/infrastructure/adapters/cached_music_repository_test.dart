@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/adapters/cached_music_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,7 +34,7 @@ void main() {
       );
 
       expect(delegate.fetchTracksCalls, 1);
-      expect(second.single.id, first.single.id);
+      expect(second.items.single.id, first.items.single.id);
 
       currentTime = currentTime.add(const Duration(seconds: 31));
       final third = await repository.fetchTracks(
@@ -43,7 +44,7 @@ void main() {
       );
 
       expect(delegate.fetchTracksCalls, 2);
-      expect(third.single.id, isNot(first.single.id));
+      expect(third.items.single.id, isNot(first.items.single.id));
     });
 
     test('过期后回源失败时回退上一份缓存，避免页面直接空掉', () async {
@@ -67,7 +68,7 @@ void main() {
       final fallback = await repository.fetchTracks(limit: 20);
 
       expect(delegate.fetchTracksCalls, 2);
-      expect(fallback.single.id, first.single.id);
+      expect(fallback.items.single.id, first.items.single.id);
     });
 
     test('收藏状态变更后清空列表缓存，避免旧数据残留', () async {
@@ -81,7 +82,7 @@ void main() {
 
       expect(delegate.setFavoriteCalls, 1);
       expect(delegate.fetchTracksCalls, 2);
-      expect(afterFavorite.single.id, isNot(beforeFavorite.single.id));
+      expect(afterFavorite.items.single.id, isNot(beforeFavorite.items.single.id));
     });
   });
 }
@@ -118,7 +119,7 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchTracks({
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
@@ -127,7 +128,7 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
     if (failFetchTracks) {
       throw Exception('fetch failed');
     }
-    return [_track('track-$fetchTracksCalls')];
+    return PaginatedResult(items: [_track('track-$fetchTracksCalls')]);
   }
 
   @override
