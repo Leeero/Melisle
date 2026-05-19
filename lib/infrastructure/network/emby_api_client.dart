@@ -113,7 +113,7 @@ class EmbyApiClient {
       queryParameters: {
         'IncludeItemTypes': 'MusicAlbum',
         'Recursive': true,
-        'SortBy': 'RandomSort',
+        'SortBy': 'Random',
         'Fields': _albumFields,
         'ImageTypeLimit': 1,
         'Limit': limit,
