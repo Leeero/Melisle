@@ -43,11 +43,13 @@ class _LoginPageState extends State<LoginPage> {
           if (message == null) return;
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(
-              content: Text(message),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: colorScheme.errorContainer,
-            ));
+            ..showSnackBar(
+              SnackBar(
+                content: Text(message),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: colorScheme.errorContainer,
+              ),
+            );
         },
         child: Stack(
           children: [
@@ -138,8 +140,9 @@ class _LoginPageState extends State<LoginPage> {
                           passwordController: _passwordController,
                           obscurePassword: _obscurePassword,
                           onSubmit: _submit,
-                          onToggleObscure: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                          onToggleObscure: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         );
 
                         if (!isWide) {
@@ -196,13 +199,12 @@ class _LoginIntro extends StatelessWidget {
               height: 52,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
+                color: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.92,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Image.asset(
-                'assets/icons/logo.png',
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset('assets/icons/logo.png', fit: BoxFit.contain),
             ),
             const SizedBox(width: 14),
             Expanded(

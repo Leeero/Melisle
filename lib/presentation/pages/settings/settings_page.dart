@@ -40,7 +40,10 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: AppPageLayout.sectionGap),
               const _SettingsSection(title: '播放', child: _PlaybackCard()),
               const SizedBox(height: AppPageLayout.sectionGap),
-              const _SettingsSection(title: '媒体来源', child: _CustomMediaSourcesCard()),
+              const _SettingsSection(
+                title: '媒体来源',
+                child: _CustomMediaSourcesCard(),
+              ),
               const SizedBox(height: AppPageLayout.sectionGap),
               _SettingsSection(
                 title: '存储',
@@ -147,9 +150,9 @@ Future<void> _showClearCacheConfirmation(BuildContext context) async {
     // 缓存清理操作：in-memory 缓存由 CachedMusicRepository 管理，
     // 登出时自动清除。此处重置会话即可触发缓存刷新。
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('缓存已清理')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('缓存已清理')));
     }
   }
 }
@@ -463,8 +466,7 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                 ),
                 const SizedBox(height: 8),
                 Tooltip(
-                  message:
-                      '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
+                  message: '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
                   child: Text(
                     '配置歌词和封面的自定义来源地址。',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -596,8 +598,10 @@ class _SourceSection extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(title,
-                            style: Theme.of(context).textTheme.titleMedium),
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                       if (tooltipMessage != null) ...[
                         const SizedBox(width: 4),
@@ -738,8 +742,8 @@ class _HoverableListTileState extends State<_HoverableListTile> {
           color: widget.isSelected
               ? colorScheme.primaryContainer.withValues(alpha: 0.82)
               : _hovered
-                  ? colorScheme.primary.withValues(alpha: 0.06)
-                  : Colors.transparent,
+              ? colorScheme.primary.withValues(alpha: 0.06)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: ListTile(

@@ -144,10 +144,7 @@ class _LyricViewState extends State<LyricView> {
         );
 
         if (widget.maxTextWidth != null) {
-          content = SizedBox(
-            width: widget.maxTextWidth,
-            child: content,
-          );
+          content = SizedBox(width: widget.maxTextWidth, child: content);
         }
 
         return GestureDetector(
@@ -155,10 +152,7 @@ class _LyricViewState extends State<LyricView> {
           onTap: widget.onLineTap == null
               ? null
               : () => widget.onLineTap!(index),
-          child: Align(
-            alignment: widget.alignment,
-            child: content,
-          ),
+          child: Align(alignment: widget.alignment, child: content),
         );
       },
     );

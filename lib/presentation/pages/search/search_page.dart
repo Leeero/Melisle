@@ -223,10 +223,7 @@ class _SearchHeader extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             const Expanded(
-              child: AppPageTitleRow(
-                title: '搜索',
-                padding: EdgeInsets.zero,
-              ),
+              child: AppPageTitleRow(title: '搜索', padding: EdgeInsets.zero),
             ),
           ],
         ),

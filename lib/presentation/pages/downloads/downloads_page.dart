@@ -113,10 +113,7 @@ class _DownloadsHeader extends StatelessWidget {
           const SizedBox(width: 8),
         ],
         const Expanded(
-          child: AppPageTitleRow(
-            title: '下载管理',
-            padding: EdgeInsets.zero,
-          ),
+          child: AppPageTitleRow(title: '下载管理', padding: EdgeInsets.zero),
         ),
       ],
     );

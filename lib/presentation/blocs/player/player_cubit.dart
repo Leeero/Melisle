@@ -321,18 +321,14 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final target = _clampSeekPosition(position);
     await _controller.seek(target);
 
-    final actualPosition = _controller.position;
-    final effectivePosition = actualPosition.isNegative
-        ? Duration.zero
-        : actualPosition;
-    final effectiveDuration = _durationCoveringPosition(effectivePosition);
-    _lastSeekPosition = effectivePosition;
+    // 使用 target（已 clamp）而非 _controller.position：just_audio seek 后
+    // position 未必立即更新到新值，读取旧位置会导致 state 回滚，歌词高亮闪回。
+    final effectiveDuration = _durationCoveringPosition(target);
+    _lastSeekPosition = target;
 
-    emit(
-      state.copyWith(position: effectivePosition, duration: effectiveDuration),
-    );
+    emit(state.copyWith(position: target, duration: effectiveDuration));
     // seek 后立即更新歌词高亮，避免被旧播放位置的 _onPositionChanged 覆盖。
-    _updateLyricHighlight(effectivePosition);
+    _updateLyricHighlight(target);
   }
 
   Future<void> moveQueueItem(int oldIndex, int newIndex) async {

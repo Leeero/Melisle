@@ -233,33 +233,27 @@ class _HomeView extends StatelessWidget {
               title: title,
               padding: const EdgeInsets.only(bottom: 10),
               action: onViewAll != null
-                  ? TextButton(
-                      onPressed: onViewAll,
-                      child: const Text('查看全部'),
-                    )
+                  ? TextButton(onPressed: onViewAll, child: const Text('查看全部'))
                   : null,
             ),
           ),
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final track = displayTracks[index];
-                final subtitle = track.albumTitle.isNotEmpty
-                    ? '${track.artistName} · ${track.albumTitle}'
-                    : track.artistName;
-                return MusicTrackTile.list(
-                  title: track.title,
-                  subtitle: subtitle,
-                  artworkUrl: track.artworkUrl,
-                  onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: tracks,
-                    startIndex: index,
-                  ),
-                );
-              },
-              childCount: displayTracks.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final track = displayTracks[index];
+              final subtitle = track.albumTitle.isNotEmpty
+                  ? '${track.artistName} · ${track.albumTitle}'
+                  : track.artistName;
+              return MusicTrackTile.list(
+                title: track.title,
+                subtitle: subtitle,
+                artworkUrl: track.artworkUrl,
+                onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                  context,
+                  tracks: tracks,
+                  startIndex: index,
+                ),
+              );
+            }, childCount: displayTracks.length),
           ),
         ],
       ),
@@ -337,19 +331,13 @@ class _HomeView extends StatelessWidget {
             ),
           ),
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final album = albums[index];
-                return _AlbumListTile(
-                  album: album,
-                  onTap: () => context.push(
-                    '/album/${album.id}',
-                    extra: album,
-                  ),
-                );
-              },
-              childCount: albums.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final album = albums[index];
+              return _AlbumListTile(
+                album: album,
+                onTap: () => context.push('/album/${album.id}', extra: album),
+              );
+            }, childCount: albums.length),
           ),
         ],
       ),
@@ -553,10 +541,7 @@ class _RankedTrackRow extends StatelessWidget {
 
 /// 专辑列表条目
 class _AlbumListTile extends StatelessWidget {
-  const _AlbumListTile({
-    required this.album,
-    required this.onTap,
-  });
+  const _AlbumListTile({required this.album, required this.onTap});
 
   final MusicAlbum album;
   final VoidCallback onTap;
@@ -572,11 +557,7 @@ class _AlbumListTile extends StatelessWidget {
         borderRadius: 14,
         semanticLabel: '《${album.title}》专辑封面',
       ),
-      title: Text(
-        album.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(album.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [
           album.artistName,

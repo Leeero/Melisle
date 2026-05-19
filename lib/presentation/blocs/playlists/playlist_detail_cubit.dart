@@ -39,11 +39,13 @@ class PlaylistDetailCubit extends Cubit<PlaylistDetailState> {
     while (hasMore && offset < 10000) {
       final futures = <Future<List<MusicTrack>>>[];
       for (int i = 0; i < 4; i++) {
-        futures.add(_fetchPlaylistTracks(
-          playlistId,
-          limit: _pageSize,
-          startIndex: offset + i * _pageSize,
-        ));
+        futures.add(
+          _fetchPlaylistTracks(
+            playlistId,
+            limit: _pageSize,
+            startIndex: offset + i * _pageSize,
+          ),
+        );
       }
 
       final results = await Future.wait(futures);

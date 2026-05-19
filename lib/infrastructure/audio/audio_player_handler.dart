@@ -50,8 +50,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   bool get isPlaying => _audioPlayer.playing;
 
-  bool get isIdle =>
-      _audioPlayer.processingState == ProcessingState.idle;
+  bool get isIdle => _audioPlayer.processingState == ProcessingState.idle;
 
   Duration get position => _audioPlayer.position;
 
@@ -85,8 +84,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       await _audioPlayer.setAudioSource(source);
       // 等待 ready 后再 play，避免在 loading/idle 中间态调用 play 无效。
-      await _audioPlayer
-          .playerStateStream
+      await _audioPlayer.playerStateStream
           .firstWhere(
             (s) =>
                 s.processingState == ProcessingState.ready ||

@@ -76,8 +76,9 @@ class _FlutterLyricViewState extends State<FlutterLyricView> {
       (line) => line.start.inMilliseconds == position.inMilliseconds,
     );
     if (index >= 0) {
-      // 点击后立即同步歌词到目标行，避免等待异步 seek 完成前的显示滞后。
-      _controller.setProgress(position);
+      // 不在这里手动 setProgress。Cubit seek 后会 emit 新 position，
+      // BlocListener 通过 _syncProgress 统一驱动 flutter_lyric 进度，
+      // 避免 lyricSyncOffset 不为零时 flashback 到错误行。
       widget.onLineTap?.call(index);
     }
   }

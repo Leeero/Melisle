@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/presentation/blocs/playlists/playlis
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -97,34 +98,78 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
       return const AppBodyStateView.message(message: '当前没有匹配的歌单。');
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      itemCount: state.playlists.length + 1,
-      itemBuilder: (context, index) {
-        if (index == state.playlists.length) {
-          if (state.isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (!state.hasMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: Text('已经到底了')),
-            );
-          }
-          return const SizedBox(height: 12);
-        }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = AppBreakpoints.usesWideContentWidth(
+          constraints.maxWidth,
+        );
 
-        final playlist = state.playlists[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _PlaylistCard(playlist: playlist),
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            if (!isWide)
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  24,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final playlist = state.playlists[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _PlaylistCard(playlist: playlist),
+                    );
+                  }, childCount: state.playlists.length),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  24,
+                ),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        _PlaylistGridCard(playlist: state.playlists[index]),
+                    childCount: state.playlists.length,
+                  ),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
+                      constraints.maxWidth,
+                    ),
+                    crossAxisSpacing: 24,
+                    mainAxisSpacing: 32,
+                    childAspectRatio: 0.8,
+                  ),
+                ),
+              ),
+            SliverToBoxAdapter(child: _buildFooter(state)),
+          ],
         );
       },
     );
+  }
+
+  Widget _buildFooter(PlaylistsState state) {
+    if (state.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!state.hasMore && state.playlists.isNotEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text('已经到底了')),
+      );
+    }
+    return const SizedBox(height: 32);
   }
 }
 
@@ -156,6 +201,140 @@ class _PlaylistsHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PlaylistGridCard extends StatefulWidget {
+  const _PlaylistGridCard({required this.playlist});
+
+  final MusicPlaylist playlist;
+
+  @override
+  State<_PlaylistGridCard> createState() => _PlaylistGridCardState();
+}
+
+class _PlaylistGridCardState extends State<_PlaylistGridCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final playlist = widget.playlist;
+    final theme = Theme.of(context);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              children: [
+                // Artwork with click navigation
+                Positioned.fill(
+                  child: InkWell(
+                    onTap: () => context.push(
+                      '/playlists/${playlist.id}',
+                      extra: playlist,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: CachedArtwork(
+                        imageUrl: playlist.artworkUrl,
+                        size: 400,
+                        borderRadius: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                // Track count overlay (permanent)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.music_note_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${playlist.trackCount}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Hover play button overlay
+                if (_hovered)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 38,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              playlist.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

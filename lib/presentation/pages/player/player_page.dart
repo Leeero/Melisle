@@ -2829,9 +2829,9 @@ class _DesktopQueueDialogState extends State<_DesktopQueueDialog> {
                   color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withValues(
-                          alpha: 0.18,
-                        ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.18),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -2884,10 +2884,7 @@ class _DesktopQueueSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: child,
-      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(24), child: child),
     );
   }
 }
@@ -2949,9 +2946,7 @@ class _DesktopQueueHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  confirmingClear
-                      ? '再次点击将清空整个队列'
-                      : '点按切歌，拖拽排序，移除后可撤销',
+                  confirmingClear ? '再次点击将清空整个队列' : '点按切歌，拖拽排序，移除后可撤销',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -2963,10 +2958,7 @@ class _DesktopQueueHeader extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           if (confirmingClear)
-            TextButton(
-              onPressed: onCancelClear,
-              child: const Text('取消'),
-            ),
+            TextButton(onPressed: onCancelClear, child: const Text('取消')),
           if (count > 0)
             TextButton(
               onPressed: onClearPressed,
@@ -3001,9 +2993,9 @@ class _DesktopQueueBadge extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
+          color: colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -3162,10 +3154,7 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                       ],
                     ),
                   ),
-                  if (!_hovered)
-                    const SizedBox(
-                      width: 48,
-                    ),
+                  if (!_hovered) const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -3197,17 +3186,17 @@ class _DesktopQueueEmptyState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               '当前播放队列为空',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
               '从音乐库选择歌曲后，队列会在这里持续显示。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                color: colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -3216,7 +3205,6 @@ class _DesktopQueueEmptyState extends StatelessWidget {
     );
   }
 }
-
 
 class _ProgressTimeline extends StatefulWidget {
   const _ProgressTimeline();

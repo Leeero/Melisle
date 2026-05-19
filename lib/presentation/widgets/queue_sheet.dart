@@ -35,8 +35,7 @@ class QueueSheet extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: colorScheme.surface.withValues(alpha: 0.96),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             children: [
@@ -69,17 +68,13 @@ class QueueSheet extends StatelessWidget {
                             children: [
                               Text(
                                 '播放队列',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
+                                style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${state.queue.length} 首歌曲',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
+                                style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                     ),
@@ -154,10 +149,7 @@ class QueueSheet extends StatelessWidget {
           elevation: elevation,
           shadowColor: Colors.black26,
           borderRadius: BorderRadius.circular(20),
-          child: Transform.scale(
-            scale: 1.0 + 0.02 * t,
-            child: child,
-          ),
+          child: Transform.scale(scale: 1.0 + 0.02 * t, child: child),
         );
       },
       child: child,
@@ -188,8 +180,7 @@ class _QueueItem extends StatelessWidget {
       child: Dismissible(
         key: ValueKey('dismiss-${track.id}-$index'),
         direction: DismissDirection.endToStart,
-        onDismissed: (_) =>
-            context.read<PlayerCubit>().removeQueueItem(index),
+        onDismissed: (_) => context.read<PlayerCubit>().removeQueueItem(index),
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
@@ -202,10 +193,7 @@ class _QueueItem extends StatelessWidget {
               ],
             ),
           ),
-          child: Icon(
-            Icons.delete_outline_rounded,
-            color: colorScheme.error,
-          ),
+          child: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
         ),
         child: MusicTrackTile.card(
           title: track.title,
@@ -257,15 +245,15 @@ class _EmptyQueueView extends StatelessWidget {
           Text(
             '当前播放队列为空',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             '从音乐库中选择歌曲开始播放',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),

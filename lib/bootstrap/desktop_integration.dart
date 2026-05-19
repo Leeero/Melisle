@@ -115,8 +115,8 @@ class DesktopIntegration with TrayListener, WindowListener {
       HotKey(key: PhysicalKeyboardKey.keyR): playerCubit.toggleLoopMode,
       HotKey(key: PhysicalKeyboardKey.keyL): () async {
         final modes = PlaybackModeOption.values;
-        final idx = (modes.indexOf(playerCubit.state.playbackMode) + 1) %
-            modes.length;
+        final idx =
+            (modes.indexOf(playerCubit.state.playbackMode) + 1) % modes.length;
         await playerCubit.setPlaybackMode(modes[idx]);
       },
 
