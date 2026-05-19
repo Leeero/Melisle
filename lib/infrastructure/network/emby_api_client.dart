@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
@@ -29,7 +30,7 @@ class EmbyApiClient {
   static const _albumFields =
       'PrimaryImageAspectRatio,ProductionYear,ChildCount,AlbumArtists,ArtistItems,UserData';
   static const _artistFields =
-      'PrimaryImageAspectRatio,ChildCount,AlbumItems,UserData';
+      'PrimaryImageAspectRatio,ChildCount,AlbumCount,AlbumItems,UserData';
   static const _playlistFields =
       'PrimaryImageAspectRatio,ChildCount,RunTimeTicks,UserData';
 
@@ -103,7 +104,7 @@ class EmbyApiClient {
         .toList();
   }
 
-  Future<List<MusicTrack>> fetchTracks(
+  Future<({List<MusicTrack> tracks, int? totalCount})> fetchTracks(
     AuthSession session, {
     int limit = 100,
     int startIndex = 0,
@@ -122,12 +123,16 @@ class EmbyApiClient {
       options: _authorizedOptions(session),
     );
 
-    final items = _readItems(response.data);
+    final data = response.data;
+    final totalCount = data?['TotalRecordCount'] as int?;
+    final items = _readItems(data);
 
-    return items
+    final tracks = items
         .map((item) => _toMusicTrack(session, item))
         .where((track) => track.id.isNotEmpty)
         .toList();
+
+    return (tracks: tracks, totalCount: totalCount);
   }
 
   Future<List<MusicAlbum>> fetchAlbums(
@@ -162,17 +167,23 @@ class EmbyApiClient {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   }) async {
+    final params = _buildQueryParameters(
+      includeItemTypes: 'MusicArtist',
+      fields: _artistFields,
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+      sortBy: 'SortName',
+    );
+    if (genreId != null && genreId.isNotEmpty) {
+      params['GenreIds'] = genreId;
+    }
+
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Users/${session.userId}/Items',
-      queryParameters: _buildQueryParameters(
-        includeItemTypes: 'MusicArtist',
-        fields: _artistFields,
-        limit: limit,
-        startIndex: startIndex,
-        searchQuery: searchQuery,
-        sortBy: 'SortName',
-      ),
+      queryParameters: params,
       options: _authorizedOptions(session),
     );
 
@@ -181,6 +192,29 @@ class EmbyApiClient {
     return items
         .map((item) => _toMusicArtist(session, item))
         .where((artist) => artist.id.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<Genre>> fetchGenres(AuthSession session) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${session.normalizedServerUrl}/Genres',
+      queryParameters: {
+        'UserId': session.userId,
+        'IncludeItemTypes': 'MusicArtist',
+        'ImageTypeLimit': 0,
+      },
+      options: _authorizedOptions(session),
+    );
+
+    final items = _readItems(response.data);
+    return items
+        .map(
+          (item) => Genre(
+            id: item['Id'] as String? ?? '',
+            name: item['Name'] as String? ?? '',
+          ),
+        )
+        .where((g) => g.id.isNotEmpty)
         .toList();
   }
 
@@ -632,7 +666,8 @@ class EmbyApiClient {
     ]);
 
     return SearchResults(
-      tracks: results[0] as List<MusicTrack>,
+      tracks:
+          (results[0] as ({List<MusicTrack> tracks, int? totalCount})).tracks,
       albums: results[1] as List<MusicAlbum>,
       artists: results[2] as List<MusicArtist>,
       playlists: results[3] as List<MusicPlaylist>,

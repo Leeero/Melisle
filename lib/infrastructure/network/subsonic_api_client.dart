@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
@@ -15,7 +16,8 @@ class SubsonicApiClient {
   SubsonicApiClient(this._dio);
 
   final Dio _dio;
-  final _playlistEntryCache = <String, _CacheEntry<List<Map<String, dynamic>>>>{};
+  final _playlistEntryCache =
+      <String, _CacheEntry<List<Map<String, dynamic>>>>{};
 
   static const _apiVersion = '1.16.1';
   static const _clientName = AppConstants.apiClientName;
@@ -175,6 +177,7 @@ class SubsonicApiClient {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId, // Subsonic 不支持按 genre 筛选艺术家，忽略此参数
   }) async {
     final query = searchQuery?.trim();
     if (query != null && query.isNotEmpty) {
@@ -205,6 +208,22 @@ class SubsonicApiClient {
     return [
       for (final artist in sliced) _toMusicArtist(session, artist),
     ].where((artist) => artist.id.isNotEmpty).toList();
+  }
+
+  Future<List<Genre>> fetchGenres(AuthSession session) async {
+    final payload = await _request(session, 'getGenres');
+    final genreList = _asMap(payload['genres']);
+    if (genreList == null) return const [];
+    final items = _readMaps(genreList['genre']);
+    return items
+        .map(
+          (item) => Genre(
+            id: (item['name'] as String? ?? '').trim(),
+            name: (item['name'] as String? ?? '').trim(),
+          ),
+        )
+        .where((g) => g.id.isNotEmpty)
+        .toList();
   }
 
   Future<List<MusicPlaylist>> fetchPlaylists(
