@@ -167,6 +167,9 @@ class _FakeMusicRepository implements MusicRepository {
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
 
   @override
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) async => [];
+
+  @override
   Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,

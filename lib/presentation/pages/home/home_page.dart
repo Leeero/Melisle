@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:cross_platform_music_player/application/usecases/fetch_latest_albums.dart';
+import 'package:cross_platform_music_player/application/usecases/fetch_random_albums.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
@@ -25,6 +26,7 @@ class HomePage extends StatelessWidget {
     return BlocProvider(
       create: (context) => HomeCubit(
         FetchLatestAlbums(context.read<MusicRepository>()),
+        FetchRandomAlbums(context.read<MusicRepository>()),
         context.read<MusicRepository>(),
         database: _tryReadDatabase(context),
       )..load(),
@@ -138,6 +140,14 @@ class _HomeView extends StatelessWidget {
           sliver: SliverToBoxAdapter(child: _SearchEntry()),
         ),
 
+        // 今日推荐（随机专辑轮播）
+        if (state.randomPicks.isNotEmpty)
+          _randomPicksCarousel(
+            context,
+            albums: state.randomPicks,
+            horizontalPadding: horizontalPadding,
+          ),
+
         // 最近播放（水平滚动卡片）
         if (state.recentlyPlayed.isNotEmpty)
           _recentTracksSection(
@@ -170,6 +180,57 @@ class _HomeView extends StatelessWidget {
           padding: EdgeInsets.only(bottom: AppSpacingTokens.contentBottom),
         ),
       ],
+    );
+  }
+
+  /// 今日推荐 — 随机专辑大卡片轮播
+  SliverPadding _randomPicksCarousel(
+    BuildContext context, {
+    required List<MusicAlbum> albums,
+    required double horizontalPadding,
+  }) {
+    final isWide = AppBreakpoints.usesWideContent(context);
+    final cardWidth = isWide ? 260.0 : 200.0;
+    final cardHeight = cardWidth * 1.15;
+    final coverSize = cardWidth - 4; // 留 2px 给边框
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppSpacingTokens.sectionGap,
+      ),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: AppSectionTitleRow(
+              title: '今日推荐',
+              padding: const EdgeInsets.only(bottom: 14),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: cardHeight,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: albums.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final album = albums[index];
+                  return _RandomPickCard(
+                    album: album,
+                    cardWidth: cardWidth,
+                    cardHeight: cardHeight,
+                    coverSize: coverSize,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -666,6 +727,148 @@ class _AlbumListTile extends StatelessWidget {
         color: colorScheme.onSurfaceVariant,
       ),
       onTap: onTap,
+    );
+  }
+}
+
+/// 今日推荐 — 大幅封面卡片
+class _RandomPickCard extends StatefulWidget {
+  const _RandomPickCard({
+    required this.album,
+    required this.cardWidth,
+    required this.cardHeight,
+    required this.coverSize,
+  });
+
+  final MusicAlbum album;
+  final double cardWidth;
+  final double cardHeight;
+  final double coverSize;
+
+  @override
+  State<_RandomPickCard> createState() => _RandomPickCardState();
+}
+
+class _RandomPickCardState extends State<_RandomPickCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final album = widget.album;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.02 : 1.0,
+        duration: AppMotion.short,
+        curve: AppMotion.enter,
+        child: SizedBox(
+          width: widget.cardWidth,
+          height: widget.cardHeight,
+          child: Semantics(
+            button: true,
+            label: '推荐专辑《${album.title}》',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.push('/album/${album.id}', extra: album),
+                borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                child: AnimatedContainer(
+                  duration: AppMotion.short,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.64),
+                    ),
+                    boxShadow: _hovered
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.15,
+                              ),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      AppRadiusTokens.card - 2,
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedArtwork(
+                          imageUrl: album.artworkUrl,
+                          size: widget.coverSize,
+                          borderRadius: AppRadiusTokens.card - 2,
+                          semanticLabel: '《${album.title}》封面',
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.75),
+                                  Colors.black.withValues(alpha: 0.15),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.5, 1.0],
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    album.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    album.artistName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

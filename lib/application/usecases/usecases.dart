@@ -3,6 +3,7 @@ export 'fetch_artist_albums.dart';
 export 'fetch_artist_top_tracks.dart';
 export 'fetch_favorite_tracks.dart';
 export 'fetch_latest_albums.dart';
+export 'fetch_random_albums.dart';
 export 'fetch_library_albums.dart';
 export 'fetch_library_artists.dart';
 export 'fetch_library_tracks.dart';

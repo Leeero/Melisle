@@ -40,6 +40,10 @@ class WebDavMusicRepository implements MusicRepository {
       _todo('fetchLatestAlbums');
 
   @override
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) async =>
+      _todo('fetchRandomAlbums');
+
+  @override
   Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,

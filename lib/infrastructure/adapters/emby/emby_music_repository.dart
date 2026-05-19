@@ -74,6 +74,11 @@ class EmbyMusicRepository implements MusicRepository {
   }
 
   @override
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) async {
+    return _client.fetchRandomAlbums(await _requireSession(), limit: limit);
+  }
+
+  @override
   Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,

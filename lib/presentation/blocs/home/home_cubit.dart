@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_latest_albums.dart';
+import 'package:cross_platform_music_player/application/usecases/fetch_random_albums.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
@@ -8,14 +9,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._fetchLatestAlbums, this._repository, {AppDatabase? database})
-    : _database = database,
-      super(const HomeState.initial());
+  HomeCubit(
+    this._fetchLatestAlbums,
+    this._fetchRandomAlbums,
+    this._repository, {
+    AppDatabase? database,
+  }) : _database = database,
+       super(const HomeState.initial());
 
   static const _homeAlbumsLimit = 8;
+  static const _randomPicksLimit = 6;
   static const _homeTracksLimit = 12;
 
   final FetchLatestAlbums _fetchLatestAlbums;
+  final FetchRandomAlbums _fetchRandomAlbums;
   final MusicRepository _repository;
   final AppDatabase? _database;
 
@@ -24,9 +31,26 @@ class HomeCubit extends Cubit<HomeState> {
     emit(state.copyWith(status: HomeStatus.loading, errorMessage: null));
 
     var albums = <MusicAlbum>[];
+    var randomPicks = <MusicAlbum>[];
     var recently = <MusicTrack>[];
     var most = <MusicTrack>[];
     final errors = <String>[];
+
+    _debugLog('section randomPicks start');
+    final randomResult = await _loadRandomPicksSection();
+    randomPicks = randomResult.data;
+    if (randomResult.errorMessage case final message?) {
+      errors.add(message);
+    }
+    _debugLog(
+      'section randomPicks done items=${randomPicks.length} error=${_errorSummary(randomResult.errorMessage)}',
+    );
+    _emitPartialSuccess(
+      albums: albums,
+      randomPicks: randomPicks,
+      recentlyPlayed: recently,
+      mostPlayed: most,
+    );
 
     _debugLog('section recentlyPlayed start');
     final recentlyResult = await _loadRecentlyPlayedSection();
@@ -39,6 +63,7 @@ class HomeCubit extends Cubit<HomeState> {
     );
     _emitPartialSuccess(
       albums: albums,
+      randomPicks: randomPicks,
       recentlyPlayed: recently,
       mostPlayed: most,
     );
@@ -54,6 +79,7 @@ class HomeCubit extends Cubit<HomeState> {
     );
     _emitPartialSuccess(
       albums: albums,
+      randomPicks: randomPicks,
       recentlyPlayed: recently,
       mostPlayed: most,
     );
@@ -69,24 +95,29 @@ class HomeCubit extends Cubit<HomeState> {
     );
     _emitPartialSuccess(
       albums: albums,
+      randomPicks: randomPicks,
       recentlyPlayed: recently,
       mostPlayed: most,
     );
 
     final hasAnyData =
-        albums.isNotEmpty || recently.isNotEmpty || most.isNotEmpty;
+        albums.isNotEmpty ||
+        randomPicks.isNotEmpty ||
+        recently.isNotEmpty ||
+        most.isNotEmpty;
     if (!hasAnyData && errors.isNotEmpty) {
       emit(
         state.copyWith(
           status: HomeStatus.failure,
           albums: albums,
+          randomPicks: randomPicks,
           recentlyPlayed: recently,
           mostPlayed: most,
           errorMessage: errors.join('；'),
         ),
       );
       _debugLog(
-        'load finish status=failure albums=${albums.length} recently=${recently.length} most=${most.length} errors=${errors.length}',
+        'load finish status=failure albums=${albums.length} random=${randomPicks.length} recently=${recently.length} most=${most.length} errors=${errors.length}',
       );
       return;
     }
@@ -95,13 +126,14 @@ class HomeCubit extends Cubit<HomeState> {
       state.copyWith(
         status: HomeStatus.success,
         albums: albums,
+        randomPicks: randomPicks,
         recentlyPlayed: recently,
         mostPlayed: most,
         errorMessage: errors.isEmpty ? null : errors.join('；'),
       ),
     );
     _debugLog(
-      'load finish status=success albums=${albums.length} recently=${recently.length} most=${most.length} errors=${errors.length}',
+      'load finish status=success albums=${albums.length} random=${randomPicks.length} recently=${recently.length} most=${most.length} errors=${errors.length}',
     );
   }
 
@@ -114,6 +146,18 @@ class HomeCubit extends Cubit<HomeState> {
       return _HomeSectionResult(
         data: const [],
         errorMessage: '最近加入加载失败：$error',
+      );
+    }
+  }
+
+  Future<_HomeSectionResult<List<MusicAlbum>>> _loadRandomPicksSection() async {
+    try {
+      final albums = await _fetchRandomAlbums(limit: _randomPicksLimit);
+      return _HomeSectionResult(data: albums);
+    } catch (error) {
+      return _HomeSectionResult(
+        data: const [],
+        errorMessage: '今日推荐加载失败：$error',
       );
     }
   }
@@ -215,11 +259,15 @@ class HomeCubit extends Cubit<HomeState> {
 
   void _emitPartialSuccess({
     required List<MusicAlbum> albums,
+    required List<MusicAlbum> randomPicks,
     required List<MusicTrack> recentlyPlayed,
     required List<MusicTrack> mostPlayed,
   }) {
     final hasAnyData =
-        albums.isNotEmpty || recentlyPlayed.isNotEmpty || mostPlayed.isNotEmpty;
+        albums.isNotEmpty ||
+        randomPicks.isNotEmpty ||
+        recentlyPlayed.isNotEmpty ||
+        mostPlayed.isNotEmpty;
     if (!hasAnyData) {
       return;
     }
@@ -228,6 +276,7 @@ class HomeCubit extends Cubit<HomeState> {
       state.copyWith(
         status: HomeStatus.success,
         albums: albums,
+        randomPicks: randomPicks,
         recentlyPlayed: recentlyPlayed,
         mostPlayed: mostPlayed,
         errorMessage: null,

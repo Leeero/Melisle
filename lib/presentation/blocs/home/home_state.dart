@@ -7,6 +7,7 @@ class HomeState {
   const HomeState({
     required this.status,
     this.albums = const [],
+    this.randomPicks = const [],
     this.recentlyPlayed = const [],
     this.mostPlayed = const [],
     this.errorMessage,
@@ -16,6 +17,7 @@ class HomeState {
 
   final HomeStatus status;
   final List<MusicAlbum> albums;
+  final List<MusicAlbum> randomPicks;
   final List<MusicTrack> recentlyPlayed;
   final List<MusicTrack> mostPlayed;
   final String? errorMessage;
@@ -23,6 +25,7 @@ class HomeState {
   HomeState copyWith({
     HomeStatus? status,
     List<MusicAlbum>? albums,
+    List<MusicAlbum>? randomPicks,
     List<MusicTrack>? recentlyPlayed,
     List<MusicTrack>? mostPlayed,
     String? errorMessage,
@@ -30,6 +33,7 @@ class HomeState {
     return HomeState(
       status: status ?? this.status,
       albums: albums ?? this.albums,
+      randomPicks: randomPicks ?? this.randomPicks,
       recentlyPlayed: recentlyPlayed ?? this.recentlyPlayed,
       mostPlayed: mostPlayed ?? this.mostPlayed,
       errorMessage: errorMessage,

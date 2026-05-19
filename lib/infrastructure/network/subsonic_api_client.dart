@@ -96,6 +96,13 @@ class SubsonicApiClient {
     return fetchAlbumList(session, type: 'newest', limit: limit, startIndex: 0);
   }
 
+  Future<List<MusicAlbum>> fetchRandomAlbums(
+    AuthSession session, {
+    int limit = 6,
+  }) {
+    return fetchAlbumList(session, type: 'random', limit: limit, startIndex: 0);
+  }
+
   Future<List<MusicAlbum>> fetchAlbumList(
     AuthSession session, {
     required String type,

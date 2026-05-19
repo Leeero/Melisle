@@ -104,6 +104,31 @@ class EmbyApiClient {
         .toList();
   }
 
+  Future<List<MusicAlbum>> fetchRandomAlbums(
+    AuthSession session, {
+    int limit = 6,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${session.normalizedServerUrl}/Users/${session.userId}/Items',
+      queryParameters: {
+        'IncludeItemTypes': 'MusicAlbum',
+        'Recursive': true,
+        'SortBy': 'RandomSort',
+        'Fields': _albumFields,
+        'ImageTypeLimit': 1,
+        'Limit': limit,
+      },
+      options: _authorizedOptions(session, requestLabel: 'home.randomAlbums'),
+    );
+
+    final items = _readItems(response.data);
+
+    return items
+        .map((item) => _toMusicAlbum(session, item))
+        .where((album) => album.id.isNotEmpty)
+        .toList();
+  }
+
   Future<({List<MusicTrack> tracks, int? totalCount})> fetchTracks(
     AuthSession session, {
     int limit = 100,

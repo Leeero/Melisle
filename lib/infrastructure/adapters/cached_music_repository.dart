@@ -71,6 +71,16 @@ class CachedMusicRepository implements MusicRepository {
   }
 
   @override
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) {
+    return _cached(
+      'randomAlbums',
+      ttl: _policy.homeFeedTtl,
+      params: {'limit': limit},
+      loader: () => _delegate.fetchRandomAlbums(limit: limit),
+    );
+  }
+
+  @override
   Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,

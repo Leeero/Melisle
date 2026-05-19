@@ -93,6 +93,8 @@ abstract class MusicRepository {
     Duration position,
   );
 
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6});
+
   Future<List<MusicTrack>> fetchRecentlyPlayed({int limit = 30});
 
   Future<List<MusicTrack>> fetchMostPlayed({int limit = 30});
