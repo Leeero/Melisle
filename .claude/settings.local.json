@@ -41,7 +41,18 @@
       "Bash(git tag *)",
       "WebFetch(domain:document.lrc.cx)",
       "Skill(feature)",
-      "Skill(impeccable)"
+      "Skill(impeccable)",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "Skill(bugfix)",
+      "Read(//Users/lero/tools/flutter/bin/**)",
+      "Read(//Users/lero/**)",
+      "Bash(/opt/homebrew/bin/flutter analyze *)",
+      "Bash(~/fvm/default/bin/flutter analyze *)",
+      "Bash(dart --version)",
+      "Bash(mdfind \"kMDItemFSName == 'flutter'\" -onlyin /)",
+      "Bash(/Users/lero/flutter-sdk/bin/dart format *)",
+      "WebFetch(domain:www.ruanyifeng.com)"
     ]
   }
 }
