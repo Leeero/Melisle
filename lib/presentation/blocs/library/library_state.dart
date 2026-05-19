@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
@@ -12,8 +13,11 @@ class LibraryState {
     this.currentFilter = LibraryFilter.tracks,
     this.searchQuery = '',
     this.tracks = const [],
+    this.totalTrackCount,
     this.albums = const [],
     this.artists = const [],
+    this.genres = const [],
+    this.selectedGenreId,
     this.hasMore = true,
     this.isLoadingMore = false,
     this.errorMessage,
@@ -27,8 +31,11 @@ class LibraryState {
   final LibraryFilter currentFilter;
   final String searchQuery;
   final List<MusicTrack> tracks;
+  final int? totalTrackCount;
   final List<MusicAlbum> albums;
   final List<MusicArtist> artists;
+  final List<Genre> genres;
+  final String? selectedGenreId;
   final bool hasMore;
   final bool isLoadingMore;
   final String? errorMessage;
@@ -54,8 +61,11 @@ class LibraryState {
     LibraryFilter? currentFilter,
     String? searchQuery,
     List<MusicTrack>? tracks,
+    int? totalTrackCount,
     List<MusicAlbum>? albums,
     List<MusicArtist>? artists,
+    List<Genre>? genres,
+    Object? selectedGenreId = _sentinel,
     bool? hasMore,
     bool? isLoadingMore,
     Object? errorMessage = _sentinel,
@@ -65,8 +75,13 @@ class LibraryState {
       currentFilter: currentFilter ?? this.currentFilter,
       searchQuery: searchQuery ?? this.searchQuery,
       tracks: tracks ?? this.tracks,
+      totalTrackCount: totalTrackCount ?? this.totalTrackCount,
       albums: albums ?? this.albums,
       artists: artists ?? this.artists,
+      genres: genres ?? this.genres,
+      selectedGenreId: identical(selectedGenreId, _sentinel)
+          ? this.selectedGenreId
+          : selectedGenreId as String?,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: identical(errorMessage, _sentinel)
