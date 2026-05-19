@@ -96,7 +96,14 @@ class _FavoritesViewState extends State<_FavoritesView> {
     }
 
     if (state.tracks.isEmpty) {
-      return const AppBodyStateView.message(message: '还没有收藏歌曲，去媒体库挑几首喜欢的吧。');
+      return AppBodyStateView.message(
+        message: '还没有收藏歌曲，去媒体库挑几首喜欢的吧。',
+        action: FilledButton.icon(
+          onPressed: () => context.go('/library'),
+          icon: const Icon(Icons.library_music_rounded),
+          label: const Text('去媒体库看看'),
+        ),
+      );
     }
 
     return ListView.builder(
@@ -161,7 +168,7 @@ class _FavoritesHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: AppPageTitleRow(
-            title: '我的收藏',
+            title: '收藏',
             badge: MetaPill(label: '$count 首', size: MetaPillSize.compact),
             action: count > 0
                 ? SizedBox(

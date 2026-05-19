@@ -59,11 +59,6 @@ GoRouter createRouter(AuthCubit authCubit) {
                     _shellPage(state, const HomePage()),
               ),
               GoRoute(
-                path: '/favorites',
-                pageBuilder: (context, state) =>
-                    _shellPage(state, const FavoritesPage()),
-              ),
-              GoRoute(
                 path: '/history',
                 pageBuilder: (context, state) =>
                     _shellPage(state, const HistoryPage()),
@@ -115,6 +110,15 @@ GoRouter createRouter(AuthCubit authCubit) {
                     playlist: state.extra as MusicPlaylist?,
                   ),
                 ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/favorites',
+                pageBuilder: (context, state) =>
+                    _shellPage(state, const FavoritesPage()),
               ),
             ],
           ),

@@ -272,12 +272,19 @@ class _ShellSidebar extends StatelessWidget {
                 selected: selectedIndex == 2,
                 onTap: () => onSelected(2),
               ),
+              const SizedBox(height: 6),
+              _ShellNavButton(
+                icon: Icons.favorite_rounded,
+                label: '收藏',
+                selected: selectedIndex == 3,
+                onTap: () => onSelected(3),
+              ),
               const Spacer(),
               _ShellNavButton(
                 icon: Icons.settings_rounded,
                 label: '设置',
-                selected: selectedIndex == 3,
-                onTap: () => onSelected(3),
+                selected: selectedIndex == 4,
+                onTap: () => onSelected(4),
               ),
             ],
           ),
@@ -349,10 +356,18 @@ class _ShellBottomBar extends StatelessWidget {
           ),
           Expanded(
             child: _ShellBottomButton(
-              icon: Icons.settings_rounded,
-              label: '设置',
+              icon: Icons.favorite_rounded,
+              label: '收藏',
               selected: selectedIndex == 3,
               onTap: () => onSelected(3),
+            ),
+          ),
+          Expanded(
+            child: _ShellBottomButton(
+              icon: Icons.settings_rounded,
+              label: '设置',
+              selected: selectedIndex == 4,
+              onTap: () => onSelected(4),
             ),
           ),
         ],

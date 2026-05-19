@@ -139,9 +139,6 @@ class _HomeView extends StatelessWidget {
           sliver: SliverToBoxAdapter(child: _SearchEntry()),
         ),
 
-        // 快捷入口：播放历史 + 我的收藏
-        _quickEntryRow(context, horizontalPadding),
-
         // 最近播放（列表形式）
         if (state.recentlyPlayed.isNotEmpty)
           _trackListSection(
@@ -150,7 +147,6 @@ class _HomeView extends StatelessWidget {
             tracks: state.recentlyPlayed,
             currentTrackId: currentTrackId,
             horizontalPadding: horizontalPadding,
-            onViewAll: () => context.push('/history'),
           ),
 
         // 常听的歌（排行形式）
@@ -179,34 +175,6 @@ class _HomeView extends StatelessWidget {
     );
   }
 
-  SliverPadding _quickEntryRow(BuildContext context, double horizontalPadding) {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0,
-        horizontalPadding,
-        AppSpacingTokens.sectionGap,
-      ),
-      sliver: SliverToBoxAdapter(
-        child: Row(
-          children: [
-            _QuickEntryTab(
-              icon: Icons.history_rounded,
-              label: '播放历史',
-              onTap: () => context.push('/history'),
-            ),
-            const SizedBox(width: 8),
-            _QuickEntryTab(
-              icon: Icons.favorite_rounded,
-              label: '我的收藏',
-              onTap: () => context.push('/favorites'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 通用曲目列表区块（recentlyPlayed / mostPlayed 复用）
   SliverPadding _trackListSection(
     BuildContext context, {
@@ -214,7 +182,6 @@ class _HomeView extends StatelessWidget {
     required List<MusicTrack> tracks,
     required String? currentTrackId,
     required double horizontalPadding,
-    VoidCallback? onViewAll,
   }) {
     const maxDisplay = 8;
     final displayTracks = tracks.take(maxDisplay).toList();
@@ -232,9 +199,6 @@ class _HomeView extends StatelessWidget {
             child: AppSectionTitleRow(
               title: title,
               padding: const EdgeInsets.only(bottom: 10),
-              action: onViewAll != null
-                  ? TextButton(onPressed: onViewAll, child: const Text('查看全部'))
-                  : null,
             ),
           ),
           SliverList(
@@ -388,57 +352,6 @@ class _SearchEntry extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 快捷入口标签
-class _QuickEntryTab extends StatelessWidget {
-  const _QuickEntryTab({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.surface.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 18, color: colorScheme.primary),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurface,
                   ),
                 ),
               ],
