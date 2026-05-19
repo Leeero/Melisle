@@ -82,7 +82,10 @@ void main() {
 
       expect(delegate.setFavoriteCalls, 1);
       expect(delegate.fetchTracksCalls, 2);
-      expect(afterFavorite.items.single.id, isNot(beforeFavorite.items.single.id));
+      expect(
+        afterFavorite.items.single.id,
+        isNot(beforeFavorite.items.single.id),
+      );
     });
   });
 }

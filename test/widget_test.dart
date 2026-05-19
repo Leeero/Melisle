@@ -113,7 +113,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('我的收藏'), findsWidgets);
+    expect(find.text('收藏'), findsWidgets);
     expect(find.text('还没有收藏歌曲，去媒体库挑几首喜欢的吧。'), findsOneWidget);
     expect(find.byIcon(Icons.home_rounded), findsOneWidget);
     expect(find.byType(AppContentPage), findsOneWidget);
