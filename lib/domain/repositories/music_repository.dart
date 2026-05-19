@@ -1,10 +1,12 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 
 /// 后端无关的音乐仓库契约。
@@ -24,7 +26,7 @@ abstract class MusicRepository {
 
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12});
 
-  Future<List<MusicTrack>> fetchTracks({
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
@@ -40,6 +42,7 @@ abstract class MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   });
 
   Future<List<MusicPlaylist>> fetchPlaylists({
@@ -105,6 +108,9 @@ abstract class MusicRepository {
     String artistId, {
     int limit = 20,
   });
+
+  /// 获取可用的音乐风格列表。
+  Future<List<Genre>> fetchGenres();
 
   /// 跨类型搜索（歌曲 / 专辑 / 艺术家 / 歌单）。
   Future<SearchResults> search(String query);

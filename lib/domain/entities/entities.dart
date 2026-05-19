@@ -1,9 +1,11 @@
 export 'audio_quality.dart';
 export 'auth_session.dart';
+export 'genre.dart';
 export 'lyric_line.dart';
 export 'music_album.dart';
 export 'music_artist.dart';
 export 'music_playlist.dart';
 export 'music_track.dart';
+export 'paginated_result.dart';
 export 'play_history_entry.dart';
 export 'search_results.dart';
