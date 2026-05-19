@@ -1,10 +1,12 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
@@ -72,17 +74,18 @@ class EmbyMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchTracks({
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
   }) async {
-    return _client.fetchTracks(
+    final result = await _client.fetchTracks(
       await _requireSession(),
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
     );
+    return PaginatedResult(items: result.tracks, totalCount: result.totalCount);
   }
 
   @override
@@ -104,13 +107,20 @@ class EmbyMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   }) async {
     return _client.fetchArtists(
       await _requireSession(),
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
+      genreId: genreId,
     );
+  }
+
+  @override
+  Future<List<Genre>> fetchGenres() async {
+    return _client.fetchGenres(await _requireSession());
   }
 
   @override

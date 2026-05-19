@@ -10,11 +10,13 @@ class FetchLibraryArtists {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   }) {
     return _repository.fetchArtists(
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
+      genreId: genreId,
     );
   }
 }

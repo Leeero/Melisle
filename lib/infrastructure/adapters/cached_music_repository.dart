@@ -3,11 +3,13 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
@@ -69,12 +71,12 @@ class CachedMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchTracks({
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
   }) {
-    return _cached(
+    return _cached<PaginatedResult<MusicTrack>>(
       'tracks',
       ttl: _policy.listTtl,
       params: {
@@ -117,6 +119,7 @@ class CachedMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   }) {
     return _cached(
       'artists',
@@ -125,12 +128,24 @@ class CachedMusicRepository implements MusicRepository {
         'limit': limit,
         'startIndex': startIndex,
         'searchQuery': searchQuery,
+        'genreId': genreId,
       },
       loader: () => _delegate.fetchArtists(
         limit: limit,
         startIndex: startIndex,
         searchQuery: searchQuery,
+        genreId: genreId,
       ),
+    );
+  }
+
+  @override
+  Future<List<Genre>> fetchGenres() {
+    return _cached(
+      'genres',
+      ttl: _policy.listTtl,
+      params: const <String, Object?>{},
+      loader: () => _delegate.fetchGenres(),
     );
   }
 
@@ -162,10 +177,8 @@ class CachedMusicRepository implements MusicRepository {
       'playlists_full',
       ttl: _policy.fullListTtl,
       params: const <String, Object?>{},
-      loader: () => _delegate.fetchPlaylists(
-        limit: fullListLimit,
-        startIndex: 0,
-      ),
+      loader: () =>
+          _delegate.fetchPlaylists(limit: fullListLimit, startIndex: 0),
     );
 
     if (startIndex >= fullList.length) return [];

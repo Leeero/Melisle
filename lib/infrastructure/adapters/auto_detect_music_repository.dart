@@ -1,10 +1,12 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
@@ -89,7 +91,7 @@ class AutoDetectMusicRepository implements MusicRepository {
   }
 
   @override
-  Future<List<MusicTrack>> fetchTracks({
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
@@ -119,12 +121,19 @@ class AutoDetectMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
+    String? genreId,
   }) async {
     return (await _requireActiveRepository()).fetchArtists(
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
+      genreId: genreId,
     );
+  }
+
+  @override
+  Future<List<Genre>> fetchGenres() async {
+    return (await _requireActiveRepository()).fetchGenres();
   }
 
   @override
