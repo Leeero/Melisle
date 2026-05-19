@@ -12,7 +12,6 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -139,11 +138,10 @@ class _HomeView extends StatelessWidget {
           sliver: SliverToBoxAdapter(child: _SearchEntry()),
         ),
 
-        // 最近播放（列表形式）
+        // 最近播放（水平滚动卡片）
         if (state.recentlyPlayed.isNotEmpty)
-          _trackListSection(
+          _recentTracksSection(
             context,
-            title: '最近播放',
             tracks: state.recentlyPlayed,
             currentTrackId: currentTrackId,
             horizontalPadding: horizontalPadding,
@@ -175,16 +173,19 @@ class _HomeView extends StatelessWidget {
     );
   }
 
-  /// 通用曲目列表区块（recentlyPlayed / mostPlayed 复用）
-  SliverPadding _trackListSection(
+  /// 最近播放 — 水平滚动卡片
+  SliverPadding _recentTracksSection(
     BuildContext context, {
-    required String title,
     required List<MusicTrack> tracks,
     required String? currentTrackId,
     required double horizontalPadding,
   }) {
     const maxDisplay = 8;
     final displayTracks = tracks.take(maxDisplay).toList();
+    final isWide = AppBreakpoints.usesWideContent(context);
+    final cardWidth = isWide ? 150.0 : 130.0;
+    final coverSize = cardWidth;
+    final cardHeight = coverSize + 52.0;
 
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(
@@ -197,27 +198,39 @@ class _HomeView extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(
             child: AppSectionTitleRow(
-              title: title,
-              padding: const EdgeInsets.only(bottom: 10),
+              title: '最近播放',
+              padding: const EdgeInsets.only(bottom: 14),
+              action: TextButton.icon(
+                onPressed: () => context.push('/history'),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                label: const Text('查看全部'),
+              ),
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              final track = displayTracks[index];
-              final subtitle = track.albumTitle.isNotEmpty
-                  ? '${track.artistName} · ${track.albumTitle}'
-                  : track.artistName;
-              return MusicTrackTile.list(
-                title: track.title,
-                subtitle: subtitle,
-                artworkUrl: track.artworkUrl,
-                onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                  context,
-                  tracks: tracks,
-                  startIndex: index,
-                ),
-              );
-            }, childCount: displayTracks.length),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: cardHeight,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: displayTracks.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final track = displayTracks[index];
+                  return _RecentPlayCard(
+                    track: track,
+                    cardWidth: cardWidth,
+                    coverSize: coverSize,
+                    isCurrent: track.id == currentTrackId,
+                    onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: tracks,
+                      startIndex: index,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -356,6 +369,174 @@ class _SearchEntry extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 最近播放 — 水平滚动卡片
+class _RecentPlayCard extends StatefulWidget {
+  const _RecentPlayCard({
+    required this.track,
+    required this.cardWidth,
+    required this.coverSize,
+    required this.isCurrent,
+    required this.onTap,
+  });
+
+  final MusicTrack track;
+  final double cardWidth;
+  final double coverSize;
+  final bool isCurrent;
+  final Future<void> Function() onTap;
+
+  @override
+  State<_RecentPlayCard> createState() => _RecentPlayCardState();
+}
+
+class _RecentPlayCardState extends State<_RecentPlayCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final track = widget.track;
+    final subtitle = track.albumTitle.isNotEmpty
+        ? '${track.artistName} · ${track.albumTitle}'
+        : track.artistName;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.025 : 1.0,
+        duration: AppMotion.short,
+        curve: AppMotion.enter,
+        child: SizedBox(
+          width: widget.cardWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                button: true,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => widget.onTap(),
+                    borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                    child: AnimatedContainer(
+                      duration: AppMotion.short,
+                      width: widget.cardWidth,
+                      height: widget.coverSize,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(
+                          AppRadiusTokens.card,
+                        ),
+                        border: Border.all(
+                          color: widget.isCurrent
+                              ? colorScheme.primary.withValues(alpha: 0.3)
+                              : colorScheme.outlineVariant.withValues(
+                                  alpha: 0.64,
+                                ),
+                        ),
+                        boxShadow: _hovered
+                            ? [
+                                BoxShadow(
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          AppRadiusTokens.card - 2,
+                        ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            CachedArtwork(
+                              imageUrl: track.artworkUrl,
+                              size: widget.coverSize,
+                              borderRadius: AppRadiusTokens.card - 2,
+                              semanticLabel: '《${track.title}》封面',
+                            ),
+                            if (widget.isCurrent)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary.withValues(
+                                      alpha: 0.9,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.graphic_eq_rounded,
+                                    size: 16,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            if (_hovered)
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.center,
+                                      colors: [
+                                        Colors.black.withValues(alpha: 0.35),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.play_circle_fill_rounded,
+                                      size: 40,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                track.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
         ),
       ),
