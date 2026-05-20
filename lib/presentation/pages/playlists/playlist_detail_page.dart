@@ -82,17 +82,6 @@ class _PlaylistDetailView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (!AppBreakpoints.usesWideContent(context))
-                        SliverToBoxAdapter(
-                          child: _PlaylistTracksHeader(
-                            tracksCount: state.tracks.length,
-                            totalTracksCount: playlist?.trackCount,
-                            isLoading:
-                                state.status == PlaylistDetailStatus.loading ||
-                                state.isLoadingAll,
-                            onPlayAll: () => _playPlaylistFromIndex(context, 0),
-                          ),
-                        ),
                       switch (state.status) {
                         PlaylistDetailStatus.loading =>
                           const AppSliverStateView.loading(),
@@ -123,10 +112,11 @@ class _PlaylistDetailView extends StatelessWidget {
                                       return _PlaylistTrackRow(
                                         isFirst:
                                             index == 0 &&
-                                            (isWide || state.tracks.length > 0),
+                                            (isWide || state.tracks.isNotEmpty),
                                         isLast:
                                             index == state.tracks.length - 1 &&
                                             !state.isLoadingMore,
+                                        isWide: isWide,
                                         child: MusicTrackTile.row(
                                           isCurrent: track.id == currentTrackId,
                                           artworkUrl: track.artworkUrl,
@@ -179,123 +169,36 @@ Future<void> _playPlaylistFromIndex(
   );
 }
 
-class _PlaylistTracksHeader extends StatelessWidget {
-  const _PlaylistTracksHeader({
-    required this.tracksCount,
-    required this.onPlayAll,
-    this.totalTracksCount,
-    this.isLoading = false,
-  });
-
-  final int tracksCount;
-  final int? totalTracksCount;
-  final bool isLoading;
-  final VoidCallback onPlayAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isWide = AppBreakpoints.usesWideContent(context);
-    final total = totalTracksCount ?? tracksCount;
-    final subtitle = total > tracksCount
-        ? '已加载 $tracksCount / $total 首'
-        : '$tracksCount 首歌曲';
-
-    return _PlaylistTrackRow(
-      isFirst: true,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(4, isWide ? 4 : 8, 4, isWide ? 8 : 12),
-        child: Row(
-          children: [
-            if (!isWide) ...[
-              SizedBox(
-                width: 54,
-                height: 54,
-                child: FilledButton(
-                  onPressed: tracksCount == 0 || isLoading ? null : onPlayAll,
-                  style: FilledButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: const CircleBorder(),
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                  ),
-                  child: isLoading
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: colorScheme.onPrimary,
-                          ),
-                        )
-                      : const Icon(Icons.play_arrow_rounded, size: 30),
-                ),
-              ),
-              const SizedBox(width: 16),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!isWide) ...[
-                    Text(
-                      '播放全部',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                  ],
-                  Text(
-                    subtitle,
-                    style:
-                        (isWide
-                                ? theme.textTheme.labelLarge
-                                : theme.textTheme.bodyMedium)
-                            ?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: isWide ? FontWeight.w600 : null,
-                            ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PlaylistTrackRow extends StatelessWidget {
   const _PlaylistTrackRow({
     required this.child,
     this.isFirst = false,
     this.isLast = false,
+    this.isWide = true,
   });
 
   final Widget child;
   final bool isFirst;
   final bool isLast;
+  final bool isWide;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final radius = isWide ? 28.0 : 14.0;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.94),
+        color: colorScheme.surface.withValues(alpha: isWide ? 0.94 : 0.92),
         borderRadius: BorderRadius.vertical(
-          top: isFirst ? const Radius.circular(28) : Radius.zero,
-          bottom: isLast ? const Radius.circular(28) : Radius.zero,
+          top: isFirst ? Radius.circular(radius) : Radius.zero,
+          bottom: isLast ? Radius.circular(radius) : Radius.zero,
         ),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          14,
+          isWide ? 14 : 12,
           isFirst ? 12 : 0,
-          14,
+          isWide ? 14 : 12,
           isLast ? 18 : 12,
         ),
         child: child,
@@ -363,22 +266,32 @@ class _PlaylistHero extends StatelessWidget {
                     const SizedBox(height: 14),
                     Text(
                       playlist?.name ?? '歌单详情',
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: titleStyle?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      playlist == null ? '正在加载歌单歌曲' : '轻触歌曲开始播放，继续下滑查看更多',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                    if (!isWide) ...[
+                      const SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: tracksCount == 0 || isLoading
+                            ? null
+                            : onPlayAll,
+                        icon: isLoading
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colorScheme.primary,
+                                ),
+                              )
+                            : const Icon(Icons.play_arrow_rounded),
+                        label: const Text('播放全部'),
                       ),
-                    ),
+                    ],
                     if (isWide) ...[
                       const SizedBox(height: 24),
                       FilledButton.icon(
