@@ -24,8 +24,6 @@ class LibraryCubit extends Cubit<LibraryState> {
   final FetchLibraryArtists _fetchLibraryArtists;
   final MusicRepository _musicRepository;
 
-  Timer? _searchDebounce;
-
   Future<void> load() async {
     await _loadGenres();
     await _loadCurrentFilter(reset: true);
@@ -82,13 +80,8 @@ class LibraryCubit extends Cubit<LibraryState> {
   }
 
   void search(String query) {
-    _searchDebounce?.cancel();
-
     emit(state.copyWith(searchQuery: query, errorMessage: null));
-
-    _searchDebounce = Timer(const Duration(milliseconds: 280), () {
-      unawaited(_loadCurrentFilter(reset: true));
-    });
+    unawaited(_loadCurrentFilter(reset: true));
   }
 
   Future<void> _loadCurrentFilter({required bool reset}) async {
@@ -169,6 +162,15 @@ class LibraryCubit extends Cubit<LibraryState> {
             ),
           );
           break;
+        case LibraryFilter.favorites:
+          emit(
+            state.copyWith(
+              status: LibraryStatus.success,
+              isLoadingMore: false,
+              errorMessage: null,
+            ),
+          );
+          break;
       }
     } on TimeoutException {
       if (reset) {
@@ -228,11 +230,5 @@ class LibraryCubit extends Cubit<LibraryState> {
       emit(state.copyWith(tracks: revertedTracks));
       rethrow;
     }
-  }
-
-  @override
-  Future<void> close() async {
-    _searchDebounce?.cancel();
-    return super.close();
   }
 }

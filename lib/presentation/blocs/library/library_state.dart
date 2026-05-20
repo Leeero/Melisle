@@ -5,7 +5,7 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
-enum LibraryFilter { tracks, albums, artists }
+enum LibraryFilter { tracks, albums, artists, favorites }
 
 class LibraryState {
   const LibraryState({
@@ -45,6 +45,7 @@ class LibraryState {
       LibraryFilter.tracks => tracks.isEmpty,
       LibraryFilter.albums => albums.isEmpty,
       LibraryFilter.artists => artists.isEmpty,
+      LibraryFilter.favorites => true,
     };
   }
 
@@ -53,6 +54,7 @@ class LibraryState {
       LibraryFilter.tracks => tracks.length,
       LibraryFilter.albums => albums.length,
       LibraryFilter.artists => artists.length,
+      LibraryFilter.favorites => 0,
     };
   }
 

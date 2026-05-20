@@ -1,9 +1,13 @@
+import 'package:cross_platform_music_player/application/usecases/fetch_favorite_tracks.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
@@ -88,7 +92,7 @@ class _LibraryViewState extends State<_LibraryView> {
       builder: (context, state) {
         return DefaultTabController(
           key: ValueKey(state.currentFilter.index),
-          length: 3,
+          length: 4,
           initialIndex: state.currentFilter.index,
           child: AppContentPage(
             header: _LibraryHeader(
@@ -151,8 +155,12 @@ class _LibraryViewState extends State<_LibraryView> {
               state,
               horizontalPadding,
             ),
+            LibraryFilter.favorites => SliverToBoxAdapter(
+              child: _LibraryFavoritesTab(searchQuery: state.searchQuery),
+            ),
           },
-          _buildFooterSliver(state),
+          if (state.currentFilter != LibraryFilter.favorites)
+            _buildFooterSliver(state),
         ],
       ),
     );
@@ -957,7 +965,8 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
         TextField(
           controller: widget.controller,
           focusNode: _searchFocusNode,
-          onChanged: context.read<LibraryCubit>().search,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (value) => context.read<LibraryCubit>().search(value),
           decoration: InputDecoration(
             hintText: _searchHint(widget.state.currentFilter),
             prefixIcon: AnimatedScale(
@@ -968,52 +977,11 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
           ),
         ),
         const SizedBox(height: 12),
-        // ── Filter tabs/pills ──
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = AppBreakpoints.usesWideContentWidth(
-              constraints.maxWidth,
-            );
-
-            if (isWide) {
-              return _LibraryPCFilterTabs(
-                selectedFilter: widget.state.currentFilter,
-                onFilterChanged: (filter) =>
-                    context.read<LibraryCubit>().changeFilter(filter),
-              );
-            }
-
-            return Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _FilterPill(
-                  label: '歌曲',
-                  icon: Icons.music_note_rounded,
-                  selected: widget.state.currentFilter == LibraryFilter.tracks,
-                  onTap: () => context.read<LibraryCubit>().changeFilter(
-                    LibraryFilter.tracks,
-                  ),
-                ),
-                _FilterPill(
-                  label: '专辑',
-                  icon: Icons.album_rounded,
-                  selected: widget.state.currentFilter == LibraryFilter.albums,
-                  onTap: () => context.read<LibraryCubit>().changeFilter(
-                    LibraryFilter.albums,
-                  ),
-                ),
-                _FilterPill(
-                  label: '艺术家',
-                  icon: Icons.mic_external_on_rounded,
-                  selected: widget.state.currentFilter == LibraryFilter.artists,
-                  onTap: () => context.read<LibraryCubit>().changeFilter(
-                    LibraryFilter.artists,
-                  ),
-                ),
-              ],
-            );
-          },
+        // ── Filter tabs ──
+        _LibraryPCFilterTabs(
+          selectedFilter: widget.state.currentFilter,
+          onFilterChanged: (filter) =>
+              context.read<LibraryCubit>().changeFilter(filter),
         ),
       ],
     );
@@ -1024,6 +992,7 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
       LibraryFilter.tracks => '搜索当前歌曲',
       LibraryFilter.albums => '搜索当前专辑',
       LibraryFilter.artists => '搜索当前艺术家',
+      LibraryFilter.favorites => '搜索当前歌曲',
     };
   }
 }
@@ -1073,6 +1042,10 @@ class _LibraryPCFilterTabs extends StatelessWidget {
           _HoverTab(
             label: '艺术家',
             isSelected: selectedFilter == LibraryFilter.artists,
+          ),
+          _HoverTab(
+            label: '收藏',
+            isSelected: selectedFilter == LibraryFilter.favorites,
           ),
         ],
       ),
@@ -1169,6 +1142,141 @@ class _GenreChip extends StatelessWidget {
   }
 }
 
+class _LibraryFavoritesTab extends StatefulWidget {
+  const _LibraryFavoritesTab({this.searchQuery});
+
+  final String? searchQuery;
+
+  @override
+  State<_LibraryFavoritesTab> createState() => _LibraryFavoritesTabState();
+}
+
+class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => FavoritesListCubit(
+        FetchFavoriteTracks(context.read<MusicRepository>()),
+        context.read<FavoritesCubit>(),
+      )..load(),
+      child: BlocBuilder<FavoritesListCubit, FavoritesListState>(
+        builder: (context, state) {
+          if (state.status == FavoritesListStatus.loading &&
+              state.tracks.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (state.status == FavoritesListStatus.failure &&
+              state.tracks.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  state.errorMessage ?? '加载收藏失败',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final query = widget.searchQuery?.trim().toLowerCase() ?? '';
+          final filteredTracks = query.isEmpty
+              ? state.tracks
+              : state.tracks.where((track) {
+                  return track.title.toLowerCase().contains(query) ||
+                      track.artistName.toLowerCase().contains(query) ||
+                      track.albumTitle.toLowerCase().contains(query);
+                }).toList();
+
+          if (filteredTracks.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  query.isEmpty ? '还没有收藏歌曲' : '没有找到匹配的收藏歌曲',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final currentTrackId = context.select<PlayerCubit, String?>(
+            (cubit) => cubit.state.currentTrack?.id,
+          );
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MobileTrackActionBar(
+                trackCount: filteredTracks.length,
+                onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
+                  context,
+                  loadedTracks: filteredTracks,
+                  allLoaded: true,
+                  fetchAll: () async => filteredTracks,
+                ),
+              ),
+              ListView.builder(
+                controller: _scrollController,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  AppPageLayout.horizontalPadding(context),
+                  0,
+                  AppPageLayout.horizontalPadding(context),
+                  24,
+                ),
+                itemCount: filteredTracks.length,
+                itemBuilder: (context, index) {
+                  final track = filteredTracks[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: MusicTrackTile.card(
+                      isCurrent: track.id == currentTrackId,
+                      artworkUrl: track.artworkUrl,
+                      title: track.title,
+                      subtitle: [
+                        track.artistName,
+                        track.albumTitle,
+                      ].where((item) => item.isNotEmpty).join(' · '),
+                      onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                        context,
+                        tracks: filteredTracks,
+                        startIndex: index,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ArtistCircleCard extends StatelessWidget {
   const _ArtistCircleCard({required this.artist});
 
@@ -1225,69 +1333,6 @@ class _ArtistCircleCard extends StatelessWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: selected
-                ? colorScheme.primaryContainer.withValues(alpha: 0.92)
-                : colorScheme.surface.withValues(alpha: 0.54),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? colorScheme.primary.withValues(alpha: 0.2)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.8),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
