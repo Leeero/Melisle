@@ -220,21 +220,11 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
       );
     }
 
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: widget.isCurrent
-            ? colorScheme.primary.withValues(alpha: 0.14)
-            : colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Icon(
-        widget.isCurrent ? Icons.graphic_eq_rounded : widget.idleIcon,
-        color: widget.isCurrent
-            ? colorScheme.primary
-            : colorScheme.onSurfaceVariant,
-      ),
+    return Icon(
+      widget.isCurrent ? Icons.graphic_eq_rounded : widget.idleIcon,
+      color: widget.isCurrent
+          ? colorScheme.primary
+          : colorScheme.onSurfaceVariant,
     );
   }
 }

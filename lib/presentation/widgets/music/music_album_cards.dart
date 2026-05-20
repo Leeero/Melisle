@@ -90,17 +90,6 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
               style: textTheme.titleMedium,
             ),
             const SizedBox(height: 2),
-            // Artist name
-            Text(
-              album.artistName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            // Year · track count
             Text(
               [
                 album.artistName,
@@ -109,8 +98,8 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
               ].join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],

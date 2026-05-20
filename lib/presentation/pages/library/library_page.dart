@@ -226,24 +226,51 @@ class _LibraryViewState extends State<_LibraryView> {
 
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final track = state.tracks[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: MusicTrackTile.card(
-              isCurrent: track.id == currentTrackId,
-              artworkUrl: track.artworkUrl,
-              title: track.title,
-              subtitle: '${track.artistName} · ${track.albumTitle}',
-              onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _MobileTrackActionBar(
+              trackCount: state.currentFilterCount,
+              totalTrackCount: state.totalTrackCount,
+              onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
                 context,
-                tracks: state.tracks,
-                startIndex: index,
+                loadedTracks: state.tracks,
+                allLoaded: !state.hasMore,
+                fetchAll: () async {
+                  final result = await context
+                      .read<MusicRepository>()
+                      .fetchTracks(
+                        limit: 500,
+                        startIndex: 0,
+                        searchQuery: state.searchQuery.trim().isEmpty
+                            ? null
+                            : state.searchQuery.trim(),
+                      );
+                  return result.items;
+                },
               ),
             ),
-          );
-        }, childCount: state.tracks.length),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final track = state.tracks[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: MusicTrackTile.card(
+                  isCurrent: track.id == currentTrackId,
+                  artworkUrl: track.artworkUrl,
+                  title: track.title,
+                  subtitle: '${track.artistName} · ${track.albumTitle}',
+                  onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                    context,
+                    tracks: state.tracks,
+                    startIndex: index,
+                  ),
+                ),
+              );
+            }, childCount: state.tracks.length),
+          ),
+        ],
       ),
     );
   }
@@ -315,7 +342,7 @@ class _LibraryViewState extends State<_LibraryView> {
           crossAxisCount: _albumGridCount(MediaQuery.sizeOf(context).width),
           mainAxisSpacing: 18,
           crossAxisSpacing: 18,
-          childAspectRatio: 0.76,
+          childAspectRatio: 0.72,
         ),
       ),
     );
@@ -459,6 +486,41 @@ class _LibraryViewState extends State<_LibraryView> {
     if (width >= 900) return 6;
     if (width >= 600) return 4;
     return 3;
+  }
+}
+
+class _MobileTrackActionBar extends StatelessWidget {
+  const _MobileTrackActionBar({
+    required this.trackCount,
+    this.totalTrackCount,
+    required this.onPlayAll,
+  });
+
+  final int trackCount;
+  final int? totalTrackCount;
+  final VoidCallback onPlayAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+      child: Row(
+        children: [
+          MetaPill(
+            label: totalTrackCount != null
+                ? '$trackCount / $totalTrackCount 首'
+                : '$trackCount 首',
+            size: MetaPillSize.compact,
+          ),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: onPlayAll,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: const Text('播放全部'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
