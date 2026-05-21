@@ -52,7 +52,18 @@
       "Bash(dart --version)",
       "Bash(mdfind \"kMDItemFSName == 'flutter'\" -onlyin /)",
       "Bash(/Users/lero/flutter-sdk/bin/dart format *)",
-      "WebFetch(domain:www.ruanyifeng.com)"
+      "WebFetch(domain:www.ruanyifeng.com)",
+      "Bash(mdfind \"kMDItemKind == 'Application'\")",
+      "Bash(xcode-select -p)",
+      "Bash(xcodebuild -version)",
+      "Bash(cp \"/Users/lero/Library/Application Support/PixPin/Temp/2026-05-19_19-29-21.png\" /tmp/reference_design.png)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:api.jellyfin.org)",
+      "Bash(gh api *)",
+      "Bash(flutter format *)",
+      "Bash(flutter --version)",
+      "Bash(flutter dart *)",
+      "Read(//opt/homebrew/**)"
     ]
   }
 }
