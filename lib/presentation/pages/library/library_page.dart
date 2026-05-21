@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/application/usecases/fetch_favorite_tracks.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
@@ -155,8 +157,14 @@ class _LibraryViewState extends State<_LibraryView> {
               state,
               horizontalPadding,
             ),
-            LibraryFilter.favorites => SliverToBoxAdapter(
-              child: _LibraryFavoritesTab(searchQuery: state.searchQuery),
+            LibraryFilter.favorites => SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                0,
+                horizontalPadding,
+                18,
+              ),
+              sliver: _LibraryFavoritesSliver(searchQuery: state.searchQuery),
             ),
           },
           if (state.currentFilter != LibraryFilter.favorites)
@@ -978,7 +986,7 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
         ),
         const SizedBox(height: 12),
         // ── Filter tabs ──
-        _LibraryPCFilterTabs(
+        _LibraryFilterTabs(
           selectedFilter: widget.state.currentFilter,
           onFilterChanged: (filter) =>
               context.read<LibraryCubit>().changeFilter(filter),
@@ -997,8 +1005,8 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
   }
 }
 
-class _LibraryPCFilterTabs extends StatelessWidget {
-  const _LibraryPCFilterTabs({
+class _LibraryFilterTabs extends StatelessWidget {
+  const _LibraryFilterTabs({
     required this.selectedFilter,
     required this.onFilterChanged,
   });
@@ -1142,29 +1150,10 @@ class _GenreChip extends StatelessWidget {
   }
 }
 
-class _LibraryFavoritesTab extends StatefulWidget {
-  const _LibraryFavoritesTab({this.searchQuery});
+class _LibraryFavoritesSliver extends StatelessWidget {
+  const _LibraryFavoritesSliver({this.searchQuery});
 
   final String? searchQuery;
-
-  @override
-  State<_LibraryFavoritesTab> createState() => _LibraryFavoritesTabState();
-}
-
-class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1177,28 +1166,32 @@ class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
         builder: (context, state) {
           if (state.status == FavoritesListStatus.loading &&
               state.tracks.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator()),
+            return const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
             );
           }
 
           if (state.status == FavoritesListStatus.failure &&
               state.tracks.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text(
-                  state.errorMessage ?? '加载收藏失败',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
+            return SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text(
+                    state.errorMessage ?? '加载收藏失败',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ),
             );
           }
 
-          final query = widget.searchQuery?.trim().toLowerCase() ?? '';
+          final query = searchQuery?.trim().toLowerCase() ?? '';
           final filteredTracks = query.isEmpty
               ? state.tracks
               : state.tracks.where((track) {
@@ -1208,13 +1201,17 @@ class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
                 }).toList();
 
           if (filteredTracks.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text(
-                  query.isEmpty ? '还没有收藏歌曲' : '没有找到匹配的收藏歌曲',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+            return SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text(
+                    query.isEmpty
+                        ? '还没有收藏歌曲，去媒体库挑几首喜欢的吧。'
+                        : '没有找到匹配的收藏歌曲，换个关键词试试。',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
@@ -1225,30 +1222,33 @@ class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
             (cubit) => cubit.state.currentTrack?.id,
           );
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _MobileTrackActionBar(
-                trackCount: filteredTracks.length,
-                onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
-                  context,
-                  loadedTracks: filteredTracks,
-                  allLoaded: true,
-                  fetchAll: () async => filteredTracks,
+          return SliverMainAxisGroup(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _MobileTrackActionBar(
+                  trackCount: filteredTracks.length,
+                  onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
+                    context,
+                    loadedTracks: filteredTracks,
+                    allLoaded: !state.hasMore || query.isNotEmpty,
+                    fetchAll: () async {
+                      if (query.isNotEmpty) return filteredTracks;
+                      final cubit = context.read<FavoritesListCubit>();
+                      final tracks = <MusicTrack>[...state.tracks];
+                      while (cubit.state.hasMore) {
+                        await cubit.loadMore();
+                        final nextState = cubit.state;
+                        tracks
+                          ..clear()
+                          ..addAll(nextState.tracks);
+                      }
+                      return tracks;
+                    },
+                  ),
                 ),
               ),
-              ListView.builder(
-                controller: _scrollController,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  AppPageLayout.horizontalPadding(context),
-                  0,
-                  AppPageLayout.horizontalPadding(context),
-                  24,
-                ),
-                itemCount: filteredTracks.length,
-                itemBuilder: (context, index) {
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
                   final track = filteredTracks[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -1267,11 +1267,75 @@ class _LibraryFavoritesTabState extends State<_LibraryFavoritesTab> {
                       ),
                     ),
                   );
-                },
+                }, childCount: filteredTracks.length),
               ),
+              _LibraryFavoritesFooter(state: state, query: query),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _LibraryFavoritesFooter extends StatelessWidget {
+  const _LibraryFavoritesFooter({required this.state, required this.query});
+
+  final FavoritesListState state;
+  final String query;
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isNotEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox(height: 14));
+    }
+
+    if (state.errorMessage != null &&
+        !state.isLoadingMore &&
+        state.status == FavoritesListStatus.failure) {
+      final colorScheme = Theme.of(context).colorScheme;
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+          child: Center(
+            child: Text(
+              state.errorMessage!,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (state.hasMore && !state.isLoadingMore) {
+      unawaited(context.read<FavoritesListCubit>().loadMore());
+      return const SliverToBoxAdapter(child: SizedBox(height: 14));
+    }
+
+    if (state.isLoadingMore) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 30),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 30),
+        child: Center(
+          child: Text(
+            '— · — · —',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+              letterSpacing: 4,
+            ),
+          ),
+        ),
       ),
     );
   }

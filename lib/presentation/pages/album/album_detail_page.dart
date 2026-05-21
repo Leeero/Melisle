@@ -58,7 +58,7 @@ class _AlbumDetailView extends StatelessWidget {
                     SliverPadding(
                       padding: AppPageLayout.sectionPadding(
                         context,
-                        top: 10,
+                        top: 4,
                         bottom: 18,
                       ),
                       sliver: SliverToBoxAdapter(
@@ -129,97 +129,162 @@ class _AlbumHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return AppDetailHeroFrame(
+      padding: EdgeInsets.zero,
+      compactGap: 18,
       coverBuilder: (context, isWide) {
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            color: colorScheme.surface.withValues(alpha: 0.22),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-            ),
-            // Phase 4: Cover BoxShadow
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: CachedArtwork(
-              imageUrl: album?.artworkUrl ?? '',
-              size: isWide ? 250 : 210,
-              borderRadius: 24,
-            ),
-          ),
+        return CachedArtwork(
+          imageUrl: album?.artworkUrl ?? '',
+          size: isWide ? 250 : 196,
+          borderRadius: isWide ? 24 : 18,
         );
       },
-      contentBuilder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                const MetaPill(label: '专辑详情', size: MetaPillSize.compact),
-                MetaPill(
-                  label:
-                      '${tracksCount == 0 ? (album?.trackCount ?? 0) : tracksCount} 首',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              album?.title ?? '专辑详情',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            _AlbumArtistLine(album: album),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton.icon(
-                  onPressed: tracksCount == 0
-                      ? null
-                      : () => PlayerNavigation.playTracksAndOpenPlayer(
-                          context,
-                          tracks: context.read<AlbumCubit>().state.tracks,
-                          startIndex: 0,
-                        ),
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('播放专辑'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/library'),
-                  icon: const Icon(Icons.library_music_rounded),
-                  label: const Text('返回媒体库'),
-                ),
-              ],
-            ),
-          ],
-        );
+      contentBuilder: (context, isWide) {
+        if (!isWide) {
+          return _MobileAlbumSummary(album: album, tracksCount: tracksCount);
+        }
+
+        return _DesktopAlbumSummary(album: album, tracksCount: tracksCount);
       },
     );
   }
+}
+
+class _DesktopAlbumSummary extends StatelessWidget {
+  const _DesktopAlbumSummary({required this.album, required this.tracksCount});
+
+  final MusicAlbum? album;
+  final int tracksCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              const MetaPill(label: '专辑详情', size: MetaPillSize.compact),
+              MetaPill(label: '${_trackCountLabel(album, tracksCount)} 首'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            album?.title ?? '专辑详情',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _AlbumArtistLine(album: album),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton.icon(
+                onPressed: tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.playTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                        startIndex: 0,
+                      ),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('播放专辑'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/library'),
+                icon: const Icon(Icons.library_music_rounded),
+                label: const Text('返回媒体库'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileAlbumSummary extends StatelessWidget {
+  const _MobileAlbumSummary({required this.album, required this.tracksCount});
+
+  final MusicAlbum? album;
+  final int tracksCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          album?.title ?? '专辑详情',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _AlbumArtistLine(album: album, centered: true),
+        const SizedBox(height: 10),
+        Text(
+          '${_trackCountLabel(album, tracksCount)} 首歌曲',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton.icon(
+                onPressed: tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.playTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                        startIndex: 0,
+                      ),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('播放专辑'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () => context.go('/library'),
+                icon: const Icon(Icons.library_music_rounded),
+                label: const Text('媒体库'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+int _trackCountLabel(MusicAlbum? album, int tracksCount) {
+  return tracksCount == 0 ? (album?.trackCount ?? 0) : tracksCount;
 }
 
 // Phase 4: Track row with hover shadow
 
 /// 专辑 hero 区的副标题：艺术家名 · 年份。艺术家名在有 artistId 时可点击。
 class _AlbumArtistLine extends StatelessWidget {
-  const _AlbumArtistLine({required this.album});
+  const _AlbumArtistLine({required this.album, this.centered = false});
 
   final MusicAlbum? album;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +294,11 @@ class _AlbumArtistLine extends StatelessWidget {
     ).textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     if (album == null) {
-      return Text('正在从 Emby 加载专辑曲目。', style: textStyle);
+      return Text(
+        '正在加载专辑曲目',
+        textAlign: centered ? TextAlign.center : TextAlign.start,
+        style: textStyle,
+      );
     }
 
     final year = album!.year?.toString() ?? '未知年份';
@@ -237,10 +306,15 @@ class _AlbumArtistLine extends StatelessWidget {
     final artistName = album!.artistName.isEmpty ? '未知艺术家' : album!.artistName;
 
     if (artistId == null || artistId.isEmpty) {
-      return Text('$artistName · $year', style: textStyle);
+      return Text(
+        '$artistName · $year',
+        textAlign: centered ? TextAlign.center : TextAlign.start,
+        style: textStyle,
+      );
     }
 
     return Wrap(
+      alignment: centered ? WrapAlignment.center : WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         InkWell(
