@@ -157,15 +157,14 @@ Future<void> _playPlaylistFromIndex(
   BuildContext context,
   int startIndex,
 ) async {
-  final tracks = await context
-      .read<PlaylistDetailCubit>()
-      .ensureAllTracksLoaded();
-  if (!context.mounted || tracks.isEmpty) return;
-  final safeIndex = startIndex.clamp(0, tracks.length - 1).toInt();
-  PlayerNavigation.playTracksAndOpenPlayer(
+  final cubit = context.read<PlaylistDetailCubit>();
+  final state = cubit.state;
+  await PlayerNavigation.playAllAndOpenPlayer(
     context,
-    tracks: tracks,
-    startIndex: safeIndex,
+    loadedTracks: state.tracks,
+    allLoaded: !state.hasMore,
+    fetchAll: cubit.ensureAllTracksLoaded,
+    startIndex: startIndex,
   );
 }
 

@@ -42,6 +42,7 @@ final class PlayerNavigation {
     required List<MusicTrack> loadedTracks,
     required bool allLoaded,
     required Future<List<MusicTrack>> Function() fetchAll,
+    int startIndex = 0,
   }) async {
     if (loadedTracks.isEmpty) return;
 
@@ -49,8 +50,12 @@ final class PlayerNavigation {
     // 预测 playTracks 后的 revision：playTracks 内部会把 playbackRevision +1。
     // 在这里 +1 取得即将使用的值；若期间其他播放操作覆盖，appendTracks* 会因
     // 值不匹配自动放弃。
+    final safeStart = startIndex.clamp(0, loadedTracks.length - 1).toInt();
     final expectedRevision = cubit.playbackRevision + 1;
-    final playbackFuture = cubit.playTracks(loadedTracks, startIndex: 0);
+    final playbackFuture = cubit.playTracks(
+      loadedTracks,
+      startIndex: safeStart,
+    );
 
     openPlayerPage(context);
     await playbackFuture;
