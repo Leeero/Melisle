@@ -29,6 +29,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ignore: unused_field  保留字段以便后续（自定义协议解析、封面代理等）扩展。
   final CustomMediaSourceResolver _mediaSourceResolver;
   final AudioPlayer _audioPlayer;
+  static const int _systemQueueWindowSize = 25;
+  int _publishedQueueStartIndex = 0;
 
   /// 外部回调：系统播控请求"下一首 / 上一首 / 跳到队列某项"。
   Future<void> Function()? onSkipNext;
@@ -202,7 +204,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> skipToQueueItem(int index) async {
     final cb = onSkipToIndex;
     if (cb == null) return;
-    await cb(index);
+    await cb(_publishedQueueStartIndex + index);
   }
 
   @override
@@ -228,16 +230,31 @@ class AudioPlayerHandler extends BaseAudioHandler
     required List<MusicTrack> tracks,
     required int currentIndex,
   }) {
-    final items = [for (final t in tracks) _asMediaItem(t)];
-    queue.add(items);
-    if (items.isEmpty) {
+    if (tracks.isEmpty) {
+      _publishedQueueStartIndex = 0;
+      queue.add(const []);
       mediaItem.add(null);
+      playbackState.add(playbackState.value.copyWith(queueIndex: null));
       return;
     }
-    final safeIndex = currentIndex.clamp(0, items.length - 1);
-    mediaItem.add(items[safeIndex]);
+
+    final safeIndex = currentIndex.clamp(0, tracks.length - 1).toInt();
+    final halfWindow = _systemQueueWindowSize ~/ 2;
+    final maxStart = (tracks.length - _systemQueueWindowSize).clamp(
+      0,
+      tracks.length,
+    );
+    final start = (safeIndex - halfWindow).clamp(0, maxStart).toInt();
+    final end = (start + _systemQueueWindowSize).clamp(start, tracks.length);
+    final windowTracks = tracks.sublist(start, end);
+    final items = [for (final t in windowTracks) _asMediaItem(t)];
+    final queueIndex = safeIndex - start;
+
+    _publishedQueueStartIndex = start;
+    queue.add(items);
+    mediaItem.add(items[queueIndex]);
     // 同时把 queueIndex 刷到 playbackState，让系统控件正确高亮当前项。
-    playbackState.add(playbackState.value.copyWith(queueIndex: safeIndex));
+    playbackState.add(playbackState.value.copyWith(queueIndex: queueIndex));
   }
 
   Future<void> dispose() async {
