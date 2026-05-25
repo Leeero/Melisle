@@ -559,8 +559,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _lastSeekPosition = null;
     }
 
-    final effectiveDuration = _durationCoveringPosition(position);
-    emit(state.copyWith(position: position, duration: effectiveDuration));
+    emit(state.copyWith(position: position));
     _updateLyricHighlight(position);
   }
 

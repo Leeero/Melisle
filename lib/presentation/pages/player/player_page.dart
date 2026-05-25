@@ -76,7 +76,6 @@ class _PlayerPageState extends State<PlayerPage> {
             prev.currentTrack?.id != next.currentTrack?.id ||
             prev.currentIndex != next.currentIndex ||
             prev.queue.length != next.queue.length ||
-            prev.duration != next.duration ||
             prev.sleepRemaining != next.sleepRemaining ||
             prev.sleepEndOfTrack != next.sleepEndOfTrack,
         builder: (context, state) {
@@ -187,6 +186,7 @@ class _MobileLayoutState extends State<_MobileLayout> {
               onSwipeEnd: (details) => _handleSwipe(context, details),
               onSwipeCancel: _resetSwipe,
               onSwipeUpdate: _updateSwipe,
+              translucent: false,
               child: Column(
                 children: [
                   Padding(
@@ -259,6 +259,7 @@ class _MobileSwipeGestureRegion extends StatelessWidget {
     required this.onSwipeEnd,
     required this.onSwipeCancel,
     this.onTap,
+    this.translucent = true,
   });
 
   final Widget child;
@@ -266,11 +267,14 @@ class _MobileSwipeGestureRegion extends StatelessWidget {
   final ValueChanged<DragEndDetails> onSwipeEnd;
   final VoidCallback onSwipeCancel;
   final VoidCallback? onTap;
+  final bool translucent;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.translucent,
+      behavior: translucent
+          ? HitTestBehavior.translucent
+          : HitTestBehavior.deferToChild,
       onTap: onTap,
       onPanStart: (_) => onSwipeCancel(),
       onPanUpdate: onSwipeUpdate,
