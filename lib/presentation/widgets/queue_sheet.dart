@@ -98,6 +98,10 @@ class QueueSheet extends StatelessWidget {
               // Queue list
               Expanded(
                 child: BlocBuilder<PlayerCubit, PlayerViewState>(
+                  buildWhen: (prev, next) =>
+                      prev.queue != next.queue ||
+                      prev.currentIndex != next.currentIndex ||
+                      prev.isPlaying != next.isPlaying,
                   builder: (context, state) {
                     if (state.queue.isEmpty) {
                       return _EmptyQueueView(colorScheme: colorScheme);

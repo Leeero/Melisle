@@ -163,7 +163,7 @@ Future<void> _playPlaylistFromIndex(
     context,
     loadedTracks: state.tracks,
     allLoaded: !state.hasMore,
-    fetchAll: cubit.ensureAllTracksLoaded,
+    fetchAll: cubit.fetchPlaybackQueueTracks,
     startIndex: startIndex,
   );
 }

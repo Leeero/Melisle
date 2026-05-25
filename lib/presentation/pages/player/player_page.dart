@@ -75,7 +75,6 @@ class _PlayerPageState extends State<PlayerPage> {
         buildWhen: (prev, next) =>
             prev.currentTrack?.id != next.currentTrack?.id ||
             prev.currentIndex != next.currentIndex ||
-            prev.queue.length != next.queue.length ||
             prev.sleepRemaining != next.sleepRemaining ||
             prev.sleepEndOfTrack != next.sleepEndOfTrack,
         builder: (context, state) {
@@ -966,10 +965,17 @@ class _DesktopUtilityBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _DesktopUtilityIconButton(
-                      tooltip: '播放队列（${state.queue.length}）',
-                      onPressed: () => _showDesktopQueueDialog(context),
-                      child: _DesktopQueueGlyph(count: state.queue.length),
+                    BlocBuilder<PlayerCubit, PlayerViewState>(
+                      buildWhen: (prev, next) =>
+                          prev.queue.length != next.queue.length,
+                      builder: (context, playerState) {
+                        final count = playerState.queue.length;
+                        return _DesktopUtilityIconButton(
+                          tooltip: '播放队列（$count）',
+                          onPressed: () => _showDesktopQueueDialog(context),
+                          child: _DesktopQueueGlyph(count: count),
+                        );
+                      },
                     ),
                     const SizedBox(width: 6),
                     BlocBuilder<PlayerCubit, PlayerViewState>(
@@ -2778,6 +2784,10 @@ class _DesktopQueueDialogState extends State<_DesktopQueueDialog> {
                 ),
                 Expanded(
                   child: BlocBuilder<PlayerCubit, PlayerViewState>(
+                    buildWhen: (prev, next) =>
+                        prev.queue != next.queue ||
+                        prev.currentIndex != next.currentIndex ||
+                        prev.isPlaying != next.isPlaying,
                     builder: (context, state) {
                       if (state.queue.isEmpty) {
                         return const _DesktopQueueEmptyState();

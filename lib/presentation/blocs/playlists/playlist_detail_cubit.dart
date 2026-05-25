@@ -37,36 +37,88 @@ class PlaylistDetailCubit extends Cubit<PlaylistDetailState> {
     var hasMore = state.hasMore;
 
     while (hasMore && offset < 10000) {
-      final futures = <Future<List<MusicTrack>>>[];
-      for (int i = 0; i < 4; i++) {
-        futures.add(
-          _fetchPlaylistTracks(
-            playlistId,
-            limit: _pageSize,
-            startIndex: offset + i * _pageSize,
-          ),
-        );
+      final batch = await _fetchTrackBatch(playlistId, offset: offset);
+      if (batch.tracks.isEmpty) {
+        hasMore = false;
+        break;
       }
 
-      final results = await Future.wait(futures);
-
-      var batch = <MusicTrack>[];
-      for (final tracks in results) {
-        if (tracks.isEmpty) break;
-        batch.addAll(tracks);
-        if (tracks.length < _pageSize) {
-          hasMore = false;
-          break;
-        }
-      }
-
-      final combined = [...state.tracks, ...batch];
+      final combined = [...state.tracks, ...batch.tracks];
       offset = combined.length;
+      hasMore = batch.hasMore;
       emit(state.copyWith(tracks: combined, hasMore: hasMore));
     }
 
-    emit(state.copyWith(isLoadingAll: false));
+    emit(state.copyWith(isLoadingAll: false, hasMore: hasMore));
     return state.tracks;
+  }
+
+  Future<List<MusicTrack>> fetchPlaybackQueueTracks({
+    int maxTracks = 500,
+  }) async {
+    final playlistId = _playlistId;
+    if (playlistId == null || maxTracks <= 0) return const [];
+
+    final tracks = <MusicTrack>[];
+    var offset = 0;
+    var hasMore = true;
+
+    while (hasMore && tracks.length < maxTracks) {
+      final limit = maxTracks - tracks.length < _pageSize
+          ? maxTracks - tracks.length
+          : _pageSize;
+      final page = await _fetchPlaylistTracks(
+        playlistId,
+        limit: limit,
+        startIndex: offset,
+      );
+      if (page.isEmpty) break;
+
+      tracks.addAll(page);
+      offset = tracks.length;
+      hasMore = page.length == limit && limit == _pageSize;
+    }
+
+    return tracks;
+  }
+
+  Future<_PlaylistTrackBatch> _fetchTrackBatch(
+    String playlistId, {
+    required int offset,
+    int remainingLimit = 10000,
+  }) async {
+    final futures = <Future<List<MusicTrack>>>[];
+    var requested = 0;
+    for (var i = 0; i < 4 && requested < remainingLimit; i++) {
+      final limit = remainingLimit - requested < _pageSize
+          ? remainingLimit - requested
+          : _pageSize;
+      futures.add(
+        _fetchPlaylistTracks(
+          playlistId,
+          limit: limit,
+          startIndex: offset + requested,
+        ),
+      );
+      requested += limit;
+    }
+
+    final results = await Future.wait(futures);
+    final tracks = <MusicTrack>[];
+    var hasMore = true;
+    for (final page in results) {
+      if (page.isEmpty) {
+        hasMore = false;
+        break;
+      }
+      tracks.addAll(page);
+      if (page.length < _pageSize) {
+        hasMore = false;
+        break;
+      }
+    }
+
+    return _PlaylistTrackBatch(tracks: tracks, hasMore: hasMore);
   }
 
   Future<void> _loadPage({required bool reset}) async {
@@ -112,4 +164,11 @@ class PlaylistDetailCubit extends Cubit<PlaylistDetailState> {
       );
     }
   }
+}
+
+class _PlaylistTrackBatch {
+  const _PlaylistTrackBatch({required this.tracks, required this.hasMore});
+
+  final List<MusicTrack> tracks;
+  final bool hasMore;
 }
