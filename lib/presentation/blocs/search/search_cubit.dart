@@ -21,19 +21,28 @@ class SearchCubit extends Cubit<SearchState> {
 
   /// Called on every keystroke — debounces then hits the backend.
   void onQueryChanged(String query) {
-    emit(state.copyWith(query: query));
     _debounce?.cancel();
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
+      _requestId++;
       emit(
         state.copyWith(
           status: SearchStatus.idle,
+          query: query,
           results: SearchResults.empty,
           errorMessage: null,
         ),
       );
       return;
     }
+    _requestId++;
+    emit(
+      state.copyWith(
+        status: SearchStatus.loading,
+        query: query,
+        errorMessage: null,
+      ),
+    );
     _debounce = Timer(const Duration(milliseconds: 320), () => _run(trimmed));
   }
 
@@ -44,6 +53,12 @@ class SearchCubit extends Cubit<SearchState> {
     if (trimmed.isEmpty) return;
     emit(state.copyWith(query: trimmed));
     await _run(trimmed, persist: true);
+  }
+
+  Future<void> retry() async {
+    final trimmed = state.query.trim();
+    if (trimmed.isEmpty) return;
+    await submit(trimmed);
   }
 
   Future<void> _run(String query, {bool persist = false}) async {
