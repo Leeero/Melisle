@@ -216,6 +216,38 @@ void main() {
       });
     });
 
+    test('keeps lrc offset as source metadata', () async {
+      final adapter = _RecordingHttpClientAdapter(
+        onFetch: (_) => ResponseBody.fromString(
+          '[offset:+500]\n[00:01.00]Test line',
+          200,
+          headers: const {
+            Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+          },
+        ),
+      );
+      final dio = Dio()..httpClientAdapter = adapter;
+      final resolver = CustomMediaSourceResolver(
+        dio: dio,
+        initialSettings: const AppSettingsSnapshot(
+          customLyricsSourceEnabled: true,
+          customLyricsSourceUrl: 'https://lyrics.example.com/api/lyrics',
+        ),
+      );
+
+      final lyrics = await resolver.fetchLyrics(
+        trackId: 'track-001',
+        title: 'Test Track',
+        artistName: 'Test Artist',
+        albumTitle: 'Test Album',
+      );
+
+      expect(lyrics, isNotNull);
+      expect(lyrics, hasLength(1));
+      expect(lyrics!.single.start, const Duration(seconds: 1));
+      expect(lyrics.single.sourceOffset, const Duration(milliseconds: 500));
+    });
+
     test(
       'keeps generic lyrics endpoint path and documented query params',
       () async {
