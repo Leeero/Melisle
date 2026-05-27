@@ -4,7 +4,6 @@ import 'package:cross_platform_music_player/application/usecases/fetch_favorite_
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
-import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
@@ -18,6 +17,7 @@ import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -425,7 +425,11 @@ class _LibraryViewState extends State<_LibraryView> {
             SliverGrid(
               delegate: SliverChildBuilderDelegate((context, index) {
                 final artist = state.artists[index];
-                return _ArtistCircleCard(artist: artist);
+                return MusicArtistGridCard(
+                  artist: artist,
+                  onTap: () =>
+                      context.push('/artist/${artist.id}', extra: artist),
+                );
               }, childCount: state.artists.length),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _artistGridCount(
@@ -1308,67 +1312,6 @@ class _LibraryFavoritesFooter extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ArtistCircleCard extends StatelessWidget {
-  const _ArtistCircleCard({required this.artist});
-
-  final MusicArtist artist;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () => context.push('/artist/${artist.id}', extra: artist),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final artworkSize = constraints.maxWidth * 0.78;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 圆形头像
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: constraints.maxWidth * 0.11,
-                ),
-                child: CachedArtwork(
-                  imageUrl: artist.artworkUrl,
-                  size: artworkSize,
-                  borderRadius: artworkSize / 2,
-                ),
-              ),
-              const SizedBox(height: 10),
-              // 艺术家名称
-              Text(
-                artist.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              // 歌曲计数
-              Text(
-                '${artist.trackCount} 首歌曲',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

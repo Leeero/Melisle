@@ -15,6 +15,8 @@ import 'package:cross_platform_music_player/infrastructure/media/custom_media_so
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/search/search_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -156,7 +158,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('周杰伦'), findsWidgets);
+    expect(find.byType(MusicArtistGridCard), findsOneWidget);
     expect(find.text('夜曲'), findsNothing);
+    expect(find.text('十一月的萧邦'), findsNothing);
+  });
+
+  testWidgets('SearchPage_wideWidth_usesAlbumAndArtistGridCards', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+    );
+
+    await tester.enterText(find.byType(TextField), '周杰伦');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('专辑 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MusicAlbumGridCard), findsOneWidget);
+    expect(find.text('十一月的萧邦'), findsOneWidget);
+    expect(find.text('夜曲'), findsNothing);
+
+    await tester.tap(find.text('艺术家 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MusicArtistGridCard), findsOneWidget);
+    expect(find.text('周杰伦'), findsWidgets);
     expect(find.text('十一月的萧邦'), findsNothing);
   });
 

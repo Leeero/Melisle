@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -17,6 +16,8 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -264,10 +265,6 @@ class _SearchHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (canPop) ...[
-                if (Platform.isMacOS)
-                  const SizedBox(
-                    width: AppSpacingTokens.macOsTrafficLightInset + 22,
-                  ),
                 _DesktopBackButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
@@ -1223,21 +1220,13 @@ class _CompactSearchResults extends StatelessWidget {
           const SliverToBoxAdapter(
             child: SizedBox(height: AppSpacingTokens.sectionGap),
           ),
-        _CompactEntitySection(
-          title: '专辑',
-          countLabel: '${scopedResults.albums.length} 张',
-          itemCount: scopedResults.albums.length,
+        _CompactAlbumGrid(
+          albums: scopedResults.albums,
           horizontalPadding: horizontalPadding,
-          itemBuilder: (context, index) =>
-              _AlbumResultRow(album: scopedResults.albums[index]),
         ),
-        _CompactEntitySection(
-          title: '艺术家',
-          countLabel: '${scopedResults.artists.length} 位',
-          itemCount: scopedResults.artists.length,
+        _CompactArtistGrid(
+          artists: scopedResults.artists,
           horizontalPadding: horizontalPadding,
-          itemBuilder: (context, index) =>
-              _ArtistResultRow(artist: scopedResults.artists[index]),
         ),
         _CompactEntitySection(
           title: '歌单',
@@ -1334,6 +1323,135 @@ class _CompactEntitySection extends StatelessWidget {
   }
 }
 
+class _CompactAlbumGrid extends StatelessWidget {
+  const _CompactAlbumGrid({
+    required this.albums,
+    required this.horizontalPadding,
+  });
+
+  final List<MusicAlbum> albums;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    if (albums.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isNarrow = screenWidth < 380;
+
+    if (isNarrow) {
+      return SliverPadding(
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          0,
+          horizontalPadding,
+          AppSpacingTokens.sectionGap,
+        ),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final album = albums[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: CachedArtwork(
+                  imageUrl: album.artworkUrl,
+                  size: 48,
+                  borderRadius: 14,
+                  semanticLabel: '《${album.title}》专辑封面',
+                ),
+                title: Text(
+                  album.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  [
+                    album.artistName,
+                    if (album.year != null) '${album.year}',
+                    '${album.trackCount} 首',
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () => context.push('/album/${album.id}', extra: album),
+              ),
+            );
+          }, childCount: albums.length),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppSpacingTokens.sectionGap,
+      ),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final album = albums[index];
+          return MusicAlbumGridCard(
+            album: album,
+            onTap: () => context.push('/album/${album.id}', extra: album),
+          );
+        }, childCount: albums.length),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(screenWidth),
+          mainAxisSpacing: 18,
+          crossAxisSpacing: 18,
+          childAspectRatio: 0.72,
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactArtistGrid extends StatelessWidget {
+  const _CompactArtistGrid({
+    required this.artists,
+    required this.horizontalPadding,
+  });
+
+  final List<MusicArtist> artists;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    if (artists.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppSpacingTokens.sectionGap,
+      ),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final artist = artists[index];
+          return MusicArtistGridCard(
+            artist: artist,
+            onTap: () => context.push('/artist/${artist.id}', extra: artist),
+          );
+        }, childCount: artists.length),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _artistGridCount(screenWidth),
+          mainAxisSpacing: 18,
+          crossAxisSpacing: 18,
+          childAspectRatio: 0.7,
+        ),
+      ),
+    );
+  }
+}
+
 class _WideSearchResults extends StatelessWidget {
   const _WideSearchResults({required this.results});
 
@@ -1342,6 +1460,16 @@ class _WideSearchResults extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasTracks = results.tracks.isNotEmpty;
+    final hasOnlyAlbums =
+        results.albums.isNotEmpty &&
+        !hasTracks &&
+        results.artists.isEmpty &&
+        results.playlists.isEmpty;
+    final hasOnlyArtists =
+        results.artists.isNotEmpty &&
+        !hasTracks &&
+        results.albums.isEmpty &&
+        results.playlists.isEmpty;
     final hasEntities =
         results.albums.isNotEmpty ||
         results.artists.isNotEmpty ||
@@ -1349,6 +1477,14 @@ class _WideSearchResults extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (hasOnlyAlbums) {
+          return _SearchAlbumGrid(albums: results.albums);
+        }
+
+        if (hasOnlyArtists) {
+          return _SearchArtistGrid(artists: results.artists);
+        }
+
         if (hasTracks && hasEntities) {
           final sidebarWidth = constraints.maxWidth >= 1180 ? 360.0 : 320.0;
           const gap = 30.0;
@@ -1386,6 +1522,64 @@ class _WideSearchResults extends StatelessWidget {
         return ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 920),
           child: _EntityColumn(results: results, fullWidth: true),
+        );
+      },
+    );
+  }
+}
+
+class _SearchAlbumGrid extends StatelessWidget {
+  const _SearchAlbumGrid({required this.albums});
+
+  final List<MusicAlbum> albums;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: albums.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
+          MediaQuery.sizeOf(context).width,
+        ),
+        mainAxisSpacing: 18,
+        crossAxisSpacing: 18,
+        childAspectRatio: 0.72,
+      ),
+      itemBuilder: (context, index) {
+        final album = albums[index];
+        return MusicAlbumGridCard(
+          album: album,
+          onTap: () => context.push('/album/${album.id}', extra: album),
+        );
+      },
+    );
+  }
+}
+
+class _SearchArtistGrid extends StatelessWidget {
+  const _SearchArtistGrid({required this.artists});
+
+  final List<MusicArtist> artists;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: artists.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: _artistGridCount(MediaQuery.sizeOf(context).width),
+        mainAxisSpacing: 18,
+        crossAxisSpacing: 18,
+        childAspectRatio: 0.7,
+      ),
+      itemBuilder: (context, index) {
+        final artist = artists[index];
+        return MusicArtistGridCard(
+          artist: artist,
+          onTap: () => context.push('/artist/${artist.id}', extra: artist),
         );
       },
     );
@@ -1978,6 +2172,13 @@ String _formatTrackDuration(Duration duration) {
   final minutes = duration.inMinutes;
   final seconds = duration.inSeconds % 60;
   return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+}
+
+int _artistGridCount(double width) {
+  if (width >= 1200) return 8;
+  if (width >= 900) return 6;
+  if (width >= 600) return 4;
+  return 3;
 }
 
 class _EntitySection extends StatelessWidget {
