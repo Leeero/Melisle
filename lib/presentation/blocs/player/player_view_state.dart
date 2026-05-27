@@ -1,5 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_sync_state.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_timeline.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -18,8 +20,7 @@ class PlayerViewState {
     this.volume = 1,
     this.errorMessage,
     this.quality = AudioQuality.auto,
-    this.lyrics = const [],
-    this.currentLyricIndex,
+    this.lyricSyncState = const LyricSyncState(),
     this.isLyricsLoading = false,
     this.sleepRemaining,
     this.sleepEndOfTrack = false,
@@ -41,11 +42,16 @@ class PlayerViewState {
   /// 当前播放音质。
   final AudioQuality quality;
 
+  /// 当前歌曲的同步歌词状态，是歌词高亮与滚动的唯一事实源。
+  final LyricSyncState lyricSyncState;
+
   /// 当前歌曲的同步歌词（空列表 = 无 / 未加载完）。
-  final List<LyricLine> lyrics;
+  List<LyricLine> get lyrics => lyricSyncState.timeline.toLyricLines();
+
+  LyricTimeline get lyricTimeline => lyricSyncState.timeline;
 
   /// 当前高亮行索引（null = 没有可高亮的行）。
-  final int? currentLyricIndex;
+  int? get currentLyricIndex => lyricSyncState.activeIndex;
 
   /// 正在拉取歌词。
   final bool isLyricsLoading;
@@ -94,8 +100,7 @@ class PlayerViewState {
     double? volume,
     String? errorMessage,
     AudioQuality? quality,
-    List<LyricLine>? lyrics,
-    Object? currentLyricIndex = _noChange,
+    LyricSyncState? lyricSyncState,
     bool? isLyricsLoading,
     Object? sleepRemaining = _noChange,
     bool? sleepEndOfTrack,
@@ -114,10 +119,7 @@ class PlayerViewState {
       volume: volume ?? this.volume,
       errorMessage: errorMessage,
       quality: quality ?? this.quality,
-      lyrics: lyrics ?? this.lyrics,
-      currentLyricIndex: identical(currentLyricIndex, _noChange)
-          ? this.currentLyricIndex
-          : currentLyricIndex as int?,
+      lyricSyncState: lyricSyncState ?? this.lyricSyncState,
       isLyricsLoading: isLyricsLoading ?? this.isLyricsLoading,
       sleepRemaining: identical(sleepRemaining, _noChange)
           ? this.sleepRemaining

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_sync_engine.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_sync_state.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/play_queue.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
@@ -11,6 +13,7 @@ import 'package:cross_platform_music_player/infrastructure/audio/track_resolver.
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:drift/drift.dart' show Value, Variable;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
@@ -61,6 +64,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   final SleepTimer _sleepTimer = SleepTimer();
   Timer? _sleepTicker;
   Timer? _reportProgressTimer;
+  final LyricSyncEngine _lyricSyncEngine = const LyricSyncEngine(
+    boundaryTolerance: Duration(milliseconds: 220),
+  );
 
   static const _uuid = Uuid();
 
@@ -88,6 +94,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   /// 在 [seek] 中设置，在收到有效位置事件或切歌时清空。
   Duration? _lastSeekPosition;
 
+  String? _lastLoggedLyricTrackId;
+  int? _lastLoggedLyricIndex;
+
   /// 两首之间的静音间隔，默认为 0（无间隔）。
   Duration _gapBetweenTracks = Duration.zero;
 
@@ -106,9 +115,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     emit(
       state.copyWith(
         lyricSyncOffset: offset,
-        currentLyricIndex: _findLyricIndex(
-          state.lyrics,
-          _lyricLookupPosition(state.position, offset),
+        lyricSyncState: _resolveLyricSyncState(
+          playbackPosition: state.position,
+          offset: offset,
         ),
       ),
     );
@@ -141,8 +150,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           currentIndex: _queue.currentIndex,
           isLoading: true,
           errorMessage: null,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
           position: Duration.zero,
           duration: Duration.zero,
         ),
@@ -232,8 +240,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           errorMessage: null,
           position: Duration.zero,
           duration: Duration.zero,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
       await _playCurrentTrack();
@@ -256,8 +263,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           errorMessage: null,
           position: Duration.zero,
           duration: Duration.zero,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
       await _playCurrentTrack();
@@ -280,8 +286,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           errorMessage: null,
           position: Duration.zero,
           duration: Duration.zero,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
       await _playCurrentTrack();
@@ -326,9 +331,13 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final effectiveDuration = _durationCoveringPosition(target);
     _lastSeekPosition = target;
 
-    emit(state.copyWith(position: target, duration: effectiveDuration));
-    // seek 后立即更新歌词高亮，避免被旧播放位置的 _onPositionChanged 覆盖。
-    _updateLyricHighlight(target);
+    emit(
+      state.copyWith(
+        position: target,
+        duration: effectiveDuration,
+        lyricSyncState: _resolveLyricSyncState(playbackPosition: target),
+      ),
+    );
   }
 
   Future<void> moveQueueItem(int oldIndex, int newIndex) async {
@@ -367,8 +376,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           currentIndex: _queue.currentIndex,
           position: Duration.zero,
           duration: Duration.zero,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
       await _enqueueSerial(() async => _playCurrentTrack());
@@ -402,8 +410,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         position: Duration.zero,
         duration: Duration.zero,
         errorMessage: null,
-        lyrics: const [],
-        currentLyricIndex: null,
+        lyricSyncState: const LyricSyncState(),
       ),
     );
   }
@@ -559,14 +566,25 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _lastSeekPosition = null;
     }
 
-    emit(state.copyWith(position: position));
-    _updateLyricHighlight(position);
+    final nextLyricState = _resolveLyricSyncState(playbackPosition: position);
+    _debugLogLyricTransition(nextLyricState);
+    emit(state.copyWith(position: position, lyricSyncState: nextLyricState));
   }
 
   void _onDurationChanged(Duration? duration) {
     final resolvedDuration = duration ?? Duration.zero;
+    final effectiveDuration = _maxDuration(resolvedDuration, state.position);
     emit(
-      state.copyWith(duration: _maxDuration(resolvedDuration, state.position)),
+      state.copyWith(
+        duration: effectiveDuration,
+        lyricSyncState: state.lyricTimeline.isEmpty
+            ? state.lyricSyncState
+            : _buildLyricSyncState(
+                state.lyrics,
+                duration: effectiveDuration,
+                playbackPosition: state.position,
+              ),
+      ),
     );
   }
 
@@ -644,8 +662,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           errorMessage: null,
           position: Duration.zero,
           duration: Duration.zero,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
       await _playCurrentTrack();
@@ -685,8 +702,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         emit(
           state.copyWith(
             isLyricsLoading: false,
-            lyrics: const [],
-            currentLyricIndex: null,
+            lyricSyncState: const LyricSyncState(),
           ),
         );
         return;
@@ -694,11 +710,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       emit(
         state.copyWith(
           isLyricsLoading: false,
-          lyrics: lyrics,
-          currentLyricIndex: _findLyricIndex(
-            lyrics,
-            _lyricLookupPosition(state.position, state.lyricSyncOffset),
-          ),
+          lyricSyncState: _buildLyricSyncState(lyrics),
         ),
       );
     } catch (_) {
@@ -710,50 +722,97 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       emit(
         state.copyWith(
           isLyricsLoading: false,
-          lyrics: const [],
-          currentLyricIndex: null,
+          lyricSyncState: const LyricSyncState(),
         ),
       );
     }
   }
 
-  void _updateLyricHighlight(Duration position) {
-    final lyrics = state.lyrics;
-    if (lyrics.isEmpty) return;
-    final idx = _findLyricIndex(
+  LyricSyncState _buildLyricSyncState(
+    List<LyricLine> lyrics, {
+    Duration? duration,
+    Duration? playbackPosition,
+    Duration? offset,
+  }) {
+    final timeline = _lyricSyncEngine.buildTimeline(
       lyrics,
-      _lyricLookupPosition(position, state.lyricSyncOffset),
+      duration: duration ?? _currentDurationHint(),
     );
-    if (idx != state.currentLyricIndex) {
-      emit(state.copyWith(currentLyricIndex: idx));
-    }
-  }
-
-  int? _findLyricIndex(List<LyricLine> lyrics, Duration position) {
-    if (lyrics.isEmpty) return null;
-    if (position < lyrics.first.start) return null;
-    var lo = 0;
-    var hi = lyrics.length - 1;
-    while (lo < hi) {
-      final mid = (lo + hi + 1) ~/ 2;
-      if (lyrics[mid].start <= position) {
-        lo = mid;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    return lo;
+    return _lyricSyncEngine.resolve(
+      timeline: timeline,
+      playbackPosition: playbackPosition ?? state.position,
+      userOffset: offset ?? state.lyricSyncOffset,
+    );
   }
 
   Future<void> seekToLyricIndex(int index) async {
-    if (index < 0 || index >= state.lyrics.length) return;
-    final target = state.lyrics[index].start - state.lyricSyncOffset;
-    await seek(target.isNegative ? Duration.zero : target);
+    final timeline = state.lyricTimeline;
+    if (index < 0 || index >= timeline.length) return;
+    final target = _lyricSyncEngine.seekPositionForIndex(
+      timeline,
+      index,
+      state.lyricSyncOffset,
+    );
+    await seek(target);
   }
 
-  Duration _lyricLookupPosition(Duration position, Duration offset) {
-    final shifted = position + offset;
-    return shifted.isNegative ? Duration.zero : shifted;
+  LyricSyncState _resolveLyricSyncState({
+    required Duration playbackPosition,
+    Duration? offset,
+  }) {
+    return _lyricSyncEngine.resolve(
+      timeline: state.lyricTimeline,
+      playbackPosition: playbackPosition,
+      userOffset: offset ?? state.lyricSyncOffset,
+    );
+  }
+
+  void _debugLogLyricTransition(LyricSyncState next) {
+    if (!kDebugMode) return;
+    final trackId = state.currentTrack?.id;
+    if (trackId == _lastLoggedLyricTrackId &&
+        next.activeIndex == _lastLoggedLyricIndex) {
+      return;
+    }
+    _lastLoggedLyricTrackId = trackId;
+    _lastLoggedLyricIndex = next.activeIndex;
+    final active = next.activeEntry;
+    final nextEntry = next.nextEntry;
+    debugPrint(
+      '[LYRIC_SYNC] '
+      'track=${state.currentTrack?.id ?? "none"} '
+      'index=${next.activeIndex ?? -1} '
+      'position=${_ms(next.playbackPosition)} '
+      'effective=${_ms(next.effectivePosition)} '
+      'userOffset=${_signedMs(next.userOffset)} '
+      'sourceOffset=${_signedMs(next.sourceOffset)} '
+      'effectiveOffset=${_signedMs(next.effectiveOffset)} '
+      'activeStart=${active == null ? "null" : _ms(active.start)} '
+      'nextStart=${nextEntry == null ? "null" : _ms(nextEntry.start)} '
+      'text="${_shortLyricText(active?.text)}"',
+    );
+  }
+
+  String _ms(Duration duration) => '${duration.inMilliseconds}ms';
+
+  String _signedMs(Duration duration) {
+    final value = duration.inMilliseconds;
+    return value >= 0 ? '+${value}ms' : '${value}ms';
+  }
+
+  String _shortLyricText(String? text) {
+    final normalized = (text ?? '').replaceAll('\n', ' ').trim();
+    if (normalized.length <= 32) return normalized;
+    return '${normalized.substring(0, 32)}...';
+  }
+
+  Duration? _currentDurationHint() {
+    if (state.duration > Duration.zero) return state.duration;
+    final trackDuration = _queue.currentTrack?.duration;
+    if (trackDuration != null && trackDuration > Duration.zero) {
+      return trackDuration;
+    }
+    return null;
   }
 
   // ========= 睡眠定时器 =========

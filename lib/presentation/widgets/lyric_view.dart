@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// 同步歌词视图：
@@ -20,6 +23,7 @@ class LyricView extends StatefulWidget {
     this.alignment = Alignment.centerLeft,
     this.maxTextWidth,
     this.currentScale = 1.05,
+    this.showCurrentLineButton = true,
   });
 
   final List<LyricLine> lines;
@@ -32,6 +36,7 @@ class LyricView extends StatefulWidget {
   final Alignment alignment;
   final double? maxTextWidth;
   final double currentScale;
+  final bool showCurrentLineButton;
 
   @override
   State<LyricView> createState() => _LyricViewState();
@@ -39,7 +44,12 @@ class LyricView extends StatefulWidget {
 
 class _LyricViewState extends State<LyricView> {
   final _scrollController = ScrollController();
-  static const double _lineHeight = 56;
+  final Map<int, GlobalKey> _lineKeys = {};
+  Timer? _autoScrollResumeTimer;
+  bool _userScrollLocked = false;
+  int? _lastScrolledIndex;
+
+  static const Duration _autoScrollResumeDelay = Duration(seconds: 3);
   static const double _verticalPadding = 120;
 
   @override
@@ -51,6 +61,10 @@ class _LyricViewState extends State<LyricView> {
   @override
   void didUpdateWidget(covariant LyricView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.lines != oldWidget.lines) {
+      _lineKeys.removeWhere((index, _) => index >= widget.lines.length);
+      _lastScrolledIndex = null;
+    }
     if (widget.currentIndex != null &&
         (widget.currentIndex != oldWidget.currentIndex ||
             widget.lines != oldWidget.lines)) {
@@ -58,33 +72,61 @@ class _LyricViewState extends State<LyricView> {
     }
   }
 
-  void _scrollToCurrent() {
+  void _scrollToCurrent({bool force = false}) {
     final idx = widget.currentIndex;
-    if (idx == null) return;
+    if (idx == null || idx < 0 || idx >= widget.lines.length) return;
+    if (!force && _userScrollLocked) return;
+    if (!force && _lastScrolledIndex == idx) return;
 
-    if (!_scrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+    final lineContext = _lineKeys[idx]?.currentContext;
+    if (!_scrollController.hasClients || lineContext == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToCurrent(force: force);
+      });
       return;
     }
 
-    final target =
-        _verticalPadding +
-        (idx * _lineHeight) -
-        (_scrollController.position.viewportDimension / 2) +
-        (_lineHeight / 2);
-    final clamped = target.clamp(
-      0.0,
-      _scrollController.position.maxScrollExtent,
-    );
-    _scrollController.animateTo(
-      clamped,
+    _lastScrolledIndex = idx;
+    Scrollable.ensureVisible(
+      lineContext,
+      alignment: 0.5,
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
     );
   }
 
+  void _lockAutoScrollForUser() {
+    _autoScrollResumeTimer?.cancel();
+    if (!_userScrollLocked && mounted) {
+      setState(() => _userScrollLocked = true);
+    }
+    _autoScrollResumeTimer = Timer(_autoScrollResumeDelay, () {
+      if (!mounted) return;
+      setState(() => _userScrollLocked = false);
+      _lastScrolledIndex = null;
+      _scrollToCurrent(force: true);
+    });
+  }
+
+  void _jumpBackToCurrent() {
+    _autoScrollResumeTimer?.cancel();
+    setState(() => _userScrollLocked = false);
+    _lastScrolledIndex = null;
+    _scrollToCurrent(force: true);
+  }
+
+  void _handleLineTap(int index) {
+    _autoScrollResumeTimer?.cancel();
+    if (_userScrollLocked) {
+      setState(() => _userScrollLocked = false);
+    }
+    _lastScrolledIndex = null;
+    widget.onLineTap?.call(index);
+  }
+
   @override
   void dispose() {
+    _autoScrollResumeTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -106,55 +148,186 @@ class _LyricViewState extends State<LyricView> {
           );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: _verticalPadding),
-      itemCount: widget.lines.length,
-      itemExtent: _lineHeight,
-      itemBuilder: (context, index) {
-        final isCurrent = index == widget.currentIndex;
-        final text = AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 220),
-          style:
-              (isCurrent
-                  ? theme.textTheme.titleLarge
-                  : theme.textTheme.titleMedium) ??
-              const TextStyle(),
-          child: Text(
-            widget.lines[index].text,
-            textAlign: widget.textAlign,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+    final lyrics = Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent) {
+          _lockAutoScrollForUser();
+        }
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: _verticalPadding),
+          child: Column(
+            crossAxisAlignment: _crossAxisAlignmentFor(widget.alignment),
+            children: [
+              for (var index = 0; index < widget.lines.length; index++)
+                _LyricLineTile(
+                  key: _lineKeys.putIfAbsent(index, GlobalKey.new),
+                  line: widget.lines[index],
+                  isCurrent: index == widget.currentIndex,
+                  textAlign: widget.textAlign,
+                  alignment: widget.alignment,
+                  maxTextWidth: widget.maxTextWidth,
+                  currentScale: widget.currentScale,
+                  onTap: widget.onLineTap == null
+                      ? null
+                      : () => _handleLineTap(index),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!widget.showCurrentLineButton) return lyrics;
+
+    return Stack(
+      children: [
+        Positioned.fill(child: lyrics),
+        Positioned(
+          right: 12,
+          bottom: 12,
+          child: AnimatedSwitcher(
+            duration: AppMotion.micro,
+            child: _userScrollLocked
+                ? _CurrentLyricButton(onPressed: _jumpBackToCurrent)
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  CrossAxisAlignment _crossAxisAlignmentFor(Alignment alignment) {
+    if (alignment.x < 0) return CrossAxisAlignment.start;
+    if (alignment.x > 0) return CrossAxisAlignment.end;
+    return CrossAxisAlignment.center;
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _lockAutoScrollForUser();
+    }
+    if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null) {
+      _lockAutoScrollForUser();
+    }
+    return false;
+  }
+}
+
+class _LyricLineTile extends StatelessWidget {
+  const _LyricLineTile({
+    super.key,
+    required this.line,
+    required this.isCurrent,
+    required this.textAlign,
+    required this.alignment,
+    required this.currentScale,
+    this.maxTextWidth,
+    this.onTap,
+  });
+
+  final LyricLine line;
+  final bool isCurrent;
+  final TextAlign textAlign;
+  final Alignment alignment;
+  final double currentScale;
+  final double? maxTextWidth;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final style =
+        (isCurrent ? theme.textTheme.titleLarge : theme.textTheme.titleMedium)
+            ?.copyWith(
               fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
               color: isCurrent
                   ? theme.lyricHighlight
                   : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-            ),
+              height: 1.28,
+            ) ??
+        TextStyle(
+          fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+          color: isCurrent
+              ? theme.lyricHighlight
+              : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          height: 1.28,
+        );
+
+    Widget content = AnimatedScale(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      scale: isCurrent ? currentScale : 1.0,
+      alignment: Alignment.center,
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        style: style,
+        child: Text(
+          line.text,
+          textAlign: textAlign,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+
+    if (maxTextWidth != null) {
+      content = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxTextWidth!),
+        child: content,
+      );
+    }
+
+    return Semantics(
+      selected: isCurrent,
+      button: onTap != null,
+      label: isCurrent ? '当前歌词：${line.text}' : line.text,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          child: Align(alignment: alignment, child: content),
+        ),
+      ),
+    );
+  }
+}
+
+class _CurrentLyricButton extends StatelessWidget {
+  const _CurrentLyricButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: '定位到当前歌词',
+      child: IconButton.filledTonal(
+        onPressed: onPressed,
+        icon: const Icon(Icons.my_location_rounded, size: 18),
+        style: IconButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.82,
           ),
-        );
-
-        Widget content = AnimatedScale(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-          scale: isCurrent ? widget.currentScale : 1.0,
-          alignment: Alignment.center,
-          child: text,
-        );
-
-        if (widget.maxTextWidth != null) {
-          content = SizedBox(width: widget.maxTextWidth, child: content);
-        }
-
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onLineTap == null
-              ? null
-              : () => widget.onLineTap!(index),
-          child: Align(alignment: widget.alignment, child: content),
-        );
-      },
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.22),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,8 +11,8 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
-import 'package:cross_platform_music_player/presentation/widgets/flutter_lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/sleep_timer_sheet.dart';
@@ -376,7 +376,9 @@ class _MobileLyricView extends StatelessWidget {
       ),
       child: BlocBuilder<PlayerCubit, PlayerViewState>(
         buildWhen: (p, c) =>
-            p.lyrics != c.lyrics || p.isLyricsLoading != c.isLyricsLoading,
+            p.lyricSyncState.timeline != c.lyricSyncState.timeline ||
+            p.lyricSyncState.activeIndex != c.lyricSyncState.activeIndex ||
+            p.isLyricsLoading != c.isLyricsLoading,
         builder: (context, state) {
           if (state.isLyricsLoading && state.lyrics.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -393,8 +395,9 @@ class _MobileLyricView extends StatelessWidget {
             );
           }
 
-          return FlutterLyricView(
+          return LyricView(
             lines: state.lyrics,
+            currentIndex: state.currentLyricIndex,
             onLineTap: (i) => context.read<PlayerCubit>().seekToLyricIndex(i),
           );
         },
@@ -615,9 +618,9 @@ class _DesktopLyricStage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
         child: BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (p, c) =>
-              p.lyrics != c.lyrics ||
-              p.isLyricsLoading != c.isLyricsLoading ||
-              p.currentIndex != c.currentIndex,
+              p.lyricSyncState.timeline != c.lyricSyncState.timeline ||
+              p.lyricSyncState.activeIndex != c.lyricSyncState.activeIndex ||
+              p.isLyricsLoading != c.isLyricsLoading,
           builder: (context, state) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,8 +684,9 @@ class _DesktopLyricStage extends StatelessWidget {
                                 ],
                               ),
                             )
-                          : FlutterLyricView(
+                          : LyricView(
                               lines: state.lyrics,
+                              currentIndex: state.currentLyricIndex,
                               onLineTap: (i) => context
                                   .read<PlayerCubit>()
                                   .seekToLyricIndex(i),
