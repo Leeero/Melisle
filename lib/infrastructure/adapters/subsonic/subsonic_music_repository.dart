@@ -367,21 +367,11 @@ class SubsonicMusicRepository implements MusicRepository {
         final timestamp = match.group(1);
         final duration = timestamp == null ? null : _parseTimestamp(timestamp);
         if (duration == null) continue;
-        lines.add(
-          LyricLine(start: _applyLrcOffset(duration, offset), text: text),
-        );
+        lines.add(LyricLine(start: duration, text: text, sourceOffset: offset));
       }
     }
     lines.sort((a, b) => a.start.compareTo(b.start));
     return lines;
-  }
-
-  Duration _applyLrcOffset(Duration duration, Duration offset) {
-    final shifted = duration + offset;
-    if (shifted.isNegative) {
-      return Duration.zero;
-    }
-    return shifted;
   }
 
   Duration _parseLrcOffset(List<String> rows) {
