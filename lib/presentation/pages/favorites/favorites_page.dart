@@ -9,6 +9,7 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -171,23 +172,15 @@ class _FavoritesHeader extends StatelessWidget {
             title: '收藏',
             badge: MetaPill(label: '$count 首', size: MetaPillSize.compact),
             action: count > 0
-                ? SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                        context,
-                        loadedTracks: tracks,
-                        allLoaded: !hasMore,
-                        fetchAll: () => context
-                            .read<MusicRepository>()
-                            .fetchFavoriteTracks(limit: 500, startIndex: 0),
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        shape: const CircleBorder(),
-                      ),
-                      child: const Icon(Icons.play_arrow_rounded, size: 26),
+                ? PlayAllButton(
+                    variant: PlayAllButtonVariant.iconOnly,
+                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                      context,
+                      loadedTracks: tracks,
+                      allLoaded: !hasMore,
+                      fetchAll: () => context
+                          .read<MusicRepository>()
+                          .fetchFavoriteTracks(limit: 500, startIndex: 0),
                     ),
                   )
                 : null,
@@ -252,7 +245,6 @@ class _FavoriteTrackCard extends StatelessWidget {
   }
 }
 
-// Phase 4: Pulsing favorite button with scale animation when pending
 class _PulsingFavoriteButton extends StatefulWidget {
   const _PulsingFavoriteButton({
     required this.isPending,

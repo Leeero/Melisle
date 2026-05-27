@@ -86,86 +86,91 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
           ]
         : const <BoxShadow>[];
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: widget.isCurrent
-              ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-              : colorScheme.surface.withValues(alpha: _hovered ? 0.82 : 0.62),
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(
+    return Semantics(
+      label: '播放《${widget.title}》',
+      button: true,
+      selected: widget.isCurrent,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
             color: widget.isCurrent
-                ? colorScheme.primary.withValues(alpha: 0.28)
-                : colorScheme.outlineVariant.withValues(alpha: 0.72),
-          ),
-          boxShadow: shadow,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+                ? colorScheme.primaryContainer.withValues(alpha: 0.8)
+                : colorScheme.surface.withValues(alpha: _hovered ? 0.82 : 0.62),
             borderRadius: BorderRadius.circular(radius),
-            onTap: () {
-              widget.onTap();
-            },
-            onLongPress: widget.onLongPress,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
-              ),
-              child: Row(
-                children: [
-                  CachedArtwork(
-                    imageUrl: widget.artworkUrl,
-                    size: artworkSize,
-                    borderRadius: artworkRadius,
-                    semanticLabel: '《${widget.title}》封面',
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (isCard)
-                          Row(
-                            children: [
-                              Expanded(child: _buildTitle(context)),
-                              if (widget.isCurrent) ...[
-                                const SizedBox(width: 8),
-                                const MetaPill(
-                                  label: '当前播放',
-                                  size: MetaPillSize.compact,
-                                ),
-                              ],
-                            ],
-                          )
-                        else
-                          _buildTitle(context),
-                        SizedBox(height: isCard ? 4 : 2),
-                        Text(
-                          widget.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                        if (!isCard && widget.statusLabel != null) ...[
-                          const SizedBox(height: 8),
-                          MetaPill(label: widget.statusLabel!),
-                        ],
-                      ],
+            border: Border.all(
+              color: widget.isCurrent
+                  ? colorScheme.primary.withValues(alpha: 0.28)
+                  : colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
+            boxShadow: shadow,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(radius),
+              onTap: () {
+                widget.onTap();
+              },
+              onLongPress: widget.onLongPress,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: widget.artworkUrl,
+                      size: artworkSize,
+                      borderRadius: artworkRadius,
+                      semanticLabel: '《${widget.title}》封面',
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (widget.extraTrailing != null) ...[
-                    widget.extraTrailing!,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (isCard)
+                            Row(
+                              children: [
+                                Expanded(child: _buildTitle(context)),
+                                if (widget.isCurrent) ...[
+                                  const SizedBox(width: 8),
+                                  const MetaPill(
+                                    label: '当前播放',
+                                    size: MetaPillSize.compact,
+                                  ),
+                                ],
+                              ],
+                            )
+                          else
+                            _buildTitle(context),
+                          SizedBox(height: isCard ? 4 : 2),
+                          Text(
+                            widget.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                          if (!isCard && widget.statusLabel != null) ...[
+                            const SizedBox(height: 8),
+                            MetaPill(label: widget.statusLabel!),
+                          ],
+                        ],
+                      ),
+                    ),
                     const SizedBox(width: 10),
+                    if (widget.extraTrailing != null) ...[
+                      widget.extraTrailing!,
+                      const SizedBox(width: 10),
+                    ],
+                    _buildIndicator(context, isCard),
                   ],
-                  _buildIndicator(context, isCard),
-                ],
+                ),
               ),
             ),
           ),
@@ -175,23 +180,27 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
   }
 
   Widget _buildListTile(BuildContext context) {
-    return ListTile(
-      leading: CachedArtwork(
-        imageUrl: widget.artworkUrl,
-        size: 48,
-        borderRadius: 14,
-        semanticLabel: '《${widget.title}》封面',
+    return Semantics(
+      label: '播放《${widget.title}》',
+      button: true,
+      child: ListTile(
+        leading: CachedArtwork(
+          imageUrl: widget.artworkUrl,
+          size: 48,
+          borderRadius: 14,
+          semanticLabel: '《${widget.title}》封面',
+        ),
+        title: _buildTitle(context),
+        subtitle: Text(
+          widget.subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Icon(widget.idleIcon),
+        onTap: () {
+          widget.onTap();
+        },
       ),
-      title: _buildTitle(context),
-      subtitle: Text(
-        widget.subtitle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Icon(widget.idleIcon),
-      onTap: () {
-        widget.onTap();
-      },
     );
   }
 

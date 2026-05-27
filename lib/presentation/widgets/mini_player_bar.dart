@@ -591,8 +591,8 @@ class _MiniPlaybackModeButton extends StatelessWidget {
                   ? colorScheme.primary.withValues(alpha: 0.18)
                   : colorScheme.outlineVariant.withValues(alpha: 0.34),
             ),
-            minimumSize: const Size.square(42),
-            maximumSize: const Size.square(42),
+            minimumSize: const Size.square(44),
+            maximumSize: const Size.square(44),
             padding: EdgeInsets.zero,
             iconSize: 20,
           ),
@@ -621,9 +621,7 @@ class _MiniControlButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final size = compact
-        ? (isPrimary ? 40.0 : 38.0)
-        : (isPrimary ? 50.0 : 42.0);
+    final size = compact ? 44.0 : (isPrimary ? 50.0 : 44.0);
     return IconButton.filled(
       onPressed: onPressed,
       tooltip: tooltip,

@@ -1127,8 +1127,8 @@ class _DesktopUtilityIconButtonState extends State<_DesktopUtilityIconButton> {
           scale: _hovered && isEnabled ? 1.03 : 1.0,
           child: AnimatedContainer(
             duration: AppMotion.micro,
-            width: 42,
-            height: 42,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(999),
@@ -1144,7 +1144,7 @@ class _DesktopUtilityIconButtonState extends State<_DesktopUtilityIconButton> {
             child: IconButton(
               onPressed: widget.onPressed,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               style: IconButton.styleFrom(
                 side: BorderSide.none,
                 foregroundColor: foregroundColor,
@@ -2126,13 +2126,11 @@ class _DesktopPopoverSurface extends StatelessWidget {
   const _DesktopPopoverSurface({
     required this.width,
     required this.child,
-    this.constraints,
     this.padding = const EdgeInsets.fromLTRB(16, 16, 16, 16),
   });
 
   final double width;
   final Widget child;
-  final BoxConstraints? constraints;
   final EdgeInsetsGeometry padding;
 
   @override
@@ -2145,7 +2143,6 @@ class _DesktopPopoverSurface extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           width: width,
-          constraints: constraints,
           padding: padding,
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -2308,35 +2305,6 @@ class _DesktopPopoverCloseButton extends StatelessWidget {
         foregroundColor: colorScheme.onSurfaceVariant,
       ),
       icon: const Icon(Icons.close_rounded),
-    );
-  }
-}
-
-class _DesktopPopoverActionButton extends StatelessWidget {
-  const _DesktopPopoverActionButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-      style: TextButton.styleFrom(
-        foregroundColor: colorScheme.onSurface,
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.28),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      ),
     );
   }
 }

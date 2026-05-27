@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -274,46 +275,21 @@ class _PlaylistHero extends StatelessWidget {
                     ),
                     if (!isWide) ...[
                       const SizedBox(height: 10),
-                      TextButton.icon(
+                      PlayAllButton(
                         onPressed: tracksCount == 0 || isLoading
                             ? null
                             : onPlayAll,
-                        icon: isLoading
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.primary,
-                                ),
-                              )
-                            : const Icon(Icons.play_arrow_rounded),
-                        label: const Text('播放全部'),
+                        isLoading: isLoading,
                       ),
                     ],
                     if (isWide) ...[
                       const SizedBox(height: 24),
-                      FilledButton.icon(
+                      PlayAllButton(
+                        variant: PlayAllButtonVariant.primary,
                         onPressed: tracksCount == 0 || isLoading
                             ? null
                             : onPlayAll,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
-                        ),
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.play_arrow_rounded),
-                        label: const Text('播放全部'),
+                        isLoading: isLoading,
                       ),
                     ],
                   ],
@@ -358,5 +334,3 @@ class _PlaylistHeroArtwork extends StatelessWidget {
     );
   }
 }
-
-// Phase 4: Track row with hover shadow

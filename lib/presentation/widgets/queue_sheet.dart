@@ -213,13 +213,16 @@ class _QueueItem extends StatelessWidget {
               Navigator.of(context).pop();
             }
           },
-          extraTrailing: ReorderableDragStartListener(
-            index: index,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.drag_handle_rounded,
-                color: colorScheme.onSurfaceVariant,
+          extraTrailing: Tooltip(
+            message: '拖拽排序',
+            child: ReorderableDragStartListener(
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.drag_handle_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),

@@ -183,8 +183,7 @@ class _StubMusicRepository implements MusicRepository {
       const [];
 
   @override
-  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) async =>
-      const [];
+  Future<List<MusicAlbum>> fetchRandomAlbums({int limit = 6}) async => const [];
 
   @override
   Future<List<MusicAlbum>> fetchAlbums({

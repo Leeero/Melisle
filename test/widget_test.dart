@@ -24,8 +24,9 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
-import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -74,6 +75,37 @@ void main() {
 
     expect(find.text('连接你的音乐库'), findsOneWidget);
     expect(find.text('登录并进入乐岛'), findsOneWidget);
+    expect(find.byTooltip('显示密码'), findsOneWidget);
+    expect(
+      tester.getSize(find.byTooltip('显示密码')).width,
+      greaterThanOrEqualTo(44),
+    );
+    expect(
+      tester.getSize(find.byTooltip('显示密码')).height,
+      greaterThanOrEqualTo(44),
+    );
+  });
+
+  testWidgets('play all icon button exposes tooltip and touch target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: PlayAllButton(
+              variant: PlayAllButtonVariant.iconOnly,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final button = find.byTooltip('播放全部');
+    expect(button, findsOneWidget);
+    expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
   });
 
   testWidgets('renders empty favorites page', (tester) async {

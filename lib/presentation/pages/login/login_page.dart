@@ -53,7 +53,6 @@ class _LoginPageState extends State<LoginPage> {
         },
         child: Stack(
           children: [
-            // Phase 4: Background gradient follows theme brightness
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -263,7 +262,6 @@ class _LoginForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      // Phase 4: Form card with surfaceContainerHighest alpha: 0.92
       color: Theme.of(
         context,
       ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
@@ -311,13 +309,13 @@ class _LoginForm extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: '密码',
                   suffixIconConstraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 40,
+                    minWidth: 44,
+                    minHeight: 44,
                   ),
-                  suffixIcon: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: onToggleObscure,
-                    child: AnimatedSwitcher(
+                  suffixIcon: IconButton(
+                    tooltip: obscurePassword ? '显示密码' : '隐藏密码',
+                    onPressed: onToggleObscure,
+                    icon: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: Icon(
                         obscurePassword
@@ -335,47 +333,33 @@ class _LoginForm extends StatelessWidget {
                 onFieldSubmitted: (_) => onSubmit(),
               ),
               const SizedBox(height: 22),
-              // Phase 4: Capsule login button with Primary glow shadow
               SizedBox(
                 width: double.infinity,
                 child: BlocBuilder<AuthCubit, AuthState>(
                   builder: (context, state) {
                     final isLoading = state.status == AuthStatus.loading;
-                    final colorScheme = Theme.of(context).colorScheme;
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+                    return FilledButton(
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        onPressed: isLoading ? null : onSubmit,
-                        child: isLoading
-                            ? const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                      onPressed: isLoading ? null : onSubmit,
+                      child: isLoading
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
-                                  SizedBox(width: 10),
-                                  Text('正在连接…'),
-                                ],
-                              )
-                            : const Text('登录并进入乐岛'),
-                      ),
+                                ),
+                                SizedBox(width: 10),
+                                Text('正在连接…'),
+                              ],
+                            )
+                          : const Text('登录并进入乐岛'),
                     );
                   },
                 ),

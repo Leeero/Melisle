@@ -19,6 +19,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -386,7 +387,7 @@ class _LibraryViewState extends State<_LibraryView> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: SizedBox(
-                  height: 32,
+                  height: 44,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: state.genres.length + 1,
@@ -529,11 +530,7 @@ class _MobileTrackActionBar extends StatelessWidget {
             size: MetaPillSize.compact,
           ),
           const Spacer(),
-          TextButton.icon(
-            onPressed: onPlayAll,
-            icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('播放全部'),
-          ),
+          PlayAllButton(onPressed: onPlayAll),
         ],
       ),
     );
@@ -553,9 +550,6 @@ class _TrackTableActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
       child: Row(
@@ -567,31 +561,7 @@ class _TrackTableActionBar extends StatelessWidget {
             size: MetaPillSize.compact,
           ),
           const Spacer(),
-          InkWell(
-            onTap: onPlayAll,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.play_arrow_rounded,
-                    size: 20,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '播放全部',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          PlayAllButton(onPressed: onPlayAll),
         ],
       ),
     );
@@ -829,8 +799,8 @@ class _TrackTableRowState extends State<_TrackTableRow> {
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: SizedBox(
-                              width: 32,
-                              height: 32,
+                              width: 44,
+                              height: 44,
                               child: IconButton(
                                 onPressed: () async {
                                   final cubit = context.read<LibraryCubit>();
@@ -885,9 +855,12 @@ class _TrackTableRowState extends State<_TrackTableRow> {
                                   ),
                                 ),
                                 padding: EdgeInsets.zero,
+                                tooltip: widget.track.isFavorite
+                                    ? '取消收藏'
+                                    : '收藏',
                                 constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
+                                  minWidth: 44,
+                                  minHeight: 44,
                                 ),
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -925,7 +898,6 @@ class _TrackTableRowState extends State<_TrackTableRow> {
   }
 }
 
-// Phase 4: Search PrefixIcon focus animation
 class _LibraryHeader extends StatefulWidget {
   const _LibraryHeader({
     required this.state,

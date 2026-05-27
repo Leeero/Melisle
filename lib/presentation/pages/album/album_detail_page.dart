@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -210,7 +211,8 @@ class _DesktopAlbumSummary extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              FilledButton.icon(
+              PlayAllButton(
+                variant: PlayAllButtonVariant.primary,
                 onPressed: tracksCount == 0
                     ? null
                     : () => PlayerNavigation.playTracksAndOpenPlayer(
@@ -218,8 +220,6 @@ class _DesktopAlbumSummary extends StatelessWidget {
                         tracks: context.read<AlbumCubit>().state.tracks,
                         startIndex: 0,
                       ),
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('播放专辑'),
               ),
               OutlinedButton.icon(
                 onPressed: () => context.go('/library'),
@@ -287,12 +287,10 @@ class _MobileAlbumHero extends StatelessWidget {
                 const SizedBox(height: 4),
                 _AlbumArtistLine(album: album),
                 const SizedBox(height: 6),
-                TextButton.icon(
+                PlayAllButton(
                   onPressed: tracksCount == 0
                       ? null
                       : () => _playAlbumFromIndex(context, 0),
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('播放全部'),
                 ),
               ],
             ),

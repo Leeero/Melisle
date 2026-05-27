@@ -29,9 +29,9 @@ class QualityPickerSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: BlocBuilder<PlayerCubit, PlayerViewState>(
         builder: (context, state) {
           final cubit = context.read<PlayerCubit>();
@@ -41,7 +41,7 @@ class QualityPickerSheet extends StatelessWidget {
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 48,
                   height: 4,
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(

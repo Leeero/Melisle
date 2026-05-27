@@ -261,10 +261,8 @@ class _HomeView extends StatelessWidget {
             child: AppSectionTitleRow(
               title: '最近播放',
               padding: const EdgeInsets.only(bottom: 14),
-              action: TextButton.icon(
+              action: _HomeViewAllButton(
                 onPressed: () => context.push('/history'),
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: const Text('查看全部'),
               ),
             ),
           ),
@@ -362,9 +360,8 @@ class _HomeView extends StatelessWidget {
             child: AppSectionTitleRow(
               title: '最近加入',
               padding: const EdgeInsets.only(bottom: 10),
-              action: TextButton(
+              action: _HomeViewAllButton(
                 onPressed: () => context.go('/library'),
-                child: const Text('查看全部'),
               ),
             ),
           ),
@@ -378,6 +375,26 @@ class _HomeView extends StatelessWidget {
             }, childCount: albums.length),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HomeViewAllButton extends StatelessWidget {
+  const _HomeViewAllButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '查看全部',
+      button: true,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        iconAlignment: IconAlignment.end,
+        label: const Text('查看全部'),
+        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
       ),
     );
   }
