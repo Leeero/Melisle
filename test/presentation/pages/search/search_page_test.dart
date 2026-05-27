@@ -43,7 +43,9 @@ void main() {
     expect(find.text('没有找到结果，换个关键词试试。'), findsOneWidget);
   });
 
-  testWidgets('SearchPage_results_showsAllResultSections', (tester) async {
+  testWidgets('SearchPage_results_defaultsToTracksAndShowsScopeTabs', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
     );
@@ -52,13 +54,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('曲目'), findsOneWidget);
-    expect(find.text('专辑'), findsOneWidget);
-    expect(find.text('艺术家'), findsOneWidget);
-    expect(find.text('歌单'), findsOneWidget);
+    expect(find.text('歌曲 1'), findsOneWidget);
+    expect(find.text('专辑 1'), findsOneWidget);
+    expect(find.text('艺术家 1'), findsOneWidget);
+    expect(find.text('歌单 1'), findsOneWidget);
+    expect(find.text('全部 4'), findsNothing);
     expect(find.text('夜曲'), findsOneWidget);
-    expect(find.text('十一月的萧邦'), findsWidgets);
-    expect(find.text('周杰伦'), findsWidgets);
+    expect(find.text('私人雷达'), findsNothing);
+
+    await tester.tap(find.text('歌单 1'));
+    await tester.pumpAndSettle();
+
     expect(find.text('私人雷达'), findsOneWidget);
   });
 
@@ -90,6 +96,9 @@ void main() {
       _buildSearchPage(repository: _FakeMusicRepository()),
     );
 
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('歌曲 / 专辑 / 艺术家 / 歌单'), findsOneWidget);
+
     await tester.enterText(find.byType(TextField), '夜曲');
     await tester.pump();
 
@@ -97,6 +106,81 @@ void main() {
     expect(clearButton, findsOneWidget);
     expect(tester.getSize(clearButton).width, greaterThanOrEqualTo(44));
     expect(tester.getSize(clearButton).height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('SearchPage_loadingState_keepsLightweightFeedback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(
+          results: _results(),
+          delay: const Duration(seconds: 1),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), '周杰伦');
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('正在搜索…'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('SearchPage_failureState_showsRetryAction', (tester) async {
+    final repository = _FakeMusicRepository(error: Exception('offline'));
+
+    await tester.pumpWidget(_buildSearchPage(repository: repository));
+
+    await tester.enterText(find.byType(TextField), '失败');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('重试'), findsOneWidget);
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.length, 2);
+  });
+
+  testWidgets('SearchPage_scopeFilter_showsSelectedResultType', (tester) async {
+    await tester.pumpWidget(
+      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+    );
+
+    await tester.enterText(find.byType(TextField), '周杰伦');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('艺术家 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('周杰伦'), findsWidgets);
+    expect(find.text('夜曲'), findsNothing);
+    expect(find.text('十一月的萧邦'), findsNothing);
+  });
+
+  testWidgets('SearchPage_clearRecent_canUndo', (tester) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.touchSearchHistory('夜曲');
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('清空'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已清空最近搜索'), findsOneWidget);
+    await tester.tap(find.text('撤销'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(ActionChip, '夜曲'), findsOneWidget);
   });
 
   testWidgets('SearchPage_mobileWidth_rendersResults', (tester) async {
@@ -113,8 +197,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('曲目'), findsOneWidget);
-    expect(find.text('专辑'), findsOneWidget);
+    expect(find.text('歌曲'), findsOneWidget);
+    expect(find.text('专辑 1'), findsOneWidget);
   });
 
   testWidgets('SearchPage_wideWidth_rendersResults', (tester) async {
@@ -132,8 +216,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('4 项'), findsOneWidget);
+    expect(find.text('歌曲 1'), findsOneWidget);
+    expect(find.text('全部 4'), findsNothing);
     expect(find.text('1 首'), findsOneWidget);
-    expect(find.text('1 张'), findsOneWidget);
+    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.text('加入队列'), findsOneWidget);
   });
 }
 
@@ -255,14 +342,23 @@ class _FakeSettingsRepository implements SettingsRepository {
 }
 
 class _FakeMusicRepository implements MusicRepository {
-  _FakeMusicRepository({this.results = SearchResults.empty});
+  _FakeMusicRepository({
+    this.results = SearchResults.empty,
+    this.delay = Duration.zero,
+    this.error,
+  });
 
   final SearchResults results;
+  final Duration delay;
+  final Object? error;
   final queries = <String>[];
 
   @override
   Future<SearchResults> search(String query) async {
     queries.add(query);
+    if (delay > Duration.zero) await Future<void>.delayed(delay);
+    final error = this.error;
+    if (error != null) throw error;
     return results;
   }
 

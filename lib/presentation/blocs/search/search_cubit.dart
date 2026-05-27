@@ -88,6 +88,24 @@ class SearchCubit extends Cubit<SearchState> {
     emit(state.copyWith(recentQueries: const []));
   }
 
+  Future<void> restoreRecent(List<String> queries) async {
+    final normalized = [
+      for (final query in queries)
+        if (query.trim().isNotEmpty) query.trim(),
+    ];
+    if (normalized.isEmpty) return;
+    final db = _database;
+    if (db != null) {
+      await db.clearSearchHistory();
+      for (final query in normalized.reversed) {
+        await db.touchSearchHistory(query);
+      }
+      await _loadRecentQueries();
+      return;
+    }
+    emit(state.copyWith(recentQueries: normalized));
+  }
+
   Future<void> _loadRecentQueries() async {
     final db = _database;
     if (db == null) return;

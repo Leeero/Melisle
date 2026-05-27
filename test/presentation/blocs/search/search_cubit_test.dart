@@ -9,8 +9,10 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/search/search_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/search/search_state.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -74,6 +76,17 @@ void main() {
 
     expect(repository.queries, ['重试', '重试']);
     expect(cubit.state.status, SearchStatus.success);
+  });
+
+  test('restoreRecent_withDatabase_restoresNormalizedHistory', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final cubit = SearchCubit(_FakeMusicRepository(), database: database);
+    addTearDown(cubit.close);
+
+    await cubit.restoreRecent([' 夜曲 ', '', '晴天']);
+
+    expect(cubit.state.recentQueries, ['夜曲', '晴天']);
   });
 }
 
