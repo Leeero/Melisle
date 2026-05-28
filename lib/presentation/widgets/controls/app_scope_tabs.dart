@@ -103,6 +103,7 @@ class _AppScopeTab<T> extends StatefulWidget {
 class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
   bool _hovered = false;
   bool _focused = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +116,10 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
       label: widget.item.semanticLabel ?? '查看${widget.item.label}',
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -125,10 +129,12 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                   : AppRadiusTokens.iconButton,
             ),
             hoverColor: Colors.transparent,
-            focusColor: colorScheme.primary.withValues(alpha: 0.08),
-            splashColor: colorScheme.primary.withValues(alpha: 0.06),
+            focusColor: Colors.transparent,
+            splashColor: Colors.transparent,
             highlightColor: Colors.transparent,
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
             onFocusChange: (value) => setState(() => _focused = value),
+            onHighlightChanged: (value) => setState(() => _pressed = value),
             onTap: widget.onPressed,
             child: AnimatedContainer(
               duration: AppMotion.micro,
@@ -200,15 +206,19 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
 
     return BoxDecoration(
       color: widget.selected
-          ? colorScheme.primaryContainer.withValues(alpha: 0.82)
+          ? colorScheme.primaryContainer.withValues(
+              alpha: _pressed ? 0.9 : 0.82,
+            )
           : colorScheme.surface.withValues(
-              alpha: _hovered || _focused ? 0.7 : 0.5,
+              alpha: _pressed ? 0.78 : (_hovered || _focused ? 0.7 : 0.5),
             ),
       borderRadius: BorderRadius.circular(AppRadiusTokens.button),
       border: Border.all(
         color: widget.selected
-            ? colorScheme.primary.withValues(alpha: 0.5)
-            : colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ? colorScheme.primary.withValues(alpha: _focused ? 0.62 : 0.5)
+            : colorScheme.outlineVariant.withValues(
+                alpha: _focused ? 0.9 : 0.72,
+              ),
       ),
     );
   }
