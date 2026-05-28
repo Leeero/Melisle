@@ -381,6 +381,7 @@ class _ShellBottomButton extends StatelessWidget {
     return Semantics(
       label: label,
       button: true,
+      selected: selected,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

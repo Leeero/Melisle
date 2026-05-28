@@ -162,6 +162,300 @@ class _AppContentBody extends StatelessWidget {
   }
 }
 
+class AppPageHeader extends StatelessWidget {
+  const AppPageHeader({
+    super.key,
+    required this.title,
+    this.description,
+    this.center,
+    this.trailing,
+    this.leading,
+    this.automaticImplyLeading = true,
+    this.hideTitleOnCompactWithCenter = true,
+    this.centerWidth,
+    this.titleMaxWidth = 300,
+    this.maxWidth = 1320,
+  });
+
+  final String title;
+  final String? description;
+  final Widget? center;
+  final Widget? trailing;
+  final Widget? leading;
+  final bool automaticImplyLeading;
+  final bool hideTitleOnCompactWithCenter;
+  final double? centerWidth;
+  final double titleMaxWidth;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+    final impliedLeading =
+        automaticImplyLeading && Navigator.of(context).canPop()
+        ? AppBackButton(onPressed: () => Navigator.of(context).maybePop())
+        : null;
+    final leadingWidget = leading ?? impliedLeading;
+
+    if (compact && center != null && hideTitleOnCompactWithCenter) {
+      return Row(
+        children: [
+          if (leadingWidget != null) ...[
+            leadingWidget,
+            const SizedBox(width: 8),
+          ],
+          Expanded(child: center!),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ],
+      );
+    }
+
+    if (compact && center != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (leadingWidget != null) ...[
+                leadingWidget,
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: AppPageTitleRow(
+                  title: title,
+                  description: description,
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+            ],
+          ),
+          const SizedBox(height: 12),
+          center!,
+        ],
+      );
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (leadingWidget != null) ...[
+            leadingWidget,
+            const SizedBox(width: 12),
+          ],
+          ConstrainedBox(
+            constraints: BoxConstraints(minWidth: 0, maxWidth: titleMaxWidth),
+            child: AppPageTitleRow(
+              title: title,
+              description: description,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          if (center != null) ...[
+            const SizedBox(width: 24),
+            if (centerWidth == null)
+              Expanded(child: center!)
+            else
+              SizedBox(width: centerWidth, child: center!),
+            if (centerWidth != null) const Spacer(),
+          ] else
+            const Spacer(),
+          if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+        ],
+      ),
+    );
+  }
+}
+
+class AppBackButton extends StatelessWidget {
+  const AppBackButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back_rounded, size: 22),
+      tooltip: '返回',
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(44),
+        minimumSize: const Size.square(44),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
+    );
+  }
+}
+
+class AppSearchField extends StatefulWidget {
+  const AppSearchField({
+    super.key,
+    required this.controller,
+    this.focusNode,
+    this.labelText,
+    this.hintText = '搜索',
+    this.semanticLabel = '搜索',
+    this.clearTooltip = '清空搜索',
+    this.onClear,
+    this.onChanged,
+    this.onSubmitted,
+    this.autofocus = false,
+    this.dense = false,
+    this.enabled = true,
+  });
+
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final String? labelText;
+  final String hintText;
+  final String semanticLabel;
+  final String clearTooltip;
+  final VoidCallback? onClear;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final bool autofocus;
+  final bool dense;
+  final bool enabled;
+
+  @override
+  State<AppSearchField> createState() => _AppSearchFieldState();
+}
+
+class _AppSearchFieldState extends State<AppSearchField> {
+  late FocusNode _focusNode;
+  late bool _ownsFocusNode;
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _attachFocusNode(widget.focusNode);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      _detachFocusNode();
+      _attachFocusNode(widget.focusNode);
+    }
+  }
+
+  void _attachFocusNode(FocusNode? node) {
+    _ownsFocusNode = node == null;
+    _focusNode = node ?? FocusNode();
+    _focused = _focusNode.hasFocus;
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _detachFocusNode() {
+    _focusNode.removeListener(_onFocusChanged);
+    if (_ownsFocusNode) _focusNode.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() => _focused = _focusNode.hasFocus);
+  }
+
+  void _clear() {
+    if (widget.onClear != null) {
+      widget.onClear!();
+      return;
+    }
+    widget.controller.clear();
+    widget.onChanged?.call('');
+  }
+
+  @override
+  void dispose() {
+    _detachFocusNode();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      label: widget.semanticLabel,
+      textField: true,
+      child: AnimatedContainer(
+        duration: AppMotion.micro,
+        curve: AppMotion.enter,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadiusTokens.input),
+          boxShadow: _focused
+              ? [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.08),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : const <BoxShadow>[],
+        ),
+        child: TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          enabled: widget.enabled,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            isDense: widget.dense,
+            contentPadding: widget.dense
+                ? const EdgeInsets.symmetric(horizontal: 0, vertical: 14)
+                : null,
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              size: widget.dense ? 22 : null,
+            ),
+            prefixIconConstraints: widget.dense
+                ? const BoxConstraints(minWidth: 46, minHeight: 46)
+                : null,
+            suffixIcon: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: widget.controller,
+              builder: (context, value, _) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return IconButton(
+                  icon: Icon(Icons.close_rounded, size: widget.dense ? 18 : 20),
+                  tooltip: widget.clearTooltip,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: BorderSide.none,
+                    shape: const CircleBorder(),
+                  ),
+                  onPressed: _clear,
+                );
+              },
+            ),
+            suffixIconConstraints: widget.dense
+                ? const BoxConstraints(minWidth: 44, minHeight: 44)
+                : null,
+            fillColor: _focused
+                ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.86)
+                : null,
+          ),
+          onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
+        ),
+      ),
+    );
+  }
+}
+
 class AppPageTitleRow extends StatelessWidget {
   const AppPageTitleRow({
     super.key,
@@ -263,16 +557,25 @@ class AppSectionTitleRow extends StatelessWidget {
 class AppBodyStateView extends StatelessWidget {
   const AppBodyStateView.loading({super.key})
     : message = null,
+      title = null,
+      description = null,
+      icon = null,
       action = null,
       _isLoading = true;
 
   const AppBodyStateView.message({
     super.key,
     required this.message,
+    this.title,
+    this.description,
+    this.icon,
     this.action,
   }) : _isLoading = false;
 
   final String? message;
+  final String? title;
+  final String? description;
+  final IconData? icon;
   final Widget? action;
   final bool _isLoading;
 
@@ -282,14 +585,36 @@ class AppBodyStateView extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final displayTitle = title ?? message!;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message!, textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 12), action!],
+            if (icon != null) ...[
+              Icon(icon, size: 32, color: colorScheme.onSurfaceVariant),
+              const SizedBox(height: 12),
+            ],
+            Text(
+              displayTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            if (description != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                description!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (action != null) ...[const SizedBox(height: 14), action!],
           ],
         ),
       ),
@@ -300,16 +625,25 @@ class AppBodyStateView extends StatelessWidget {
 class AppSliverStateView extends StatelessWidget {
   const AppSliverStateView.loading({super.key})
     : message = null,
+      title = null,
+      description = null,
+      icon = null,
       action = null,
       _isLoading = true;
 
   const AppSliverStateView.message({
     super.key,
     required this.message,
+    this.title,
+    this.description,
+    this.icon,
     this.action,
   }) : _isLoading = false;
 
   final String? message;
+  final String? title;
+  final String? description;
+  final IconData? icon;
   final Widget? action;
   final bool _isLoading;
 
@@ -319,7 +653,13 @@ class AppSliverStateView extends StatelessWidget {
       hasScrollBody: false,
       child: _isLoading
           ? const AppBodyStateView.loading()
-          : AppBodyStateView.message(message: message!, action: action),
+          : AppBodyStateView.message(
+              message: message!,
+              title: title,
+              description: description,
+              icon: icon,
+              action: action,
+            ),
     );
   }
 }
@@ -371,7 +711,7 @@ class AppDetailHeroFrame extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.72),
         ),
