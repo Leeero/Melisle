@@ -8,10 +8,10 @@ abstract final class AppColorTokens {
   static const darkSurfaceHigh = Color(0xFF171E2B);
   static const darkSurfaceHighest = Color(0xFF212A3B);
 
-  static const lightScaffold = Color(0xFFF5F7FB);
-  static const lightSurface = Color(0xFFFFFFFF);
-  static const lightSurfaceHigh = Color(0xFFF1F4FA);
-  static const lightSurfaceHighest = Color(0xFFE5EBF5);
+  static const lightScaffold = Color(0xFFF6F8FC);
+  static const lightSurface = Color(0xFFFBFCFF);
+  static const lightSurfaceHigh = Color(0xFFF0F3F9);
+  static const lightSurfaceHighest = Color(0xFFE4EAF3);
 
   static const darkPrimary = Color(0xFF9CA6FF);
   static const darkPrimaryContainer = Color(0xFF2B3150);
@@ -36,13 +36,13 @@ abstract final class AppColorTokens {
 }
 
 abstract final class AppRadiusTokens {
-  static const double shellContainer = 24;
-  static const double card = 20;
+  static const double shellContainer = 22;
+  static const double card = 14;
   static const double button = 999;
-  static const double input = 16;
-  static const double iconButton = 18;
-  static const double coverGrid = 16;
-  static const double coverDetail = 24;
+  static const double input = 14;
+  static const double iconButton = 12;
+  static const double coverGrid = 14;
+  static const double coverDetail = 22;
 }
 
 abstract final class AppSpacingTokens {

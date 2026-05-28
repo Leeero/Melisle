@@ -4,9 +4,8 @@ import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 
 /// Design-system tokens for the Melisle (乐岛) visual redesign v2.
 ///
-/// Colour palette, typography (Righteous + Poppins), border-radii, spacing
-/// and component themes all live here so they stay in sync with
-/// `design-system/melisle/MASTER.md` and `visual-redesign.md`.
+/// Colour palette, typography, border-radii, spacing and component themes live
+/// here so the product UI keeps one coherent visual language.
 abstract final class AppTheme {
   // ──────────────────── Colour Palette ────────────────────
 
@@ -52,8 +51,8 @@ abstract final class AppTheme {
 
   // ──────────────────── Typography ────────────────────
 
-  static const _displayFont = 'Righteous';
-  static const _bodyFont = 'Poppins';
+  static const String? _productFont = null;
+  static const _brandFont = 'Righteous';
 
   // ──────────────────── Border Radii ────────────────────
 
@@ -112,11 +111,11 @@ abstract final class AppTheme {
           )
         : baseScheme.copyWith(
             primary: _lightPrimary,
-            onPrimary: Colors.white,
+            onPrimary: const Color(0xFFF9FAFF),
             primaryContainer: _lightPrimaryContainer,
             onPrimaryContainer: const Color(0xFF192253),
             secondary: _lightSecondary,
-            onSecondary: Colors.white,
+            onSecondary: const Color(0xFFF8FCFC),
             secondaryContainer: _lightSecondaryContainer,
             onSecondaryContainer: const Color(0xFF173F3D),
             surface: _lightSurface,
@@ -140,79 +139,83 @@ abstract final class AppTheme {
           displayColor: colorScheme.onSurface,
         )
         .copyWith(
-          // Display — Righteous for brand personality
+          // Display is reserved for brand-led moments such as the player page.
           displayLarge: baseTextTheme.displayLarge?.copyWith(
-            fontFamily: _displayFont,
-            fontWeight: FontWeight.w400, // Righteous only has Regular
-            letterSpacing: -1.5,
+            fontFamily: _brandFont,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 0,
           ),
           displayMedium: baseTextTheme.displayMedium?.copyWith(
-            fontFamily: _displayFont,
+            fontFamily: _brandFont,
             fontWeight: FontWeight.w400,
-            letterSpacing: -1.2,
+            letterSpacing: 0,
           ),
           displaySmall: baseTextTheme.displaySmall?.copyWith(
-            fontFamily: _displayFont,
+            fontFamily: _brandFont,
             fontWeight: FontWeight.w400,
-            letterSpacing: -1.0,
+            letterSpacing: 0,
           ),
-          // Headlines — Righteous for pages/albums/artists
+          // Product pages use the platform font for Chinese readability.
           headlineLarge: baseTextTheme.headlineLarge?.copyWith(
-            fontFamily: _displayFont,
-            fontWeight: FontWeight.w400,
-            letterSpacing: -0.9,
+            fontFamily: _productFont,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
           ),
           headlineMedium: baseTextTheme.headlineMedium?.copyWith(
-            fontFamily: _displayFont,
-            fontWeight: FontWeight.w400,
-            letterSpacing: -0.6,
+            fontFamily: _productFont,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
           ),
           headlineSmall: baseTextTheme.headlineSmall?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.45,
+            letterSpacing: 0,
           ),
-          // Title — Poppins SemiBold/Bold
           titleLarge: baseTextTheme.titleLarge?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
+            letterSpacing: 0,
           ),
           titleMedium: baseTextTheme.titleMedium?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0,
           ),
           titleSmall: baseTextTheme.titleSmall?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0,
           ),
-          // Body — Poppins Regular
           bodyLarge: baseTextTheme.bodyLarge?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             height: 1.4,
+            letterSpacing: 0,
           ),
           bodyMedium: baseTextTheme.bodyMedium?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             height: 1.4,
+            letterSpacing: 0,
           ),
           bodySmall: baseTextTheme.bodySmall?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             color: colorScheme.onSurfaceVariant,
             height: 1.35,
+            letterSpacing: 0,
           ),
-          // Labels — Poppins SemiBold/Medium
           labelLarge: baseTextTheme.labelLarge?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
+            letterSpacing: 0,
           ),
           labelMedium: baseTextTheme.labelMedium?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0,
           ),
           labelSmall: baseTextTheme.labelSmall?.copyWith(
-            fontFamily: _bodyFont,
+            fontFamily: _productFont,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0,
           ),
         );
 
@@ -248,17 +251,17 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         clipBehavior: Clip.antiAlias,
         color: isDark
-            ? colorScheme.surface.withValues(alpha: 0.82)
+            ? colorScheme.surface.withValues(alpha: 0.78)
             : colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
-        elevation: isDark ? 0 : 0.5,
+        shadowColor: Colors.black.withValues(alpha: isDark ? 0 : 0.05),
+        elevation: isDark ? 0 : 0.35,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusCard),
           side: BorderSide(
             color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.52 : 0.88,
+              alpha: isDark ? 0.46 : 0.82,
             ),
           ),
         ),
@@ -266,9 +269,9 @@ abstract final class AppTheme {
 
       // ─── ListTile ───
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         minLeadingWidth: 0,
-        minVerticalPadding: 10,
+        minVerticalPadding: 8,
         iconColor: colorScheme.onSurfaceVariant,
         textColor: colorScheme.onSurface,
         subtitleTextStyle: textTheme.bodyMedium?.copyWith(
@@ -282,7 +285,7 @@ abstract final class AppTheme {
       // ─── Chip (MetaPill) ───
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surface.withValues(
-          alpha: isDark ? 0.46 : 1,
+          alpha: isDark ? 0.42 : 0.92,
         ),
         selectedColor: colorScheme.primaryContainer,
         secondarySelectedColor: colorScheme.secondaryContainer,
@@ -297,18 +300,18 @@ abstract final class AppTheme {
             alpha: isDark ? 0.55 : 0.9,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       ),
 
       // ─── InputDecoration ───
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark
-            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.72)
-            : colorScheme.surface,
+            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.58)
+            : colorScheme.surfaceContainer.withValues(alpha: 0.72),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 16,
+          horizontal: 16,
+          vertical: 14,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant,
@@ -316,13 +319,13 @@ abstract final class AppTheme {
         prefixIconColor: colorScheme.onSurfaceVariant,
         suffixIconColor: colorScheme.onSurfaceVariant,
         border: _inputBorder(
-          colorScheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.9),
+          colorScheme.outlineVariant.withValues(alpha: isDark ? 0.42 : 0.82),
         ),
         enabledBorder: _inputBorder(
-          colorScheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.9),
+          colorScheme.outlineVariant.withValues(alpha: isDark ? 0.42 : 0.82),
         ),
         focusedBorder: _inputBorder(
-          colorScheme.primary.withValues(alpha: isDark ? 0.78 : 0.95),
+          colorScheme.primary.withValues(alpha: isDark ? 0.68 : 0.86),
           width: 1.25,
         ),
         errorBorder: _inputBorder(colorScheme.error.withValues(alpha: 0.78)),
@@ -332,8 +335,8 @@ abstract final class AppTheme {
       // ─── FilledButton (Capsule) ───
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(0, 50),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           textStyle: textTheme.labelLarge,
@@ -347,8 +350,8 @@ abstract final class AppTheme {
       // ─── OutlinedButton (Capsule) ───
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 50),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           foregroundColor: colorScheme.onSurface,
           side: BorderSide(
             color: colorScheme.outlineVariant.withValues(
@@ -367,7 +370,7 @@ abstract final class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
           minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusIconButton),
@@ -377,37 +380,171 @@ abstract final class AppTheme {
 
       // ─── IconButton ───
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          foregroundColor: colorScheme.onSurface,
-          backgroundColor: isDark
-              ? colorScheme.surface.withValues(alpha: 0.26)
-              : colorScheme.surface,
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.all(10),
-          iconSize: 22,
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.5 : 0.9,
+        style:
+            IconButton.styleFrom(
+              foregroundColor: colorScheme.onSurfaceVariant,
+              backgroundColor: Colors.transparent,
+              minimumSize: const Size(44, 44),
+              padding: const EdgeInsets.all(10),
+              iconSize: 22,
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radiusIconButton),
+              ),
+            ).copyWith(
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return colorScheme.primary.withValues(alpha: 0.10);
+                }
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.focused)) {
+                  return colorScheme.onSurface.withValues(
+                    alpha: isDark ? 0.08 : 0.06,
+                  );
+                }
+                return Colors.transparent;
+              }),
             ),
-          ),
+      ),
+
+      // ─── Filled tonal button ───
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          elevation: 0,
+          backgroundColor: colorScheme.surfaceContainerHigh,
+          foregroundColor: colorScheme.onSurface,
+          textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusIconButton),
+            borderRadius: BorderRadius.circular(radiusButton),
           ),
         ),
       ),
 
+      // ─── Checkbox / Switch / Radio ───
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        side: BorderSide(color: colorScheme.outline),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.onPrimary;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.42 : 0.72,
+          );
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+      ),
+
+      // ─── Legacy MaterialButton defaults ───
+      buttonTheme: ButtonThemeData(
+        minWidth: 44,
+        height: 44,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusButton),
+        ),
+      ),
+
+      // ─── FloatingActionButton ───
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 1,
+        highlightElevation: 0,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+
+      // ─── Tooltip ───
+      tooltipTheme: TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 450),
+        showDuration: const Duration(milliseconds: 1800),
+        decoration: BoxDecoration(
+          color: isDark
+              ? colorScheme.surfaceContainerHighest
+              : colorScheme.inverseSurface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: textTheme.bodySmall?.copyWith(
+          color: isDark ? colorScheme.onSurface : colorScheme.onInverseSurface,
+        ),
+      ),
+
+      // ─── Dialog ───
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: isDark ? 0 : 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.48 : 0.78,
+            ),
+          ),
+        ),
+      ),
+
+      // ─── BottomSheet ───
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: colorScheme.surface,
+        modalBarrierColor: colorScheme.scrim.withValues(alpha: 0.46),
+        dragHandleColor: colorScheme.outlineVariant,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+      ),
+
+      // ─── Menu / Popup ───
+      popupMenuTheme: PopupMenuThemeData(
+        color: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: isDark ? 0 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.48 : 0.78,
+            ),
+          ),
+        ),
+        textStyle: textTheme.bodyMedium,
+      ),
+
+      // ─── IconButton ───
+      // Defined above with explicit overlay states.
+
       // ─── NavigationBar (mobile) ───
       navigationBarTheme: NavigationBarThemeData(
-        height: 78,
+        height: 72,
         backgroundColor: Colors.transparent,
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         indicatorColor: colorScheme.primaryContainer.withValues(
-          alpha: isDark ? 0.88 : 0.92,
+          alpha: isDark ? 0.76 : 0.82,
         ),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -422,7 +559,7 @@ abstract final class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            size: 24,
+            size: 23,
             color: selected
                 ? colorScheme.onPrimaryContainer
                 : colorScheme.onSurfaceVariant,
@@ -437,7 +574,7 @@ abstract final class AppTheme {
         useIndicator: false,
         groupAlignment: -0.84,
         labelType: NavigationRailLabelType.all,
-        minWidth: 96,
+        minWidth: 92,
         selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w600,
@@ -448,24 +585,24 @@ abstract final class AppTheme {
         ),
         selectedIconTheme: IconThemeData(
           color: colorScheme.onSurface,
-          size: 24,
+          size: 23,
         ),
         unselectedIconTheme: IconThemeData(
           color: colorScheme.onSurfaceVariant,
-          size: 24,
+          size: 23,
         ),
       ),
 
       // ─── Slider (progress & volume) ───
       sliderTheme: SliderThemeData(
-        trackHeight: 4.5,
+        trackHeight: 4,
         activeTrackColor: colorScheme.primary,
         inactiveTrackColor: colorScheme.outlineVariant.withValues(
           alpha: isDark ? 0.48 : 0.72,
         ),
         thumbColor: colorScheme.primary,
         overlayColor: colorScheme.primary.withValues(alpha: 0.12),
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
       ),
 
@@ -484,9 +621,7 @@ abstract final class AppTheme {
         contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: isDark ? colorScheme.onSurface : colorScheme.onInverseSurface,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusCard),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
       // ─── PageTransitions ───
