@@ -724,6 +724,9 @@ PC 端应更克制、更密、更稳定。
 - 实际启动 macOS 桌面端完成首屏检查：应用可正常构建启动，登录页在桌面窗口下无明显布局崩坏；已登录页面仍需依赖可用会话或后续专用 fixture 做截图验收。
 - `AppOptionTile` 的 hover、focus、pressed 收敛为单一外层状态源，关闭内部 Ink overlay，减少 Sheet 选项叠色和相邻项残留高亮的概率。
 - 新增 `global_ui_smoke_test.dart`，覆盖设置页、下载页、队列 Sheet 在 390×844 与 1280×900 下的布局 smoke，避免后续全局 UI 改动遗漏工具页和弹层。
+- 复扫剩余 `ListTile`、`InkWell`、`MouseRegion` 和小尺寸点击区：操作 Sheet 未回退到原生 `ListTile`；搜索/媒体库窄屏 `ListTile` 仅保留为普通内容列表语义。
+- `AppScopeTabs` 的 hover、focus、pressed 同步收敛为单一外层状态源，避免 Tab 内部 Ink overlay 与自定义选中态叠加。
+- 当前 Codex 运行环境无法通过系统 `screencapture` 或 `flutter screenshot` 获取 macOS 应用截图；真实应用已能启动并加载，截图级验收需在本机手动截图或后续补专用 golden fixture。
 
 验收：
 
