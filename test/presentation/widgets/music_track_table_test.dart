@@ -1,0 +1,107 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
+import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
+import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+
+void main() {
+  testWidgets('MusicTrackTable row action has tooltip and touch target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          onTrackTap: (_, _) {},
+          onAddTrackToQueue: (_) {},
+        ),
+      ),
+    );
+
+    final addButton = find.byTooltip('加入队列');
+    expect(addButton, findsOneWidget);
+    expect(tester.getSize(addButton).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(addButton).height, greaterThanOrEqualTo(44));
+  });
+}
+
+Widget _buildWidget(Widget child) {
+  final mediaSourceResolver = CustomMediaSourceResolver();
+  final settingsCubit = AppSettingsCubit(
+    _FakeSettingsRepository(),
+    mediaSourceResolver,
+  );
+
+  return MultiRepositoryProvider(
+    providers: [
+      RepositoryProvider<CustomMediaSourceResolver>.value(
+        value: mediaSourceResolver,
+      ),
+    ],
+    child: BlocProvider<AppSettingsCubit>(
+      create: (_) => settingsCubit,
+      child: MaterialApp(home: Scaffold(body: child)),
+    ),
+  );
+}
+
+const _track = MusicTrack(
+  id: 'track-1',
+  title: '夜曲',
+  artistName: '周杰伦',
+  albumTitle: '十一月的萧邦',
+  artworkUrl: '',
+  duration: Duration(minutes: 4),
+);
+
+class _FakeSettingsRepository implements SettingsRepository {
+  AppSettingsSnapshot _snapshot = const AppSettingsSnapshot();
+
+  @override
+  Future<AppSettingsSnapshot> load() async => _snapshot;
+
+  @override
+  Future<void> saveThemeMode(ThemeMode mode) async {
+    _snapshot = _snapshot.copyWith(themeMode: mode);
+  }
+
+  @override
+  Future<void> saveDefaultQuality(AudioQuality quality) async {
+    _snapshot = _snapshot.copyWith(defaultQuality: quality);
+  }
+
+  @override
+  Future<void> saveGapBetweenTracks(Duration gap) async {
+    _snapshot = _snapshot.copyWith(gapBetweenTracks: gap);
+  }
+
+  @override
+  Future<void> saveLyricSyncOffset(Duration offset) async {
+    _snapshot = _snapshot.copyWith(lyricSyncOffset: offset);
+  }
+
+  @override
+  Future<void> saveCustomArtworkSourceEnabled(bool enabled) async {
+    _snapshot = _snapshot.copyWith(customArtworkSourceEnabled: enabled);
+  }
+
+  @override
+  Future<void> saveCustomArtworkSourceUrl(String url) async {
+    _snapshot = _snapshot.copyWith(customArtworkSourceUrl: url);
+  }
+
+  @override
+  Future<void> saveCustomLyricsSourceEnabled(bool enabled) async {
+    _snapshot = _snapshot.copyWith(customLyricsSourceEnabled: enabled);
+  }
+
+  @override
+  Future<void> saveCustomLyricsSourceUrl(String url) async {
+    _snapshot = _snapshot.copyWith(customLyricsSourceUrl: url);
+  }
+}

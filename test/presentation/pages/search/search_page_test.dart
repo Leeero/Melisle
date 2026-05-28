@@ -99,7 +99,7 @@ void main() {
     );
 
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('歌曲 / 专辑 / 艺术家 / 歌单'), findsOneWidget);
+    expect(find.text('搜索音乐库'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '夜曲');
     await tester.pump();
@@ -255,6 +255,30 @@ void main() {
     expect(find.text('1 首'), findsOneWidget);
     expect(find.text('播放全部'), findsOneWidget);
     expect(find.text('加入队列'), findsOneWidget);
+  });
+
+  testWidgets('SearchPage_responsiveSmoke_hasNoLayoutExceptions', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final size in const [Size(390, 844), Size(1280, 900)]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+
+      await tester.pumpWidget(
+        _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+      );
+
+      await tester.enterText(find.byType(TextField), '周杰伦');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AppContentPage), findsOneWidget);
+      expect(find.text('歌曲 1'), findsOneWidget);
+    }
   });
 }
 

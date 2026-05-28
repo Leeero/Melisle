@@ -25,6 +25,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:drift/native.dart';
@@ -108,6 +109,46 @@ void main() {
     expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
   });
 
+  testWidgets('dense app action button keeps a 44px touch target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: AppActionButton(
+              icon: Icons.delete_sweep_rounded,
+              label: '清空',
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final button = find.widgetWithText(TextButton, '清空');
+    expect(button, findsOneWidget);
+    expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('app back button exposes tooltip and touch target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: AppBackButton(onPressed: () {})),
+        ),
+      ),
+    );
+
+    final button = find.byTooltip('返回');
+    expect(button, findsOneWidget);
+    expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+  });
+
   testWidgets('renders empty favorites page', (tester) async {
     final repository = _FakeMusicRepository();
     final settingsRepository = _FakeSettingsRepository();
@@ -146,8 +187,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('收藏'), findsWidgets);
-    expect(find.text('还没有收藏歌曲，去媒体库挑几首喜欢的吧。'), findsOneWidget);
-    expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+    expect(find.text('还没有收藏歌曲'), findsOneWidget);
+    expect(find.text('在媒体库或播放页点亮爱心后，歌曲会集中显示在这里。'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsOneWidget);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
 
@@ -188,8 +230,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('播放历史'), findsWidgets);
-    expect(find.text('还没有播放历史，先放一首歌吧。'), findsOneWidget);
-    expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+    expect(find.text('还没有播放历史'), findsOneWidget);
+    expect(find.text('开始播放后，最近听过的歌曲会自动记录在这里。'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsOneWidget);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
 }
