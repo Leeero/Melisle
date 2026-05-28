@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 class MusicAlbumGridCard extends StatefulWidget {
@@ -7,8 +8,8 @@ class MusicAlbumGridCard extends StatefulWidget {
     super.key,
     required this.album,
     required this.onTap,
-    this.artworkRadius = 24,
-    this.scaleOnHover = 1.015,
+    this.artworkRadius = AppRadiusTokens.coverGrid,
+    this.scaleOnHover = 1.012,
   });
 
   final MusicAlbum album;
@@ -108,76 +109,6 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class MusicAlbumCompactCard extends StatelessWidget {
-  const MusicAlbumCompactCard({
-    super.key,
-    required this.album,
-    required this.onTap,
-  });
-
-  final MusicAlbum album;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Semantics(
-      label: '打开专辑《${album.title}》',
-      button: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.62),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AspectRatio(
-                    aspectRatio: 1,
-                    child: CachedArtwork(
-                      imageUrl: album.artworkUrl,
-                      size: 160,
-                      borderRadius: 18,
-                      semanticLabel: '《${album.title}》专辑封面',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    album.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    album.year == null ? album.artistName : '${album.year}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),

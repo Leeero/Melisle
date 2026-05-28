@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
@@ -11,15 +15,14 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/sleep_timer_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -149,27 +152,21 @@ class _MobileLayoutState extends State<_MobileLayout> {
               onMorePressed: () =>
                   _showMobileMoreActionsSheet(context, track: widget.track),
             ),
+            _MobileModeSwitch(
+              mode: _contentMode,
+              onChanged: (mode) => setState(() => _contentMode = mode),
+            ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+                padding: const EdgeInsets.fromLTRB(0, 10, 0, 8),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 260),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   child: showingLyrics
-                      ? _MobileLyricsStage(
-                          key: const ValueKey('lyrics'),
-                          onShowArtwork: () => setState(
-                            () =>
-                                _contentMode = _MobilePlayerContentMode.artwork,
-                          ),
-                        )
+                      ? const _MobileLyricsStage(key: ValueKey('lyrics'))
                       : _MobileSwipeGestureRegion(
                           key: const ValueKey('artwork'),
-                          onTap: () => setState(
-                            () =>
-                                _contentMode = _MobilePlayerContentMode.lyrics,
-                          ),
                           onSwipeEnd: (details) =>
                               _handleSwipe(context, details),
                           onSwipeCancel: _resetSwipe,
@@ -250,6 +247,69 @@ class _MobileLayoutState extends State<_MobileLayout> {
   }
 }
 
+class _MobileModeSwitch extends StatelessWidget {
+  const _MobileModeSwitch({required this.mode, required this.onChanged});
+
+  final _MobilePlayerContentMode mode;
+  final ValueChanged<_MobilePlayerContentMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacingTokens.playerHorizontalPadding,
+      ),
+      child: SizedBox(
+        height: 42,
+        child: SegmentedButton<_MobilePlayerContentMode>(
+          segments: const [
+            ButtonSegment(
+              value: _MobilePlayerContentMode.artwork,
+              icon: Icon(Icons.album_rounded),
+              label: Text('封面'),
+            ),
+            ButtonSegment(
+              value: _MobilePlayerContentMode.lyrics,
+              icon: Icon(Icons.lyrics_rounded),
+              label: Text('歌词'),
+            ),
+          ],
+          selected: {mode},
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return colorScheme.primaryContainer.withValues(alpha: 0.64);
+              }
+              return colorScheme.surface.withValues(alpha: 0.12);
+            }),
+            foregroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return colorScheme.primary;
+              }
+              return colorScheme.onSurfaceVariant;
+            }),
+            side: WidgetStatePropertyAll(
+              BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+              ),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+              ),
+            ),
+          ),
+          onSelectionChanged: (selection) => onChanged(selection.first),
+        ),
+      ),
+    );
+  }
+}
+
 class _MobileSwipeGestureRegion extends StatelessWidget {
   const _MobileSwipeGestureRegion({
     super.key,
@@ -257,7 +317,6 @@ class _MobileSwipeGestureRegion extends StatelessWidget {
     required this.onSwipeUpdate,
     required this.onSwipeEnd,
     required this.onSwipeCancel,
-    this.onTap,
     this.translucent = true,
   });
 
@@ -265,7 +324,6 @@ class _MobileSwipeGestureRegion extends StatelessWidget {
   final ValueChanged<DragUpdateDetails> onSwipeUpdate;
   final ValueChanged<DragEndDetails> onSwipeEnd;
   final VoidCallback onSwipeCancel;
-  final VoidCallback? onTap;
   final bool translucent;
 
   @override
@@ -274,7 +332,6 @@ class _MobileSwipeGestureRegion extends StatelessWidget {
       behavior: translucent
           ? HitTestBehavior.translucent
           : HitTestBehavior.deferToChild,
-      onTap: onTap,
       onPanStart: (_) => onSwipeCancel(),
       onPanUpdate: onSwipeUpdate,
       onPanCancel: onSwipeCancel,
@@ -320,47 +377,21 @@ class _MobileArtworkStage extends StatelessWidget {
 }
 
 class _MobileLyricsStage extends StatelessWidget {
-  const _MobileLyricsStage({super.key, required this.onShowArtwork});
-
-  final VoidCallback onShowArtwork;
+  const _MobileLyricsStage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(28),
+        color: colorScheme.surface.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.16),
         ),
       ),
-      child: Stack(
-        children: [
-          const Positioned.fill(child: _MobileLyricView()),
-          Positioned(
-            top: 10,
-            right: 10,
-            child: Tooltip(
-              message: '切回封面',
-              child: FilledButton.tonalIcon(
-                onPressed: onShowArtwork,
-                icon: const Icon(Icons.album_rounded, size: 18),
-                label: const Text('封面'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: const _MobileLyricView(),
     );
   }
 }
@@ -487,7 +518,7 @@ class _MobileTrackInfo extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Desktop layout — side by side: Artwork+Info | Lyrics, bottom bar
+// Desktop layout — stable player workspace: artwork | lyrics | tools
 // ---------------------------------------------------------------------------
 
 class _DesktopLayout extends StatelessWidget {
@@ -506,27 +537,62 @@ class _DesktopLayout extends StatelessWidget {
         Expanded(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
+              constraints: const BoxConstraints(maxWidth: 1400),
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 10,
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  8,
+                  horizontalPadding,
+                  14,
                 ),
-                child: Row(
+                child: Column(
                   children: [
                     Expanded(
-                      flex: 5,
-                      child: _DesktopArtworkStage(track: track),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compactDesktop = constraints.maxWidth < 1220;
+                          final majorGap = compactDesktop ? 14.0 : 22.0;
+                          final minorGap = compactDesktop ? 14.0 : 18.0;
+                          final utilityWidth = compactDesktop ? 256.0 : 286.0;
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: _DesktopArtworkStage(track: track),
+                              ),
+                              SizedBox(width: majorGap),
+                              Expanded(
+                                flex: 5,
+                                child: _DesktopLyricStage(track: track),
+                              ),
+                              SizedBox(width: minorGap),
+                              SizedBox(
+                                width: utilityWidth,
+                                child: _DesktopUtilityBar(
+                                  state: state,
+                                  track: track,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                    const SizedBox(width: 48),
-                    Expanded(flex: 6, child: _DesktopLyricStage(track: track)),
+                    const SizedBox(height: 14),
+                    _DesktopBottomBar(state: state, track: track),
+                    SizedBox(
+                      height:
+                          AppSpacingTokens.shellBottomInset +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
                   ],
                 ),
               ),
             ),
           ),
         ),
-        _DesktopBottomBar(state: state, track: track),
       ],
     );
   }
@@ -539,25 +605,24 @@ class _DesktopArtworkStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final artworkSourceContext = ArtworkSourceContext.track(track);
+    final subtitle = [
+      track.artistName,
+      if (track.albumTitle.isNotEmpty) track.albumTitle,
+    ].where((value) => value.isNotEmpty).join(' · ');
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(36),
+        color: colorScheme.surface.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.18),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
-          ),
-        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
         child: BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (prev, next) =>
               prev.isPlaying != next.isPlaying ||
@@ -568,13 +633,93 @@ class _DesktopArtworkStage extends StatelessWidget {
               children: [
                 Expanded(
                   child: Center(
-                    child: _VinylArtworkStage(
-                      track: track,
-                      isPlaying: state.isPlaying,
-                      isLoading: state.isLoading,
-                      size: 410,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final stageSize = math
+                            .min(
+                              constraints.maxWidth,
+                              constraints.maxHeight * 0.96,
+                            )
+                            .clamp(280.0, 430.0)
+                            .toDouble();
+                        return _VinylArtworkStage(
+                          track: track,
+                          isPlaying: state.isPlaying,
+                          isLoading: state.isLoading,
+                          size: stageSize,
+                        );
+                      },
                     ),
                   ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: track.artworkUrl,
+                      size: 58,
+                      borderRadius: AppRadiusTokens.coverGrid,
+                      sourceContext: artworkSourceContext,
+                      semanticLabel: '《${track.title}》封面',
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: AppMotion.medium,
+                        child: Column(
+                          key: ValueKey(track.id),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              track.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.12,
+                              ),
+                            ),
+                            if (subtitle.isNotEmpty) ...[
+                              const SizedBox(height: 5),
+                              Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    BlocBuilder<FavoritesCubit, FavoritesState>(
+                      builder: (context, favState) {
+                        final isFav =
+                            favState.entries[track.id] ?? track.isFavorite;
+                        return _DesktopUtilityIconButton(
+                          tooltip: isFav ? '取消收藏' : '收藏',
+                          active: isFav,
+                          onPressed: () => context
+                              .read<FavoritesCubit>()
+                              .toggle(track.id, currentValue: isFav),
+                          child: AnimatedSwitcher(
+                            duration: AppMotion.micro,
+                            child: Icon(
+                              isFav
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              key: ValueKey(isFav),
+                              size: 20,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             );
@@ -594,28 +739,17 @@ class _DesktopLyricStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final subtitle = [
-      track.artistName,
-      if (track.albumTitle.isNotEmpty) track.albumTitle,
-    ].where((value) => value.isNotEmpty).join(' · ');
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(36),
+        color: colorScheme.surface.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.18),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
-          ),
-        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+        padding: const EdgeInsets.fromLTRB(26, 22, 26, 18),
         child: BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (p, c) =>
               p.lyricSyncState.timeline != c.lyricSyncState.timeline ||
@@ -625,78 +759,65 @@ class _DesktopLyricStage extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  track.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.08,
-                  ),
-                ),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lyrics_rounded,
+                      size: 20,
+                      color: colorScheme.primary,
                     ),
-                  ),
-                ],
-                const SizedBox(height: 18),
-                Container(
-                  height: 1,
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.18),
-                ),
-                const SizedBox(height: 18),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      color: colorScheme.surface.withValues(alpha: 0.12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 4,
+                    const SizedBox(width: 8),
+                    Text(
+                      '歌词',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      child: state.isLyricsLoading && state.lyrics.isEmpty
-                          ? const Center(child: CircularProgressIndicator())
-                          : state.lyrics.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.lyrics_outlined,
-                                    size: 28,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    '暂无歌词',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : LyricView(
-                              lines: state.lyrics,
-                              currentIndex: state.currentLyricIndex,
-                              onLineTap: (i) => context
-                                  .read<PlayerCubit>()
-                                  .seekToLyricIndex(i),
-                              textAlign: TextAlign.center,
-                              alignment: Alignment.center,
-                              maxTextWidth: 520,
-                              currentScale: 1.02,
-                            ),
                     ),
-                  ),
+                    const Spacer(),
+                    if (state.lyrics.isNotEmpty)
+                      Text(
+                        '${state.currentLyricIndex == null ? 0 : state.currentLyricIndex! + 1}/${state.lyrics.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontFeatures: [const ui.FontFeature.tabularFigures()],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: state.isLyricsLoading && state.lyrics.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : state.lyrics.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lyrics_outlined,
+                                size: 30,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '暂无歌词',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : LyricView(
+                          lines: state.lyrics,
+                          currentIndex: state.currentLyricIndex,
+                          onLineTap: (i) =>
+                              context.read<PlayerCubit>().seekToLyricIndex(i),
+                          textAlign: TextAlign.center,
+                          alignment: Alignment.center,
+                          maxTextWidth: 560,
+                          currentScale: 1.03,
+                        ),
                 ),
               ],
             );
@@ -717,164 +838,38 @@ class _DesktopBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final artworkSourceContext = ArtworkSourceContext.track(track);
-    final subtitle = [
-      track.artistName,
-      if (track.albumTitle.isNotEmpty) track.albumTitle,
-    ].where((value) => value.isNotEmpty).join(' · ');
 
-    Widget sectionDivider() {
-      return Container(
-        width: 1,
-        height: 64,
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.22),
-          borderRadius: BorderRadius.circular(999),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.84),
-          borderRadius: BorderRadius.circular(34),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
+                child: _ProgressTimeline(),
+              ),
+            ),
+            const SizedBox(width: 22),
+            _DesktopControlCluster(child: const _PlaybackControls()),
+            const SizedBox(width: 18),
+            Text(
+              state.quality.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 18, 28, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withValues(
-                            alpha: 0.52,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.18,
-                            ),
-                          ),
-                        ),
-                        child: CachedArtwork(
-                          imageUrl: track.artworkUrl,
-                          size: 58,
-                          borderRadius: 18,
-                          sourceContext: artworkSourceContext,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '正在播放',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                letterSpacing: 0.3,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              track.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (subtitle.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      BlocBuilder<FavoritesCubit, FavoritesState>(
-                        builder: (context, favState) {
-                          final isFav =
-                              favState.entries[track.id] ?? track.isFavorite;
-                          return _DesktopUtilityIconButton(
-                            tooltip: isFav ? '取消收藏' : '收藏',
-                            active: isFav,
-                            onPressed: () => context
-                                .read<FavoritesCubit>()
-                                .toggle(track.id, currentValue: isFav),
-                            child: AnimatedSwitcher(
-                              duration: AppMotion.micro,
-                              child: Icon(
-                                isFav
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                key: ValueKey(isFav),
-                                size: 20,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                sectionDivider(),
-                Expanded(
-                  flex: 5,
-                  child: Align(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ProgressTimeline(),
-                          const SizedBox(height: 12),
-                          _DesktopControlCluster(
-                            child: const _PlaybackControls(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                sectionDivider(),
-                Expanded(
-                  flex: 4,
-                  child: _DesktopUtilityBar(state: state, track: track),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -893,141 +888,221 @@ class _DesktopUtilityBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final showInlineVolume = constraints.maxWidth >= 420;
-        final sliderWidth = (constraints.maxWidth - 230)
-            .clamp(112.0, 156.0)
-            .toDouble();
-        final sleepActive =
-            state.sleepRemaining != null || state.sleepEndOfTrack;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final sleepActive = state.sleepRemaining != null || state.sleepEndOfTrack;
+    final sleepValue = sleepActive
+        ? state.sleepRemaining != null
+              ? _formatSleep(state.sleepRemaining!)
+              : '本曲结束后'
+        : '未启用';
 
-        return Align(
-          alignment: Alignment.centerRight,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _DesktopUtilitySegment(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.tune_rounded, size: 20, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  '播放工具',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            BlocBuilder<DownloadsCubit, DownloadsState>(
+              buildWhen: (p, c) =>
+                  p.completedTrackIds.contains(track.id) !=
+                      c.completedTrackIds.contains(track.id) ||
+                  p.jobs.containsKey(track.id) != c.jobs.containsKey(track.id),
+              builder: (context, dlState) {
+                final downloaded = dlState.completedTrackIds.contains(track.id);
+                final running = dlState.jobs.containsKey(track.id);
+                return _DesktopUtilityTile(
+                  icon: downloaded
+                      ? Icons.download_done_rounded
+                      : running
+                      ? Icons.downloading_rounded
+                      : Icons.download_rounded,
+                  title: '下载',
+                  value: downloaded
+                      ? '已下载'
+                      : running
+                      ? '下载中'
+                      : '离线保存',
+                  active: downloaded || running,
+                  enabled: !downloaded && !running,
+                  onPressed: () =>
+                      context.read<DownloadsCubit>().enqueue(track),
+                );
+              },
+            ),
+            _DesktopUtilityTile(
+              icon: sleepActive
+                  ? Icons.bedtime_rounded
+                  : Icons.bedtime_outlined,
+              title: '睡眠定时',
+              value: sleepValue,
+              active: sleepActive,
+              onPressed: () => _showDesktopSleepTimerDialog(context),
+            ),
+            BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) => prev.queue.length != next.queue.length,
+              builder: (context, playerState) {
+                final count = playerState.queue.length;
+                return _DesktopUtilityTile(
+                  icon: Icons.queue_music_rounded,
+                  title: '播放队列',
+                  value: '$count 首',
+                  onPressed: () => _showDesktopQueueDialog(context),
+                );
+              },
+            ),
+            BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) => prev.quality != next.quality,
+              builder: (context, playerState) {
+                return _DesktopUtilityTile(
+                  icon: Icons.high_quality_rounded,
+                  title: '音质',
+                  value: playerState.quality.label,
+                  active: playerState.quality != AudioQuality.auto,
+                  onPressed: () => _showDesktopQualityDialog(context),
+                );
+              },
+            ),
+            const Spacer(),
+            _DesktopUtilitySegment(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: _DesktopVolumeControl(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopUtilityTile extends StatefulWidget {
+  const _DesktopUtilityTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onPressed,
+    this.active = false,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onPressed;
+  final bool active;
+  final bool enabled;
+
+  @override
+  State<_DesktopUtilityTile> createState() => _DesktopUtilityTileState();
+}
+
+class _DesktopUtilityTileState extends State<_DesktopUtilityTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = widget.enabled
+        ? colorScheme.onSurface
+        : colorScheme.onSurfaceVariant.withValues(alpha: 0.42);
+    final accent = widget.active
+        ? colorScheme.primary
+        : colorScheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: AppMotion.micro,
+          decoration: BoxDecoration(
+            color: widget.active
+                ? colorScheme.primaryContainer.withValues(alpha: 0.48)
+                : _hovered && widget.enabled
+                ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.34)
+                : colorScheme.surface.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+            border: Border.all(
+              color: widget.active
+                  ? colorScheme.primary.withValues(alpha: 0.18)
+                  : colorScheme.outlineVariant.withValues(alpha: 0.16),
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+              onTap: widget.enabled ? widget.onPressed : null,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    BlocBuilder<DownloadsCubit, DownloadsState>(
-                      buildWhen: (p, c) =>
-                          p.completedTrackIds.contains(track.id) !=
-                              c.completedTrackIds.contains(track.id) ||
-                          p.jobs.containsKey(track.id) !=
-                              c.jobs.containsKey(track.id),
-                      builder: (context, dlState) {
-                        final downloaded = dlState.completedTrackIds.contains(
-                          track.id,
-                        );
-                        final running = dlState.jobs.containsKey(track.id);
-                        return _DesktopUtilityIconButton(
-                          tooltip: downloaded
-                              ? '已下载'
-                              : running
-                              ? '下载中'
-                              : '下载当前曲目',
-                          active: downloaded || running,
-                          onPressed: downloaded || running
-                              ? null
-                              : () => context.read<DownloadsCubit>().enqueue(
-                                  track,
-                                ),
-                          child: Icon(
-                            downloaded
-                                ? Icons.download_done_rounded
-                                : running
-                                ? Icons.downloading_rounded
-                                : Icons.download_rounded,
-                            size: 20,
+                    Icon(widget.icon, size: 20, color: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        );
-                      },
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: foreground,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    _DesktopUtilityIconButton(
-                      tooltip: sleepActive
-                          ? state.sleepRemaining != null
-                                ? '睡眠定时：${_formatSleep(state.sleepRemaining!)}'
-                                : '睡眠定时：本曲结束后'
-                          : '睡眠定时',
-                      active: sleepActive,
-                      onPressed: () => _showDesktopSleepTimerDialog(context),
-                      child: Icon(
-                        sleepActive
-                            ? Icons.bedtime_rounded
-                            : Icons.bedtime_outlined,
-                        size: 20,
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: widget.enabled ? 0.68 : 0.28,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              _DesktopUtilitySegment(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BlocBuilder<PlayerCubit, PlayerViewState>(
-                      buildWhen: (prev, next) =>
-                          prev.queue.length != next.queue.length,
-                      builder: (context, playerState) {
-                        final count = playerState.queue.length;
-                        return _DesktopUtilityIconButton(
-                          tooltip: '播放队列（$count）',
-                          onPressed: () => _showDesktopQueueDialog(context),
-                          child: _DesktopQueueGlyph(count: count),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 6),
-                    BlocBuilder<PlayerCubit, PlayerViewState>(
-                      buildWhen: (prev, next) => prev.quality != next.quality,
-                      builder: (context, playerState) {
-                        return _DesktopUtilityIconButton(
-                          tooltip: '播放音质：${playerState.quality.label}',
-                          active: playerState.quality != AudioQuality.auto,
-                          onPressed: () => _showDesktopQualityDialog(context),
-                          child: const Icon(
-                            Icons.high_quality_rounded,
-                            size: 20,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              if (showInlineVolume)
-                _DesktopUtilitySegment(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: SizedBox(
-                    width: sliderWidth,
-                    child: _DesktopVolumeControl(width: sliderWidth),
-                  ),
-                )
-              else
-                _DesktopUtilitySegment(
-                  child: BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) => prev.volume != next.volume,
-                    builder: (context, playerState) {
-                      return _DesktopUtilityIconButton(
-                        tooltip: '音量 ${_volumePercent(playerState.volume)}%',
-                        onPressed: () => _showDesktopVolumeDialog(context),
-                        child: Icon(_volumeIcon(playerState.volume), size: 20),
-                      );
-                    },
-                  ),
-                ),
-            ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -1161,46 +1236,6 @@ class _DesktopUtilityIconButtonState extends State<_DesktopUtilityIconButton> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _DesktopQueueGlyph extends StatelessWidget {
-  const _DesktopQueueGlyph({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final badgeText = count > 99 ? '99+' : '$count';
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Icon(Icons.queue_music_rounded, size: 20),
-        if (count > 0)
-          Positioned(
-            top: -4,
-            right: -8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                badgeText,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onPrimary,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  height: 1.0,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -1578,9 +1613,7 @@ class _PlaybackModeButtonState extends State<_PlaybackModeButton> {
 }
 
 class _DesktopVolumeControl extends StatelessWidget {
-  const _DesktopVolumeControl({this.width});
-
-  final double? width;
+  const _DesktopVolumeControl();
 
   @override
   Widget build(BuildContext context) {
@@ -1590,64 +1623,61 @@ class _DesktopVolumeControl extends StatelessWidget {
     return BlocBuilder<PlayerCubit, PlayerViewState>(
       buildWhen: (prev, next) => prev.volume != next.volume,
       builder: (context, state) {
-        return SizedBox(
-          width: width,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _volumeIcon(state.volume),
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3.2,
-                    activeTrackColor: colorScheme.primary.withValues(
-                      alpha: 0.92,
-                    ),
-                    inactiveTrackColor: colorScheme.onSurface.withValues(
-                      alpha: 0.14,
-                    ),
-                    thumbShape: _PlayerSliderThumbShape(
-                      radius: 4.8,
-                      fillColor: colorScheme.surface,
-                      ringColor: colorScheme.primary,
-                      glowColor: colorScheme.primary,
-                      glowAlpha: 0.12,
-                    ),
-                    overlayColor: colorScheme.primary.withValues(alpha: 0.1),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 14,
-                    ),
-                    trackShape: _GlowingSliderTrackShape(
-                      glowColor: colorScheme.primary,
-                      glowAlpha: 0.1,
-                      blurSigma: 6,
-                    ),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _volumeIcon(state.volume),
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3.2,
+                  activeTrackColor: colorScheme.primary.withValues(alpha: 0.92),
+                  inactiveTrackColor: colorScheme.onSurface.withValues(
+                    alpha: 0.14,
                   ),
-                  child: Slider(
-                    value: state.volume,
-                    onChanged: context.read<PlayerCubit>().setVolume,
+                  thumbShape: _PlayerSliderThumbShape(
+                    radius: 4.8,
+                    fillColor: colorScheme.surface,
+                    ringColor: colorScheme.primary,
+                    glowColor: colorScheme.primary,
+                    glowAlpha: 0.12,
+                  ),
+                  overlayColor: colorScheme.primary.withValues(alpha: 0.1),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 14,
+                  ),
+                  trackShape: _GlowingSliderTrackShape(
+                    glowColor: colorScheme.primary,
+                    glowAlpha: 0.1,
+                    blurSigma: 6,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 36,
-                child: Text(
-                  '${_volumePercent(state.volume)}%',
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontFeatures: [const ui.FontFeature.tabularFigures()],
-                  ),
+                child: Slider(
+                  value: state.volume,
+                  semanticFormatterCallback: (value) =>
+                      '音量 ${_volumePercent(value)}%',
+                  onChanged: context.read<PlayerCubit>().setVolume,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '${_volumePercent(state.volume)}%',
+                textAlign: TextAlign.end,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontFeatures: [const ui.FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -1740,6 +1770,8 @@ class _VolumeSheet extends StatelessWidget {
                       ),
                       child: Slider(
                         value: state.volume,
+                        semanticFormatterCallback: (value) =>
+                            '音量 ${_volumePercent(value)}%',
                         onChanged: context.read<PlayerCubit>().setVolume,
                       ),
                     ),
@@ -1814,49 +1846,16 @@ class _MobileMoreActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: AppSheetScaffold(
+        title: '更多操作',
+        description: '管理当前曲目的下载、音质、音量和睡眠定时。',
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '更多操作',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '管理当前曲目的下载、音质、音量和睡眠定时。',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
             BlocBuilder<DownloadsCubit, DownloadsState>(
               buildWhen: (p, c) =>
                   p.completedTrackIds.contains(track.id) !=
@@ -1867,7 +1866,7 @@ class _MobileMoreActionsSheet extends StatelessWidget {
                   track.id,
                 );
                 final running = downloadState.jobs.containsKey(track.id);
-                return _MobileMoreActionTile(
+                return AppOptionTile<_MobileMoreAction>(
                   icon: downloaded
                       ? Icons.download_done_rounded
                       : running
@@ -1883,8 +1882,11 @@ class _MobileMoreActionsSheet extends StatelessWidget {
                       : running
                       ? '正在加入离线缓存'
                       : '保存到本地，离线时优先播放',
+                  value: _MobileMoreAction.download,
+                  groupValue: _MobileMoreAction.none,
+                  showRadio: false,
                   enabled: !downloaded && !running,
-                  onTap: () async {
+                  onSelected: (_) async {
                     await context.read<DownloadsCubit>().enqueue(track);
                     if (context.mounted) Navigator.of(context).pop();
                   },
@@ -1893,11 +1895,14 @@ class _MobileMoreActionsSheet extends StatelessWidget {
             ),
             BlocBuilder<PlayerCubit, PlayerViewState>(
               buildWhen: (prev, next) => prev.quality != next.quality,
-              builder: (context, state) => _MobileMoreActionTile(
+              builder: (context, state) => AppOptionTile<_MobileMoreAction>(
                 icon: Icons.high_quality_rounded,
                 title: '播放音质：${state.quality.label}',
                 subtitle: '下一首起生效；无损取决于源文件',
-                onTap: () => _openNestedSheet(
+                value: _MobileMoreAction.quality,
+                groupValue: _MobileMoreAction.none,
+                showRadio: false,
+                onSelected: (_) => _openNestedSheet(
                   context,
                   () => QualityPickerSheet.show(parentContext),
                 ),
@@ -1914,13 +1919,16 @@ class _MobileMoreActionsSheet extends StatelessWidget {
                     : remaining != null
                     ? '剩余 ${_formatSleep(remaining)}'
                     : '时间到后自动暂停播放';
-                return _MobileMoreActionTile(
+                return AppOptionTile<_MobileMoreAction>(
                   icon: remaining != null || state.sleepEndOfTrack
                       ? Icons.bedtime_rounded
                       : Icons.bedtime_outlined,
                   title: '睡眠定时',
                   subtitle: subtitle,
-                  onTap: () => _openNestedSheet(
+                  value: _MobileMoreAction.sleep,
+                  groupValue: _MobileMoreAction.none,
+                  showRadio: false,
+                  onSelected: (_) => _openNestedSheet(
                     context,
                     () => SleepTimerSheet.show(parentContext),
                   ),
@@ -1929,11 +1937,14 @@ class _MobileMoreActionsSheet extends StatelessWidget {
             ),
             BlocBuilder<PlayerCubit, PlayerViewState>(
               buildWhen: (prev, next) => prev.volume != next.volume,
-              builder: (context, state) => _MobileMoreActionTile(
+              builder: (context, state) => AppOptionTile<_MobileMoreAction>(
                 icon: _volumeIcon(state.volume),
                 title: '音量 ${_volumePercent(state.volume)}%',
                 subtitle: '调节当前输出强度',
-                onTap: () => _openNestedSheet(
+                value: _MobileMoreAction.volume,
+                groupValue: _MobileMoreAction.none,
+                showRadio: false,
+                onSelected: (_) => _openNestedSheet(
                   context,
                   () async => _showVolumeSheet(parentContext),
                 ),
@@ -1955,108 +1966,7 @@ class _MobileMoreActionsSheet extends StatelessWidget {
   }
 }
 
-class _MobileMoreActionTile extends StatelessWidget {
-  const _MobileMoreActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.enabled = true,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final foreground = enabled
-        ? colorScheme.onSurface
-        : colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(20),
-          child: Ink(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.58),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(
-                      alpha: enabled ? 0.58 : 0.24,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: enabled
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: foreground,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: enabled
-                              ? colorScheme.onSurfaceVariant
-                              : colorScheme.onSurfaceVariant.withValues(
-                                  alpha: 0.45,
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: colorScheme.onSurfaceVariant.withValues(
-                    alpha: enabled ? 0.72 : 0.32,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+enum _MobileMoreAction { none, download, quality, sleep, volume }
 
 Future<void> _showDesktopPopover(BuildContext context, Widget child) {
   return showGeneralDialog<void>(
@@ -2083,16 +1993,6 @@ Future<void> _showDesktopPopover(BuildContext context, Widget child) {
         ),
       );
     },
-  );
-}
-
-Future<void> _showDesktopVolumeDialog(BuildContext context) {
-  return _showDesktopPopover(
-    context,
-    BlocProvider.value(
-      value: context.read<PlayerCubit>(),
-      child: const _DesktopVolumeDialog(),
-    ),
   );
 }
 
@@ -2141,42 +2041,24 @@ class _DesktopPopoverSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          width: width,
-          padding: padding,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colorScheme.surface.withValues(alpha: 0.9),
-                colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.28),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: 34,
-                offset: const Offset(0, 18),
-              ),
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.06),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: child,
+    return Container(
+      width: width,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.24),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
+      child: child,
     );
   }
 }
@@ -2305,123 +2187,10 @@ class _DesktopPopoverCloseButton extends StatelessWidget {
       tooltip: '关闭',
       style: IconButton.styleFrom(
         side: BorderSide.none,
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.24),
+        backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurfaceVariant,
       ),
       icon: const Icon(Icons.close_rounded),
-    );
-  }
-}
-
-class _DesktopVolumeDialog extends StatelessWidget {
-  const _DesktopVolumeDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.bottomRight,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 108),
-          child: Material(
-            color: Colors.transparent,
-            child: BlocBuilder<PlayerCubit, PlayerViewState>(
-              buildWhen: (prev, next) => prev.volume != next.volume,
-              builder: (context, state) {
-                return _DesktopPopoverSurface(
-                  width: 328,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _DesktopPopoverHeader(
-                        icon: _volumeIcon(state.volume),
-                        title: '音量',
-                        subtitle: '拖动滑块实时调节当前输出强度。',
-                        meta: '${_volumePercent(state.volume)}%',
-                        trailing: _DesktopPopoverCloseButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface.withValues(alpha: 0.26),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.16,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                trackHeight: 3.4,
-                                activeTrackColor: colorScheme.primary
-                                    .withValues(alpha: 0.94),
-                                inactiveTrackColor: colorScheme.onSurface
-                                    .withValues(alpha: 0.14),
-                                thumbShape: _PlayerSliderThumbShape(
-                                  radius: 5.2,
-                                  fillColor: colorScheme.surface,
-                                  ringColor: colorScheme.primary,
-                                  glowColor: colorScheme.primary,
-                                  glowAlpha: 0.14,
-                                ),
-                                overlayColor: colorScheme.primary.withValues(
-                                  alpha: 0.12,
-                                ),
-                                overlayShape: const RoundSliderOverlayShape(
-                                  overlayRadius: 15,
-                                ),
-                                trackShape: _GlowingSliderTrackShape(
-                                  glowColor: colorScheme.primary,
-                                  glowAlpha: 0.12,
-                                  blurSigma: 7,
-                                ),
-                              ),
-                              child: Slider(
-                                value: state.volume,
-                                onChanged: context
-                                    .read<PlayerCubit>()
-                                    .setVolume,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  '静音',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '最大',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -2484,24 +2253,29 @@ class _DesktopSleepTimerDialog extends StatelessWidget {
                         runSpacing: 10,
                         children: [
                           for (final preset in _presets)
-                            FilledButton.tonal(
+                            AppActionButton(
+                              icon: Icons.timer_rounded,
+                              label: '${preset.inMinutes} 分钟',
+                              tone: AppActionButtonTone.primary,
+                              dense: false,
                               onPressed: () async {
                                 await cubit.startSleepTimer(preset);
                                 if (context.mounted) {
                                   Navigator.of(context).pop();
                                 }
                               },
-                              child: Text('${preset.inMinutes} 分钟'),
                             ),
-                          OutlinedButton.icon(
+                          AppActionButton(
+                            icon: Icons.skip_next_rounded,
+                            label: '本曲结束后',
+                            tone: AppActionButtonTone.neutral,
+                            dense: false,
                             onPressed: () async {
                               await cubit.startSleepTimerEndOfTrack();
                               if (context.mounted) {
                                 Navigator.of(context).pop();
                               }
                             },
-                            icon: const Icon(Icons.skip_next_rounded),
-                            label: const Text('本曲结束后'),
                           ),
                         ],
                       ),
@@ -2597,18 +2371,10 @@ class _DesktopQualityDialog extends StatelessWidget {
                                 13,
                               ),
                               decoration: BoxDecoration(
-                                gradient: quality == state.quality
-                                    ? LinearGradient(
-                                        colors: [
-                                          colorScheme.primaryContainer
-                                              .withValues(alpha: 0.82),
-                                          colorScheme.primaryContainer
-                                              .withValues(alpha: 0.56),
-                                        ],
-                                      )
-                                    : null,
                                 color: quality == state.quality
-                                    ? null
+                                    ? colorScheme.primaryContainer.withValues(
+                                        alpha: 0.62,
+                                      )
                                     : colorScheme.surface.withValues(
                                         alpha: 0.24,
                                       ),
@@ -3124,24 +2890,48 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                           ),
                           icon: const Icon(Icons.close_rounded),
                         ),
-                        Tooltip(
-                          message: '拖拽排序',
-                          child: ReorderableDragStartListener(
-                            index: widget.index,
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.drag_handle_rounded,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
+                        _DesktopQueueDragHandle(
+                          index: widget.index,
+                          colorScheme: colorScheme,
                         ),
                       ],
                     ),
                   ),
                   if (!_hovered) const SizedBox(width: 48),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopQueueDragHandle extends StatelessWidget {
+  const _DesktopQueueDragHandle({
+    required this.index,
+    required this.colorScheme,
+  });
+
+  final int index;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '拖拽排序',
+      button: true,
+      child: Tooltip(
+        message: '拖拽排序',
+        child: ReorderableDragStartListener(
+          index: index,
+          child: SizedBox.square(
+            dimension: 44,
+            child: Center(
+              child: Icon(
+                Icons.drag_handle_rounded,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -3265,6 +3055,8 @@ class _ProgressTimelineState extends State<_ProgressTimeline> {
                 child: Slider(
                   value: sliderValue,
                   max: effectiveMax,
+                  semanticFormatterCallback: (value) =>
+                      '播放进度 ${_format(Duration(milliseconds: value.round()))}',
                   onChangeStart: (value) {
                     setState(() {
                       _dragging = true;
@@ -4245,25 +4037,13 @@ class _EmptyPlayerState extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
 
-                      // 引导操作按钮
-                      OutlinedButton.icon(
+                      AppActionButton(
+                        icon: Icons.library_music_rounded,
+                        label: '返回浏览',
+                        dense: false,
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        icon: const Icon(Icons.library_music_rounded, size: 18),
-                        label: const Text('返回浏览'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: colorScheme.onSurface,
-                          side: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.52,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 14,
-                          ),
-                        ),
                       ),
                     ],
                   ),

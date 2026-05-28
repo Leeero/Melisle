@@ -3,6 +3,8 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +21,7 @@ class SettingsPage extends StatelessWidget {
       builder: (context, state) {
         if (state.isLoading) {
           return const AppContentPage(
-            header: AppPageTitleRow(title: '设置'),
+            header: AppPageHeader(title: '设置', automaticImplyLeading: false),
             body: AppBodyStateView.loading(),
           );
         }
@@ -28,7 +30,10 @@ class SettingsPage extends StatelessWidget {
         final colorScheme = Theme.of(context).colorScheme;
 
         return AppContentPage(
-          header: const AppPageTitleRow(title: '设置'),
+          header: const AppPageHeader(
+            title: '设置',
+            automaticImplyLeading: false,
+          ),
           body: ListView(
             padding: EdgeInsets.only(
               left: horizontalPadding,
@@ -47,7 +52,7 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: AppPageLayout.sectionGap),
               _SettingsSection(
                 title: '存储',
-                child: Card(
+                child: _SettingsGroupSurface(
                   child: Column(
                     children: [
                       _HoverableListTile(
@@ -71,7 +76,7 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: AppPageLayout.sectionGap),
               _SettingsSection(
                 title: '连接与账户',
-                child: Card(
+                child: _SettingsGroupSurface(
                   child: Column(
                     children: [
                       BlocBuilder<AuthCubit, AuthState>(
@@ -106,47 +111,29 @@ class SettingsPage extends StatelessWidget {
 }
 
 Future<void> _showLogoutConfirmation(BuildContext context) async {
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAppConfirmationDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('退出登录'),
-      content: const Text('确定要退出当前会话吗？退出后需重新输入服务器信息。'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('退出'),
-        ),
-      ],
-    ),
+    title: '退出登录',
+    message: '退出后会清除当前设备上的登录态，需要重新输入服务器信息。',
+    confirmLabel: '退出',
+    icon: Icons.logout_rounded,
+    tone: AppModalTone.danger,
   );
-  if (confirmed == true && context.mounted) {
+  if (confirmed && context.mounted) {
     context.read<AuthCubit>().logout();
   }
 }
 
 Future<void> _showClearCacheConfirmation(BuildContext context) async {
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAppConfirmationDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('清理缓存'),
-      content: const Text('确定要清理临时缓存吗？下载的离线曲目不受影响。'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('清理'),
-        ),
-      ],
-    ),
+    title: '清理缓存',
+    message: '将清除临时数据并释放本地存储空间，已下载的离线曲目不会受到影响。',
+    confirmLabel: '清理',
+    icon: Icons.cleaning_services_rounded,
+    tone: AppModalTone.danger,
   );
-  if (confirmed == true && context.mounted) {
+  if (confirmed && context.mounted) {
     // 缓存清理操作：in-memory 缓存由 CachedMusicRepository 管理，
     // 登出时自动清除。此处重置会话即可触发缓存刷新。
     if (context.mounted) {
@@ -180,6 +167,29 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
+class _SettingsGroupSurface extends StatelessWidget {
+  const _SettingsGroupSurface({required this.child, this.padding});
+
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.62),
+        ),
+      ),
+      child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
+    );
+  }
+}
+
 class _ThemeCard extends StatelessWidget {
   const _ThemeCard();
 
@@ -191,42 +201,40 @@ class _ThemeCard extends StatelessWidget {
         final cubit = context.read<AppSettingsCubit>();
         return Semantics(
           label: '主题模式选择',
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: RadioGroup<ThemeMode>(
-                groupValue: state.themeMode,
-                onChanged: (mode) {
-                  if (mode != null) cubit.setThemeMode(mode);
-                },
-                child: Column(
-                  children: [
-                    _themeTile(
-                      context,
-                      ThemeMode.system,
-                      Icons.brightness_auto_rounded,
-                      '跟随系统',
-                      '根据系统深色/浅色设置自动切换。',
-                      state.themeMode,
-                    ),
-                    _themeTile(
-                      context,
-                      ThemeMode.light,
-                      Icons.light_mode_rounded,
-                      '浅色',
-                      '日间或高亮环境下更易读。',
-                      state.themeMode,
-                    ),
-                    _themeTile(
-                      context,
-                      ThemeMode.dark,
-                      Icons.dark_mode_rounded,
-                      '深色',
-                      '适合夜间使用，减少屏幕眩光。',
-                      state.themeMode,
-                    ),
-                  ],
-                ),
+          child: _SettingsGroupSurface(
+            padding: const EdgeInsets.all(8),
+            child: RadioGroup<ThemeMode>(
+              groupValue: state.themeMode,
+              onChanged: (mode) {
+                if (mode != null) cubit.setThemeMode(mode);
+              },
+              child: Column(
+                children: [
+                  _themeTile(
+                    context,
+                    ThemeMode.system,
+                    Icons.brightness_auto_rounded,
+                    '跟随系统',
+                    '根据系统深色/浅色设置自动切换。',
+                    state.themeMode,
+                  ),
+                  _themeTile(
+                    context,
+                    ThemeMode.light,
+                    Icons.light_mode_rounded,
+                    '浅色',
+                    '日间或高亮环境下更易读。',
+                    state.themeMode,
+                  ),
+                  _themeTile(
+                    context,
+                    ThemeMode.dark,
+                    Icons.dark_mode_rounded,
+                    '深色',
+                    '适合夜间使用，减少屏幕眩光。',
+                    state.themeMode,
+                  ),
+                ],
               ),
             ),
           ),
@@ -297,10 +305,10 @@ class _PlaybackCard extends StatelessWidget {
       builder: (context, state) {
         final cubit = context.read<AppSettingsCubit>();
         final colorScheme = Theme.of(context).colorScheme;
-        return Card(
+        return _SettingsGroupSurface(
           child: Column(
             children: [
-              ListTile(
+              _HoverableListTile(
                 leading: const Icon(Icons.graphic_eq_rounded),
                 title: const Text('默认音质'),
                 subtitle: Text('新建播放队列时使用 · 当前：${state.defaultQuality.label}'),
@@ -308,7 +316,7 @@ class _PlaybackCard extends StatelessWidget {
                 onTap: () => _pickQuality(context, state, cubit),
               ),
               Divider(height: 1, color: colorScheme.outlineVariant),
-              ListTile(
+              _HoverableListTile(
                 leading: const Icon(Icons.space_bar_rounded),
                 title: const Text('曲间间隔'),
                 subtitle: Text(
@@ -333,21 +341,28 @@ class _PlaybackCard extends StatelessWidget {
   ) async {
     final result = await showModalBottomSheet<AudioQuality>(
       context: context,
-      showDragHandle: true,
-      builder: (_) => RadioGroup<AudioQuality>(
-        groupValue: state.defaultQuality,
-        onChanged: (value) {
-          if (value != null) Navigator.of(context).pop(value);
-        },
-        child: SafeArea(
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => AppSheetScaffold(
+        title: '默认音质',
+        description: '新建播放队列时使用，切换不会影响当前正在播放的队列。',
+        child: RadioGroup<AudioQuality>(
+          groupValue: state.defaultQuality,
+          onChanged: (value) {
+            if (value != null) Navigator.of(sheetContext).pop(value);
+          },
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final q in AudioQuality.values)
-                ListTile(
-                  leading: Radio<AudioQuality>(value: q),
-                  title: Text(q.label),
-                  onTap: () => Navigator.of(context).pop(q),
+                AppOptionTile<AudioQuality>(
+                  title: q.label,
+                  subtitle: _qualityDescription(q),
+                  icon: Icons.high_quality_rounded,
+                  value: q,
+                  groupValue: state.defaultQuality,
+                  onSelected: (value) => Navigator.of(sheetContext).pop(value),
                 ),
             ],
           ),
@@ -367,22 +382,33 @@ class _PlaybackCard extends StatelessWidget {
     const presets = [0, 2, 4, 6, 10];
     final result = await showModalBottomSheet<int>(
       context: context,
-      showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final s in presets)
-              ListTile(
-                leading: Icon(
-                  s == state.gapBetweenTracks.inSeconds
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => AppSheetScaffold(
+        title: '曲间间隔',
+        description: '每首歌结束后等待一小段时间再继续播放。',
+        child: RadioGroup<int>(
+          groupValue: state.gapBetweenTracks.inSeconds,
+          onChanged: (value) {
+            if (value != null) Navigator.of(sheetContext).pop(value);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final s in presets)
+                AppOptionTile<int>(
+                  title: s == 0 ? '无间隔' : '$s 秒',
+                  subtitle: s == 0 ? '默认连续播放，不额外等待。' : '每首结束后等待 $s 秒。',
+                  icon: s == 0
+                      ? Icons.skip_next_rounded
+                      : Icons.space_bar_rounded,
+                  value: s,
+                  groupValue: state.gapBetweenTracks.inSeconds,
+                  onSelected: (value) => Navigator.of(sheetContext).pop(value),
                 ),
-                title: Text(s == 0 ? '无间隔' : '$s 秒'),
-                onTap: () => Navigator.of(context).pop(s),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -390,6 +416,16 @@ class _PlaybackCard extends StatelessWidget {
       await cubit.setGapBetweenTracks(Duration(seconds: result));
     }
   }
+}
+
+String _qualityDescription(AudioQuality quality) {
+  return switch (quality) {
+    AudioQuality.auto => '自动选择当前服务可用的合适音质。',
+    AudioQuality.low => '较低带宽占用，适合移动网络。',
+    AudioQuality.medium => '平衡流量与听感。',
+    AudioQuality.high => '优先使用较高码率。',
+    AudioQuality.lossless => '尽量保留源文件质量。',
+  };
 }
 
 class _CustomMediaSourcesCard extends StatefulWidget {
@@ -454,68 +490,63 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
           a.lyricsSourceTest != b.lyricsSourceTest,
       builder: (context, state) {
         final cubit = context.read<AppSettingsCubit>();
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '自定义歌词与封面',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Tooltip(
-                  message: '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
-                  child: Text(
-                    '配置歌词和封面的自定义来源地址。',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+        return _SettingsGroupSurface(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('自定义歌词与封面', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Tooltip(
+                message: '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
+                child: Text(
+                  '配置歌词和封面的自定义来源地址。',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 16),
-                _SourceSection(
-                  icon: Icons.image_search_rounded,
-                  title: '歌曲封面来源',
-                  description: '用于封面代理、图床转发或统一压缩服务。',
-                  tooltipMessage:
-                      '若地址不含模板变量，应用会自动补上 sourceUrl、trackId、albumId、artistId、title、artist、album、size 等查询参数；api.lrc.cx/cover 会仅补 title。',
-                  enabled: state.customArtworkSourceEnabled,
-                  onToggle: cubit.setCustomArtworkSourceEnabled,
-                  controller: _artworkController,
-                  hintText:
-                      '例如：https://api.lrc.cx/cover 或 https://example.com/cover?source={sourceUrl}&size={size}',
-                  testState: state.artworkSourceTest,
-                  testingLabel: '正在测试封面地址…',
-                  customEnabledLabel: '当前生效：自定义封面地址优先',
-                  builtinEnabledLabel: '当前生效：数据源内置封面地址',
-                  emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置封面地址',
-                  onTest: cubit.testCustomArtworkSource,
-                ),
-                Divider(
-                  height: 32,
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-                _SourceSection(
-                  icon: Icons.lyrics_rounded,
-                  title: '歌词来源',
-                  description: '用于歌词服务或自建接口。',
-                  tooltipMessage:
-                      '若地址不含模板变量，应用会自动补上 title、album、artist 查询参数；album/artist 可能为空，album 为 [Unknown Album] 时会按空值处理。当前支持 LRC 文本及常见 JSON 歌词结构。',
-                  enabled: state.customLyricsSourceEnabled,
-                  onToggle: cubit.setCustomLyricsSourceEnabled,
-                  controller: _lyricsController,
-                  hintText: '例如：https://api.lrc.cx/lyrics',
-                  testState: state.lyricsSourceTest,
-                  testingLabel: '正在测试歌词地址…',
-                  customEnabledLabel: '当前生效：自定义歌词地址优先',
-                  builtinEnabledLabel: '当前生效：数据源内置歌词接口',
-                  emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置歌词接口',
-                  onTest: cubit.testCustomLyricsSource,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              _SourceSection(
+                icon: Icons.image_search_rounded,
+                title: '歌曲封面来源',
+                description: '用于封面代理、图床转发或统一压缩服务。',
+                tooltipMessage:
+                    '若地址不含模板变量，应用会自动补上 sourceUrl、trackId、albumId、artistId、title、artist、album、size 等查询参数；api.lrc.cx/cover 会仅补 title。',
+                enabled: state.customArtworkSourceEnabled,
+                onToggle: cubit.setCustomArtworkSourceEnabled,
+                controller: _artworkController,
+                hintText:
+                    '例如：https://api.lrc.cx/cover 或 https://example.com/cover?source={sourceUrl}&size={size}',
+                testState: state.artworkSourceTest,
+                testingLabel: '正在测试封面地址…',
+                customEnabledLabel: '当前生效：自定义封面地址优先',
+                builtinEnabledLabel: '当前生效：数据源内置封面地址',
+                emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置封面地址',
+                onTest: cubit.testCustomArtworkSource,
+              ),
+              Divider(
+                height: 32,
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+              _SourceSection(
+                icon: Icons.lyrics_rounded,
+                title: '歌词来源',
+                description: '用于歌词服务或自建接口。',
+                tooltipMessage:
+                    '若地址不含模板变量，应用会自动补上 title、album、artist 查询参数；album/artist 可能为空，album 为 [Unknown Album] 时会按空值处理。当前支持 LRC 文本及常见 JSON 歌词结构。',
+                enabled: state.customLyricsSourceEnabled,
+                onToggle: cubit.setCustomLyricsSourceEnabled,
+                controller: _lyricsController,
+                hintText: '例如：https://api.lrc.cx/lyrics',
+                testState: state.lyricsSourceTest,
+                testingLabel: '正在测试歌词地址…',
+                customEnabledLabel: '当前生效：自定义歌词地址优先',
+                builtinEnabledLabel: '当前生效：数据源内置歌词接口',
+                emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置歌词接口',
+                onTest: cubit.testCustomLyricsSource,
+              ),
+            ],
           ),
         );
       },
@@ -679,7 +710,7 @@ class _SourceSection extends StatelessWidget {
           children: [
             Tooltip(
               message: '测试当前地址是否可用',
-              child: OutlinedButton.icon(
+              child: TextButton.icon(
                 onPressed: addressIsEmpty || isTesting ? null : onTest,
                 icon: isTesting
                     ? SizedBox(
@@ -690,8 +721,13 @@ class _SourceSection extends StatelessWidget {
                           color: colorScheme.primary,
                         ),
                       )
-                    : const Icon(Icons.network_check_rounded),
+                    : const Icon(Icons.network_check_rounded, size: 18),
                 label: Text(isTesting ? testingLabel : '测试地址'),
+                style: AppActionButtonStyle.text(
+                  context,
+                  tone: AppActionButtonTone.primary,
+                  dense: false,
+                ),
               ),
             ),
           ],
@@ -728,30 +764,99 @@ class _HoverableListTile extends StatefulWidget {
 
 class _HoverableListTileState extends State<_HoverableListTile> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final enabled = widget.onTap != null;
+    final backgroundColor = _pressed && enabled
+        ? (widget.isSelected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+              : colorScheme.surfaceContainerHigh.withValues(alpha: 0.5))
+        : _hovered && enabled
+        ? (widget.isSelected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.38)
+              : colorScheme.surfaceContainerHigh.withValues(alpha: 0.34))
+        : Colors.transparent;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      onEnter: (_) {
+        if (enabled) setState(() => _hovered = true);
+      },
+      onExit: (_) {
+        if (enabled) {
+          setState(() {
+            _hovered = false;
+            _pressed = false;
+          });
+        }
+      },
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: widget.isSelected
-              ? colorScheme.primaryContainer.withValues(alpha: 0.82)
-              : _hovered
-              ? colorScheme.primary.withValues(alpha: 0.06)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
         ),
-        child: ListTile(
-          leading: widget.leading,
-          title: widget.title,
-          subtitle: widget.subtitle,
-          trailing: widget.trailing,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
+          onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+          onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+          onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                if (widget.leading != null) ...[
+                  IconTheme.merge(
+                    data: IconThemeData(
+                      color: widget.isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    child: widget.leading!,
+                  ),
+                  const SizedBox(width: 14),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DefaultTextStyle.merge(
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        child: widget.title ?? const SizedBox.shrink(),
+                      ),
+                      if (widget.subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        DefaultTextStyle.merge(
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          child: widget.subtitle!,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (widget.trailing != null) ...[
+                  const SizedBox(width: 12),
+                  IconTheme.merge(
+                    data: IconThemeData(
+                      color: widget.isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    child: widget.trailing!,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

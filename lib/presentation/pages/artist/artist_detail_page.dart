@@ -12,7 +12,10 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -96,26 +99,15 @@ class _ArtistDetailView extends StatelessWidget {
                           sliver: SliverToBoxAdapter(
                             child: AppSectionTitleRow(
                               title: '热门曲目',
-                              action: SizedBox(
-                                width: 44,
-                                height: 44,
-                                child: FilledButton(
-                                  onPressed: () =>
-                                      PlayerNavigation.playAllAndOpenPlayer(
-                                        context,
-                                        loadedTracks: state.topTracks,
-                                        allLoaded: true,
-                                        fetchAll: () async => state.topTracks,
-                                      ),
-                                  style: FilledButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    shape: const CircleBorder(),
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: 22,
-                                  ),
-                                ),
+                              action: PlayAllButton(
+                                variant: PlayAllButtonVariant.compact,
+                                onPressed: () =>
+                                    PlayerNavigation.playAllAndOpenPlayer(
+                                      context,
+                                      loadedTracks: state.topTracks,
+                                      allLoaded: true,
+                                      fetchAll: () async => state.topTracks,
+                                    ),
                               ),
                             ),
                           ),
@@ -125,31 +117,50 @@ class _ArtistDetailView extends StatelessWidget {
                             context,
                             bottom: 16,
                           ),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final track = state.topTracks[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: MusicTrackTile.row(
-                                  isCurrent: track.id == currentTrackId,
-                                  artworkUrl: track.artworkUrl,
-                                  title: track.title,
-                                  subtitle: track.albumTitle,
-                                  onTap: () =>
-                                      PlayerNavigation.playTracksAndOpenPlayer(
-                                        context,
-                                        tracks: state.topTracks,
-                                        startIndex: index,
+                          sliver: AppBreakpoints.usesWideContent(context)
+                              ? SliverToBoxAdapter(
+                                  child: MusicTrackTable(
+                                    tracks: state.topTracks,
+                                    currentTrackId: currentTrackId,
+                                    showActionBar: false,
+                                    onTrackTap: (index, _) =>
+                                        PlayerNavigation.playTracksAndOpenPlayer(
+                                          context,
+                                          tracks: state.topTracks,
+                                          startIndex: index,
+                                        ),
+                                  ),
+                                )
+                              : SliverList(
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    final track = state.topTracks[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
                                       ),
-                                  onLongPress: () =>
-                                      showTrackActionsSheet(context, track),
+                                      child: MusicTrackTile.row(
+                                        isCurrent: track.id == currentTrackId,
+                                        artworkUrl: track.artworkUrl,
+                                        title: track.title,
+                                        subtitle: track.albumTitle,
+                                        onTap: () =>
+                                            PlayerNavigation.playTracksAndOpenPlayer(
+                                              context,
+                                              tracks: state.topTracks,
+                                              startIndex: index,
+                                            ),
+                                        onLongPress: () =>
+                                            showTrackActionsSheet(
+                                              context,
+                                              track,
+                                            ),
+                                      ),
+                                    );
+                                  }, childCount: state.topTracks.length),
                                 ),
-                              );
-                            }, childCount: state.topTracks.length),
-                          ),
                         ),
                       ],
                       if (state.albums.isNotEmpty) ...[
@@ -180,7 +191,7 @@ class _ArtistDetailView extends StatelessWidget {
                               index,
                             ) {
                               final album = state.albums[index];
-                              return MusicAlbumCompactCard(
+                              return MusicAlbumGridCard(
                                 album: album,
                                 onTap: () => context.push(
                                   '/album/${album.id}',

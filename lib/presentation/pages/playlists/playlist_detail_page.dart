@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/page_lay
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -100,38 +101,49 @@ class _PlaylistDetailView extends StatelessWidget {
                                     context,
                                     bottom: state.isLoadingMore ? 12 : 28,
                                   ),
-                                  sliver: SliverList(
-                                    delegate: SliverChildBuilderDelegate((
-                                      context,
-                                      index,
-                                    ) {
-                                      final track = state.tracks[index];
-                                      final isWide =
-                                          AppBreakpoints.usesWideContent(
-                                            context,
-                                          );
-                                      return _PlaylistTrackRow(
-                                        isFirst:
-                                            index == 0 &&
-                                            (isWide || state.tracks.isNotEmpty),
-                                        isLast:
-                                            index == state.tracks.length - 1 &&
-                                            !state.isLoadingMore,
-                                        isWide: isWide,
-                                        child: MusicTrackTile.row(
-                                          isCurrent: track.id == currentTrackId,
-                                          artworkUrl: track.artworkUrl,
-                                          title: track.title,
-                                          subtitle:
-                                              '${track.artistName} · ${track.albumTitle}',
-                                          onTap: () => _playPlaylistFromIndex(
+                                  sliver:
+                                      AppBreakpoints.usesWideContent(context)
+                                      ? SliverToBoxAdapter(
+                                          child: MusicTrackTable(
+                                            tracks: state.tracks,
+                                            currentTrackId: currentTrackId,
+                                            showActionBar: false,
+                                            onTrackTap: (index, _) =>
+                                                _playPlaylistFromIndex(
+                                                  context,
+                                                  index,
+                                                ),
+                                          ),
+                                        )
+                                      : SliverList(
+                                          delegate: SliverChildBuilderDelegate((
                                             context,
                                             index,
-                                          ),
+                                          ) {
+                                            final track = state.tracks[index];
+                                            return _PlaylistTrackRow(
+                                              isFirst: index == 0,
+                                              isLast:
+                                                  index ==
+                                                      state.tracks.length - 1 &&
+                                                  !state.isLoadingMore,
+                                              isWide: false,
+                                              child: MusicTrackTile.row(
+                                                isCurrent:
+                                                    track.id == currentTrackId,
+                                                artworkUrl: track.artworkUrl,
+                                                title: track.title,
+                                                subtitle:
+                                                    '${track.artistName} · ${track.albumTitle}',
+                                                onTap: () =>
+                                                    _playPlaylistFromIndex(
+                                                      context,
+                                                      index,
+                                                    ),
+                                              ),
+                                            );
+                                          }, childCount: state.tracks.length),
                                         ),
-                                      );
-                                    }, childCount: state.tracks.length),
-                                  ),
                                 ),
                       },
                       if (state.status == PlaylistDetailStatus.success &&
@@ -230,73 +242,60 @@ class _PlaylistHero extends StatelessWidget {
         final isWide = AppBreakpoints.usesWideContentWidth(
           constraints.maxWidth,
         );
-        final coverSize = isWide ? 220.0 : 128.0;
         final titleStyle = isWide
             ? theme.textTheme.headlineMedium
             : theme.textTheme.headlineSmall;
 
-        return Padding(
-          padding: EdgeInsets.fromLTRB(0, isWide ? 8 : 10, 0, isWide ? 8 : 4),
-          child: Flex(
-            direction: isWide ? Axis.horizontal : Axis.horizontal,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _PlaylistHeroArtwork(
-                imageUrl: playlist?.artworkUrl ?? '',
-                size: coverSize,
-              ),
-              SizedBox(width: isWide ? 28 : 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+        return AppDetailHeroFrame(
+          padding: isWide
+              ? const EdgeInsets.all(22)
+              : const EdgeInsets.fromLTRB(0, 10, 0, 4),
+          compactGap: 18,
+          spacing: 28,
+          coverBuilder: (context, isWide) {
+            return _PlaylistHeroArtwork(
+              imageUrl: playlist?.artworkUrl ?? '',
+              size: isWide ? 220 : 128,
+            );
+          },
+          contentBuilder: (context, isWide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        const MetaPill(label: '歌单', size: MetaPillSize.compact),
-                        MetaPill(
-                          label:
-                              '${tracksCount == 0 ? (playlist?.trackCount ?? 0) : tracksCount} 首',
-                          size: MetaPillSize.compact,
-                        ),
-                      ],
+                    const MetaPill(label: '歌单', size: MetaPillSize.compact),
+                    MetaPill(
+                      label:
+                          '${tracksCount == 0 ? (playlist?.trackCount ?? 0) : tracksCount} 首',
+                      size: MetaPillSize.compact,
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      playlist?.name ?? '歌单详情',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    if (!isWide) ...[
-                      const SizedBox(height: 10),
-                      PlayAllButton(
-                        onPressed: tracksCount == 0 || isLoading
-                            ? null
-                            : onPlayAll,
-                        isLoading: isLoading,
-                      ),
-                    ],
-                    if (isWide) ...[
-                      const SizedBox(height: 24),
-                      PlayAllButton(
-                        variant: PlayAllButtonVariant.primary,
-                        onPressed: tracksCount == 0 || isLoading
-                            ? null
-                            : onPlayAll,
-                        isLoading: isLoading,
-                      ),
-                    ],
                   ],
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 14),
+                Text(
+                  playlist?.name ?? '歌单详情',
+                  maxLines: isWide ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                SizedBox(height: isWide ? 24 : 10),
+                PlayAllButton(
+                  variant: isWide
+                      ? PlayAllButtonVariant.primary
+                      : PlayAllButtonVariant.compact,
+                  onPressed: tracksCount == 0 || isLoading ? null : onPlayAll,
+                  isLoading: isLoading,
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -314,14 +313,14 @@ class _PlaylistHeroArtwork extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         color: colorScheme.surface.withValues(alpha: 0.24),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.42),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: AppColorTokens.darkScaffold.withValues(alpha: 0.22),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -329,7 +328,11 @@ class _PlaylistHeroArtwork extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(6),
-        child: CachedArtwork(imageUrl: imageUrl, size: size, borderRadius: 18),
+        child: CachedArtwork(
+          imageUrl: imageUrl,
+          size: size,
+          borderRadius: AppRadiusTokens.coverDetail - 4,
+        ),
       ),
     );
   }

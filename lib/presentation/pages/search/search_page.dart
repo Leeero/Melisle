@@ -14,11 +14,14 @@ import 'package:cross_platform_music_player/presentation/blocs/search/search_cub
 import 'package:cross_platform_music_player/presentation/blocs/search/search_state.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -75,6 +78,22 @@ extension _SearchScopeInfo on _SearchScope {
   }
 }
 
+List<AppScopeTabItem<_SearchScope>> _searchScopeItems(
+  SearchResults results, {
+  bool withIcons = true,
+}) {
+  return [
+    for (final scope in _visibleSearchScopes)
+      AppScopeTabItem(
+        value: scope,
+        label: scope.label,
+        count: scope.count(results),
+        icon: withIcons ? scope.icon : null,
+        semanticLabel: '查看${scope.label}结果',
+      ),
+  ];
+}
+
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key, this.initialQuery});
 
@@ -118,21 +137,16 @@ class _SearchView extends StatefulWidget {
 class _SearchViewState extends State<_SearchView> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
-  bool _focused = false;
   _SearchScope _selectedScope = _SearchScope.tracks;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery ?? '');
-    _focusNode = FocusNode()..addListener(_onFocusChange);
+    _focusNode = FocusNode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
-  }
-
-  void _onFocusChange() {
-    setState(() => _focused = _focusNode.hasFocus);
   }
 
   void _onQueryChanged(String query) {
@@ -165,7 +179,6 @@ class _SearchViewState extends State<_SearchView> {
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocusChange);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -180,7 +193,6 @@ class _SearchViewState extends State<_SearchView> {
             header: _SearchHeader(
               controller: _controller,
               focusNode: _focusNode,
-              focused: _focused,
               resultCount: state.query.trim().isEmpty || state.results.isEmpty
                   ? null
                   : state.results.totalCount,
@@ -207,7 +219,6 @@ class _SearchHeader extends StatelessWidget {
   const _SearchHeader({
     required this.controller,
     required this.focusNode,
-    required this.focused,
     required this.resultCount,
     required this.onClear,
     required this.onChanged,
@@ -216,7 +227,6 @@ class _SearchHeader extends StatelessWidget {
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final bool focused;
   final int? resultCount;
   final VoidCallback onClear;
   final ValueChanged<String> onChanged;
@@ -224,244 +234,30 @@ class _SearchHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.of(context).canPop();
-    final colorScheme = Theme.of(context).colorScheme;
-    final compact = AppBreakpoints.isCompact(context);
-
-    if (compact) {
-      return Row(
-        children: [
-          if (canPop) ...[
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: '返回',
-            ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: _SearchField(
-              controller: controller,
-              focusNode: focusNode,
-              focused: focused,
-              colorScheme: colorScheme,
-              labelText: null,
-              onClear: onClear,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-            ),
-          ),
-        ],
-      );
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final searchWidth = constraints.maxWidth >= 1180 ? 620.0 : 520.0;
 
-        return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1320),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (canPop) ...[
-                _DesktopBackButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-                const SizedBox(width: 16),
-              ],
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 236, maxWidth: 300),
-                child: AppPageTitleRow(
-                  title: '搜索',
-                  description: '查找歌曲、专辑、艺术家和歌单',
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-              const SizedBox(width: 24),
-              SizedBox(
-                width: searchWidth,
-                child: _SearchField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  focused: focused,
-                  colorScheme: colorScheme,
-                  dense: true,
-                  hintText: '搜索音乐库',
-                  onClear: onClear,
-                  onChanged: onChanged,
-                  onSubmitted: onSubmitted,
-                ),
-              ),
-              const Spacer(),
-              if (resultCount != null)
-                MetaPill(label: '$resultCount 项', size: MetaPillSize.compact),
-            ],
+        return AppPageHeader(
+          title: '搜索',
+          description: '查找歌曲、专辑、艺术家和歌单',
+          centerWidth: searchWidth,
+          center: AppSearchField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            dense: true,
+            hintText: '搜索音乐库',
+            semanticLabel: '搜索音乐库',
+            onClear: onClear,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
           ),
+          trailing: resultCount == null
+              ? null
+              : MetaPill(label: '$resultCount 项', size: MetaPillSize.compact),
         );
       },
-    );
-  }
-}
-
-class _DesktopBackButton extends StatelessWidget {
-  const _DesktopBackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return IconButton(
-      icon: const Icon(Icons.arrow_back_rounded, size: 22),
-      tooltip: '返回',
-      onPressed: onPressed,
-      style:
-          IconButton.styleFrom(
-            fixedSize: const Size.square(40),
-            minimumSize: const Size.square(40),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            backgroundColor: Colors.transparent,
-            foregroundColor: colorScheme.onSurfaceVariant,
-            side: BorderSide.none,
-            shape: const CircleBorder(),
-          ).copyWith(
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return colorScheme.primary.withValues(alpha: 0.10);
-              }
-              if (states.contains(WidgetState.hovered) ||
-                  states.contains(WidgetState.focused)) {
-                return colorScheme.onSurface.withValues(alpha: 0.06);
-              }
-              return Colors.transparent;
-            }),
-          ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.focusNode,
-    required this.focused,
-    required this.colorScheme,
-    required this.onClear,
-    required this.onChanged,
-    required this.onSubmitted,
-    this.labelText,
-    this.hintText = '歌曲 / 专辑 / 艺术家 / 歌单',
-    this.dense = false,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool focused;
-  final ColorScheme colorScheme;
-  final String? labelText;
-  final VoidCallback onClear;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final String hintText;
-  final bool dense;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: '搜索音乐库',
-      textField: true,
-      child: AnimatedContainer(
-        duration: AppMotion.micro,
-        curve: AppMotion.enter,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadiusTokens.input),
-          boxShadow: focused
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.08),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : const <BoxShadow>[],
-        ),
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            labelText: labelText,
-            hintText: hintText,
-            isDense: dense,
-            contentPadding: dense
-                ? const EdgeInsets.symmetric(horizontal: 0, vertical: 14)
-                : null,
-            prefixIcon: Icon(Icons.search_rounded, size: dense ? 22 : null),
-            prefixIconConstraints: dense
-                ? const BoxConstraints(minWidth: 46, minHeight: 46)
-                : null,
-            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: controller,
-              builder: (context, value, _) {
-                if (value.text.isEmpty) return const SizedBox.shrink();
-                return IconButton(
-                  icon: Icon(Icons.close_rounded, size: dense ? 18 : 20),
-                  tooltip: '清空搜索',
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 44,
-                    height: 44,
-                  ),
-                  style:
-                      IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: colorScheme.onSurfaceVariant,
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide.none,
-                        shape: const CircleBorder(),
-                      ).copyWith(
-                        overlayColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.pressed)) {
-                            return colorScheme.primary.withValues(alpha: 0.10);
-                          }
-                          if (states.contains(WidgetState.hovered) ||
-                              states.contains(WidgetState.focused)) {
-                            return colorScheme.onSurface.withValues(
-                              alpha: 0.05,
-                            );
-                          }
-                          return Colors.transparent;
-                        }),
-                      ),
-                  onPressed: onClear,
-                );
-              },
-            ),
-            suffixIconConstraints: dense
-                ? const BoxConstraints(minWidth: 44, minHeight: 44)
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.input),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.input),
-              borderSide: BorderSide(color: colorScheme.primary),
-            ),
-            filled: true,
-            fillColor: focused
-                ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.86)
-                : colorScheme.surfaceContainerHigh,
-          ),
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-        ),
-      ),
     );
   }
 }
@@ -570,10 +366,12 @@ class _SearchResultsContent extends StatelessWidget {
                 children: [
                   _DesktopSearchOverview(query: query, results: results),
                   const SizedBox(height: 18),
-                  _DesktopSearchScopeTabs(
-                    results: results,
-                    selectedScope: selectedScope,
-                    onScopeChanged: onScopeChanged,
+                  AppScopeTabs<_SearchScope>(
+                    semanticLabel: '搜索结果分类',
+                    variant: AppScopeTabsVariant.underline,
+                    items: _searchScopeItems(results, withIcons: false),
+                    selectedValue: selectedScope,
+                    onChanged: onScopeChanged,
                   ),
                   const SizedBox(height: 18),
                   if (isLoading) const _SearchLoadingBanner(),
@@ -673,251 +471,6 @@ class _DesktopSearchOverview extends StatelessWidget {
   }
 }
 
-class _DesktopSearchScopeTabs extends StatelessWidget {
-  const _DesktopSearchScopeTabs({
-    required this.results,
-    required this.selectedScope,
-    required this.onScopeChanged,
-  });
-
-  final SearchResults results;
-  final _SearchScope selectedScope;
-  final ValueChanged<_SearchScope> onScopeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.68),
-          ),
-        ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final scope in _visibleSearchScopes)
-              _DesktopSearchScopeTab(
-                label: '${scope.label} ${scope.count(results)}',
-                selected: selectedScope == scope,
-                onPressed: () => onScopeChanged(scope),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DesktopSearchScopeTab extends StatefulWidget {
-  const _DesktopSearchScopeTab({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  State<_DesktopSearchScopeTab> createState() => _DesktopSearchScopeTabState();
-}
-
-class _DesktopSearchScopeTabState extends State<_DesktopSearchScopeTab> {
-  bool _hovered = false;
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final active = widget.selected || _hovered || _focused;
-
-    return Semantics(
-      button: true,
-      selected: widget.selected,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onPressed,
-            onFocusChange: (value) => setState(() => _focused = value),
-            hoverColor: Colors.transparent,
-            focusColor: colorScheme.primary.withValues(alpha: 0.06),
-            child: AnimatedContainer(
-              duration: AppMotion.micro,
-              curve: AppMotion.enter,
-              constraints: const BoxConstraints(minWidth: 116),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              height: 48,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    width: widget.selected ? 2.5 : 2,
-                    color: widget.selected
-                        ? colorScheme.primary
-                        : Colors.transparent,
-                  ),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                widget.label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: widget.selected
-                      ? colorScheme.primary
-                      : active
-                      ? colorScheme.onSurface
-                      : colorScheme.onSurfaceVariant,
-                  fontWeight: widget.selected
-                      ? FontWeight.w700
-                      : FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchScopeBar extends StatelessWidget {
-  const _SearchScopeBar({
-    required this.results,
-    required this.selectedScope,
-    required this.onScopeChanged,
-  });
-
-  final SearchResults results;
-  final _SearchScope selectedScope;
-  final ValueChanged<_SearchScope> onScopeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: '搜索结果分类',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: [
-            for (final scope in _visibleSearchScopes) ...[
-              _SearchScopeButton(
-                scope: scope,
-                count: scope.count(results),
-                selected: selectedScope == scope,
-                onPressed: () => onScopeChanged(scope),
-              ),
-              if (scope != _visibleSearchScopes.last) const SizedBox(width: 8),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchScopeButton extends StatefulWidget {
-  const _SearchScopeButton({
-    required this.scope,
-    required this.count,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final _SearchScope scope;
-  final int count;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  State<_SearchScopeButton> createState() => _SearchScopeButtonState();
-}
-
-class _SearchScopeButtonState extends State<_SearchScopeButton> {
-  bool _hovered = false;
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final highlighted = widget.selected || _hovered || _focused;
-    const height = 44.0;
-    const iconSize = 18.0;
-    const horizontalPadding = 16.0;
-
-    return Semantics(
-      button: true,
-      selected: widget.selected,
-      label: '查看${widget.scope.label}结果',
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: AppMotion.micro,
-          curve: AppMotion.enter,
-          height: height,
-          decoration: BoxDecoration(
-            color: widget.selected
-                ? colorScheme.primaryContainer.withValues(alpha: 0.82)
-                : colorScheme.surface.withValues(
-                    alpha: highlighted ? 0.7 : 0.5,
-                  ),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: widget.selected
-                  ? colorScheme.primary.withValues(alpha: 0.5)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.72),
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              hoverColor: Colors.transparent,
-              focusColor: colorScheme.primary.withValues(alpha: 0.08),
-              onFocusChange: (focused) => setState(() => _focused = focused),
-              onTap: widget.onPressed,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      widget.scope.icon,
-                      size: iconSize,
-                      color: widget.selected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${widget.scope.label} ${widget.count}',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: widget.selected
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ScopedNoResults extends StatelessWidget {
   const _ScopedNoResults({required this.selectedScope});
 
@@ -945,11 +498,11 @@ class _SearchFailureState extends StatelessWidget {
         icon: Icons.wifi_off_rounded,
         title: '服务器暂时没有响应',
         message: '请检查连接状态，然后重试搜索。',
-        action: TextButton.icon(
+        action: AppActionButton(
           onPressed: onRetry,
-          icon: const Icon(Icons.refresh_rounded),
-          label: const Text('重试'),
-          style: _minimalSearchButtonStyle(context, primary: true),
+          icon: Icons.refresh_rounded,
+          label: '重试',
+          tone: AppActionButtonTone.primary,
         ),
       ),
     );
@@ -1162,10 +715,12 @@ class _CompactSearchResults extends StatelessWidget {
             14,
           ),
           sliver: SliverToBoxAdapter(
-            child: _SearchScopeBar(
-              results: results,
-              selectedScope: selectedScope,
-              onScopeChanged: onScopeChanged,
+            child: AppScopeTabs<_SearchScope>(
+              semanticLabel: '搜索结果分类',
+              variant: AppScopeTabsVariant.pill,
+              items: _searchScopeItems(results),
+              selectedValue: selectedScope,
+              onChanged: onScopeChanged,
             ),
           ),
         ),
@@ -1657,7 +1212,30 @@ class _TrackSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dense) {
-      return _DesktopTrackTable(tracks: tracks);
+      return MusicTrackTable(
+        tracks: tracks,
+        onTrackTap: (index, _) => unawaited(
+          PlayerNavigation.playTracksAndOpenPlayer(
+            context,
+            tracks: tracks,
+            startIndex: index,
+          ),
+        ),
+        onPlayAll: tracks.isEmpty
+            ? null
+            : () => unawaited(
+                PlayerNavigation.playTracksAndOpenPlayer(
+                  context,
+                  tracks: tracks,
+                  startIndex: 0,
+                ),
+              ),
+        onAddAllToQueue: tracks.isEmpty
+            ? null
+            : () => unawaited(_addTracksToQueue(context, tracks)),
+        onAddTrackToQueue: (track) =>
+            unawaited(_addTracksToQueue(context, [track])),
+      );
     }
 
     return _EntitySection(
@@ -1693,457 +1271,6 @@ class _TrackSection extends StatelessWidget {
   }
 }
 
-class _DesktopTrackTable extends StatelessWidget {
-  const _DesktopTrackTable({required this.tracks});
-
-  final List<MusicTrack> tracks;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DesktopTrackActionBar(tracks: tracks),
-        const SizedBox(height: 12),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.56),
-              ),
-            ),
-          ),
-          child: Column(
-            children: [
-              const _DesktopTrackTableHeader(),
-              for (var i = 0; i < tracks.length; i++)
-                _DesktopTrackTableRow(
-                  index: i,
-                  track: tracks[i],
-                  tracks: tracks,
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DesktopTrackActionBar extends StatelessWidget {
-  const _DesktopTrackActionBar({required this.tracks});
-
-  final List<MusicTrack> tracks;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        MetaPill(label: '${tracks.length} 首', size: MetaPillSize.compact),
-        const Spacer(),
-        TextButton.icon(
-          onPressed: tracks.isEmpty
-              ? null
-              : () => unawaited(
-                  PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: tracks,
-                    startIndex: 0,
-                  ),
-                ),
-          icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text('播放全部'),
-          style: _minimalSearchButtonStyle(context, primary: true),
-        ),
-        const SizedBox(width: 6),
-        TextButton.icon(
-          onPressed: tracks.isEmpty
-              ? null
-              : () => unawaited(_addTracksToQueue(context, tracks)),
-          icon: const Icon(Icons.playlist_add_rounded),
-          label: const Text('加入队列'),
-          style: _minimalSearchButtonStyle(
-            context,
-            foregroundColor: colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DesktopTrackTableHeader extends StatelessWidget {
-  const _DesktopTrackTableHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final labelStyle = theme.textTheme.labelMedium?.copyWith(
-      color: colorScheme.onSurfaceVariant,
-      fontWeight: FontWeight.w600,
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final showArtist = constraints.maxWidth >= 760;
-        final showAlbum = constraints.maxWidth >= 620;
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 36,
-                child: Text(
-                  '#',
-                  style: labelStyle,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const SizedBox(width: 44),
-              const SizedBox(width: 12),
-              Expanded(flex: 4, child: Text('歌曲 / 歌手', style: labelStyle)),
-              if (showArtist) ...[
-                const SizedBox(width: 16),
-                Expanded(flex: 2, child: Text('歌手', style: labelStyle)),
-              ],
-              if (showAlbum) ...[
-                const SizedBox(width: 16),
-                Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
-              ],
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 58,
-                child: Text(
-                  '时长',
-                  style: labelStyle,
-                  textAlign: TextAlign.right,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const SizedBox(width: 36),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _DesktopTrackTableRow extends StatefulWidget {
-  const _DesktopTrackTableRow({
-    required this.index,
-    required this.track,
-    required this.tracks,
-  });
-
-  final int index;
-  final MusicTrack track;
-  final List<MusicTrack> tracks;
-
-  @override
-  State<_DesktopTrackTableRow> createState() => _DesktopTrackTableRowState();
-}
-
-class _DesktopTrackTableRowState extends State<_DesktopTrackTableRow> {
-  bool _hovered = false;
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final highlighted = _hovered || _focused;
-    final track = widget.track;
-    final indexLabel = (widget.index + 1).toString().padLeft(2, '0');
-
-    return Semantics(
-      label: '播放《${track.title}》',
-      button: true,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        opaque: true,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 1),
-          child: Material(
-            color: highlighted
-                ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.74)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              focusColor: colorScheme.primary.withValues(alpha: 0.08),
-              hoverColor: Colors.transparent,
-              splashColor: colorScheme.primary.withValues(alpha: 0.06),
-              highlightColor: Colors.transparent,
-              onFocusChange: (value) => setState(() => _focused = value),
-              onTap: () => unawaited(
-                PlayerNavigation.playTracksAndOpenPlayer(
-                  context,
-                  tracks: widget.tracks,
-                  startIndex: widget.index,
-                ),
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final showArtist = constraints.maxWidth >= 760;
-                  final showAlbum = constraints.maxWidth >= 620;
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 36,
-                          child: Center(
-                            child: highlighted
-                                ? Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: 20,
-                                    color: colorScheme.primary,
-                                  )
-                                : Text(
-                                    indexLabel,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontFeatures: const [
-                                        ui.FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        CachedArtwork(
-                          imageUrl: track.artworkUrl,
-                          size: 44,
-                          borderRadius: 10,
-                          semanticLabel: '《${track.title}》封面',
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 4,
-                          child: _TrackTitleCell(
-                            track: track,
-                            showSubtitle: !showArtist,
-                          ),
-                        ),
-                        if (showArtist) ...[
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: _DesktopTableText(track.artistName),
-                          ),
-                        ],
-                        if (showAlbum) ...[
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 3,
-                            child: _DesktopTableText(track.albumTitle),
-                          ),
-                        ],
-                        const SizedBox(width: 16),
-                        SizedBox(
-                          width: 58,
-                          child: Text(
-                            _formatTrackDuration(track.duration),
-                            textAlign: TextAlign.right,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontFeatures: const [
-                                ui.FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 36,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              _DesktopTrackIconButton(
-                                icon: Icons.playlist_add_rounded,
-                                tooltip: '加入队列',
-                                onPressed: () => unawaited(
-                                  _addTracksToQueue(context, [track]),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TrackTitleCell extends StatelessWidget {
-  const _TrackTitleCell({required this.track, required this.showSubtitle});
-
-  final MusicTrack track;
-  final bool showSubtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                track.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (track.codec?.toLowerCase() == 'flac') ...[
-              const SizedBox(width: 8),
-              MetaPill(label: 'FLAC', size: MetaPillSize.compact),
-            ],
-          ],
-        ),
-        if (showSubtitle) ...[
-          const SizedBox(height: 3),
-          Text(
-            '${track.artistName} · ${track.albumTitle}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _DesktopTableText extends StatelessWidget {
-  const _DesktopTableText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}
-
-class _DesktopTrackIconButton extends StatelessWidget {
-  const _DesktopTrackIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SizedBox.square(
-      dimension: 36,
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        tooltip: tooltip,
-        padding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
-        style:
-            IconButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: colorScheme.onSurfaceVariant,
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              side: BorderSide.none,
-              shape: const CircleBorder(),
-            ).copyWith(
-              overlayColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.pressed)) {
-                  return colorScheme.primary.withValues(alpha: 0.10);
-                }
-                if (states.contains(WidgetState.hovered) ||
-                    states.contains(WidgetState.focused)) {
-                  return colorScheme.onSurface.withValues(alpha: 0.05);
-                }
-                return Colors.transparent;
-              }),
-            ),
-      ),
-    );
-  }
-}
-
-ButtonStyle _minimalSearchButtonStyle(
-  BuildContext context, {
-  bool primary = false,
-  Color? foregroundColor,
-}) {
-  final colorScheme = Theme.of(context).colorScheme;
-  final resolvedForeground =
-      foregroundColor ??
-      (primary ? colorScheme.primary : colorScheme.onSurfaceVariant);
-
-  return TextButton.styleFrom(
-    foregroundColor: resolvedForeground,
-    disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.34),
-    backgroundColor: Colors.transparent,
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    minimumSize: const Size(0, 36),
-    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    textStyle: Theme.of(
-      context,
-    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-  ).copyWith(
-    overlayColor: WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.pressed)) {
-        return resolvedForeground.withValues(alpha: 0.10);
-      }
-      if (states.contains(WidgetState.hovered) ||
-          states.contains(WidgetState.focused)) {
-        return resolvedForeground.withValues(alpha: 0.06);
-      }
-      return Colors.transparent;
-    }),
-  );
-}
-
 Future<void> _addTracksToQueue(
   BuildContext context,
   List<MusicTrack> tracks,
@@ -2166,12 +1293,6 @@ Future<void> _addTracksToQueue(
         duration: const Duration(seconds: 2),
       ),
     );
-}
-
-String _formatTrackDuration(Duration duration) {
-  final minutes = duration.inMinutes;
-  final seconds = duration.inSeconds % 60;
-  return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 }
 
 int _artistGridCount(double width) {

@@ -138,7 +138,7 @@ class _CompactMiniPlayer extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Semantics(
-      label: '当前播放：$trackTitle，$artistName。双击展开播放页。',
+      label: '当前播放：$trackTitle，$artistName。点击展开播放页。',
       button: true,
       child: Material(
         color: Colors.transparent,
@@ -315,7 +315,7 @@ class _MiniTrackButton extends StatelessWidget {
     );
 
     return Semantics(
-      label: '展开全屏播放器',
+      label: '当前播放：$trackTitle，$artistName。点击展开播放器。',
       button: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadiusTokens.card),
@@ -471,6 +471,8 @@ class _MiniVolumeControl extends StatelessWidget {
                   buildWhen: (prev, next) => prev.volume != next.volume,
                   builder: (context, state) => Slider(
                     value: state.volume,
+                    semanticFormatterCallback: (value) =>
+                        '音量 ${_volumePercent(value)}%',
                     onChanged: context.read<PlayerCubit>().setVolume,
                   ),
                 ),
@@ -535,6 +537,8 @@ class _MiniTimelineState extends State<_MiniTimeline> {
             child: Slider(
               value: sliderValue,
               max: effectiveMax,
+              semanticFormatterCallback: (value) =>
+                  '播放进度 ${_format(Duration(milliseconds: value.round()))}',
               onChangeStart: (value) {
                 setState(() {
                   _dragging = true;
@@ -666,6 +670,8 @@ String _playbackModeLabel(PlaybackModeOption mode) {
     PlaybackModeOption.shuffle => '随机播放',
   };
 }
+
+int _volumePercent(double volume) => (volume.clamp(0, 1) * 100).round();
 
 String _format(Duration duration) {
   final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');

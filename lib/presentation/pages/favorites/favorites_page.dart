@@ -9,7 +9,9 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -93,17 +95,58 @@ class _FavoritesViewState extends State<_FavoritesView> {
     }
 
     if (state.status == FavoritesListStatus.failure && state.tracks.isEmpty) {
-      return AppBodyStateView.message(message: state.errorMessage ?? '加载收藏失败');
+      return AppBodyStateView.message(
+        message: '收藏加载失败',
+        description: state.errorMessage,
+        icon: Icons.error_outline_rounded,
+      );
     }
 
     if (state.tracks.isEmpty) {
       return AppBodyStateView.message(
-        message: '还没有收藏歌曲，去媒体库挑几首喜欢的吧。',
+        message: '还没有收藏歌曲',
+        description: '在媒体库或播放页点亮爱心后，歌曲会集中显示在这里。',
+        icon: Icons.favorite_border_rounded,
         action: FilledButton.icon(
           onPressed: () => context.go('/library'),
           icon: const Icon(Icons.library_music_rounded),
           label: const Text('去媒体库看看'),
         ),
+      );
+    }
+
+    if (AppBreakpoints.usesWideContent(context)) {
+      return ListView(
+        controller: _scrollController,
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          0,
+          horizontalPadding,
+          24,
+        ),
+        children: [
+          MusicTrackTable(
+            tracks: state.tracks,
+            currentTrackId: currentTrackId,
+            trackCountLabel: '${state.tracks.length} 首',
+            onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
+              context,
+              tracks: state.tracks,
+              startIndex: index,
+            ),
+            onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
+              context,
+              loadedTracks: state.tracks,
+              allLoaded: !state.hasMore,
+              fetchAll: () => context
+                  .read<MusicRepository>()
+                  .fetchFavoriteTracks(limit: 500, startIndex: 0),
+            ),
+            trailingBuilder: (context, track, _) =>
+                _FavoriteTrackActionButton(track: track, compact: true),
+          ),
+          _FavoritesPaginationFooter(state: state),
+        ],
       );
     }
 
@@ -113,19 +156,7 @@ class _FavoritesViewState extends State<_FavoritesView> {
       itemCount: state.tracks.length + 1,
       itemBuilder: (context, index) {
         if (index == state.tracks.length) {
-          if (state.isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (!state.hasMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: Text('已经到底了')),
-            );
-          }
-          return const SizedBox(height: 12);
+          return _FavoritesPaginationFooter(state: state);
         }
 
         final track = state.tracks[index];
@@ -159,35 +190,31 @@ class _FavoritesHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => context.go('/home'),
-          icon: const Icon(Icons.home_rounded),
-          tooltip: '回到首页',
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: AppPageTitleRow(
-            title: '收藏',
-            badge: MetaPill(label: '$count 首', size: MetaPillSize.compact),
-            action: count > 0
-                ? PlayAllButton(
-                    variant: PlayAllButtonVariant.iconOnly,
-                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                      context,
-                      loadedTracks: tracks,
-                      allLoaded: !hasMore,
-                      fetchAll: () => context
-                          .read<MusicRepository>()
-                          .fetchFavoriteTracks(limit: 500, startIndex: 0),
-                    ),
-                  )
-                : null,
-            padding: EdgeInsets.zero,
-          ),
-        ),
-      ],
+    return AppPageHeader(
+      title: '收藏',
+      description: '你标记喜欢的歌曲',
+      leading: AppBackButton(onPressed: () => context.go('/home')),
+      automaticImplyLeading: false,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MetaPill(label: '$count 首', size: MetaPillSize.compact),
+          if (count > 0) ...[
+            const SizedBox(width: 10),
+            PlayAllButton(
+              variant: PlayAllButtonVariant.iconOnly,
+              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                context,
+                loadedTracks: tracks,
+                allLoaded: !hasMore,
+                fetchAll: () => context
+                    .read<MusicRepository>()
+                    .fetchFavoriteTracks(limit: 500, startIndex: 0),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -205,14 +232,6 @@ class _FavoriteTrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isFavorite = context.select<FavoritesCubit, bool>(
-      (cubit) => cubit.isFavorite(track.id, fallback: track.isFavorite),
-    );
-    final isPending = context.select<FavoritesCubit, bool>(
-      (cubit) => cubit.state.pending.contains(track.id),
-    );
-
     return MusicTrackTile.card(
       isCurrent: track.id == currentTrackId,
       artworkUrl: track.artworkUrl,
@@ -222,26 +241,72 @@ class _FavoriteTrackCard extends StatelessWidget {
         track.albumTitle,
       ].where((item) => item.isNotEmpty).join(' · '),
       onTap: onTap,
-      extraTrailing: _PulsingFavoriteButton(
-        isPending: isPending,
-        isFavorite: isFavorite,
-        colorScheme: colorScheme,
-        onPressed: isPending
-            ? null
-            : () async {
-                final favoritesCubit = context.read<FavoritesCubit>();
-                final listCubit = context.read<FavoritesListCubit>();
-                await favoritesCubit.toggle(track.id, currentValue: isFavorite);
-                final stillFavorite = favoritesCubit.isFavorite(
-                  track.id,
-                  fallback: track.isFavorite,
-                );
-                if (!stillFavorite) {
-                  listCubit.removeTrack(track.id);
-                }
-              },
-      ),
+      extraTrailing: _FavoriteTrackActionButton(track: track),
     );
+  }
+}
+
+class _FavoriteTrackActionButton extends StatelessWidget {
+  const _FavoriteTrackActionButton({required this.track, this.compact = false});
+
+  final MusicTrack track;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isFavorite = context.select<FavoritesCubit, bool>(
+      (cubit) => cubit.isFavorite(track.id, fallback: track.isFavorite),
+    );
+    final isPending = context.select<FavoritesCubit, bool>(
+      (cubit) => cubit.state.pending.contains(track.id),
+    );
+
+    return _PulsingFavoriteButton(
+      isPending: isPending,
+      isFavorite: isFavorite,
+      colorScheme: colorScheme,
+      compact: compact,
+      onPressed: isPending
+          ? null
+          : () async {
+              final favoritesCubit = context.read<FavoritesCubit>();
+              final listCubit = context.read<FavoritesListCubit>();
+              await favoritesCubit.toggle(track.id, currentValue: isFavorite);
+              final stillFavorite = favoritesCubit.isFavorite(
+                track.id,
+                fallback: track.isFavorite,
+              );
+              if (!stillFavorite) {
+                listCubit.removeTrack(track.id);
+              }
+            },
+    );
+  }
+}
+
+class _FavoritesPaginationFooter extends StatelessWidget {
+  const _FavoritesPaginationFooter({required this.state});
+
+  final FavoritesListState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!state.hasMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text('已经到底了', style: Theme.of(context).textTheme.bodySmall),
+        ),
+      );
+    }
+    return const SizedBox(height: 12);
   }
 }
 
@@ -251,12 +316,14 @@ class _PulsingFavoriteButton extends StatefulWidget {
     required this.isFavorite,
     required this.colorScheme,
     required this.onPressed,
+    this.compact = false,
   });
 
   final bool isPending;
   final bool isFavorite;
   final ColorScheme colorScheme;
   final VoidCallback? onPressed;
+  final bool compact;
 
   @override
   State<_PulsingFavoriteButton> createState() => _PulsingFavoriteButtonState();
@@ -300,28 +367,44 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
 
   @override
   Widget build(BuildContext context) {
+    const dimension = 44.0;
+    final iconSize = widget.compact ? 18.0 : 22.0;
+
     return ScaleTransition(
       scale: _scaleAnimation,
-      child: IconButton(
-        tooltip: '取消收藏',
-        onPressed: widget.onPressed,
-        icon: widget.isPending
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: widget.colorScheme.primary,
+      child: SizedBox.square(
+        dimension: dimension,
+        child: IconButton(
+          tooltip: '取消收藏',
+          onPressed: widget.onPressed,
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.padded,
+            side: BorderSide.none,
+            shape: const CircleBorder(),
+          ),
+          icon: widget.isPending
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: widget.colorScheme.primary,
+                  ),
+                )
+              : Icon(
+                  widget.isFavorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  size: iconSize,
+                  color: widget.isFavorite
+                      ? widget.colorScheme.error
+                      : widget.colorScheme.onSurfaceVariant,
                 ),
-              )
-            : Icon(
-                widget.isFavorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                color: widget.isFavorite
-                    ? widget.colorScheme.error
-                    : widget.colorScheme.onSurfaceVariant,
-              ),
+        ),
       ),
     );
   }

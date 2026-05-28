@@ -7,7 +7,9 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -58,11 +60,46 @@ class _HistoryView extends StatelessWidget {
     }
 
     if (state.status == HistoryStatus.failure && state.tracks.isEmpty) {
-      return AppBodyStateView.message(message: state.errorMessage ?? '加载历史失败');
+      return AppBodyStateView.message(
+        message: '播放历史加载失败',
+        description: state.errorMessage,
+        icon: Icons.error_outline_rounded,
+      );
     }
 
     if (state.tracks.isEmpty) {
-      return const AppBodyStateView.message(message: '还没有播放历史，先放一首歌吧。');
+      return const AppBodyStateView.message(
+        message: '还没有播放历史',
+        description: '开始播放后，最近听过的歌曲会自动记录在这里。',
+        icon: Icons.history_rounded,
+      );
+    }
+
+    if (AppBreakpoints.usesWideContent(context)) {
+      return ListView(
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          0,
+          horizontalPadding,
+          24,
+        ),
+        children: [
+          MusicTrackTable(
+            tracks: state.tracks,
+            currentTrackId: currentTrackId,
+            trackCountLabel: '${state.tracks.length} 条',
+            showActionBar: false,
+            onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
+              context,
+              tracks: state.tracks,
+              startIndex: index,
+            ),
+            trailingBuilder: (context, track, _) => _HistoryPlayedAtButton(
+              label: _formatLastPlayed(track.lastPlayedAt),
+            ),
+          ),
+        ],
+      );
     }
 
     return ListView.builder(
@@ -95,33 +132,29 @@ class _HistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => context.go('/home'),
-          icon: const Icon(Icons.home_rounded),
-          tooltip: '回到首页',
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: AppPageTitleRow(
-            title: '播放历史',
-            badge: MetaPill(label: '$count 条', size: MetaPillSize.compact),
-            action: count > 0
-                ? PlayAllButton(
-                    variant: PlayAllButtonVariant.iconOnly,
-                    onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                      context,
-                      loadedTracks: tracks,
-                      allLoaded: true,
-                      fetchAll: () async => tracks,
-                    ),
-                  )
-                : null,
-            padding: EdgeInsets.zero,
-          ),
-        ),
-      ],
+    return AppPageHeader(
+      title: '播放历史',
+      description: '最近听过的歌曲',
+      leading: AppBackButton(onPressed: () => context.go('/home')),
+      automaticImplyLeading: false,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MetaPill(label: '$count 条', size: MetaPillSize.compact),
+          if (count > 0) ...[
+            const SizedBox(width: 10),
+            PlayAllButton(
+              variant: PlayAllButtonVariant.iconOnly,
+              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+                context,
+                loadedTracks: tracks,
+                allLoaded: true,
+                fetchAll: () async => tracks,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -152,13 +185,34 @@ class _HistoryTrackCard extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
 
-  String _formatLastPlayed(DateTime? value) {
-    if (value == null) return '播放时间未知';
-    final month = value.month.toString().padLeft(2, '0');
-    final day = value.day.toString().padLeft(2, '0');
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$month-$day $hour:$minute';
+class _HistoryPlayedAtButton extends StatelessWidget {
+  const _HistoryPlayedAtButton({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: SizedBox.square(
+        dimension: 36,
+        child: Icon(
+          Icons.history_rounded,
+          size: 18,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
   }
+}
+
+String _formatLastPlayed(DateTime? value) {
+  if (value == null) return '播放时间未知';
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  final hour = value.hour.toString().padLeft(2, '0');
+  final minute = value.minute.toString().padLeft(2, '0');
+  return '$month-$day $hour:$minute';
 }

@@ -14,11 +14,13 @@ import 'package:cross_platform_music_player/presentation/blocs/library/library_s
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -98,11 +100,7 @@ class _LibraryViewState extends State<_LibraryView> {
           length: 4,
           initialIndex: state.currentFilter.index,
           child: AppContentPage(
-            header: _LibraryHeader(
-              state: state,
-              controller: _searchController,
-              tracks: state.tracks,
-            ),
+            header: _LibraryHeader(state: state, controller: _searchController),
             body: _buildBody(context, state, horizontalPadding, currentTrackId),
           ),
         );
@@ -198,43 +196,24 @@ class _LibraryViewState extends State<_LibraryView> {
         sliver: SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
-              child: _TrackTableActionBar(
-                trackCount: state.currentFilterCount,
-                totalTrackCount: state.totalTrackCount,
-                onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
-                  context,
-                  loadedTracks: state.tracks,
-                  allLoaded: !state.hasMore,
-                  fetchAll: () async {
-                    final result = await context
-                        .read<MusicRepository>()
-                        .fetchTracks(
-                          limit: 500,
-                          startIndex: 0,
-                          searchQuery: state.searchQuery.trim().isEmpty
-                              ? null
-                              : state.searchQuery.trim(),
-                        );
-                    return result.items;
-                  },
-                ),
+              child: MusicTrackTable(
+                tracks: state.tracks,
+                currentTrackId: currentTrackId,
+                trackCountLabel: state.totalTrackCount != null
+                    ? '${state.currentFilterCount} / ${state.totalTrackCount} 首'
+                    : '${state.currentFilterCount} 首',
+                onTrackTap: (index, _) =>
+                    PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: state.tracks,
+                      startIndex: index,
+                    ),
+                onPlayAll: () => _playAllLibraryTracks(context, state),
+                trailingBuilder: (context, track, hovered) =>
+                    hovered || track.isFavorite
+                    ? _LibraryTrackFavoriteButton(track: track)
+                    : null,
               ),
-            ),
-            const SliverToBoxAdapter(child: _TrackTableHeader()),
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final track = state.tracks[index];
-                return _TrackTableRow(
-                  index: index + 1,
-                  track: track,
-                  isCurrent: track.id == currentTrackId,
-                  onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: state.tracks,
-                    startIndex: index,
-                  ),
-                );
-              }, childCount: state.tracks.length),
             ),
           ],
         ),
@@ -249,23 +228,7 @@ class _LibraryViewState extends State<_LibraryView> {
             child: _MobileTrackActionBar(
               trackCount: state.currentFilterCount,
               totalTrackCount: state.totalTrackCount,
-              onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: state.tracks,
-                allLoaded: !state.hasMore,
-                fetchAll: () async {
-                  final result = await context
-                      .read<MusicRepository>()
-                      .fetchTracks(
-                        limit: 500,
-                        startIndex: 0,
-                        searchQuery: state.searchQuery.trim().isEmpty
-                            ? null
-                            : state.searchQuery.trim(),
-                      );
-                  return result.items;
-                },
-              ),
+              onPlayAll: () => _playAllLibraryTracks(context, state),
             ),
           ),
           SliverList(
@@ -289,6 +252,24 @@ class _LibraryViewState extends State<_LibraryView> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _playAllLibraryTracks(BuildContext context, LibraryState state) {
+    return PlayerNavigation.playAllAndOpenPlayer(
+      context,
+      loadedTracks: state.tracks,
+      allLoaded: !state.hasMore,
+      fetchAll: () async {
+        final result = await context.read<MusicRepository>().fetchTracks(
+          limit: 500,
+          startIndex: 0,
+          searchQuery: state.searchQuery.trim().isEmpty
+              ? null
+              : state.searchQuery.trim(),
+        );
+        return result.items;
+      },
     );
   }
 
@@ -541,431 +522,117 @@ class _MobileTrackActionBar extends StatelessWidget {
   }
 }
 
-class _TrackTableActionBar extends StatelessWidget {
-  const _TrackTableActionBar({
-    required this.trackCount,
-    this.totalTrackCount,
-    required this.onPlayAll,
-  });
+class _LibraryTrackFavoriteButton extends StatelessWidget {
+  const _LibraryTrackFavoriteButton({required this.track});
 
-  final int trackCount;
-  final int? totalTrackCount;
-  final VoidCallback onPlayAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
-      child: Row(
-        children: [
-          MetaPill(
-            label: totalTrackCount != null
-                ? '$trackCount / $totalTrackCount 首'
-                : '$trackCount 首',
-            size: MetaPillSize.compact,
-          ),
-          const Spacer(),
-          PlayAllButton(onPressed: onPlayAll),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrackTableHeader extends StatelessWidget {
-  const _TrackTableHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final labelStyle = theme.textTheme.labelLarge?.copyWith(
-      color: colorScheme.onSurfaceVariant,
-      fontWeight: FontWeight.w600,
-    );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 36,
-            child: Text('#', style: labelStyle, textAlign: TextAlign.center),
-          ),
-          const SizedBox(width: 12),
-          const SizedBox(width: 48),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 4,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Text('歌曲', style: labelStyle),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 200),
-              child: Text('歌手', style: labelStyle),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 3,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: Text('专辑', style: labelStyle),
-            ),
-          ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 60,
-            child: Text('时长', textAlign: TextAlign.right, style: labelStyle),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrackTableRow extends StatefulWidget {
-  const _TrackTableRow({
-    required this.index,
-    required this.track,
-    required this.isCurrent,
-    required this.onTap,
-  });
-
-  final int index;
   final MusicTrack track;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  @override
-  State<_TrackTableRow> createState() => _TrackTableRowState();
-}
-
-class _TrackTableRowState extends State<_TrackTableRow> {
-  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final indexText = widget.index.toString().padLeft(2, '0');
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Semantics(
-      label: '歌曲: ${widget.track.title}, 歌手: ${widget.track.artistName}',
-      selected: widget.isCurrent,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            color: widget.isCurrent
-                ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-                : _hovered
-                ? colorScheme.surface.withValues(alpha: 0.92)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
-            border: widget.isCurrent
-                ? Border.all(color: colorScheme.primary.withValues(alpha: 0.28))
-                : null,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              borderRadius: BorderRadius.circular(24),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 14,
-                ),
-                child: Row(
-                  children: [
-                    // Index / playing indicator / play on hover
-                    SizedBox(
-                      width: 36,
-                      child: Center(
-                        child: widget.isCurrent
-                            ? Icon(
-                                Icons.graphic_eq_rounded,
-                                size: 18,
-                                color: colorScheme.primary,
-                              )
-                            : _hovered
-                            ? Icon(
-                                Icons.play_arrow_rounded,
-                                size: 20,
-                                color: colorScheme.primary,
-                              )
-                            : Text(
-                                indexText,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Album artwork
-                    CachedArtwork(
-                      imageUrl: widget.track.artworkUrl,
-                      size: 48,
-                      borderRadius: 14,
-                    ),
-                    const SizedBox(width: 12),
-                    // Title + Hi-Res badge
-                    Expanded(
-                      flex: 4,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                widget.track.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: widget.isCurrent
-                                      ? colorScheme.primary
-                                      : colorScheme.onSurface,
-                                  fontWeight: widget.isCurrent
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (widget.track.codec?.toLowerCase() == 'flac')
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: MetaPill(
-                                  label: 'Hi-Res',
-                                  size: MetaPillSize.compact,
-                                  backgroundColor: colorScheme.tertiary
-                                      .withValues(alpha: 0.15),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Artist
-                    Expanded(
-                      flex: 2,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 200),
-                        child: Text(
-                          widget.track.artistName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Album
-                    Expanded(
-                      flex: 3,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 300),
-                        child: Text(
-                          widget.track.albumTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Duration + favorite on hover
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_hovered)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: IconButton(
-                                onPressed: () async {
-                                  final cubit = context.read<LibraryCubit>();
-                                  final messenger = ScaffoldMessenger.of(
-                                    context,
-                                  );
-                                  final isFavorite = widget.track.isFavorite;
-                                  try {
-                                    await cubit.toggleTrackFavorite(
-                                      widget.track.id,
-                                    );
-                                    if (!context.mounted) return;
-                                    messenger.clearSnackBars();
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          isFavorite ? '已取消收藏' : '已收藏歌曲',
-                                        ),
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  } catch (_) {
-                                    if (!context.mounted) return;
-                                    messenger.clearSnackBars();
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: const Text('操作失败，请重试'),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: colorScheme.error,
-                                      ),
-                                    );
-                                  }
-                                },
-                                icon: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  transitionBuilder: (child, animation) {
-                                    return ScaleTransition(
-                                      scale: animation,
-                                      child: child,
-                                    );
-                                  },
-                                  child: Icon(
-                                    widget.track.isFavorite
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
-                                    key: ValueKey(widget.track.isFavorite),
-                                    size: 18,
-                                    color: widget.track.isFavorite
-                                        ? Colors.redAccent
-                                        : colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                padding: EdgeInsets.zero,
-                                tooltip: widget.track.isFavorite
-                                    ? '取消收藏'
-                                    : '收藏',
-                                constraints: const BoxConstraints(
-                                  minWidth: 44,
-                                  minHeight: 44,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ),
-                        SizedBox(
-                          width: 60,
-                          child: Text(
-                            _formatDuration(widget.track.duration),
-                            textAlign: TextAlign.right,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+    return SizedBox.square(
+      dimension: 44,
+      child: IconButton(
+        onPressed: () async {
+          final cubit = context.read<LibraryCubit>();
+          final messenger = ScaffoldMessenger.of(context);
+          final isFavorite = track.isFavorite;
+          try {
+            await cubit.toggleTrackFavorite(track.id);
+            if (!context.mounted) return;
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(isFavorite ? '已取消收藏' : '已收藏歌曲'),
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
               ),
-            ),
+            );
+          } catch (_) {
+            if (!context.mounted) return;
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: const Text('操作失败，请重试'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: colorScheme.error,
+              ),
+            );
+          }
+        },
+        icon: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          transitionBuilder: (child, animation) =>
+              ScaleTransition(scale: animation, child: child),
+          child: Icon(
+            track.isFavorite
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            key: ValueKey(track.isFavorite),
+            size: 18,
+            color: track.isFavorite
+                ? Colors.redAccent
+                : colorScheme.onSurfaceVariant,
           ),
+        ),
+        padding: EdgeInsets.zero,
+        tooltip: track.isFavorite ? '取消收藏' : '收藏',
+        visualDensity: VisualDensity.standard,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.padded,
+          side: BorderSide.none,
+          shape: const CircleBorder(),
         ),
       ),
     );
   }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
 }
 
-class _LibraryHeader extends StatefulWidget {
-  const _LibraryHeader({
-    required this.state,
-    required this.controller,
-    required this.tracks,
-  });
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({required this.state, required this.controller});
 
   final LibraryState state;
   final TextEditingController controller;
-  final List<MusicTrack> tracks;
-
-  @override
-  State<_LibraryHeader> createState() => _LibraryHeaderState();
-}
-
-class _LibraryHeaderState extends State<_LibraryHeader> {
-  late final FocusNode _searchFocusNode;
-  bool _searchFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocusNode = FocusNode()..addListener(_onSearchFocusChange);
-  }
-
-  void _onSearchFocusChange() {
-    setState(() => _searchFocused = _searchFocusNode.hasFocus);
-  }
-
-  @override
-  void dispose() {
-    _searchFocusNode.removeListener(_onSearchFocusChange);
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppPageTitleRow(title: '媒体库'),
-        const SizedBox(height: 14),
-        // ── Search field ──
-        TextField(
-          controller: widget.controller,
-          focusNode: _searchFocusNode,
-          textInputAction: TextInputAction.search,
-          onSubmitted: (value) => context.read<LibraryCubit>().search(value),
-          decoration: InputDecoration(
-            hintText: _searchHint(widget.state.currentFilter),
-            prefixIcon: AnimatedScale(
-              scale: _searchFocused ? 1.1 : 1.0,
-              duration: const Duration(milliseconds: 160),
-              child: const Icon(Icons.search_rounded),
-            ),
+        AppPageHeader(
+          title: '媒体库',
+          automaticImplyLeading: false,
+          hideTitleOnCompactWithCenter: false,
+          center: AppSearchField(
+            controller: controller,
+            dense: true,
+            hintText: _searchHint(state.currentFilter),
+            semanticLabel: '搜索媒体库',
+            onClear: () {
+              controller.clear();
+              context.read<LibraryCubit>().search('');
+            },
+            onSubmitted: (value) => context.read<LibraryCubit>().search(value),
           ),
         ),
-        const SizedBox(height: 12),
-        // ── Filter tabs ──
-        _LibraryFilterTabs(
-          selectedFilter: widget.state.currentFilter,
-          onFilterChanged: (filter) =>
+        const SizedBox(height: 14),
+        AppScopeTabs<LibraryFilter>(
+          semanticLabel: '媒体库分类',
+          variant: AppBreakpoints.usesWideContent(context)
+              ? AppScopeTabsVariant.underline
+              : AppScopeTabsVariant.pill,
+          selectedValue: state.currentFilter,
+          onChanged: (filter) =>
               context.read<LibraryCubit>().changeFilter(filter),
+          items: const [
+            AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
+            AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
+            AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
+            AppScopeTabItem(value: LibraryFilter.favorites, label: '收藏'),
+          ],
         ),
       ],
     );
@@ -978,103 +645,6 @@ class _LibraryHeaderState extends State<_LibraryHeader> {
       LibraryFilter.artists => '搜索当前艺术家',
       LibraryFilter.favorites => '搜索当前歌曲',
     };
-  }
-}
-
-class _LibraryFilterTabs extends StatelessWidget {
-  const _LibraryFilterTabs({
-    required this.selectedFilter,
-    required this.onFilterChanged,
-  });
-
-  final LibraryFilter selectedFilter;
-  final ValueChanged<LibraryFilter> onFilterChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            width: 1,
-          ),
-        ),
-      ),
-      child: TabBar(
-        onTap: (index) => onFilterChanged(LibraryFilter.values[index]),
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        dividerColor: Colors.transparent,
-        indicatorColor: colorScheme.primary,
-        indicatorWeight: 3,
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
-        padding: EdgeInsets.zero,
-        labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-        tabs: [
-          _HoverTab(
-            label: '歌曲',
-            isSelected: selectedFilter == LibraryFilter.tracks,
-          ),
-          _HoverTab(
-            label: '专辑',
-            isSelected: selectedFilter == LibraryFilter.albums,
-          ),
-          _HoverTab(
-            label: '艺术家',
-            isSelected: selectedFilter == LibraryFilter.artists,
-          ),
-          _HoverTab(
-            label: '收藏',
-            isSelected: selectedFilter == LibraryFilter.favorites,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HoverTab extends StatefulWidget {
-  const _HoverTab({required this.label, required this.isSelected});
-
-  final String label;
-  final bool isSelected;
-
-  @override
-  State<_HoverTab> createState() => _HoverTabState();
-}
-
-class _HoverTabState extends State<_HoverTab> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final textColor = widget.isSelected
-        ? colorScheme.primary
-        : _hovered
-        ? colorScheme.primary.withValues(alpha: 0.8)
-        : colorScheme.onSurfaceVariant;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Tab(
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 150),
-          style: theme.textTheme.titleMedium!.copyWith(
-            color: textColor,
-            fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-          child: Text(widget.label),
-        ),
-      ),
-    );
   }
 }
 

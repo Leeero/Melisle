@@ -6,10 +6,12 @@ import 'package:cross_platform_music_player/presentation/blocs/album/album_state
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -90,6 +92,16 @@ class _AlbumDetailView extends StatelessWidget {
                             ? const AppSliverStateView.message(
                                 message: '当前专辑还没有曲目。',
                               )
+                            : isWide
+                            ? SliverToBoxAdapter(
+                                child: MusicTrackTable(
+                                  tracks: state.tracks,
+                                  currentTrackId: currentTrackId,
+                                  showActionBar: false,
+                                  onTrackTap: (index, _) =>
+                                      _playAlbumFromIndex(context, index),
+                                ),
+                              )
                             : SliverList(
                                 delegate: SliverChildBuilderDelegate((
                                   context,
@@ -107,15 +119,6 @@ class _AlbumDetailView extends StatelessWidget {
                                     onLongPress: () =>
                                         showTrackActionsSheet(context, track),
                                   );
-
-                                  if (isWide) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 12,
-                                      ),
-                                      child: trackTile,
-                                    );
-                                  }
 
                                   return _AlbumTrackRow(
                                     isFirst: index == 0,
@@ -145,30 +148,35 @@ class _AlbumHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = album?.title.trim();
+    final displayTitle = title == null || title.isEmpty ? '专辑详情' : title;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = AppBreakpoints.usesWideContentWidth(
           constraints.maxWidth,
         );
-        if (!isWide) {
-          return _MobileAlbumHero(album: album, tracksCount: tracksCount);
-        }
 
         return AppDetailHeroFrame(
-          padding: EdgeInsets.zero,
+          padding: isWide
+              ? const EdgeInsets.all(22)
+              : const EdgeInsets.fromLTRB(0, 10, 0, 4),
           compactGap: 18,
+          spacing: 28,
           coverBuilder: (context, isWide) {
-            final title = album?.title.trim();
-            return CachedArtwork(
+            return _AlbumHeroArtwork(
               imageUrl: album?.artworkUrl ?? '',
-              size: 250,
-              borderRadius: 24,
-              semanticLabel:
-                  '《${title == null || title.isEmpty ? '专辑' : title}》封面',
+              size: isWide ? 220 : 128,
+              semanticLabel: '《$displayTitle》封面',
             );
           },
           contentBuilder: (context, isWide) {
-            return _DesktopAlbumSummary(album: album, tracksCount: tracksCount);
+            return _AlbumHeroSummary(
+              album: album,
+              tracksCount: tracksCount,
+              isWide: isWide,
+              displayTitle: displayTitle,
+            );
           },
         );
       },
@@ -176,127 +184,80 @@ class _AlbumHero extends StatelessWidget {
   }
 }
 
-class _DesktopAlbumSummary extends StatelessWidget {
-  const _DesktopAlbumSummary({required this.album, required this.tracksCount});
+class _AlbumHeroSummary extends StatelessWidget {
+  const _AlbumHeroSummary({
+    required this.album,
+    required this.tracksCount,
+    required this.isWide,
+    required this.displayTitle,
+  });
 
   final MusicAlbum? album;
   final int tracksCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              const MetaPill(label: '专辑详情', size: MetaPillSize.compact),
-              MetaPill(label: '${_trackCountLabel(album, tracksCount)} 首'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            album?.title ?? '专辑详情',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          _AlbumArtistLine(album: album),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              PlayAllButton(
-                variant: PlayAllButtonVariant.primary,
-                onPressed: tracksCount == 0
-                    ? null
-                    : () => PlayerNavigation.playTracksAndOpenPlayer(
-                        context,
-                        tracks: context.read<AlbumCubit>().state.tracks,
-                        startIndex: 0,
-                      ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/library'),
-                icon: const Icon(Icons.library_music_rounded),
-                label: const Text('返回媒体库'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MobileAlbumHero extends StatelessWidget {
-  const _MobileAlbumHero({required this.album, required this.tracksCount});
-
-  final MusicAlbum? album;
-  final int tracksCount;
+  final bool isWide;
+  final String displayTitle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final title = album?.title.trim();
-    final displayTitle = title == null || title.isEmpty ? '专辑详情' : title;
+    final titleStyle = isWide
+        ? theme.textTheme.headlineMedium
+        : theme.textTheme.headlineSmall;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 10, 0, 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _AlbumHeroArtwork(
-            imageUrl: album?.artworkUrl ?? '',
-            size: 128,
-            semanticLabel: '《$displayTitle》封面',
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    const MetaPill(label: '专辑', size: MetaPillSize.compact),
-                    MetaPill(
-                      label: '${_trackCountLabel(album, tracksCount)} 首',
-                      size: MetaPillSize.compact,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  displayTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                _AlbumArtistLine(album: album),
-                const SizedBox(height: 6),
-                PlayAllButton(
-                  onPressed: tracksCount == 0
-                      ? null
-                      : () => _playAlbumFromIndex(context, 0),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            const MetaPill(label: '专辑', size: MetaPillSize.compact),
+            MetaPill(
+              label: '${_trackCountLabel(album, tracksCount)} 首',
+              size: MetaPillSize.compact,
             ),
+          ],
+        ),
+        SizedBox(height: isWide ? 16 : 14),
+        Text(
+          displayTitle,
+          maxLines: isWide ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: titleStyle?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: colorScheme.onSurface,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        _AlbumArtistLine(album: album),
+        SizedBox(height: isWide ? 22 : 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            PlayAllButton(
+              variant: isWide
+                  ? PlayAllButtonVariant.primary
+                  : PlayAllButtonVariant.compact,
+              onPressed: tracksCount == 0
+                  ? null
+                  : () => PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: context.read<AlbumCubit>().state.tracks,
+                      startIndex: 0,
+                    ),
+            ),
+            if (isWide)
+              AppActionButton(
+                onPressed: () => context.go('/library'),
+                icon: Icons.library_music_rounded,
+                label: '返回媒体库',
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -317,14 +278,14 @@ class _AlbumHeroArtwork extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
         color: colorScheme.surface.withValues(alpha: 0.24),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.42),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: AppColorTokens.darkScaffold.withValues(alpha: 0.22),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -335,7 +296,7 @@ class _AlbumHeroArtwork extends StatelessWidget {
         child: CachedArtwork(
           imageUrl: imageUrl,
           size: size,
-          borderRadius: 18,
+          borderRadius: AppRadiusTokens.coverDetail - 4,
           semanticLabel: semanticLabel,
         ),
       ),
