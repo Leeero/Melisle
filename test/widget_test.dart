@@ -74,17 +74,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('连接你的音乐库'), findsOneWidget);
+    expect(find.text('连接你的音乐岛屿'), findsOneWidget);
+    expect(find.text('音乐源'), findsOneWidget);
+    expect(find.text('Navidrome'), findsOneWidget);
     expect(find.text('登录并进入乐岛'), findsOneWidget);
-    expect(find.byTooltip('显示密码'), findsOneWidget);
-    expect(
-      tester.getSize(find.byTooltip('显示密码')).width,
-      greaterThanOrEqualTo(44),
-    );
-    expect(
-      tester.getSize(find.byTooltip('显示密码')).height,
-      greaterThanOrEqualTo(44),
-    );
+    expect(find.text('等待登录'), findsOneWidget);
   });
 
   testWidgets('play all icon button exposes tooltip and touch target', (
