@@ -26,9 +26,10 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
-    final textTheme = Theme.of(context).textTheme;
+    final textTheme = theme.textTheme;
 
     return Semantics(
       label: '打开歌单《${playlist.name}》',
@@ -61,11 +62,13 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                         boxShadow: _hovered
                             ? [
                                 BoxShadow(
-                                  color: colorScheme.primary.withValues(
-                                    alpha: 0.10,
+                                  color: theme.musicTeal.withValues(
+                                    alpha: theme.brightness == Brightness.dark
+                                        ? 0.18
+                                        : 0.14,
                                   ),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 6),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 7),
                                 ),
                               ]
                             : const <BoxShadow>[],
@@ -161,7 +164,8 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
 
     return Semantics(
@@ -174,15 +178,13 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
           duration: AppMotion.micro,
           curve: AppMotion.enter,
           decoration: BoxDecoration(
-            color: _hovered
-                ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.66)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+            color: _hovered ? theme.hoverWash : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+              borderRadius: BorderRadius.circular(8),
               onTap: widget.onTap,
               child: Padding(
                 padding: const EdgeInsets.symmetric(

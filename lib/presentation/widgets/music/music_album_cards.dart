@@ -26,9 +26,10 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final album = widget.album;
-    final textTheme = Theme.of(context).textTheme;
+    final textTheme = theme.textTheme;
 
     return Semantics(
       label: '打开专辑《${album.title}》',
@@ -59,11 +60,13 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                         boxShadow: _hovered
                             ? [
                                 BoxShadow(
-                                  color: colorScheme.primary.withValues(
-                                    alpha: 0.12,
+                                  color: theme.musicRose.withValues(
+                                    alpha: theme.brightness == Brightness.dark
+                                        ? 0.18
+                                        : 0.14,
                                   ),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 7),
                                 ),
                               ]
                             : [],

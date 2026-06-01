@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 enum MusicTrackTileStyle { card, row, list }
@@ -68,7 +69,8 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
       return _buildListTile(context);
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isCard = widget.style == MusicTrackTileStyle.card;
     final radius = isCard ? 20.0 : 24.0;
     final artworkSize = isCard ? 58.0 : 48.0;
@@ -79,9 +81,9 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         widget.style == MusicTrackTileStyle.row && _hovered && !widget.isCurrent
         ? [
             BoxShadow(
-              color: colorScheme.primary.withValues(alpha: 0.1),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: theme.musicTeal.withValues(alpha: 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 7),
             ),
           ]
         : const <BoxShadow>[];
@@ -97,13 +99,17 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
             color: widget.isCurrent
-                ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-                : colorScheme.surface.withValues(alpha: _hovered ? 0.82 : 0.62),
+                ? theme.selectedWash
+                : _hovered
+                ? theme.hoverWash
+                : colorScheme.surface.withValues(alpha: isCard ? 0.92 : 0),
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
               color: widget.isCurrent
-                  ? colorScheme.primary.withValues(alpha: 0.28)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.72),
+                  ? colorScheme.primary.withValues(alpha: 0.20)
+                  : colorScheme.outlineVariant.withValues(
+                      alpha: isCard ? 0.72 : 0,
+                    ),
             ),
             boxShadow: shadow,
           ),

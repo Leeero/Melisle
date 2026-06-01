@@ -37,7 +37,8 @@ class MusicTrackTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,7 +55,7 @@ class MusicTrackTable extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.56),
+                color: colorScheme.outlineVariant.withValues(alpha: 0.76),
               ),
             ),
           ),
@@ -134,11 +135,11 @@ class _MusicTrackTableHeader extends StatelessWidget {
         final showAlbum = constraints.maxWidth >= 620;
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
           child: Row(
             children: [
               SizedBox(
-                width: 44,
+                width: 36,
                 child: Text(
                   '#',
                   style: labelStyle,
@@ -146,7 +147,7 @@ class _MusicTrackTableHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const SizedBox(width: 44),
+              const SizedBox(width: 40),
               const SizedBox(width: 12),
               Expanded(flex: 4, child: Text('歌曲 / 歌手', style: labelStyle)),
               if (showArtist) ...[
@@ -222,11 +223,11 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
           padding: const EdgeInsets.symmetric(vertical: 1),
           child: Material(
             color: widget.isCurrent
-                ? colorScheme.primaryContainer.withValues(alpha: 0.62)
+                ? theme.selectedWash
                 : highlighted
-                ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.74)
+                ? theme.hoverWash
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+            borderRadius: BorderRadius.circular(6),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               focusColor: colorScheme.primary.withValues(alpha: 0.08),
@@ -242,13 +243,13 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 44,
+                          width: 36,
                           child: Center(
                             child: widget.isCurrent
                                 ? Icon(
@@ -276,8 +277,8 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                         const SizedBox(width: 12),
                         CachedArtwork(
                           imageUrl: track.artworkUrl,
-                          size: 44,
-                          borderRadius: 10,
+                          size: 40,
+                          borderRadius: 9,
                           semanticLabel: '《${track.title}》封面',
                         ),
                         const SizedBox(width: 12),
