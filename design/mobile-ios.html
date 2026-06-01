@@ -1,0 +1,2383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>乐岛 Melisle — iOS</title>
+<style>
+/* ============================================================
+   Melisle Mobile — iOS-native design language
+   ============================================================ */
+:root {
+  --bg: oklch(98.8% 0.006 190);
+  --surface: oklch(100% 0 0);
+  --surface-raised: oklch(99.4% 0.004 190);
+  --fg: oklch(16% 0.014 215);
+  --fg-secondary: oklch(42% 0.015 210);
+  --muted: oklch(57% 0.014 205);
+  --border: oklch(89.5% 0.006 195);
+  --border-light: oklch(94% 0.004 195);
+  --accent: oklch(60% 0.105 178);
+  --accent-hover: oklch(54% 0.125 178);
+  --accent-soft: oklch(93.5% 0.032 178);
+  --music-warm: oklch(76% 0.09 70);
+  --music-warm-soft: oklch(95.5% 0.028 70);
+  --music-rose: oklch(73% 0.095 38);
+  --music-rose-soft: oklch(95% 0.03 38);
+  --music-teal: oklch(66% 0.095 178);
+  --music-teal-soft: oklch(94.5% 0.03 178);
+  --hover-wash: color-mix(in oklch, var(--music-teal-soft) 54%, transparent);
+  --selected-wash: color-mix(in oklch, var(--music-warm-soft) 64%, transparent);
+  --success: oklch(55% 0.14 145);
+  --overlay: oklch(0% 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.06);
+  --shadow-md: 0 4px 16px oklch(0% 0 0 / 0.08);
+  --shadow-lg: 0 12px 40px oklch(0% 0 0 / 0.12);
+  --shadow-music: 0 14px 36px color-mix(in oklch, var(--music-rose) 18%, transparent);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --safe-top: env(safe-area-inset-top, 48px);
+  --safe-bottom: max(env(safe-area-inset-bottom, 34px), 34px);
+  --page-x: 24px;
+  --chrome-x: var(--page-x);
+  --tab-content-h: 54px;
+  --tab-h: calc(var(--tab-content-h) + var(--safe-bottom));
+  --mini-h: 58px;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --ease-music: cubic-bezier(0.2, 0, 0.13, 1);
+}
+
+[data-theme="dark"] {
+  --bg: oklch(18% 0.012 215);
+  --surface: oklch(22% 0.012 215);
+  --surface-raised: oklch(25% 0.012 215);
+  --fg: oklch(93% 0.006 200);
+  --fg-secondary: oklch(70% 0.012 200);
+  --muted: oklch(55% 0.014 200);
+  --border: oklch(31% 0.01 210);
+  --border-light: oklch(27% 0.008 210);
+  --accent: oklch(70% 0.105 178);
+  --accent-soft: oklch(27% 0.045 178);
+  --music-warm: oklch(74% 0.085 70);
+  --music-warm-soft: oklch(27% 0.034 70);
+  --music-rose: oklch(72% 0.09 38);
+  --music-rose-soft: oklch(27% 0.036 38);
+  --music-teal: oklch(72% 0.09 178);
+  --music-teal-soft: oklch(27% 0.034 178);
+  --hover-wash: color-mix(in oklch, var(--music-teal-soft) 64%, transparent);
+  --selected-wash: color-mix(in oklch, var(--music-warm-soft) 76%, transparent);
+  --overlay: oklch(0% 0 0 / 0.6);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: var(--font-body);
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.45;
+  overflow: hidden;
+  height: 100dvh;
+  width: 100vw;
+  position: relative;
+}
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; -webkit-tap-highlight-color: transparent; }
+input { font: inherit; border: none; outline: none; background: none; color: inherit; }
+
+/* ============================================================
+   Phone Frame
+   ============================================================ */
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 44px;
+  box-shadow: 0 0 0 3px oklch(0% 0 0 / 0.08), var(--shadow-lg);
+}
+.phone-frame.logged-out .screen-area,
+.phone-frame.logged-out .mini-player-m,
+.phone-frame.logged-out .np-overlay-m,
+.phone-frame.logged-out .queue-sheet,
+.phone-frame.logged-out .player-action-sheet-m,
+.phone-frame.logged-out .tab-bar { display: none !important; }
+.phone-frame.logged-in .mobile-login-gate { display: none; }
+.mobile-login-gate {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: 18px var(--page-x) calc(var(--safe-bottom) + 24px);
+  background:
+    radial-gradient(circle at 50% 4%, color-mix(in oklch, var(--music-warm, var(--accent)) 16%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in oklch, var(--surface) 34%, transparent), transparent 44%),
+    var(--bg);
+  z-index: 20;
+}
+
+/* Status bar */
+.status-bar {
+  height: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  position: relative;
+  z-index: 60;
+}
+.status-bar .time { font-variant-numeric: tabular-nums; }
+.status-bar .icons { display: flex; gap: 5px; align-items: center; }
+.status-bar .icons svg { width: 16px; height: 16px; }
+
+/* Dynamic Island */
+.dynamic-island {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 36px;
+  background: oklch(0% 0 0);
+  border-radius: 20px;
+  z-index: 70;
+}
+
+/* ============================================================
+   Screen Content Area
+   ============================================================ */
+.screen-area {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tab-h) + var(--mini-h) + 18px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: 24px;
+}
+.screen { display: none; padding: 0 var(--page-x) 24px; }
+.screen.active { display: block; }
+
+.screen-title {
+  font-family: var(--font-display);
+  font-size: 31px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  padding: 10px 0 18px;
+}
+
+/* ============================================================
+   Section
+   ============================================================ */
+.section-title {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 20px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title .see-all {
+  font-size: 14px;
+  font-weight: 450;
+  color: var(--accent);
+}
+.library-tabs-m {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  min-height: 34px;
+  padding: 2px;
+  margin: 0 0 18px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--border-light) 72%, transparent);
+}
+.library-tab-m {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.library-tab-m.active {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
+}
+.library-panel-m[hidden] { display: none; }
+
+.favorite-action-m {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0 0 22px;
+}
+.favorite-action-m .btn-primary-m {
+  min-height: 40px;
+  padding: 9px 16px;
+}
+
+.daily-recommend {
+  margin: 0 0 4px;
+  padding: 0 0 8px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--page-x);
+  -webkit-overflow-scrolling: touch;
+}
+.daily-recommend::-webkit-scrollbar { display: none; }
+.rec-card-m {
+  scroll-snap-align: start;
+  flex: 0 0 286px;
+  min-height: 160px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--border-light);
+  background:
+    radial-gradient(circle at 86% 20%, color-mix(in oklch, var(--accent) 16%, transparent), transparent 42%),
+    linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.rec-card-m:active { transform: scale(0.985); }
+.rec-art-m {
+  width: 92px;
+  height: 92px;
+  border-radius: 20px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+.rec-art-m img,
+.mp-cover-m img,
+.np-cover-m img,
+.qi-cover-m img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rec-copy-m { min-width: 0; position: relative; z-index: 1; }
+.rec-kicker-m {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.rec-copy-m h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+  margin-bottom: 7px;
+}
+.rec-copy-m p {
+  font-size: 12px;
+  color: var(--fg-secondary);
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+.rec-play-m {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radius-full);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+}
+.rec-play-m svg { width: 13px; height: 13px; margin-left: 1px; }
+
+/* ============================================================
+   Horizontal Card Scroll
+   ============================================================ */
+.card-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--page-x);
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  margin: 0;
+}
+.card-scroll::-webkit-scrollbar { display: none; }
+.card-scroll .card { scroll-snap-align: start; flex-shrink: 0; }
+.library-grid-m {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 14px 12px;
+}
+.library-grid-m .card {
+  width: auto;
+  min-width: 0;
+}
+.library-grid-m .card-title,
+.library-grid-m .card-subtitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.library-grid-m .card-round .card-cover {
+  background: transparent;
+}
+
+.card {
+  width: 150px;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+.card:active { transform: scale(0.97); }
+.card-cover {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  background: var(--border-light);
+  margin-bottom: 6px;
+}
+.card-cover img { width: 100%; height: 100%; object-fit: cover; }
+.card-title {
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.card-round .card-cover { border-radius: 50%; }
+
+/* ============================================================
+   Track List (mobile)
+   ============================================================ */
+.track-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  min-height: 52px;
+}
+.track-item:last-child { border-bottom: none; }
+.track-item:active { background: color-mix(in oklch, var(--accent-soft) 58%, transparent); border-radius: var(--radius-sm); }
+.track-item.playing { color: var(--accent); }
+.track-item .ti-num {
+  width: 24px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-align: center;
+}
+.track-item.playing .ti-num { color: var(--accent); }
+.track-item .ti-info { flex: 1; min-width: 0; }
+.track-item .ti-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-item .ti-artist { font-size: 13px; color: var(--muted); margin-top: 1px; }
+.track-item .ti-dur { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.track-item .ti-action {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  color: var(--muted);
+}
+.track-item .ti-action svg { width: 18px; height: 18px; }
+
+/* ============================================================
+   Search (mobile)
+   ============================================================ */
+.search-bar-mobile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in oklch, var(--surface-raised) 86%, var(--border-light));
+  border-radius: 12px;
+  padding: 9px 11px;
+  margin-bottom: 16px;
+  min-height: 40px;
+}
+.search-bar-mobile svg { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+.search-bar-mobile input { flex: 1; font-size: 16px; }
+.search-bar-mobile input::placeholder { color: var(--muted); }
+.search-bar-mobile .cancel { font-size: 15px; color: var(--accent); flex-shrink: 0; display: none; }
+.search-bar-mobile:focus-within .cancel { display: block; }
+
+.search-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--surface-raised);
+  color: var(--fg-secondary);
+  transition: background var(--transition-fast);
+}
+.chip:active { background: var(--accent-soft); color: var(--accent); }
+
+/* ============================================================
+   Detail Page (mobile)
+   ============================================================ */
+.detail-hero-mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0 24px;
+}
+.detail-cover-mobile {
+  width: 220px; height: 220px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: var(--border-light);
+}
+.detail-cover-mobile img { width: 100%; height: 100%; object-fit: cover; }
+.detail-meta-mobile { text-align: center; }
+.detail-meta-mobile .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.detail-meta-mobile h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 4px 0;
+}
+.detail-meta-mobile .subtitle { font-size: 14px; color: var(--fg-secondary); }
+.detail-actions-mobile {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  justify-content: center;
+}
+.btn-primary-m {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform var(--transition-fast);
+}
+.btn-primary-m:active { transform: scale(0.97); }
+.btn-primary-m svg { width: 16px; height: 16px; }
+.btn-ghost-m {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+.btn-ghost-m:active { background: var(--border-light); }
+.btn-ghost-m svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   Mini Player (mobile, above tab bar)
+   ============================================================ */
+.mini-player-m {
+  position: absolute;
+  left: var(--chrome-x);
+  right: var(--chrome-x);
+  bottom: calc(var(--tab-h) + 8px);
+  height: var(--mini-h);
+  background: color-mix(in oklch, var(--surface) 92%, transparent);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px oklch(0% 0 0 / 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 11px;
+  z-index: 50;
+  border: 0.5px solid color-mix(in oklch, var(--border) 70%, transparent);
+  backdrop-filter: blur(20px) saturate(1.12);
+  -webkit-backdrop-filter: blur(20px) saturate(1.12);
+}
+.mp-cover-m {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--border-light);
+}
+.mp-info-m { flex: 1; min-width: 0; }
+.mp-info-m .mp-title-m { font-size: 14px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-info-m .mp-artist-m { font-size: 12px; color: var(--muted); }
+.mp-controls-m { display: flex; gap: 4px; }
+.mp-controls-m button {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+}
+.mp-controls-m button:active { background: var(--border-light); }
+.mp-controls-m svg { width: 20px; height: 20px; }
+.mp-controls-m .play-m {
+  width: 36px; height: 36px;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: 50%;
+}
+.mp-controls-m .play-m svg { width: 16px; height: 16px; margin-left: 1px; }
+
+/* ============================================================
+   Tab Bar
+   ============================================================ */
+.tab-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tab-h);
+  padding: 5px var(--page-x) var(--safe-bottom);
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+  border-top: 0.5px solid color-mix(in oklch, var(--border) 72%, transparent);
+  backdrop-filter: blur(24px) saturate(1.18);
+  -webkit-backdrop-filter: blur(24px) saturate(1.18);
+  display: flex;
+  gap: 0;
+  z-index: 55;
+}
+.tab-item {
+  flex: 1;
+  min-height: var(--tab-content-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 510;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+  cursor: pointer;
+  border-radius: 12px;
+}
+.tab-item:active { opacity: 0.62; }
+.tab-item.active { color: var(--accent); }
+.tab-item svg { width: 22px; height: 22px; margin-bottom: 1px; }
+
+/* ============================================================
+   Now Playing (fullscreen overlay, mobile)
+   ============================================================ */
+.np-overlay-m {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+}
+.np-overlay-m.active {
+  display: flex;
+  z-index: 100;
+  pointer-events: auto;
+}
+.np-bg-m {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg) 50%);
+  z-index: -1;
+}
+[data-theme="dark"] .np-bg-m {
+  background: linear-gradient(180deg, oklch(25% 0.03 230) 0%, var(--bg) 50%);
+}
+.np-header-m {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--page-x);
+  height: 48px;
+}
+.np-header-m button {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+}
+.np-header-m button:active { background: var(--border-light); }
+.np-header-m svg { width: 20px; height: 20px; }
+.np-header-m .np-title-m {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.np-body-m {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px var(--page-x);
+  gap: 20px;
+  overflow: hidden;
+}
+.np-cover-m {
+  width: 280px; height: 280px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: var(--border-light);
+  flex-shrink: 0;
+}
+.np-track-m { text-align: center; width: 100%; }
+.np-song-m {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.np-artist-m {
+  font-size: 15px;
+  color: var(--fg-secondary);
+  margin-top: 2px;
+}
+.np-lyrics-m {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+  text-align: center;
+  padding: 10px 0;
+  -webkit-overflow-scrolling: touch;
+}
+.lyric-line-m {
+  font-size: 16px;
+  line-height: 2.2;
+  color: var(--muted);
+  transition: color 0.3s, font-size 0.3s, font-weight 0.3s;
+  padding: 2px 0;
+}
+.lyric-line-m.current {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.np-controls-m {
+  padding: 12px var(--page-x) calc(20px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.np-progress-m {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.np-progress-m .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 36px; }
+.np-progress-m .time.right { text-align: right; }
+.progress-track-m {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  position: relative;
+}
+.progress-fill-m {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  width: 35%;
+}
+.np-btns-m {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.np-btns-m button {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--fg);
+}
+.np-btns-m button:active { background: var(--border-light); }
+.np-btns-m button.active { color: var(--accent); }
+.np-btns-m svg { width: 24px; height: 24px; }
+.np-btns-m .play-main-m {
+  width: 56px; height: 56px;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: 50%;
+}
+.np-btns-m .play-main-m svg { width: 26px; height: 26px; margin-left: 2px; }
+.np-extras-m {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.np-extras-m button {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.np-extras-m button:active { color: var(--fg); }
+.np-extras-m button.active { color: var(--accent); }
+.np-extras-m svg { width: 20px; height: 20px; }
+
+/* ============================================================
+   Settings (mobile)
+   ============================================================ */
+.settings-group-m {
+  background: color-mix(in oklch, var(--surface) 96%, transparent);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 22px;
+  border: 0.5px solid color-mix(in oklch, var(--border-light) 70%, transparent);
+}
+.settings-group-m .group-title {
+  font-size: 12px;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  padding: 13px 16px 6px;
+}
+.setting-row-m {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  min-height: 46px;
+  width: 100%;
+  text-align: left;
+  border-bottom: 0.5px solid var(--border-light);
+}
+.setting-action-m:active { background: color-mix(in oklch, var(--border-light) 58%, transparent); }
+.setting-row-m:last-child { border-bottom: none; }
+.setting-row-m .label { font-size: 15px; letter-spacing: -0.01em; }
+.setting-row-m .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.setting-row-m .value { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.setting-row-m .value svg { width: 14px; height: 14px; }
+
+/* ============================================================
+   Connect / Login (mobile)
+   ============================================================ */
+.connect-hero-m {
+  padding: 10px 0 18px;
+}
+.connect-logo-m {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 24%, color-mix(in oklch, white 34%, transparent), transparent 36%),
+    linear-gradient(145deg, var(--music-warm, var(--accent)), var(--music-rose, var(--accent)) 55%, var(--accent));
+  color: white;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  box-shadow: 0 16px 38px color-mix(in oklch, var(--music-rose, var(--accent)) 22%, transparent);
+}
+.connect-hero-m h1 {
+  font-family: var(--font-display);
+  font-size: 31px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  margin-bottom: 6px;
+}
+.connect-hero-m p {
+  max-width: 260px;
+  color: var(--fg-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.service-picker-m {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.service-pill-m {
+  min-height: 82px;
+  padding: 10px 8px;
+  border-radius: 18px;
+  border: 0.5px solid color-mix(in oklch, var(--border-light) 78%, transparent);
+  background: color-mix(in oklch, var(--surface) 82%, transparent);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  text-align: center;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.service-pill-m::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, color-mix(in oklch, var(--fg) 18%, transparent) 0 18%, transparent 19% 100%),
+    conic-gradient(from 20deg, color-mix(in oklch, var(--music-warm, var(--accent)) 65%, var(--surface)), color-mix(in oklch, var(--music-rose, var(--accent)) 55%, var(--surface)), color-mix(in oklch, var(--accent) 52%, var(--surface)), color-mix(in oklch, var(--music-warm, var(--accent)) 65%, var(--surface)));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, white 42%, transparent);
+}
+.service-pill-m:active { transform: scale(0.97); background: color-mix(in oklch, var(--border-light) 42%, var(--surface)); }
+.service-pill-m.active {
+  border-color: color-mix(in oklch, var(--accent) 42%, var(--border));
+  background: color-mix(in oklch, var(--music-warm, var(--accent)) 16%, var(--surface));
+}
+.service-pill-m strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.service-pill-m span,
+.service-pill-m svg { display: none; }
+.login-card-m {
+  margin-bottom: 14px;
+}
+.login-field-m {
+  align-items: stretch;
+  gap: 12px;
+}
+.login-field-m input {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: var(--fg);
+  font-size: 15px;
+}
+.login-field-m input::placeholder { color: var(--muted); }
+.connect-primary-m {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 18px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 16px;
+  font-weight: 650;
+  margin: 6px 0 12px;
+}
+.connect-primary-m:active { transform: scale(0.985); opacity: 0.9; }
+.connect-status-m {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.connect-status-m.success { color: var(--success); }
+.connect-status-m .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.connect-note-m { display: none; }
+
+.toggle-m {
+  width: 50px; height: 30px;
+  background: var(--border);
+  border-radius: 15px;
+  position: relative;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+.toggle-m.on { background: var(--success); }
+.toggle-m::after {
+  content: '';
+  position: absolute;
+  width: 26px; height: 26px;
+  background: white;
+  border-radius: 50%;
+  top: 2px; left: 2px;
+  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.15);
+  transition: transform var(--transition-fast);
+}
+.toggle-m.on::after { transform: translateX(20px); }
+
+/* ============================================================
+   Cover placeholders
+   ============================================================ */
+.cover-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: white;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.cp-1 { background: linear-gradient(135deg, oklch(60% 0.08 230), oklch(45% 0.12 260)); }
+.cp-2 { background: linear-gradient(135deg, oklch(65% 0.10 170), oklch(50% 0.12 200)); }
+.cp-3 { background: linear-gradient(135deg, oklch(60% 0.10 30), oklch(50% 0.14 50)); }
+.cp-4 { background: linear-gradient(135deg, oklch(55% 0.08 280), oklch(45% 0.10 310)); }
+.cp-5 { background: linear-gradient(135deg, oklch(62% 0.10 100), oklch(50% 0.08 140)); }
+.cp-6 { background: linear-gradient(135deg, oklch(58% 0.12 20), oklch(48% 0.10 350)); }
+.cp-7 { background: linear-gradient(135deg, oklch(55% 0.06 250), oklch(42% 0.08 270)); }
+.cp-8 { background: linear-gradient(135deg, oklch(65% 0.08 80), oklch(52% 0.10 120)); }
+
+/* ============================================================
+   Warmth refinement pass — iOS music-native polish
+   ============================================================ */
+.screen-area {
+  background:
+    radial-gradient(circle at 82% 4%, color-mix(in oklch, var(--music-teal-soft) 52%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in oklch, var(--surface-raised) 38%, var(--bg)) 0%, var(--bg) 42%);
+}
+.screen.active { animation: screenLiftIn 0.3s var(--ease-music); }
+@keyframes screenLiftIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.section-title { margin-top: 24px; }
+.library-tabs-m {
+  background: color-mix(in oklch, var(--surface-raised) 74%, transparent);
+  border: 0.5px solid color-mix(in oklch, var(--border-light) 76%, transparent);
+}
+.library-tab-m.active {
+  background: linear-gradient(180deg, var(--surface), color-mix(in oklch, var(--music-warm-soft) 24%, var(--surface)));
+  color: var(--fg);
+  box-shadow: 0 1px 4px color-mix(in oklch, var(--fg) 8%, transparent);
+}
+.rec-card-m {
+  border-color: color-mix(in oklch, var(--music-teal) 18%, var(--border-light));
+  background:
+    radial-gradient(circle at 82% 18%, color-mix(in oklch, var(--music-teal) 17%, transparent), transparent 40%),
+    radial-gradient(circle at 18% 82%, color-mix(in oklch, var(--music-rose) 12%, transparent), transparent 36%),
+    linear-gradient(135deg, color-mix(in oklch, var(--surface) 88%, var(--music-warm-soft)) 0%, var(--surface-raised) 100%);
+}
+.rec-art-m,
+.card-cover,
+.detail-cover-mobile,
+.mp-cover-m,
+.np-cover-m {
+  box-shadow: 0 10px 28px color-mix(in oklch, var(--fg) 8%, transparent);
+}
+.card:nth-child(3n + 2) .card-cover { border-radius: 18px 24px 18px 18px; }
+.card:nth-child(4n + 3) .card-cover { border-radius: 24px 18px 22px 18px; }
+.card-round .card-cover { box-shadow: none; border-radius: 50%; }
+.track-item {
+  transition: background var(--transition-fast), transform var(--transition-fast), color var(--transition-fast);
+}
+.track-item:active {
+  background: var(--hover-wash);
+  transform: scale(0.992);
+}
+.track-item.playing {
+  color: var(--fg);
+  background: color-mix(in oklch, var(--music-rose-soft) 44%, transparent);
+  border-radius: 12px;
+  padding-inline: 10px;
+}
+.track-item.playing .ti-title { color: color-mix(in oklch, var(--accent) 78%, var(--music-rose)); }
+.search-bar-mobile {
+  background: color-mix(in oklch, var(--surface) 78%, var(--border-light));
+  border: 0.5px solid color-mix(in oklch, var(--border-light) 68%, transparent);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.search-bar-mobile:focus-within {
+  background: var(--surface);
+  border-color: color-mix(in oklch, var(--accent) 36%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 10%, transparent);
+}
+.chip { background: color-mix(in oklch, var(--surface-raised) 82%, transparent); }
+.chip:active { background: var(--selected-wash); color: var(--fg); }
+.detail-hero-mobile {
+  margin-top: 4px;
+  padding-bottom: 28px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 18%, color-mix(in oklch, var(--music-rose) 12%, transparent), transparent 42%),
+    transparent;
+}
+.btn-primary-m {
+  background: color-mix(in oklch, var(--accent) 82%, var(--music-teal));
+  box-shadow: 0 8px 20px color-mix(in oklch, var(--accent) 12%, transparent);
+}
+.btn-ghost-m { background: color-mix(in oklch, var(--surface) 72%, transparent); }
+.mini-player-m {
+  bottom: calc(var(--tab-h) + 10px);
+  height: 60px;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--surface) 94%, transparent), color-mix(in oklch, var(--music-warm-soft) 30%, var(--surface)));
+  border-color: color-mix(in oklch, var(--music-teal) 18%, var(--border));
+  box-shadow: 0 10px 30px color-mix(in oklch, var(--fg) 10%, transparent);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.mini-player-m:active { transform: translateY(1px) scale(0.992); }
+.mp-cover-m { border-radius: 12px; box-shadow: 0 8px 18px color-mix(in oklch, var(--music-rose) 16%, transparent); }
+.mp-controls-m .play-m,
+.np-btns-m .play-main-m {
+  background: color-mix(in oklch, var(--fg) 88%, var(--music-rose));
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+.mp-controls-m .play-m:active,
+.np-btns-m .play-main-m:active { transform: scale(0.96); opacity: 0.92; }
+.tab-bar {
+  background: color-mix(in oklch, var(--surface) 86%, transparent);
+  border-top-color: color-mix(in oklch, var(--music-teal) 14%, var(--border));
+}
+.tab-item.active { color: color-mix(in oklch, var(--accent) 82%, var(--music-teal)); }
+.np-overlay-m.active { animation: playerRiseM 0.38s var(--ease-music); }
+@keyframes playerRiseM {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.np-bg-m {
+  background:
+    radial-gradient(circle at 50% 14%, color-mix(in oklch, var(--music-rose) 24%, transparent), transparent 38%),
+    radial-gradient(circle at 84% 36%, color-mix(in oklch, var(--music-teal) 15%, transparent), transparent 32%),
+    linear-gradient(180deg, color-mix(in oklch, var(--music-warm-soft) 70%, var(--bg)) 0%, var(--bg) 58%);
+}
+[data-theme="dark"] .np-bg-m {
+  background:
+    radial-gradient(circle at 50% 14%, color-mix(in oklch, var(--music-rose) 18%, transparent), transparent 40%),
+    radial-gradient(circle at 82% 34%, color-mix(in oklch, var(--music-teal) 14%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in oklch, var(--music-warm-soft) 78%, var(--bg)) 0%, var(--bg) 58%);
+}
+.np-cover-m {
+  border-radius: 30px;
+  box-shadow: var(--shadow-music);
+  transition: transform 0.55s var(--ease-music);
+}
+.np-cover-m:active { transform: scale(0.992); }
+.np-lyrics-m {
+  mask-image: linear-gradient(transparent 0, black 16%, black 86%, transparent 100%);
+}
+.lyric-line-m {
+  color: color-mix(in oklch, var(--fg) 38%, transparent);
+  opacity: 0.58;
+  transition: color 0.42s var(--ease-music), font-size 0.42s var(--ease-music), font-weight 0.42s var(--ease-music), transform 0.42s var(--ease-music), opacity 0.42s var(--ease-music);
+}
+.lyric-line-m.current {
+  color: color-mix(in oklch, var(--music-rose) 50%, var(--fg));
+  opacity: 1;
+  transform: scale(1.035);
+}
+.progress-fill-m { background: linear-gradient(90deg, var(--music-rose), var(--music-teal)); }
+.settings-group-m {
+  background: color-mix(in oklch, var(--surface) 78%, transparent);
+  border-color: color-mix(in oklch, var(--border-light) 62%, transparent);
+  border-radius: 18px;
+}
+.setting-action-m:active { background: var(--hover-wash); }
+.queue-sheet,
+.player-action-sheet-m .sheet-card-m {
+  background: color-mix(in oklch, var(--surface) 94%, transparent);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+.queue-sheet .qi-m.active {
+  color: var(--fg);
+  background: var(--selected-wash);
+  border-radius: 12px;
+  padding-inline: 10px;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ============================================================
+   Player Action Sheet (mobile)
+   ============================================================ */
+.player-action-sheet-m {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 var(--page-x) calc(var(--safe-bottom) + 12px);
+  background: color-mix(in oklch, var(--fg) 10%, transparent);
+  z-index: -1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.player-action-sheet-m.open {
+  display: flex;
+  z-index: 220;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.player-action-sheet-m:not(.open),
+.queue-sheet:not(.open) {
+  pointer-events: none !important;
+}
+.sheet-card-m {
+  width: 100%;
+  max-height: min(430px, calc(100% - 84px));
+  overflow: hidden;
+  border-radius: 24px;
+  border: 0.5px solid color-mix(in oklch, var(--border-light) 72%, transparent);
+  background: color-mix(in oklch, var(--surface) 96%, transparent);
+  box-shadow: 0 18px 48px color-mix(in oklch, var(--fg) 14%, transparent);
+  padding: 8px 16px 16px;
+  animation: sheetRiseM 0.24s var(--ease-music);
+}
+@keyframes sheetRiseM {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.sheet-title-m {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 2px 14px;
+}
+.sheet-title-m h3 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+.sheet-title-m button { color: var(--accent); font-size: 15px; }
+.sheet-content-m {
+  display: grid;
+  gap: 12px;
+  max-height: 310px;
+  overflow-y: auto;
+  padding-bottom: 2px;
+}
+.sheet-option-m {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--fg-secondary);
+  background: transparent;
+  text-align: left;
+}
+.sheet-option-m > span:first-child { flex: 1; min-width: 0; }
+.sheet-option-m > span:last-child {
+  width: 24px;
+  flex: 0 0 24px;
+  color: var(--accent);
+  text-align: right;
+}
+.sheet-option-m:active { background: var(--hover-wash); transform: scale(0.992); }
+.sheet-option-m.active {
+  color: var(--accent);
+  background: var(--selected-wash);
+}
+.sheet-option-m .main { font-size: 15px; font-weight: 560; color: inherit; }
+.sheet-option-m .sub { font-size: 12px; color: var(--muted); }
+.sheet-section-m {
+  padding: 2px 0 4px;
+}
+.sheet-section-title-m {
+  padding: 0 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.sheet-segment-m {
+  display: grid;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 18px;
+  background: color-mix(in oklch, var(--hover-wash) 72%, transparent);
+}
+.sheet-toggle-row-m {
+  min-height: 52px;
+  border-radius: 16px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: color-mix(in oklch, var(--surface-warm) 76%, transparent);
+}
+.sheet-toggle-copy-m { min-width: 0; }
+.sheet-toggle-copy-m .main { display: block; font-size: 15px; font-weight: 560; color: var(--fg-secondary); }
+.sheet-toggle-copy-m .sub { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.sheet-switch-m {
+  width: 48px;
+  height: 28px;
+  flex: 0 0 48px;
+  border-radius: 999px;
+  padding: 3px;
+  background: color-mix(in oklch, var(--meta) 24%, transparent);
+  transition: background 0.18s var(--ease-music);
+}
+.sheet-switch-m::after {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 2px 6px color-mix(in oklch, var(--fg) 16%, transparent);
+  transition: transform 0.18s var(--ease-music);
+}
+.sheet-switch-m.active { background: var(--accent); }
+.sheet-switch-m.active::after { transform: translateX(20px); }
+.volume-sheet-row-m {
+  display: grid;
+  grid-template-columns: 22px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 6px;
+}
+.volume-sheet-row-m svg { width: 20px; height: 20px; color: var(--muted); }
+.volume-range-m { width: 100%; accent-color: var(--accent); }
+.volume-value-m { font-size: 14px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.sheet-toast-m {
+  min-height: 22px;
+  padding: 4px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.mobile-player-toast-m {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--tab-h) + 92px);
+  transform: translateX(-50%) translateY(8px);
+  padding: 8px 13px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--surface) 92%, transparent);
+  border: 0.5px solid var(--border-light);
+  color: var(--fg);
+  font-size: 13px;
+  box-shadow: 0 12px 28px color-mix(in oklch, var(--fg) 12%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: 230;
+}
+.mobile-player-toast-m.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   Queue Sheet (mobile)
+   ============================================================ */
+.queue-sheet {
+  position: absolute;
+  left: var(--page-x); right: var(--page-x); bottom: 0;
+  max-height: 60%;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-lg);
+  z-index: 210;
+  display: none;
+  flex-direction: column;
+}
+.queue-sheet.open { display: flex; }
+.queue-sheet .sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 8px auto;
+}
+.queue-sheet .sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 18px 12px;
+}
+.queue-sheet .sheet-header h3 { font-size: 17px; font-weight: 600; }
+.queue-sheet .sheet-header button {
+  font-size: 15px;
+  color: var(--accent);
+}
+.queue-sheet .sheet-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px calc(20px + var(--safe-bottom));
+}
+.queue-sheet .qi-m {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.queue-sheet .qi-m:last-child { border-bottom: none; }
+.queue-sheet .qi-m.active { color: var(--accent); }
+.queue-sheet .qi-m .qi-cover-m {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--border-light);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.queue-sheet .qi-m .qi-info-m { flex: 1; min-width: 0; }
+.queue-sheet .qi-m .qi-title-m { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-sheet .qi-m .qi-artist-m { font-size: 12px; color: var(--muted); }
+.queue-sheet .qi-m .qi-dur-m { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Back nav for detail screens
+   ============================================================ */
+.back-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 15px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.back-nav svg { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<div class="phone-frame logged-out">
+  <!-- Dynamic Island -->
+  <div class="dynamic-island"></div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="icons">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <div class="mobile-login-gate" aria-label="登录并连接服务器">
+    <div class="connect-hero-m">
+      <div class="connect-logo-m">乐</div>
+      <h1>连接你的音乐岛屿</h1>
+      <p>选择音乐源，进入自己的私人曲库。</p>
+    </div>
+
+    <div class="service-picker-m" aria-label="选择服务类型">
+      <button class="service-pill-m" type="button" onclick="selectServiceM(this)"><strong>Emby</strong></button>
+      <button class="service-pill-m active" type="button" onclick="selectServiceM(this)"><strong>Navidrome</strong></button>
+      <button class="service-pill-m" type="button" onclick="selectServiceM(this)"><strong>Subsonic</strong></button>
+    </div>
+
+    <div class="settings-group-m login-card-m">
+      <label class="setting-row-m login-field-m">
+        <span class="label">服务器</span>
+        <input value="music.example.com" inputmode="url" autocomplete="url">
+      </label>
+      <label class="setting-row-m login-field-m">
+        <span class="label">账号</span>
+        <input value="lero" autocomplete="username">
+      </label>
+      <label class="setting-row-m login-field-m">
+        <span class="label">密码 / Token</span>
+        <input type="password" value="melisle-token" autocomplete="current-password">
+      </label>
+    </div>
+
+    <button class="connect-primary-m" type="button" onclick="loginMobile()">进入乐岛</button>
+    <div class="connect-status-m" id="loginStatusM"><span class="dot"></span>等待连接</div>
+    <p class="connect-note-m">登录成功后，乐岛会在本机保存安全会话，并同步歌曲、专辑、艺术家、歌单、歌曲收藏、下载任务和歌词来源设置。</p>
+  </div>
+
+  <!-- Screen Content Area -->
+  <div class="screen-area">
+
+    <!-- Home -->
+    <div class="screen active" id="screen-home">
+      <div class="screen-title">首页</div>
+
+      <div class="section-title">
+        <span>今日推荐</span>
+      </div>
+      <div class="daily-recommend" aria-label="今日推荐歌曲">
+        <div class="rec-card-m" onclick="openNPM()">
+          <div class="rec-art-m"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+          <div class="rec-copy-m">
+            <div class="rec-kicker-m">为你整理</div>
+            <h2>安静整理音乐库</h2>
+            <p>24 首华语流行，适合浏览专辑、歌词和离线下载。</p>
+            <button class="rec-play-m">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              播放推荐
+            </button>
+          </div>
+        </div>
+        <div class="rec-card-m" onclick="openNPM()">
+          <div class="rec-art-m"><img src="assets/artwork/album-blue-gate.svg" alt="蓝色大门专辑封面"></div>
+          <div class="rec-copy-m">
+            <div class="rec-kicker-m">夜间模式</div>
+            <h2>睡前低音量播放</h2>
+            <p>16 首轻柔曲目，搭配睡眠定时和滚动歌词。</p>
+            <button class="rec-play-m">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              开始播放
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>继续播放</span>
+        <span class="see-all">查看全部</span>
+      </div>
+      <div class="card-scroll">
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+          <div class="card-title">夜曲</div>
+          <div class="card-subtitle">周杰伦</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-sunny.svg" alt="晴天专辑封面"></div>
+          <div class="card-title">晴天</div>
+          <div class="card-subtitle">周杰伦</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-red-bean.svg" alt="红豆专辑封面"></div>
+          <div class="card-title">红豆</div>
+          <div class="card-subtitle">王菲</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-blue-gate.svg" alt="蓝色大门专辑封面"></div>
+          <div class="card-title">蓝色大门</div>
+          <div class="card-subtitle">陈绮贞</div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>推荐艺术家</span>
+      </div>
+      <div class="card-scroll">
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-jay.svg" alt="周杰伦艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">周杰伦</div>
+        </div>
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-faye.svg" alt="王菲艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">王菲</div>
+        </div>
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-cheer.svg" alt="陈绮贞艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">陈绮贞</div>
+        </div>
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-gem.svg" alt="邓紫棋艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">邓紫棋</div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>最近添加</span>
+      </div>
+      <div class="card-scroll">
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-huanian.svg" alt="华年专辑封面"></div>
+          <div class="card-title">华年</div>
+          <div class="card-subtitle">好妹妹</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-lightyear.svg" alt="光年之外专辑封面"></div>
+          <div class="card-title">光年之外</div>
+          <div class="card-subtitle">邓紫棋</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-summer.svg" alt="夏天的风专辑封面"></div>
+          <div class="card-title">夏天的风</div>
+          <div class="card-subtitle">温岚</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-rice.svg" alt="稻香专辑封面"></div>
+          <div class="card-title">稻香</div>
+          <div class="card-subtitle">周杰伦</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="screen" id="screen-search">
+      <div class="screen-title">搜索</div>
+      <div class="search-bar-mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="歌曲、专辑、艺术家">
+        <button class="cancel">取消</button>
+      </div>
+
+      <div class="search-chips">
+        <span class="chip">华语流行</span>
+        <span class="chip">独立民谣</span>
+        <span class="chip">电子</span>
+        <span class="chip">摇滚</span>
+        <span class="chip">古典</span>
+        <span class="chip">爵士</span>
+      </div>
+
+      <div class="section-title"><span>歌曲</span><span class="see-all">查看全部</span></div>
+      <div class="track-list-mobile">
+        <div class="track-item playing" onclick="openNPM()">
+          <span class="ti-num">1</span>
+          <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦 · 十一月的萧邦</div></div>
+          <span class="ti-dur">3:46</span>
+          <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+        <div class="track-item" onclick="openNPM()">
+          <span class="ti-num">2</span>
+          <div class="ti-info"><div class="ti-title">晴天</div><div class="ti-artist">周杰伦 · 叶惠美</div></div>
+          <span class="ti-dur">4:29</span>
+          <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+        <div class="track-item" onclick="openNPM()">
+          <span class="ti-num">3</span>
+          <div class="ti-info"><div class="ti-title">七里香</div><div class="ti-artist">周杰伦 · 七里香</div></div>
+          <span class="ti-dur">4:59</span>
+          <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+      </div>
+
+      <div class="section-title"><span>专辑</span><span class="see-all">3 个结果</span></div>
+      <div class="card-scroll">
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+          <div class="card-title">十一月的萧邦</div>
+          <div class="card-subtitle">周杰伦 · 2005</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-yh.svg" alt="叶惠美专辑封面"></div>
+          <div class="card-title">叶惠美</div>
+          <div class="card-subtitle">周杰伦 · 2003</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-qili.svg" alt="七里香专辑封面"></div>
+          <div class="card-title">七里香</div>
+          <div class="card-subtitle">周杰伦 · 2004</div>
+        </div>
+      </div>
+
+      <div class="section-title"><span>艺术家</span><span class="see-all">4 个结果</span></div>
+      <div class="card-scroll">
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-jay.svg" alt="周杰伦艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">周杰伦</div>
+          <div class="card-subtitle" style="text-align:center">128 首</div>
+        </div>
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-faye.svg" alt="王菲艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">王菲</div>
+          <div class="card-subtitle" style="text-align:center">42 首</div>
+        </div>
+        <div class="card card-round" onclick="openArtistM()">
+          <div class="card-cover"><img src="assets/artwork/artist-cheer.svg" alt="陈绮贞艺术家头像"></div>
+          <div class="card-title" style="text-align:center;margin-top:6px">陈绮贞</div>
+          <div class="card-subtitle" style="text-align:center">36 首</div>
+        </div>
+      </div>
+
+      <div class="section-title"><span>歌单</span><span class="see-all">3 个结果</span></div>
+      <div class="card-scroll">
+        <div class="card" onclick="openPlaylistM()">
+          <div class="card-cover"><img src="assets/artwork/playlist-organize.svg" alt="整理音乐库时听歌单封面"></div>
+          <div class="card-title">整理音乐库时听</div>
+          <div class="card-subtitle">24 首 · 推荐</div>
+        </div>
+        <div class="card" onclick="openPlaylistM()">
+          <div class="card-cover"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+          <div class="card-title">夜间低音量播放</div>
+          <div class="card-subtitle">16 首 · 睡眠</div>
+        </div>
+        <div class="card" onclick="openPlaylistM()">
+          <div class="card-cover"><img src="assets/artwork/playlist-commute.svg" alt="离线通勤收藏歌单封面"></div>
+          <div class="card-title">离线通勤收藏</div>
+          <div class="card-subtitle">31 首 · 已下载</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Library -->
+    <div class="screen" id="screen-library">
+      <div class="screen-title">媒体库</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px">328 首 · 42 专辑 · 18 艺术家</p>
+
+      <div class="library-tabs-m" role="tablist" aria-label="媒体库分类">
+        <button class="library-tab-m active" type="button" onclick="switchLibraryTabM(this, 'songs')">歌曲</button>
+        <button class="library-tab-m" type="button" onclick="switchLibraryTabM(this, 'albums')">专辑</button>
+        <button class="library-tab-m" type="button" onclick="switchLibraryTabM(this, 'artists')">艺术家</button>
+      </div>
+
+      <div class="library-panel-m" data-library-panel-m="songs">
+        <div class="section-title"><span>歌曲</span><span class="see-all">328 首</span></div>
+        <div class="favorite-action-m" style="margin-top: 6px; margin-bottom: 14px;">
+          <button class="btn-primary-m" onclick="openNPM()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            全部播放
+          </button>
+        </div>
+        <div class="track-list-mobile">
+          <div class="track-item playing" onclick="openNPM()">
+            <span class="ti-num">1</span>
+            <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦 · 十一月的萧邦</div></div>
+            <span class="ti-dur">3:46</span>
+            <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+          </div>
+          <div class="track-item" onclick="openNPM()">
+            <span class="ti-num">2</span>
+            <div class="ti-info"><div class="ti-title">晴天</div><div class="ti-artist">周杰伦 · 叶惠美</div></div>
+            <span class="ti-dur">4:29</span>
+            <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+          </div>
+          <div class="track-item" onclick="openNPM()">
+            <span class="ti-num">3</span>
+            <div class="ti-info"><div class="ti-title">红豆</div><div class="ti-artist">王菲 · 唱游</div></div>
+            <span class="ti-dur">5:12</span>
+            <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+          </div>
+          <div class="track-item" onclick="openNPM()">
+            <span class="ti-num">4</span>
+            <div class="ti-info"><div class="ti-title">小幸运</div><div class="ti-artist">田馥甄 · 我的少女时代</div></div>
+            <span class="ti-dur">4:38</span>
+            <button class="ti-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="library-panel-m" data-library-panel-m="albums" hidden>
+        <div class="section-title"><span>专辑</span><span class="see-all">42 张</span></div>
+        <div class="library-grid-m">
+          <div class="card" onclick="openAlbumM()">
+            <div class="card-cover"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+            <div class="card-title">十一月的萧邦</div>
+            <div class="card-subtitle">周杰伦</div>
+          </div>
+          <div class="card" onclick="openAlbumM()">
+            <div class="card-cover"><img src="assets/artwork/album-sunny.svg" alt="晴天专辑封面"></div>
+            <div class="card-title">叶惠美</div>
+            <div class="card-subtitle">周杰伦</div>
+          </div>
+          <div class="card" onclick="openAlbumM()">
+            <div class="card-cover"><img src="assets/artwork/album-red-bean.svg" alt="红豆专辑封面"></div>
+            <div class="card-title">唱游</div>
+            <div class="card-subtitle">王菲</div>
+          </div>
+          <div class="card" onclick="openAlbumM()">
+            <div class="card-cover"><img src="assets/artwork/album-blue-gate.svg" alt="蓝色大门专辑封面"></div>
+            <div class="card-title">蓝色大门</div>
+            <div class="card-subtitle">陈绮贞</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="library-panel-m" data-library-panel-m="artists" hidden>
+        <div class="section-title"><span>艺术家</span><span class="see-all">18 位</span></div>
+        <div class="library-grid-m">
+          <div class="card card-round" onclick="openArtistM()">
+            <div class="card-cover"><img src="assets/artwork/artist-jay.svg" alt="周杰伦艺术家头像"></div>
+            <div class="card-title" style="text-align:center;margin-top:6px">周杰伦</div>
+            <div class="card-subtitle" style="text-align:center">86 首歌曲</div>
+          </div>
+          <div class="card card-round" onclick="openArtistM()">
+            <div class="card-cover"><img src="assets/artwork/artist-faye.svg" alt="王菲艺术家头像"></div>
+            <div class="card-title" style="text-align:center;margin-top:6px">王菲</div>
+            <div class="card-subtitle" style="text-align:center">42 首歌曲</div>
+          </div>
+          <div class="card card-round" onclick="openArtistM()">
+            <div class="card-cover"><img src="assets/artwork/artist-cheer.svg" alt="陈绮贞艺术家头像"></div>
+            <div class="card-title" style="text-align:center;margin-top:6px">陈绮贞</div>
+            <div class="card-subtitle" style="text-align:center">28 首歌曲</div>
+          </div>
+          <div class="card card-round" onclick="openArtistM()">
+            <div class="card-cover"><img src="assets/artwork/artist-gem.svg" alt="邓紫棋艺术家头像"></div>
+            <div class="card-title" style="text-align:center;margin-top:6px">邓紫棋</div>
+            <div class="card-subtitle" style="text-align:center">24 首歌曲</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Favorites -->
+    <div class="screen" id="screen-favorites">
+      <div class="screen-title">收藏</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px">26 首歌曲 · 6 张专辑 · 4 位艺术家</p>
+      <div class="favorite-action-m">
+        <button class="btn-primary-m" onclick="openNPM()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          播放全部
+        </button>
+      </div>
+      <div class="section-title"><span>收藏歌曲</span><span class="see-all">26 首</span></div>
+      <div class="track-item playing" onclick="openNPM()">
+        <span class="ti-num">1</span>
+        <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">3:46</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">2</span>
+        <div class="ti-info"><div class="ti-title">红豆</div><div class="ti-artist">王菲</div></div>
+        <span class="ti-dur">5:12</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">3</span>
+        <div class="ti-info"><div class="ti-title">小幸运</div><div class="ti-artist">田馥甄</div></div>
+        <span class="ti-dur">4:38</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">4</span>
+        <div class="ti-info"><div class="ti-title">光年之外</div><div class="ti-artist">邓紫棋</div></div>
+        <span class="ti-dur">3:55</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">5</span>
+        <div class="ti-info"><div class="ti-title">晴天</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">4:29</span>
+      </div>
+    </div>
+
+    <!-- Playlist Detail -->
+    <div class="screen" id="screen-playlist-m">
+      <div class="back-nav" onclick="switchScreenM('library')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        返回
+      </div>
+      <div class="detail-hero-mobile">
+        <div class="detail-cover-mobile"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+        <div class="detail-meta-mobile">
+          <div class="label">歌单</div>
+          <h1>深夜独处</h1>
+          <div class="subtitle">32 首 · 手动创建 · 最近更新</div>
+        </div>
+        <div class="detail-actions-mobile">
+          <button class="btn-primary-m">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            播放
+          </button>
+          <button class="btn-ghost-m">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            下载
+          </button>
+        </div>
+      </div>
+      <div class="track-item playing" onclick="openNPM()">
+        <span class="ti-num">1</span>
+        <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">3:46</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">2</span>
+        <div class="ti-info"><div class="ti-title">红豆</div><div class="ti-artist">王菲</div></div>
+        <span class="ti-dur">5:12</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">3</span>
+        <div class="ti-info"><div class="ti-title">小幸运</div><div class="ti-artist">田馥甄</div></div>
+        <span class="ti-dur">4:38</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">4</span>
+        <div class="ti-info"><div class="ti-title">晴天</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">4:29</span>
+      </div>
+    </div>
+
+    <!-- Album Detail -->
+    <div class="screen" id="screen-album-m">
+      <div class="back-nav" onclick="switchScreenM('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        返回
+      </div>
+      <div class="detail-hero-mobile">
+        <div class="detail-cover-mobile"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+        <div class="detail-meta-mobile">
+          <div class="label">专辑</div>
+          <h1>十一月的萧邦</h1>
+          <div class="subtitle">周杰伦 · 2005 · 12 首</div>
+        </div>
+        <div class="detail-actions-mobile">
+          <button class="btn-primary-m">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            播放
+          </button>
+          <button class="btn-ghost-m">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            收藏
+          </button>
+        </div>
+      </div>
+      <div class="track-item playing" onclick="openNPM()">
+        <span class="ti-num">1</span>
+        <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">3:46</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">2</span>
+        <div class="ti-info"><div class="ti-title">蓝色风暴</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">4:15</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">3</span>
+        <div class="ti-info"><div class="ti-title">发如雪</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">5:01</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">4</span>
+        <div class="ti-info"><div class="ti-title">黑色毛衣</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">4:12</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">5</span>
+        <div class="ti-info"><div class="ti-title">珊瑚海</div><div class="ti-artist">周杰伦 / Lara</div></div>
+        <span class="ti-dur">4:23</span>
+      </div>
+    </div>
+
+    <!-- Artist Detail -->
+    <div class="screen" id="screen-artist-m">
+      <div class="back-nav" onclick="switchScreenM('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        返回
+      </div>
+      <div class="detail-hero-mobile">
+        <div class="detail-cover-mobile" style="border-radius:50%"><img src="assets/artwork/artist-jay.svg" alt="周杰伦艺术家头像"></div>
+        <div class="detail-meta-mobile">
+          <div class="label">艺术家</div>
+          <h1>周杰伦</h1>
+          <div class="subtitle">华语流行 · 15 张专辑</div>
+        </div>
+        <div class="detail-actions-mobile">
+          <button class="btn-primary-m">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            随机播放
+          </button>
+          <button class="btn-ghost-m">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            已关注
+          </button>
+        </div>
+      </div>
+      <div class="section-title"><span>热门歌曲</span></div>
+      <div class="track-item playing" onclick="openNPM()">
+        <span class="ti-num">1</span>
+        <div class="ti-info"><div class="ti-title">夜曲</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">3:46</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">2</span>
+        <div class="ti-info"><div class="ti-title">晴天</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">4:29</span>
+      </div>
+      <div class="track-item" onclick="openNPM()">
+        <span class="ti-num">3</span>
+        <div class="ti-info"><div class="ti-title">稻香</div><div class="ti-artist">周杰伦</div></div>
+        <span class="ti-dur">3:43</span>
+      </div>
+
+      <div class="section-title"><span>专辑</span></div>
+      <div class="card-scroll">
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+          <div class="card-title">十一月的萧邦</div>
+          <div class="card-subtitle">2005</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-sunny.svg" alt="晴天专辑封面"></div>
+          <div class="card-title">叶惠美</div>
+          <div class="card-subtitle">2003</div>
+        </div>
+        <div class="card" onclick="openAlbumM()">
+          <div class="card-cover"><img src="assets/artwork/album-qili.svg" alt="七里香专辑封面"></div>
+          <div class="card-title">七里香</div>
+          <div class="card-subtitle">2004</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="screen" id="screen-settings-m">
+      <div class="screen-title">设置</div>
+
+      <div class="settings-group-m">
+        <div class="group-title">服务器</div>
+        <div class="setting-row-m">
+          <div>
+            <div class="label">服务器地址</div>
+            <div class="desc">https://music.example.com</div>
+          </div>
+          <div class="value">已连接</div>
+        </div>
+        <div class="setting-row-m">
+          <div class="label">服务类型</div>
+          <div class="value">Navidrome</div>
+        </div>
+        <button class="setting-row-m setting-action-m" onclick="logoutMobile()">
+          <div>
+            <div class="label">退出登录</div>
+            <div class="desc">回到登录页后重新连接服务器</div>
+          </div>
+          <div class="value">重新登录 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </button>
+      </div>
+
+      <div class="settings-group-m">
+        <div class="group-title">播放</div>
+        <div class="setting-row-m">
+          <div>
+            <div class="label">在线音质</div>
+            <div class="desc">流媒体播放音质</div>
+          </div>
+          <div class="value">320kbps <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="setting-row-m">
+          <div class="label">无缝播放</div>
+          <div class="toggle-m on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="setting-row-m">
+          <div class="label">音量标准化</div>
+          <div class="toggle-m" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="settings-group-m">
+        <div class="group-title">外观</div>
+        <button class="setting-row-m setting-action-m" onclick="toggleThemeM()">
+          <div>
+            <div class="label">主题</div>
+            <div class="desc">浅色 / 深色</div>
+          </div>
+          <div class="value" id="themeValueM">浅色 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </button>
+        <div class="setting-row-m">
+          <div class="label">歌词来源</div>
+          <div class="value">网易云音乐 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="settings-group-m">
+        <div class="group-title">下载</div>
+        <div class="setting-row-m">
+          <div class="label">下载音质</div>
+          <div class="value">FLAC <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="setting-row-m">
+          <div class="label">仅 Wi-Fi 下载</div>
+          <div class="toggle-m on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="settings-group-m">
+        <div class="group-title">关于</div>
+        <div class="setting-row-m">
+          <div class="label">版本</div>
+          <div class="value">Melisle 1.0.0</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Mini Player (mobile) -->
+  <div class="mini-player-m" onclick="openNPM()">
+    <div class="mp-cover-m"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+    <div class="mp-info-m">
+      <div class="mp-title-m">夜曲</div>
+      <div class="mp-artist-m">周杰伦</div>
+    </div>
+    <div class="mp-controls-m" onclick="event.stopPropagation()">
+      <button>
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+      </button>
+      <button>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Now Playing Overlay (mobile) -->
+  <div class="np-overlay-m" id="npOverlay">
+    <div class="np-bg-m"></div>
+    <div class="np-header-m">
+      <button onclick="closeNPM()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <span class="np-title-m">正在播放</span>
+      <button onclick="openPlayerSheetM('more')" aria-label="更多播放操作">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+    <div class="np-body-m">
+      <div class="np-cover-m"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+      <div class="np-track-m">
+        <div class="np-song-m">夜曲</div>
+        <div class="np-artist-m">周杰伦</div>
+      </div>
+      <div class="np-lyrics-m">
+        <div class="lyric-line-m">一群嗜血的蚂蚁</div>
+        <div class="lyric-line-m">被腐肉所吸引</div>
+        <div class="lyric-line-m">我面无表情</div>
+        <div class="lyric-line-m">看孤独的风景</div>
+        <div class="lyric-line-m current">失去你</div>
+        <div class="lyric-line-m">爱恨都已过去</div>
+        <div class="lyric-line-m">关于我们的一切</div>
+        <div class="lyric-line-m">我全部都愿意</div>
+        <div class="lyric-line-m">只要你说一句</div>
+        <div class="lyric-line-m">说你不会离去</div>
+      </div>
+    </div>
+    <div class="np-controls-m">
+      <div class="np-progress-m">
+        <span class="time">1:18</span>
+        <div class="progress-track-m"><div class="progress-fill-m"></div></div>
+        <span class="time right">3:46</span>
+      </div>
+      <div class="np-btns-m">
+        <button class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
+        <button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+        </button>
+        <button class="play-main-m">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        </button>
+        <button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <button onclick="openQueueM()" aria-label="打开播放队列">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="np-extras-m">
+        <button onclick="showPlayerSheetToastM('已加入收藏')" aria-label="收藏歌曲">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        <button onclick="openPlayerSheetM('volume')" aria-label="调节音量">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <button onclick="openPlayerSheetM('settings')" aria-label="播放设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Action Sheet (mobile) -->
+  <div class="player-action-sheet-m" id="playerActionSheetM" onclick="closePlayerSheetM()">
+    <div class="sheet-card-m" onclick="event.stopPropagation()">
+      <div class="sheet-title-m">
+        <h3 id="playerSheetTitleM">播放设置</h3>
+        <button onclick="closePlayerSheetM()">完成</button>
+      </div>
+      <div class="sheet-content-m" id="playerSheetContentM"></div>
+      <div class="sheet-toast-m" id="playerSheetToastM">轻触选项即可应用</div>
+    </div>
+  </div>
+  <div class="mobile-player-toast-m" id="mobilePlayerToastM">已更新</div>
+
+  <!-- Queue Sheet (mobile) -->
+  <div class="queue-sheet" id="queueSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>播放队列</h3>
+      <button onclick="closeQueueM()">完成</button>
+    </div>
+    <div class="sheet-list">
+      <div class="qi-m active">
+        <div class="qi-cover-m"><img src="assets/artwork/album-night.svg" alt="夜曲专辑封面"></div>
+        <div class="qi-info-m"><div class="qi-title-m">夜曲</div><div class="qi-artist-m">周杰伦</div></div>
+        <span class="qi-dur-m">3:46</span>
+      </div>
+      <div class="qi-m">
+        <div class="qi-cover-m"><img src="assets/artwork/album-sunny.svg" alt="晴天专辑封面"></div>
+        <div class="qi-info-m"><div class="qi-title-m">晴天</div><div class="qi-artist-m">周杰伦</div></div>
+        <span class="qi-dur-m">4:29</span>
+      </div>
+      <div class="qi-m">
+        <div class="qi-cover-m"><img src="assets/artwork/album-qili.svg" alt="七里香专辑封面"></div>
+        <div class="qi-info-m"><div class="qi-title-m">七里香</div><div class="qi-artist-m">周杰伦</div></div>
+        <span class="qi-dur-m">4:59</span>
+      </div>
+      <div class="qi-m">
+        <div class="qi-cover-m"><img src="assets/artwork/album-red-bean.svg" alt="红豆专辑封面"></div>
+        <div class="qi-info-m"><div class="qi-title-m">红豆</div><div class="qi-artist-m">王菲</div></div>
+        <span class="qi-dur-m">5:12</span>
+      </div>
+      <div class="qi-m">
+        <div class="qi-cover-m"><img src="assets/artwork/album-blue-gate.svg" alt="蓝色大门专辑封面"></div>
+        <div class="qi-info-m"><div class="qi-title-m">蓝色大门</div><div class="qi-artist-m">陈绮贞</div></div>
+        <span class="qi-dur-m">4:05</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item active" data-tab="home" onclick="switchScreenM('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      首页
+    </div>
+    <div class="tab-item" data-tab="search" onclick="switchScreenM('search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      搜索
+    </div>
+    <div class="tab-item" data-tab="library" onclick="switchScreenM('library')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      媒体库
+    </div>
+    <div class="tab-item" data-tab="favorites" onclick="switchScreenM('favorites')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      收藏
+    </div>
+    <div class="tab-item" data-tab="settings-m" onclick="switchScreenM('settings-m')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      设置
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Tab navigation
+const tabs = document.querySelectorAll('.tab-item');
+const screens = document.querySelectorAll('.screen');
+
+function switchScreenM(id) {
+  closePlayerSheetM();
+  closeQueueM();
+  closeNPM();
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  screens.forEach(s => s.classList.toggle('active', s.id === 'screen-' + id));
+  const area = document.querySelector('.screen-area');
+  if (area) area.scrollTop = 0;
+}
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    switchScreenM(tab.dataset.tab);
+  }, true);
+});
+
+function switchLibraryTabM(btn, panel) {
+  btn.parentElement.querySelectorAll('.library-tab-m').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('[data-library-panel-m]').forEach(section => {
+    section.hidden = section.dataset.libraryPanelM !== panel;
+  });
+}
+
+// Now Playing
+function openNPM() {
+  document.getElementById('npOverlay').classList.add('active');
+}
+function closeNPM() {
+  document.getElementById('npOverlay').classList.remove('active');
+}
+
+// Album / Artist
+function openAlbumM() { switchScreenM('album-m'); }
+function openArtistM() { switchScreenM('artist-m'); }
+function openPlaylistM() { switchScreenM('playlist-m'); }
+
+// Login Gate
+function selectServiceM(btn) {
+  btn.parentElement.querySelectorAll('.service-pill-m').forEach(option => option.classList.remove('active'));
+  btn.classList.add('active');
+  const status = document.getElementById('loginStatusM');
+  if (status) {
+    status.classList.remove('success');
+    status.lastChild.textContent = '等待连接';
+  }
+}
+function loginMobile() {
+  const status = document.getElementById('loginStatusM');
+  const frame = document.querySelector('.phone-frame');
+  if (!status || !frame) return;
+  status.classList.remove('success');
+  status.lastChild.textContent = '正在验证服务器与账号…';
+  window.setTimeout(() => {
+    status.classList.add('success');
+    status.lastChild.textContent = '连接成功，正在进入乐岛';
+    frame.classList.remove('logged-out');
+    frame.classList.add('logged-in');
+    switchScreenM('home');
+  }, 650);
+}
+function logoutMobile() {
+  const frame = document.querySelector('.phone-frame');
+  if (!frame) return;
+  frame.classList.remove('logged-in');
+  frame.classList.add('logged-out');
+  document.getElementById('npOverlay')?.classList.remove('active');
+  document.getElementById('queueSheet')?.classList.remove('open');
+  document.getElementById('playerActionSheetM')?.classList.remove('open');
+  const status = document.getElementById('loginStatusM');
+  if (status) {
+    status.classList.remove('success');
+    status.lastChild.textContent = '等待连接';
+  }
+}
+
+// Player sheets
+const PLAYER_SHEETS_M = {
+  volume: {
+    title: '音量',
+    toast: '拖动滑杆调整当前播放音量',
+    html: `
+      <div class="volume-sheet-row-m">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input class="volume-range-m" id="volumeRangeM" type="range" min="0" max="100" value="62" oninput="setVolumeM(this.value)">
+        <div class="volume-value-m" id="volumeValueM">62%</div>
+      </div>`
+  },
+  settings: {
+    title: '播放设置',
+    toast: '轻触选项即可应用',
+    html: `
+      <div class="sheet-section-m">
+        <div class="sheet-section-title-m">在线音质</div>
+        <div class="sheet-segment-m">
+          <button class="sheet-option-m active" onclick="selectPlayerOptionM(this, '已切换为无损优先')">
+            <span><span class="main">无损优先</span><br><span class="sub">Wi‑Fi 下自动选择最高可用音质</span></span><span>✓</span>
+          </button>
+          <button class="sheet-option-m" onclick="selectPlayerOptionM(this, '已切换为流量节省')">
+            <span><span class="main">流量节省</span><br><span class="sub">移动网络下使用 320 kbps</span></span><span></span>
+          </button>
+        </div>
+      </div>
+      <button class="sheet-toggle-row-m" onclick="toggleSheetSwitchM(this, '睡眠定时：30 分钟')">
+        <span class="sheet-toggle-copy-m"><span class="main">睡眠定时</span><span class="sub">30 分钟后暂停播放</span></span>
+        <span class="sheet-switch-m"></span>
+      </button>
+      <button class="sheet-toggle-row-m" onclick="toggleSheetSwitchM(this, '已开启音量标准化')">
+        <span class="sheet-toggle-copy-m"><span class="main">音量标准化</span><span class="sub">减少不同专辑间的音量跳变</span></span>
+        <span class="sheet-switch-m"></span>
+      </button>`
+  },
+  more: {
+    title: '更多操作',
+    toast: '选择后会保留在当前播放页',
+    html: `
+      <button class="sheet-option-m" onclick="showPlayerSheetToastM('已下载到本机')"><span class="main">下载当前歌曲</span><span>↓</span></button>
+      <button class="sheet-option-m" onclick="showPlayerSheetToastM('已添加到播放队列')"><span class="main">下一首播放</span><span>＋</span></button>
+      <button class="sheet-option-m" onclick="showPlayerSheetToastM('已复制歌曲信息')"><span class="main">复制歌曲信息</span><span>⌁</span></button>
+      <button class="sheet-option-m" onclick="openQueueM(); closePlayerSheetM();"><span class="main">查看播放队列</span><span>›</span></button>`
+  }
+};
+
+function openPlayerSheetM(type) {
+  closeQueueM();
+  const config = PLAYER_SHEETS_M[type] || PLAYER_SHEETS_M.settings;
+  document.getElementById('playerSheetTitleM').textContent = config.title;
+  document.getElementById('playerSheetContentM').innerHTML = config.html;
+  document.getElementById('playerSheetToastM').textContent = config.toast;
+  document.getElementById('playerActionSheetM').classList.add('open');
+}
+function closePlayerSheetM() {
+  document.getElementById('playerActionSheetM')?.classList.remove('open');
+}
+function setVolumeM(value) {
+  const label = document.getElementById('volumeValueM');
+  if (label) label.textContent = value + '%';
+  const toast = document.getElementById('playerSheetToastM');
+  if (toast) toast.textContent = '当前音量 ' + value + '%';
+}
+function selectPlayerOptionM(btn, message) {
+  btn.parentElement.querySelectorAll('.sheet-option-m').forEach(option => {
+    option.classList.remove('active');
+    const marker = option.lastElementChild;
+    if (marker) marker.textContent = '';
+  });
+  btn.classList.add('active');
+  if (btn.lastElementChild) btn.lastElementChild.textContent = '✓';
+  showPlayerSheetToastM(message);
+}
+function toggleSheetSwitchM(btn, message) {
+  const control = btn.querySelector('.sheet-switch-m');
+  control?.classList.toggle('active');
+  showPlayerSheetToastM(message);
+}
+function showPlayerSheetToastM(message) {
+  const sheetToast = document.getElementById('playerSheetToastM');
+  if (sheetToast) sheetToast.textContent = message;
+  const toast = document.getElementById('mobilePlayerToastM');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  window.clearTimeout(toast._timer);
+  toast._timer = window.setTimeout(() => toast.classList.remove('show'), 1300);
+}
+
+// Queue
+function openQueueM() {
+  closePlayerSheetM();
+  document.getElementById('queueSheet')?.classList.add('open');
+}
+function closeQueueM() {
+  document.getElementById('queueSheet')?.classList.remove('open');
+}
+
+// Theme
+function setThemeM(theme) {
+  const frame = document.querySelector('.phone-frame');
+  const value = document.getElementById('themeValueM');
+  frame.setAttribute('data-theme', theme);
+  if (value) value.firstChild.textContent = theme === 'dark' ? '深色 ' : '浅色 ';
+  localStorage.setItem('melisle-m-theme', theme);
+}
+function toggleThemeM() {
+  const frame = document.querySelector('.phone-frame');
+  const isDark = frame.getAttribute('data-theme') === 'dark';
+  setThemeM(isDark ? 'light' : 'dark');
+}
+(function() {
+  const saved = localStorage.getItem('melisle-m-theme') || 'light';
+  setThemeM(saved === 'dark' ? 'dark' : 'light');
+})();
+
+// Lyric scroll
+(function() {
+  const lines = document.querySelectorAll('.lyric-line-m');
+  let current = 4;
+  setInterval(() => {
+    lines[current].classList.remove('current');
+    current = (current + 1) % lines.length;
+    lines[current].classList.add('current');
+    const lyrics = document.querySelector('.np-lyrics-m');
+    if (lyrics) lyrics.scrollTop = Math.max(0, lines[current].offsetTop - lyrics.clientHeight / 2);
+  }, 3000);
+})();
+</script>
+</body>
+</html>
