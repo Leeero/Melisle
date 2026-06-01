@@ -53,38 +53,20 @@ class _DesktopShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final macOsTrafficLightPadding = Platform.isMacOS
-        ? AppSpacingTokens.macOsTrafficLightInset
-        : 0.0;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      body: SafeArea(
-        top: !Platform.isMacOS,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacingTokens.shellOuterPadding,
-            Platform.isMacOS
-                ? macOsTrafficLightPadding
-                : AppSpacingTokens.shellOuterPadding,
-            AppSpacingTokens.shellOuterPadding,
-            AppSpacingTokens.shellBottomInset,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Row(
+        children: [
+          _ShellSidebar(selectedIndex: selectedIndex, onSelected: onSelected),
+          Expanded(
+            child: _ShellContentSurface(
+              body: navigationShell,
+              footer: const MiniPlayerBar(),
+            ),
           ),
-          child: Row(
-            children: [
-              _ShellSidebar(
-                selectedIndex: selectedIndex,
-                onSelected: onSelected,
-              ),
-              const SizedBox(width: AppSpacingTokens.shellGap),
-              Expanded(
-                child: _ShellContentSurface(
-                  body: navigationShell,
-                  footer: const MiniPlayerBar(),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -103,18 +85,23 @@ class _CompactShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final hasMiniPlayer = context.select<PlayerCubit, bool>(
       (cubit) => cubit.state.currentTrack != null,
     );
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: navigationShell,
       bottomNavigationBar: _ShellBottomDock(
         hasMiniPlayer: hasMiniPlayer,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const MiniPlayerBar(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: MiniPlayerBar(),
+            ),
             SizedBox(height: hasMiniPlayer ? 2 : 0),
             _ShellBottomBar(
               selectedIndex: selectedIndex,
@@ -138,12 +125,7 @@ class _ShellBottomDock extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacingTokens.shellBottomInset,
-          hasMiniPlayer ? 2 : 6,
-          AppSpacingTokens.shellBottomInset,
-          AppSpacingTokens.shellBottomInset,
-        ),
+        padding: EdgeInsets.only(top: hasMiniPlayer ? 0 : 5),
         child: child,
       ),
     );
@@ -158,7 +140,6 @@ class _ShellContentSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final children = <Widget>[Expanded(child: body)];
     final footer = this.footer;
     if (footer != null) {
@@ -167,23 +148,21 @@ class _ShellContentSurface extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(AppRadiusTokens.shellContainer),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              Theme.of(context).musicTealSoft.withValues(alpha: 0.18),
+              Theme.of(context).scaffoldBackgroundColor,
+            ),
+            Theme.of(context).scaffoldBackgroundColor,
+          ],
+          stops: const [0, 0.46],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 36,
-            offset: const Offset(0, 18),
-          ),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadiusTokens.shellContainer),
-        child: Column(children: children),
-      ),
+      child: Column(children: children),
     );
   }
 }
@@ -196,83 +175,124 @@ class _ShellSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.64),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+        color: theme.surfaceSidebar,
+        border: Border(
+          right: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.82),
           ),
-        ],
+        ),
       ),
       child: SizedBox(
         width: AppSpacingTokens.desktopSidebarWidth,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            10,
-            AppSpacingTokens.desktopSidebarTopGap,
-            10,
-            AppSpacingTokens.desktopSidebarBottomGap,
-          ),
+          padding: EdgeInsets.fromLTRB(10, Platform.isMacOS ? 20 : 16, 10, 16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (Platform.isMacOS) const SizedBox(height: 8),
-              Container(
-                width: 48,
-                height: 48,
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.14),
-                  ),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 10,
+                  top: Platform.isMacOS
+                      ? AppSpacingTokens.macOsTrafficLightInset
+                      : 4,
+                  right: 10,
+                  bottom: 20,
                 ),
-                child: Image.asset(
-                  'assets/icons/logo.png',
-                  fit: BoxFit.contain,
-                  semanticLabel: '乐岛图标',
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(
+                          AppRadiusTokens.iconButton - 4,
+                        ),
+                      ),
+                      child: Image.asset(
+                        'assets/icons/logo.png',
+                        fit: BoxFit.contain,
+                        semanticLabel: '乐岛图标',
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      AppConstants.appName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                AppConstants.appName,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 28),
               _ShellNavButton(
                 icon: Icons.home_rounded,
                 label: '首页',
                 selected: selectedIndex == 0,
                 onTap: () => onSelected(0),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
+              _ShellNavButton(
+                icon: Icons.search_rounded,
+                label: '搜索',
+                selected: false,
+                onTap: () => context.push('/search'),
+              ),
+              const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.library_music_rounded,
                 label: '媒体库',
                 selected: selectedIndex == 1,
                 onTap: () => onSelected(1),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
+              const _ShellSectionDivider(),
+              const _ShellSectionLabel('资料库'),
+              _ShellNavButton(
+                icon: Icons.favorite_border_rounded,
+                label: '收藏',
+                selected: false,
+                onTap: () {
+                  onSelected(1);
+                  context.go('/library');
+                },
+              ),
+              const SizedBox(height: 2),
+              _ShellNavButton(
+                icon: Icons.history_rounded,
+                label: '最近播放',
+                selected: false,
+                onTap: () {
+                  onSelected(0);
+                  context.go('/history');
+                },
+              ),
+              const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.queue_music_rounded,
                 label: '歌单',
                 selected: selectedIndex == 2,
                 onTap: () => onSelected(2),
               ),
-              const Spacer(),
+              const SizedBox(height: 10),
+              const _ShellSectionDivider(),
+              const _ShellSectionLabel('管理'),
+              _ShellNavButton(
+                icon: Icons.download_rounded,
+                label: '下载管理',
+                selected: false,
+                onTap: () {
+                  onSelected(3);
+                  context.go('/downloads');
+                },
+              ),
+              const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.settings_rounded,
                 label: '设置',
@@ -282,6 +302,41 @@ class _ShellSidebar extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ShellSectionLabel extends StatelessWidget {
+  const _ShellSectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).muted,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _ShellSectionDivider extends StatelessWidget {
+  const _ShellSectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.outlineVariant,
+        child: const SizedBox(height: 1),
       ),
     );
   }
@@ -300,62 +355,64 @@ class _ShellBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(AppRadiusTokens.card),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+        color: colorScheme.surface.withValues(alpha: 0.88),
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            width: 0.5,
+          ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, -8),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ShellBottomButton(
-              icon: Icons.home_rounded,
-              label: '首页',
-              selected: selectedIndex == 0,
-              onTap: () => onSelected(0),
-            ),
+      child: SizedBox(
+        height: AppSpacingTokens.mobileTabContentHeight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              Expanded(
+                child: _ShellBottomButton(
+                  icon: Icons.home_rounded,
+                  label: '首页',
+                  selected: selectedIndex == 0,
+                  onTap: () => onSelected(0),
+                ),
+              ),
+              Expanded(
+                child: _ShellBottomButton(
+                  icon: Icons.library_music_rounded,
+                  label: '媒体库',
+                  selected: selectedIndex == 1,
+                  onTap: () => onSelected(1),
+                ),
+              ),
+              Expanded(
+                child: _ShellBottomButton(
+                  icon: Icons.queue_music_rounded,
+                  label: '歌单',
+                  selected: selectedIndex == 2,
+                  onTap: () => onSelected(2),
+                ),
+              ),
+              Expanded(
+                child: _ShellBottomButton(
+                  icon: Icons.settings_rounded,
+                  label: '设置',
+                  selected: selectedIndex == 3,
+                  onTap: () => onSelected(3),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _ShellBottomButton(
-              icon: Icons.library_music_rounded,
-              label: '媒体库',
-              selected: selectedIndex == 1,
-              onTap: () => onSelected(1),
-            ),
-          ),
-          Expanded(
-            child: _ShellBottomButton(
-              icon: Icons.queue_music_rounded,
-              label: '歌单',
-              selected: selectedIndex == 2,
-              onTap: () => onSelected(2),
-            ),
-          ),
-          Expanded(
-            child: _ShellBottomButton(
-              icon: Icons.settings_rounded,
-              label: '设置',
-              selected: selectedIndex == 3,
-              onTap: () => onSelected(3),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -386,28 +443,32 @@ class _ShellBottomButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadiusTokens.card),
-          child: AnimatedContainer(
-            duration: AppMotion.short,
-            height: 44,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            decoration: BoxDecoration(
-              color: selected
-                  ? colorScheme.primaryContainer.withValues(alpha: 0.9)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppRadiusTokens.card),
-              border: Border.all(
-                color: selected
-                    ? colorScheme.primary.withValues(alpha: 0.12)
-                    : Colors.transparent,
-              ),
-            ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: selected
-                  ? colorScheme.onPrimaryContainer
-                  : colorScheme.onSurfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: SizedBox(
+            height: AppSpacingTokens.mobileTabContentHeight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 22,
+                  color: selected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -452,58 +513,47 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
           onTap: widget.onTap,
           onHover: (value) => setState(() => _hovered = value),
           onFocusChange: (value) => setState(() => _focused = value),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton - 6),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           child: AnimatedContainer(
-            duration: AppMotion.short,
+            duration: AppMotion.micro,
             curve: AppMotion.enter,
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+            constraints: const BoxConstraints(minHeight: 34),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: widget.selected
-                  ? colorScheme.primary.withValues(alpha: 0.10)
+                  ? colorScheme.primaryContainer
                   : (highlighted
-                        ? colorScheme.onSurface.withValues(alpha: 0.05)
+                        ? colorScheme.outlineVariant.withValues(alpha: 0.74)
                         : Colors.transparent),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: widget.selected
-                    ? colorScheme.primary.withValues(alpha: 0.12)
-                    : (_focused
-                          ? colorScheme.primary.withValues(alpha: 0.42)
-                          : Colors.transparent),
+              borderRadius: BorderRadius.circular(
+                AppRadiusTokens.iconButton - 6,
               ),
-              boxShadow: widget.selected || _focused
-                  ? [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(
-                          alpha: _focused ? 0.12 : 0.08,
-                        ),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : const [],
+              border: Border.all(color: Colors.transparent),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
                 Icon(
                   widget.icon,
-                  size: 22,
-                  color: widget.selected || _focused
+                  size: 18,
+                  color: widget.selected
                       ? colorScheme.primary
                       : colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(width: 10),
                 Text(
                   widget.label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: widget.selected || _focused
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: widget.selected
                         ? colorScheme.primary
+                        : highlighted
+                        ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
                     fontWeight: widget.selected
                         ? FontWeight.w600
-                        : FontWeight.w500,
+                        : FontWeight.w400,
                   ),
                 ),
               ],

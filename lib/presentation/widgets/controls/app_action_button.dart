@@ -36,7 +36,8 @@ abstract final class AppActionButtonStyle {
     AppActionButtonTone tone = AppActionButtonTone.neutral,
     bool dense = true,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final foreground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primary,
       AppActionButtonTone.secondary => colorScheme.secondary,
@@ -63,11 +64,14 @@ abstract final class AppActionButtonStyle {
     ).copyWith(
       overlayColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.pressed)) {
-          return foreground.withValues(alpha: 0.10);
+          return foreground.withValues(alpha: 0.12);
         }
         if (states.contains(WidgetState.hovered) ||
             states.contains(WidgetState.focused)) {
-          return foreground.withValues(alpha: 0.06);
+          if (tone == AppActionButtonTone.neutral) {
+            return theme.hoverWash;
+          }
+          return foreground.withValues(alpha: 0.08);
         }
         return Colors.transparent;
       }),

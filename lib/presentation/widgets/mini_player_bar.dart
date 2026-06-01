@@ -58,57 +58,86 @@ class _MiniPlayerFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacingTokens.miniPlayerOuterHorizontal,
-          AppSpacingTokens.miniPlayerOuterTop,
-          AppSpacingTokens.miniPlayerOuterHorizontal,
-          isWide
-              ? AppSpacingTokens.miniPlayerOuterBottomWide
-              : AppSpacingTokens.miniPlayerOuterBottomCompact,
+    if (isWide) {
+      return SizedBox(
+        height: AppSpacingTokens.desktopMiniPlayerHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.surface.withValues(alpha: 0.96),
+                Color.alphaBlend(
+                  theme.musicWarmSoft.withValues(alpha: 0.28),
+                  colorScheme.surface,
+                ),
+              ],
+            ),
+            border: Border(
+              top: BorderSide(
+                color: Color.alphaBlend(
+                  theme.musicTeal.withValues(alpha: 0.16),
+                  colorScheme.outlineVariant,
+                ),
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.shadow.withValues(alpha: 0.05),
+                blurRadius: 34,
+                offset: const Offset(0, -12),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacingTokens.miniPlayerInnerHorizontal,
+            ),
+            child: child,
+          ),
         ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: SizedBox(
+        height: AppSpacingTokens.mobileMiniPlayerHeight,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(isWide ? 24 : 22),
+          borderRadius: BorderRadius.circular(18),
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                   colors: [
-                    colorScheme.surface.withValues(alpha: 0.88),
-                    colorScheme.surfaceContainerHigh.withValues(alpha: 0.76),
+                    colorScheme.surface.withValues(alpha: 0.94),
+                    Color.alphaBlend(
+                      theme.musicWarmSoft.withValues(alpha: 0.30),
+                      colorScheme.surface,
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(isWide ? 24 : 22),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.58),
+                  color: Color.alphaBlend(
+                    theme.musicTeal.withValues(alpha: 0.18),
+                    colorScheme.outlineVariant,
+                  ),
+                  width: 0.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.16),
-                    blurRadius: 28,
-                    offset: const Offset(0, 12),
-                  ),
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.07),
-                    blurRadius: 24,
-                    offset: const Offset(0, 6),
+                    color: colorScheme.shadow.withValues(alpha: 0.10),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  isWide ? AppSpacingTokens.miniPlayerInnerHorizontal : 10,
-                  isWide ? AppSpacingTokens.miniPlayerInnerVerticalWide : 6,
-                  isWide ? AppSpacingTokens.miniPlayerInnerHorizontal : 10,
-                  isWide ? AppSpacingTokens.miniPlayerInnerVerticalWide : 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 11),
                 child: child,
               ),
             ),
@@ -230,8 +259,8 @@ class _WideMiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          flex: 4,
+        SizedBox(
+          width: 280,
           child: _MiniTrackButton(
             trackTitle: trackTitle,
             artistName: artistName,
@@ -239,22 +268,15 @@ class _WideMiniPlayer extends StatelessWidget {
             sourceContext: sourceContext,
           ),
         ),
-        const SizedBox(width: 18),
-        const _MiniSectionDivider(),
-        const SizedBox(width: 18),
-        const Expanded(
-          flex: 5,
-          child: _MiniTimelineBlock(showElapsedLabels: true),
-        ),
-        const SizedBox(width: 18),
-        const _MiniSectionDivider(),
-        const SizedBox(width: 18),
+        const SizedBox(width: 16),
         const _MiniControlCluster(child: _MiniTransportControls()),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
+        const Expanded(child: _MiniTimelineBlock(showElapsedLabels: true)),
+        const SizedBox(width: 16),
         const _MiniPlaybackModeButton(),
-        const SizedBox(width: 12),
-        const _MiniVolumeControl(),
         const SizedBox(width: 8),
+        const _MiniVolumeControl(),
+        const SizedBox(width: 4),
         const _MiniExpandButton(),
       ],
     );
@@ -285,11 +307,11 @@ class _MiniTrackButton extends StatelessWidget {
       children: [
         CachedArtwork(
           imageUrl: artworkUrl,
-          size: 56,
-          borderRadius: 22,
+          size: 48,
+          borderRadius: 12,
           sourceContext: sourceContext,
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +342,10 @@ class _MiniTrackButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadiusTokens.card),
         onTap: () => PlayerNavigation.openPlayerPage(context),
-        child: content,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: content,
+        ),
       ),
     );
   }
@@ -407,35 +432,12 @@ class _MiniControlCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.52),
-        ),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _MiniSectionDivider extends StatelessWidget {
-  const _MiniSectionDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 42,
-      color: Theme.of(
-        context,
-      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      child: child,
     );
   }
 }
@@ -447,39 +449,28 @@ class _MiniVolumeControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.44),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.46),
-        ),
-      ),
-      child: SizedBox(
-        width: 132,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            children: [
-              const Tooltip(
-                message: '音量',
-                child: Icon(Icons.volume_up_rounded, size: 18),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: BlocBuilder<PlayerCubit, PlayerViewState>(
-                  buildWhen: (prev, next) => prev.volume != next.volume,
-                  builder: (context, state) => Slider(
-                    value: state.volume,
-                    semanticFormatterCallback: (value) =>
-                        '音量 ${_volumePercent(value)}%',
-                    onChanged: context.read<PlayerCubit>().setVolume,
-                  ),
-                ),
-              ),
-            ],
+    return SizedBox(
+      width: 132,
+      child: Row(
+        children: [
+          Icon(
+            Icons.volume_up_rounded,
+            size: 18,
+            color: colorScheme.onSurfaceVariant,
           ),
-        ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (prev, next) => prev.volume != next.volume,
+              builder: (context, state) => Slider(
+                value: state.volume,
+                semanticFormatterCallback: (value) =>
+                    '音量 ${_volumePercent(value)}%',
+                onChanged: context.read<PlayerCubit>().setVolume,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -490,9 +481,9 @@ class _MiniExpandButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filledTonal(
+    return _MiniControlButton(
+      icon: Icons.open_in_full_rounded,
       onPressed: () => PlayerNavigation.openPlayerPage(context),
-      icon: const Icon(Icons.open_in_full_rounded),
       tooltip: '展开播放器',
     );
   }
@@ -586,14 +577,12 @@ class _MiniPlaybackModeButton extends StatelessWidget {
           onPressed: context.read<PlayerCubit>().cyclePlaybackMode,
           tooltip: '播放模式：${_playbackModeLabel(mode)}，点击切换',
           style: IconButton.styleFrom(
-            backgroundColor: selected
-                ? colorScheme.primaryContainer
-                : colorScheme.surface,
+            backgroundColor: selected ? theme.selectedWash : Colors.transparent,
             foregroundColor: foregroundColor,
             side: BorderSide(
               color: selected
                   ? colorScheme.primary.withValues(alpha: 0.18)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.34),
+                  : Colors.transparent,
             ),
             minimumSize: const Size.square(44),
             maximumSize: const Size.square(44),
@@ -624,6 +613,7 @@ class _MiniControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final size = compact ? 44.0 : (isPrimary ? 50.0 : 44.0);
     return IconButton.filled(
@@ -631,18 +621,15 @@ class _MiniControlButton extends StatelessWidget {
       tooltip: tooltip,
       style: IconButton.styleFrom(
         backgroundColor: isPrimary
-            ? colorScheme.primary
-            : colorScheme.surface.withValues(alpha: compact ? 0.0 : 0.78),
+            ? Color.alphaBlend(
+                theme.musicRose.withValues(alpha: 0.12),
+                colorScheme.onSurface,
+              )
+            : Colors.transparent,
         foregroundColor: isPrimary
             ? colorScheme.onPrimary
             : colorScheme.onSurfaceVariant,
-        side: isPrimary
-            ? BorderSide.none
-            : BorderSide(
-                color: colorScheme.outlineVariant.withValues(
-                  alpha: compact ? 0.24 : 0.38,
-                ),
-              ),
+        side: isPrimary ? BorderSide.none : BorderSide.none,
         minimumSize: Size.square(size),
         maximumSize: Size.square(size),
         padding: EdgeInsets.zero,

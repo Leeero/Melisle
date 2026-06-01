@@ -55,9 +55,12 @@ class AppScopeTabs<T> extends StatelessWidget {
               variant: effectiveVariant,
               onPressed: () => onChanged(items[index].value),
             ),
-            if (effectiveVariant == AppScopeTabsVariant.pill &&
-                index != items.length - 1)
-              const SizedBox(width: 8),
+            if (index != items.length - 1)
+              SizedBox(
+                width: effectiveVariant == AppScopeTabsVariant.underline
+                    ? 18
+                    : 2,
+              ),
           ],
         ],
       ),
@@ -70,13 +73,23 @@ class AppScopeTabs<T> extends StatelessWidget {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.68),
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.76),
                   ),
                 ),
               ),
               child: tabs,
             )
-          : tabs,
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorScheme.outlineVariant.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.32
+                      : 0.58,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Padding(padding: const EdgeInsets.all(2), child: tabs),
+            ),
     );
   }
 }
@@ -103,12 +116,13 @@ class _AppScopeTab<T> extends StatefulWidget {
 class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
   bool _hovered = false;
   bool _focused = false;
-  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final active = widget.selected || _hovered || _focused;
+    final isUnderline = widget.variant == AppScopeTabsVariant.underline;
 
     return Semantics(
       button: true,
@@ -116,10 +130,7 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
       label: widget.item.semanticLabel ?? '查看${widget.item.label}',
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
+        onExit: (_) => setState(() => _hovered = false),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -134,22 +145,13 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
             highlightColor: Colors.transparent,
             overlayColor: const WidgetStatePropertyAll(Colors.transparent),
             onFocusChange: (value) => setState(() => _focused = value),
-            onHighlightChanged: (value) => setState(() => _pressed = value),
             onTap: widget.onPressed,
             child: AnimatedContainer(
               duration: AppMotion.micro,
               curve: AppMotion.enter,
-              constraints: BoxConstraints(
-                minWidth: widget.variant == AppScopeTabsVariant.underline
-                    ? 116
-                    : 0,
-              ),
-              height: widget.variant == AppScopeTabsVariant.underline ? 48 : 44,
-              padding: EdgeInsets.symmetric(
-                horizontal: widget.variant == AppScopeTabsVariant.underline
-                    ? 18
-                    : 16,
-              ),
+              constraints: BoxConstraints(minWidth: isUnderline ? 0 : 0),
+              height: isUnderline ? 40 : 34,
+              padding: EdgeInsets.symmetric(horizontal: isUnderline ? 0 : 14),
               decoration: _decoration(context),
               alignment: Alignment.center,
               child: Row(
@@ -163,23 +165,25 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                           ? colorScheme.primary
                           : colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 7),
                   ],
                   Text(
                     widget.item.displayLabel,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: widget.selected
-                          ? widget.variant == AppScopeTabsVariant.underline
-                                ? colorScheme.primary
-                                : colorScheme.onPrimaryContainer
-                          : active
-                          ? colorScheme.onSurface
-                          : colorScheme.onSurfaceVariant,
-                      fontWeight: widget.selected
-                          ? FontWeight.w700
-                          : FontWeight.w600,
-                    ),
+                    style:
+                        (isUnderline
+                                ? theme.textTheme.labelLarge
+                                : theme.textTheme.labelMedium)
+                            ?.copyWith(
+                              color: widget.selected
+                                  ? colorScheme.onSurface
+                                  : active
+                                  ? colorScheme.onSurface
+                                  : colorScheme.onSurfaceVariant,
+                              fontWeight: widget.selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w600,
+                            ),
                   ),
                 ],
               ),
@@ -191,13 +195,14 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
   }
 
   BoxDecoration _decoration(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     if (widget.variant == AppScopeTabsVariant.underline) {
       return BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            width: widget.selected ? 2.5 : 2,
+            width: 2,
             color: widget.selected ? colorScheme.primary : Colors.transparent,
           ),
         ),
@@ -206,20 +211,23 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
 
     return BoxDecoration(
       color: widget.selected
-          ? colorScheme.primaryContainer.withValues(
-              alpha: _pressed ? 0.9 : 0.82,
-            )
-          : colorScheme.surface.withValues(
-              alpha: _pressed ? 0.78 : (_hovered || _focused ? 0.7 : 0.5),
-            ),
-      borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+          ? colorScheme.surface
+          : (_hovered || _focused ? theme.hoverWash : Colors.transparent),
+      borderRadius: BorderRadius.circular(8),
       border: Border.all(
         color: widget.selected
-            ? colorScheme.primary.withValues(alpha: _focused ? 0.62 : 0.5)
-            : colorScheme.outlineVariant.withValues(
-                alpha: _focused ? 0.9 : 0.72,
-              ),
+            ? colorScheme.outlineVariant.withValues(alpha: 0.34)
+            : Colors.transparent,
       ),
+      boxShadow: widget.selected
+          ? [
+              BoxShadow(
+                color: colorScheme.shadow.withValues(alpha: 0.10),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ]
+          : const <BoxShadow>[],
     );
   }
 }
