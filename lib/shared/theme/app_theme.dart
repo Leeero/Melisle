@@ -17,12 +17,14 @@ abstract final class AppTheme {
   static const _darkSurface = AppColorTokens.darkSurface;
   static const _darkSurfaceHigh = AppColorTokens.darkSurfaceHigh;
   static const _darkSurfaceHighest = AppColorTokens.darkSurfaceHighest;
+  static const _darkSurfaceSidebar = AppColorTokens.darkSurfaceSidebar;
 
   // — Light mode surfaces
   static const _lightScaffold = AppColorTokens.lightScaffold;
   static const _lightSurface = AppColorTokens.lightSurface;
   static const _lightSurfaceHigh = AppColorTokens.lightSurfaceHigh;
   static const _lightSurfaceHighest = AppColorTokens.lightSurfaceHighest;
+  static const _lightSurfaceSidebar = AppColorTokens.lightSurfaceSidebar;
 
   // — Semantic colours (dark)
   static const _darkPrimary = AppColorTokens.darkPrimary;
@@ -31,6 +33,7 @@ abstract final class AppTheme {
   static const _darkSecondaryContainer = AppColorTokens.darkSecondaryContainer;
   static const _darkOnSurface = AppColorTokens.darkOnSurface;
   static const _darkOnSurfaceVariant = AppColorTokens.darkOnSurfaceVariant;
+  static const _darkMuted = AppColorTokens.darkMuted;
   static const _darkOutline = AppColorTokens.darkOutline;
   static const _darkOutlineVariant = AppColorTokens.darkOutlineVariant;
 
@@ -40,7 +43,9 @@ abstract final class AppTheme {
   static const _lightSecondary = AppColorTokens.lightSecondary;
   static const _lightSecondaryContainer =
       AppColorTokens.lightSecondaryContainer;
+  static const _lightOnSurface = AppColorTokens.lightOnSurface;
   static const _lightOnSurfaceVariant = AppColorTokens.lightOnSurfaceVariant;
+  static const _lightMuted = AppColorTokens.lightMuted;
   static const _lightOutline = AppColorTokens.lightOutline;
   static const _lightOutlineVariant = AppColorTokens.lightOutlineVariant;
 
@@ -91,13 +96,15 @@ abstract final class AppTheme {
     final colorScheme = isDark
         ? baseScheme.copyWith(
             primary: _darkPrimary,
-            onPrimary: const Color(0xFF182040),
+            onPrimary: _darkScaffold,
             primaryContainer: _darkPrimaryContainer,
-            onPrimaryContainer: const Color(0xFFE1E5FF),
+            onPrimaryContainer: _darkOnSurface,
             secondary: _darkSecondary,
-            onSecondary: const Color(0xFF073A39),
+            onSecondary: _darkScaffold,
             secondaryContainer: _darkSecondaryContainer,
-            onSecondaryContainer: const Color(0xFFC4F4F1),
+            onSecondaryContainer: _darkOnSurface,
+            error: AppColorTokens.darkDanger,
+            onError: _darkScaffold,
             surface: _darkSurface,
             surfaceContainer: _darkSurfaceHigh,
             surfaceContainerHigh: _darkSurfaceHigh,
@@ -113,15 +120,18 @@ abstract final class AppTheme {
             primary: _lightPrimary,
             onPrimary: const Color(0xFFF9FAFF),
             primaryContainer: _lightPrimaryContainer,
-            onPrimaryContainer: const Color(0xFF192253),
+            onPrimaryContainer: _lightOnSurface,
             secondary: _lightSecondary,
             onSecondary: const Color(0xFFF8FCFC),
             secondaryContainer: _lightSecondaryContainer,
-            onSecondaryContainer: const Color(0xFF173F3D),
+            onSecondaryContainer: _lightOnSurface,
+            error: AppColorTokens.lightDanger,
+            onError: const Color(0xFFFFFAF8),
             surface: _lightSurface,
             surfaceContainer: _lightSurfaceHigh,
             surfaceContainerHigh: _lightSurfaceHigh,
             surfaceContainerHighest: _lightSurfaceHighest,
+            onSurface: _lightOnSurface,
             onSurfaceVariant: _lightOnSurfaceVariant,
             outline: _lightOutline,
             outlineVariant: _lightOutlineVariant,
@@ -430,13 +440,15 @@ abstract final class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.onPrimary;
+            return isDark ? _darkOnSurface : _lightSurface;
           }
           return colorScheme.onSurfaceVariant;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primary;
+            return isDark
+                ? AppColorTokens.darkSuccess
+                : AppColorTokens.lightSuccess;
           }
           return colorScheme.outlineVariant.withValues(
             alpha: isDark ? 0.42 : 0.72,
@@ -654,4 +666,58 @@ extension MelisleThemeX on ThemeData {
   Color get lyricHighlight => brightness == Brightness.dark
       ? AppTheme.darkLyricHighlight
       : AppTheme.lightLyricHighlight;
+
+  Color get surfaceSidebar => brightness == Brightness.dark
+      ? AppTheme._darkSurfaceSidebar
+      : AppTheme._lightSurfaceSidebar;
+
+  Color get muted => brightness == Brightness.dark
+      ? AppTheme._darkMuted
+      : AppTheme._lightMuted;
+
+  Color get accentHover => brightness == Brightness.dark
+      ? AppColorTokens.darkPrimaryHover
+      : AppColorTokens.lightPrimaryHover;
+
+  Color get musicWarm => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicWarm
+      : AppColorTokens.lightMusicWarm;
+
+  Color get musicWarmSoft => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicWarmSoft
+      : AppColorTokens.lightMusicWarmSoft;
+
+  Color get musicRose => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicRose
+      : AppColorTokens.lightMusicRose;
+
+  Color get musicRoseSoft => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicRoseSoft
+      : AppColorTokens.lightMusicRoseSoft;
+
+  Color get musicTeal => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicTeal
+      : AppColorTokens.lightMusicTeal;
+
+  Color get musicTealSoft => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicTealSoft
+      : AppColorTokens.lightMusicTealSoft;
+
+  Color get musicInk => brightness == Brightness.dark
+      ? AppColorTokens.darkMusicInk
+      : AppColorTokens.lightMusicInk;
+
+  Color get hoverWash => Color.alphaBlend(
+    musicTealSoft.withValues(
+      alpha: brightness == Brightness.dark ? 0.46 : 0.54,
+    ),
+    colorScheme.surface,
+  );
+
+  Color get selectedWash => Color.alphaBlend(
+    musicWarmSoft.withValues(
+      alpha: brightness == Brightness.dark ? 0.60 : 0.64,
+    ),
+    colorScheme.surface,
+  );
 }

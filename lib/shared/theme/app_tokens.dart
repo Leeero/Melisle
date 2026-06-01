@@ -1,38 +1,68 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColorTokens {
-  static const seed = Color(0xFF9CA6FF);
+  static const seed = Color(0xFF1A9480);
 
-  static const darkScaffold = Color(0xFF090C12);
-  static const darkSurface = Color(0xFF121723);
-  static const darkSurfaceHigh = Color(0xFF171E2B);
-  static const darkSurfaceHighest = Color(0xFF212A3B);
+  static const darkScaffold = Color(0xFF0C1315);
+  static const darkSurface = Color(0xFF141C1E);
+  static const darkSurfaceHigh = Color(0xFF1B2325);
+  static const darkSurfaceHighest = Color(0xFF202B2E);
+  static const darkSurfaceSidebar = Color(0xFF101719);
 
-  static const lightScaffold = Color(0xFFF6F8FC);
-  static const lightSurface = Color(0xFFFBFCFF);
-  static const lightSurfaceHigh = Color(0xFFF0F3F9);
-  static const lightSurfaceHighest = Color(0xFFE4EAF3);
+  static const lightScaffold = Color(0xFFF7FCFC);
+  static const lightSurface = Color(0xFFFEFFFF);
+  static const lightSurfaceHigh = Color(0xFFFAFEFE);
+  static const lightSurfaceHighest = Color(0xFFEFF6F5);
+  static const lightSurfaceSidebar = Color(0xFFF1F9F8);
 
-  static const darkPrimary = Color(0xFF9CA6FF);
-  static const darkPrimaryContainer = Color(0xFF2B3150);
-  static const darkSecondary = Color(0xFF86D3D0);
-  static const darkSecondaryContainer = Color(0xFF1D333C);
-  static const darkOnSurface = Color(0xFFE8ECF4);
-  static const darkOnSurfaceVariant = Color(0xFFACB6C7);
-  static const darkOutline = Color(0xFF5A6478);
-  static const darkOutlineVariant = Color(0xFF2A3342);
+  static const darkPrimary = Color(0xFF46B49E);
+  static const darkPrimaryHover = Color(0xFF41C7AE);
+  static const darkPrimaryContainer = Color(0xFF062D26);
+  static const darkSecondary = Color(0xFF5FB7A5);
+  static const darkSecondaryContainer = Color(0xFF122C26);
+  static const darkOnSurface = Color(0xFFE3E9E9);
+  static const darkOnSurfaceVariant = Color(0xFF96A1A1);
+  static const darkMuted = Color(0xFF697475);
+  static const darkOutline = Color(0xFF2B3233);
+  static const darkOutlineVariant = Color(0xFF222829);
 
-  static const lightPrimary = Color(0xFF6172E3);
-  static const lightPrimaryContainer = Color(0xFFE0E4FF);
-  static const lightSecondary = Color(0xFF4BA9A4);
-  static const lightSecondaryContainer = Color(0xFFD4F3F0);
-  static const lightOnSurfaceVariant = Color(0xFF5E687C);
-  static const lightOutline = Color(0xFF8A93A7);
-  static const lightOutlineVariant = Color(0xFFD8DFEA);
+  static const lightPrimary = Color(0xFF1A9480);
+  static const lightPrimaryHover = Color(0xFF00856F);
+  static const lightPrimaryContainer = Color(0xFFD4F1E9);
+  static const lightSecondary = Color(0xFF45A592);
+  static const lightSecondaryContainer = Color(0xFFD9F4ED);
+  static const lightOnSurface = Color(0xFF070F11);
+  static const lightOnSurfaceVariant = Color(0xFF444F52);
+  static const lightMuted = Color(0xFF6E7A7B);
+  static const lightOutline = Color(0xFFD8DEDD);
+  static const lightOutlineVariant = Color(0xFFE8ECEC);
 
-  static const accent = Color(0xFF4BA9A4);
-  static const darkLyricHighlight = Color(0xFFECA35B);
-  static const lightLyricHighlight = Color(0xFFECA35B);
+  static const accent = lightPrimary;
+  static const darkLyricHighlight = Color(0xFFD6917B);
+  static const lightLyricHighlight = Color(0xFF20373B);
+
+  static const lightMusicWarm = Color(0xFFD6A771);
+  static const lightMusicWarmSoft = Color(0xFFFDEDDC);
+  static const lightMusicRose = Color(0xFFDC937C);
+  static const lightMusicRoseSoft = Color(0xFFFFE8E0);
+  static const lightMusicTeal = Color(0xFF45A592);
+  static const lightMusicTealSoft = Color(0xFFD9F4ED);
+  static const lightMusicInk = Color(0xFF20373B);
+
+  static const darkMusicWarm = Color(0xFFCEA26F);
+  static const darkMusicWarmSoft = Color(0xFF312313);
+  static const darkMusicRose = Color(0xFFD6917B);
+  static const darkMusicRoseSoft = Color(0xFF362019);
+  static const darkMusicTeal = Color(0xFF5FB7A5);
+  static const darkMusicTealSoft = Color(0xFF122C26);
+  static const darkMusicInk = Color(0xFFBECECF);
+
+  static const lightSuccess = Color(0xFF308639);
+  static const lightWarn = Color(0xFFCA8A10);
+  static const lightDanger = Color(0xFFC53637);
+  static const darkSuccess = Color(0xFF46B49E);
+  static const darkWarn = Color(0xFFCEA26F);
+  static const darkDanger = Color(0xFFD6917B);
 }
 
 abstract final class AppRadiusTokens {
@@ -60,11 +90,14 @@ abstract final class AppSpacingTokens {
   static const double pageHorizontalMedium = 24;
   static const double pageHorizontalExpanded = 24;
 
-  static const double shellOuterPadding = 14;
-  static const double shellGap = 14;
-  static const double shellBottomInset = 10;
+  static const double shellOuterPadding = 0;
+  static const double shellGap = 0;
+  static const double shellBottomInset = 0;
   static const double macOsTrafficLightInset = 28;
-  static const double desktopSidebarWidth = 80;
+  static const double desktopSidebarWidth = 220;
+  static const double desktopMiniPlayerHeight = 72;
+  static const double mobileMiniPlayerHeight = 60;
+  static const double mobileTabContentHeight = 54;
 
   static const double playerHorizontalPadding = 28;
   static const double playerControlGap = 14;
@@ -72,14 +105,14 @@ abstract final class AppSpacingTokens {
   static const double desktopSidebarTopGap = 12;
   static const double desktopSidebarBottomGap = 18;
 
-  static const double miniPlayerOuterHorizontal = 12;
-  static const double miniPlayerOuterTop = 8;
-  static const double miniPlayerOuterBottomCompact = 8;
-  static const double miniPlayerOuterBottomWide = 12;
-  static const double miniPlayerInnerHorizontal = 14;
-  static const double miniPlayerInnerVerticalCompact = 10;
-  static const double miniPlayerInnerVerticalWide = 12;
-  static const double miniPlayerControlGap = 8;
+  static const double miniPlayerOuterHorizontal = 0;
+  static const double miniPlayerOuterTop = 0;
+  static const double miniPlayerOuterBottomCompact = 0;
+  static const double miniPlayerOuterBottomWide = 0;
+  static const double miniPlayerInnerHorizontal = 20;
+  static const double miniPlayerInnerVerticalCompact = 0;
+  static const double miniPlayerInnerVerticalWide = 0;
+  static const double miniPlayerControlGap = 6;
   static const double miniPlayerSectionGap = 10;
 }
 
