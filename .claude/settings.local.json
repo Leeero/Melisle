@@ -63,7 +63,10 @@
       "Bash(flutter format *)",
       "Bash(flutter --version)",
       "Bash(flutter dart *)",
-      "Read(//opt/homebrew/**)"
+      "Read(//opt/homebrew/**)",
+      "Bash(git apply *)",
+      "Bash(git *)",
+      "Bash(/Users/lero/flutter-sdk/bin/flutter build *)"
     ]
   }
 }
