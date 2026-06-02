@@ -23,6 +23,7 @@ class MusicPlaylistGridCard extends StatefulWidget {
 
 class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,11 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
         child: AnimatedScale(
           duration: AppMotion.short,
           curve: AppMotion.enter,
-          scale: _hovered ? widget.scaleOnHover : 1,
+          scale: _pressed
+              ? 0.992
+              : _hovered
+              ? widget.scaleOnHover
+              : 1,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -52,6 +57,8 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(widget.artworkRadius),
                     onTap: widget.onTap,
+                    onHighlightChanged: (pressed) =>
+                        setState(() => _pressed = pressed),
                     child: AnimatedContainer(
                       duration: AppMotion.short,
                       curve: AppMotion.enter,
@@ -97,8 +104,11 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                 count: playlist.trackCount,
                               ),
                             ),
-                            if (_hovered)
-                              Positioned.fill(
+                            Positioned.fill(
+                              child: AnimatedOpacity(
+                                duration: AppMotion.micro,
+                                curve: AppMotion.enter,
+                                opacity: _hovered ? 1 : 0,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: AppColorTokens.darkScaffold
@@ -114,6 +124,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                   ),
                                 ),
                               ),
+                            ),
                           ],
                         ),
                       ),

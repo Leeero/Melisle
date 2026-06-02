@@ -23,6 +23,7 @@ class MusicAlbumGridCard extends StatefulWidget {
 
 class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +39,13 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedScale(
-          duration: const Duration(milliseconds: 180),
-          scale: _hovered ? widget.scaleOnHover : 1,
+          duration: AppMotion.micro,
+          curve: AppMotion.enter,
+          scale: _pressed
+              ? 0.992
+              : _hovered
+              ? widget.scaleOnHover
+              : 1,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -51,8 +57,11 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(widget.artworkRadius),
                     onTap: widget.onTap,
+                    onHighlightChanged: (pressed) =>
+                        setState(() => _pressed = pressed),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
+                      duration: AppMotion.micro,
+                      curve: AppMotion.enter,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(
                           widget.artworkRadius,
@@ -69,22 +78,47 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                                   offset: const Offset(0, 7),
                                 ),
                               ]
-                            : [],
+                            : const <BoxShadow>[],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(
                           widget.artworkRadius,
                         ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final artworkSize = constraints.maxWidth;
-                            return CachedArtwork(
-                              imageUrl: album.artworkUrl,
-                              size: artworkSize,
-                              borderRadius: 0,
-                              semanticLabel: '《${album.title}》专辑封面',
-                            );
-                          },
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final artworkSize = constraints.maxWidth;
+                                return CachedArtwork(
+                                  imageUrl: album.artworkUrl,
+                                  size: artworkSize,
+                                  borderRadius: 0,
+                                  semanticLabel: '《${album.title}》专辑封面',
+                                );
+                              },
+                            ),
+                            AnimatedOpacity(
+                              duration: AppMotion.micro,
+                              curve: AppMotion.enter,
+                              opacity: _hovered ? 1 : 0,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: AppColorTokens.darkScaffold.withValues(
+                                    alpha: 0.10,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.play_circle_fill_rounded,
+                                    size: 42,
+                                    color: AppColorTokens.lightScaffold
+                                        .withValues(alpha: 0.88),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

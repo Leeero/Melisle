@@ -24,20 +24,34 @@ class AppSheetScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+    final sheetRadius = compact
+        ? AppRadiusTokens.mobileXl
+        : AppRadiusTokens.coverDetail;
 
     return Material(
       color: Colors.transparent,
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadiusTokens.coverDetail),
+          color: colorScheme.surface.withValues(alpha: compact ? 0.96 : 1),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(sheetRadius),
           ),
           border: Border(
             top: BorderSide(
               color: colorScheme.outlineVariant.withValues(alpha: 0.36),
             ),
           ),
+          boxShadow: compact
+              ? [
+                  BoxShadow(
+                    color: colorScheme.onSurface.withValues(alpha: 0.14),
+                    blurRadius: 48,
+                    offset: const Offset(0, -18),
+                  ),
+                ]
+              : const <BoxShadow>[],
         ),
         child: SafeArea(
           top: false,
@@ -58,16 +72,25 @@ class AppSheetScaffold extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style:
+                                (compact
+                                        ? theme.textTheme.titleMedium
+                                        : theme.textTheme.titleLarge)
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface,
+                                    ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (description != null) ...[
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 4),
                             Text(
                               description!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.muted,
                               ),
                             ),
                           ],
@@ -152,22 +175,24 @@ class _AppOptionTileState<T> extends State<AppOptionTile<T>> {
     final selected = widget.value == widget.groupValue;
     final interactive = widget.enabled;
     final foregroundColor = widget.enabled
-        ? colorScheme.onSurface
+        ? selected
+              ? colorScheme.primary
+              : colorScheme.onSurfaceVariant
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
     final secondaryColor = widget.enabled
-        ? colorScheme.onSurfaceVariant
+        ? theme.muted
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
     final backgroundColor = selected
-        ? colorScheme.primaryContainer.withValues(alpha: _pressed ? 0.66 : 0.58)
+        ? theme.selectedWash
         : _pressed && interactive
-        ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.62)
+        ? theme.hoverWash
         : (_hovered || _focused) && interactive
-        ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.46)
+        ? theme.hoverWash
         : Colors.transparent;
     final borderColor = selected
-        ? colorScheme.primary.withValues(alpha: _focused ? 0.36 : 0.24)
+        ? colorScheme.primary.withValues(alpha: _focused ? 0.24 : 0.0)
         : colorScheme.outlineVariant.withValues(
-            alpha: (_hovered || _focused) && interactive ? 0.32 : 0.0,
+            alpha: _focused && interactive ? 0.28 : 0.0,
           );
 
     return Padding(
@@ -238,11 +263,10 @@ class _AppOptionTileState<T> extends State<AppOptionTile<T>> {
                         children: [
                           Text(
                             widget.title,
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: foregroundColor,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           if (widget.subtitle != null) ...[
@@ -253,6 +277,7 @@ class _AppOptionTileState<T> extends State<AppOptionTile<T>> {
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: secondaryColor,
+                                fontSize: 12,
                               ),
                             ),
                           ],

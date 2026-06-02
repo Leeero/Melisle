@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 final class AppPageLayout {
@@ -290,6 +293,36 @@ class AppBackButton extends StatelessWidget {
   }
 }
 
+class AppDetailBackNav extends StatelessWidget {
+  const AppDetailBackNav({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.chevron_left_rounded, size: 22),
+        label: const Text('返回'),
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          textStyle: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AppSearchField extends StatefulWidget {
   const AppSearchField({
     super.key,
@@ -302,9 +335,12 @@ class AppSearchField extends StatefulWidget {
     this.onClear,
     this.onChanged,
     this.onSubmitted,
+    this.onCancel,
+    this.cancelLabel = '取消',
     this.autofocus = false,
     this.dense = false,
     this.enabled = true,
+    this.showCancelAction,
   });
 
   final TextEditingController controller;
@@ -316,9 +352,12 @@ class AppSearchField extends StatefulWidget {
   final VoidCallback? onClear;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onCancel;
+  final String cancelLabel;
   final bool autofocus;
   final bool dense;
   final bool enabled;
+  final bool? showCancelAction;
 
   @override
   State<AppSearchField> createState() => _AppSearchFieldState();
@@ -369,6 +408,11 @@ class _AppSearchFieldState extends State<AppSearchField> {
     widget.onChanged?.call('');
   }
 
+  void _cancel() {
+    widget.onCancel?.call();
+    _focusNode.unfocus();
+  }
+
   @override
   void dispose() {
     _detachFocusNode();
@@ -377,80 +421,160 @@ class _AppSearchFieldState extends State<AppSearchField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+    final showCancel = widget.showCancelAction ?? compact;
+    final fieldHeight = compact ? 46.0 : 46.0;
+    final radius = compact ? AppRadiusTokens.mobileMd : AppRadiusTokens.button;
+    final fillColor = compact
+        ? Color.alphaBlend(
+            colorScheme.outlineVariant.withValues(alpha: 0.34),
+            colorScheme.surfaceContainerHigh,
+          )
+        : colorScheme.surface.withValues(alpha: 0.86);
+    final focusedFillColor = compact
+        ? Color.alphaBlend(
+            colorScheme.outlineVariant.withValues(alpha: 0.18),
+            colorScheme.surfaceContainerHigh,
+          )
+        : colorScheme.surface;
+    final borderColor = _focused
+        ? colorScheme.primary.withValues(alpha: compact ? 0.0 : 0.46)
+        : colorScheme.outlineVariant.withValues(alpha: compact ? 0.0 : 0.74);
+    final focusRing = colorScheme.primary.withValues(
+      alpha: compact ? 0.0 : 0.12,
+    );
+    final inputTextStyle =
+        (compact ? theme.textTheme.bodyLarge : theme.textTheme.bodyMedium)
+            ?.copyWith(color: colorScheme.onSurface);
 
     return Semantics(
       label: widget.semanticLabel,
       textField: true,
-      child: AnimatedContainer(
-        duration: AppMotion.micro,
-        curve: AppMotion.enter,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadiusTokens.input),
-          boxShadow: _focused
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.08),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: AnimatedContainer(
+              duration: AppMotion.micro,
+              curve: AppMotion.enter,
+              height: fieldHeight,
+              decoration: BoxDecoration(
+                color: _focused ? focusedFillColor : fillColor,
+                borderRadius: BorderRadius.circular(radius),
+                border: Border.all(color: borderColor),
+                boxShadow: _focused && !compact
+                    ? [
+                        BoxShadow(
+                          color: focusRing,
+                          blurRadius: 0,
+                          spreadRadius: 4,
+                        ),
+                      ]
+                    : const <BoxShadow>[],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: compact ? 0 : 18,
+                    sigmaY: compact ? 0 : 18,
                   ),
-                ]
-              : const <BoxShadow>[],
-        ),
-        child: TextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          autofocus: widget.autofocus,
-          enabled: widget.enabled,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isDense: widget.dense,
-            contentPadding: widget.dense
-                ? const EdgeInsets.symmetric(horizontal: 0, vertical: 14)
-                : null,
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              size: widget.dense ? 22 : null,
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    autofocus: widget.autofocus,
+                    enabled: widget.enabled,
+                    textInputAction: TextInputAction.search,
+                    style: inputTextStyle,
+                    decoration: InputDecoration(
+                      labelText: widget.labelText,
+                      hintText: widget.hintText,
+                      isDense: true,
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      prefixIcon: const Icon(CupertinoIcons.search, size: 18),
+                      prefixIconConstraints: BoxConstraints(
+                        minWidth: compact ? 40 : 44,
+                        minHeight: fieldHeight,
+                      ),
+                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: widget.controller,
+                        builder: (context, value, _) {
+                          if (value.text.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: Icon(
+                              CupertinoIcons.xmark_circle_fill,
+                              size: compact ? 18 : 20,
+                            ),
+                            tooltip: widget.clearTooltip,
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.standard,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 46,
+                              height: 46,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: colorScheme.onSurfaceVariant,
+                              fixedSize: const Size.square(46),
+                              minimumSize: const Size.square(46),
+                              padding: EdgeInsets.zero,
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                              side: BorderSide.none,
+                              shape: const CircleBorder(),
+                            ),
+                            onPressed: _clear,
+                          );
+                        },
+                      ),
+                      suffixIconConstraints: const BoxConstraints(
+                        minWidth: 46,
+                        minHeight: 46,
+                      ),
+                    ),
+                    onChanged: widget.onChanged,
+                    onSubmitted: widget.onSubmitted,
+                  ),
+                ),
+              ),
             ),
-            prefixIconConstraints: widget.dense
-                ? const BoxConstraints(minWidth: 46, minHeight: 46)
-                : null,
-            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: widget.controller,
-              builder: (context, value, _) {
-                if (value.text.isEmpty) return const SizedBox.shrink();
-                return IconButton(
-                  icon: Icon(Icons.close_rounded, size: widget.dense ? 18 : 20),
-                  tooltip: widget.clearTooltip,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 44,
-                    height: 44,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    side: BorderSide.none,
-                    shape: const CircleBorder(),
-                  ),
-                  onPressed: _clear,
-                );
-              },
-            ),
-            suffixIconConstraints: widget.dense
-                ? const BoxConstraints(minWidth: 44, minHeight: 44)
-                : null,
-            fillColor: _focused
-                ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.86)
-                : null,
           ),
-          onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
-        ),
+          if (showCancel) ...[
+            const SizedBox(width: 10),
+            AnimatedSwitcher(
+              duration: AppMotion.micro,
+              switchInCurve: AppMotion.enter,
+              switchOutCurve: AppMotion.exit,
+              child: _focused
+                  ? TextButton(
+                      key: const ValueKey('search-cancel'),
+                      onPressed: _cancel,
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        minimumSize: const Size(44, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        textStyle: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      child: Text(widget.cancelLabel),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('search-cancel-empty')),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -528,15 +652,16 @@ class AppSectionTitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trailingChildren = <Widget>[];
-    final action = this.action;
-    if (action != null) {
-      trailingChildren.addAll([action, const SizedBox(width: 10)]);
-    }
-    final badge = this.badge;
-    if (badge != null) {
-      trailingChildren.add(badge);
-    }
+    final theme = Theme.of(context);
+    final compact = AppBreakpoints.isCompact(context);
+    final effectiveTitleStyle =
+        titleStyle ??
+        (compact ? theme.textTheme.titleMedium : theme.textTheme.titleSmall)
+            ?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontSize: compact ? 18 : 17,
+              fontWeight: FontWeight.w600,
+            );
 
     return Padding(
       padding: padding,
@@ -544,10 +669,13 @@ class AppSectionTitleRow extends StatelessWidget {
         children: [
           Text(
             title,
-            style: titleStyle ?? Theme.of(context).textTheme.titleLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: effectiveTitleStyle,
           ),
           const Spacer(),
-          ...trailingChildren,
+          if (badge != null) ...[const SizedBox(width: 10), badge!],
+          if (action != null) ...[const SizedBox(width: 10), action!],
         ],
       ),
     );
@@ -705,17 +833,8 @@ class AppDetailHeroFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
+    return Padding(
       padding: padding,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(AppRadiusTokens.coverDetail),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-        ),
-      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = AppBreakpoints.usesWideContentWidth(
@@ -725,7 +844,7 @@ class AppDetailHeroFrame extends StatelessWidget {
           final content = contentBuilder(context, isWide);
           if (!isWide) {
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Center(child: cover),
                 SizedBox(height: compactGap),
@@ -735,6 +854,7 @@ class AppDetailHeroFrame extends StatelessWidget {
           }
 
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               cover,
               SizedBox(width: spacing),

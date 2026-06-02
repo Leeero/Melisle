@@ -19,6 +19,7 @@ class MusicArtistGridCard extends StatefulWidget {
 
 class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +36,15 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
         child: AnimatedScale(
           duration: AppMotion.short,
           curve: AppMotion.enter,
-          scale: _hovered ? 1.012 : 1,
+          scale: _pressed
+              ? 0.992
+              : _hovered
+              ? 1.012
+              : 1,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: widget.onTap,
+            onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final artworkSize = constraints.maxWidth * 0.78;

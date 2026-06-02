@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
-import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -123,15 +122,14 @@ class _MusicTrackTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final labelStyle = theme.textTheme.labelMedium?.copyWith(
-      color: colorScheme.onSurfaceVariant,
+      color: theme.muted,
       fontWeight: FontWeight.w600,
+      fontSize: 11,
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showArtist = constraints.maxWidth >= 760;
         final showAlbum = constraints.maxWidth >= 620;
 
         return Padding(
@@ -147,20 +145,14 @@ class _MusicTrackTableHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const SizedBox(width: 40),
-              const SizedBox(width: 12),
               Expanded(flex: 4, child: Text('歌曲 / 歌手', style: labelStyle)),
-              if (showArtist) ...[
-                const SizedBox(width: 16),
-                Expanded(flex: 2, child: Text('歌手', style: labelStyle)),
-              ],
               if (showAlbum) ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
               ],
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               SizedBox(
-                width: 58,
+                width: 80,
                 child: Text(
                   '时长',
                   style: labelStyle,
@@ -227,7 +219,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                 : highlighted
                 ? theme.hoverWash
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               focusColor: colorScheme.primary.withValues(alpha: 0.08),
@@ -238,13 +230,12 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
               onTap: widget.onTap,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final showArtist = constraints.maxWidth >= 760;
                   final showAlbum = constraints.maxWidth >= 620;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 8,
                     ),
                     child: Row(
                       children: [
@@ -275,38 +266,24 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        CachedArtwork(
-                          imageUrl: track.artworkUrl,
-                          size: 40,
-                          borderRadius: 9,
-                          semanticLabel: '《${track.title}》封面',
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           flex: 4,
                           child: _MusicTrackTitleCell(
                             track: track,
                             isCurrent: widget.isCurrent,
-                            showSubtitle: !showArtist,
+                            showSubtitle: true,
                           ),
                         ),
-                        if (showArtist) ...[
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: _MusicTrackTableText(track.artistName),
-                          ),
-                        ],
                         if (showAlbum) ...[
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             flex: 3,
                             child: _MusicTrackTableText(track.albumTitle),
                           ),
                         ],
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         SizedBox(
-                          width: 58,
+                          width: 80,
                           child: Text(
                             _formatTrackDuration(track.duration),
                             textAlign: TextAlign.right,
@@ -319,17 +296,22 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        SizedBox(
-                          width: 44,
-                          child:
-                              trailing ??
-                              (widget.onAddToQueue == null
-                                  ? const SizedBox.shrink()
-                                  : _MusicTrackTableIconButton(
-                                      icon: Icons.playlist_add_rounded,
-                                      tooltip: '加入队列',
-                                      onPressed: widget.onAddToQueue!,
-                                    )),
+                        AnimatedOpacity(
+                          duration: AppMotion.micro,
+                          curve: AppMotion.enter,
+                          opacity: highlighted || widget.isCurrent ? 1 : 0,
+                          child: SizedBox(
+                            width: 44,
+                            child:
+                                trailing ??
+                                (widget.onAddToQueue == null
+                                    ? const SizedBox.shrink()
+                                    : _MusicTrackTableIconButton(
+                                        icon: Icons.playlist_add_rounded,
+                                        tooltip: '加入队列',
+                                        onPressed: widget.onAddToQueue!,
+                                      )),
+                          ),
                         ),
                       ],
                     ),
@@ -385,13 +367,14 @@ class _MusicTrackTitleCell extends StatelessWidget {
           ],
         ),
         if (showSubtitle) ...[
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           Text(
-            '${track.artistName} · ${track.albumTitle}',
+            track.artistName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+              color: theme.muted,
+              fontSize: 12,
             ),
           ),
         ],
@@ -413,6 +396,7 @@ class _MusicTrackTableText extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontSize: 13,
       ),
     );
   }
@@ -448,7 +432,9 @@ class _MusicTrackTableIconButton extends StatelessWidget {
           padding: EdgeInsets.zero,
           tapTargetSize: MaterialTapTargetSize.padded,
           side: BorderSide.none,
-          shape: const CircleBorder(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          ),
         ),
       ),
     );

@@ -62,23 +62,27 @@ class MusicTrackTile extends StatefulWidget {
 
 class _MusicTrackTileState extends State<MusicTrackTile> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    if (widget.style == MusicTrackTileStyle.list) {
-      return _buildListTile(context);
+    final compact = AppBreakpoints.isCompact(context);
+    if (widget.style == MusicTrackTileStyle.list ||
+        (compact && widget.style == MusicTrackTileStyle.row)) {
+      return _buildListTile(context, selected: widget.isCurrent);
     }
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isCard = widget.style == MusicTrackTileStyle.card;
-    final radius = isCard ? 20.0 : 24.0;
-    final artworkSize = isCard ? 58.0 : 48.0;
-    final artworkRadius = isCard ? 20.0 : 14.0;
+    final radius = isCard
+        ? AppRadiusTokens.mobileLg
+        : AppRadiusTokens.desktopSm;
+    final artworkSize = isCard ? 58.0 : 44.0;
+    final artworkRadius = isCard ? AppRadiusTokens.mobileLg : 8.0;
     final horizontalPadding = isCard ? 14.0 : 12.0;
-    final verticalPadding = isCard ? 12.0 : 10.0;
-    final shadow =
-        widget.style == MusicTrackTileStyle.row && _hovered && !widget.isCurrent
+    final verticalPadding = isCard ? 12.0 : 8.0;
+    final shadow = isCard && _hovered && !widget.isCurrent
         ? [
             BoxShadow(
               color: theme.musicTeal.withValues(alpha: 0.12),
@@ -100,6 +104,8 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
           decoration: BoxDecoration(
             color: widget.isCurrent
                 ? theme.selectedWash
+                : _pressed
+                ? theme.hoverWash
                 : _hovered
                 ? theme.hoverWash
                 : colorScheme.surface.withValues(alpha: isCard ? 0.92 : 0),
@@ -108,7 +114,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
               color: widget.isCurrent
                   ? colorScheme.primary.withValues(alpha: 0.20)
                   : colorScheme.outlineVariant.withValues(
-                      alpha: isCard ? 0.72 : 0,
+                      alpha: isCard ? 0.58 : 0,
                     ),
             ),
             boxShadow: shadow,
@@ -121,6 +127,8 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                 widget.onTap();
               },
               onLongPress: widget.onLongPress,
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: horizontalPadding,
@@ -159,7 +167,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                             widget.subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           if (!isCard && widget.statusLabel != null) ...[
@@ -185,35 +193,132 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
     );
   }
 
-  Widget _buildListTile(BuildContext context) {
+  Widget _buildListTile(BuildContext context, {required bool selected}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final backgroundColor = selected
+        ? theme.selectedWash
+        : _pressed
+        ? theme.hoverWash
+        : Colors.transparent;
+
     return Semantics(
       label: '播放《${widget.title}》',
       button: true,
-      child: ListTile(
-        leading: CachedArtwork(
-          imageUrl: widget.artworkUrl,
-          size: 48,
-          borderRadius: 14,
-          semanticLabel: '《${widget.title}》封面',
+      selected: selected,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
+          ),
         ),
-        title: _buildTitle(context),
-        subtitle: Text(
-          widget.subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        child: AnimatedContainer(
+          duration: AppMotion.micro,
+          curve: AppMotion.enter,
+          constraints: const BoxConstraints(minHeight: 52),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: selected || _pressed
+                ? BorderRadius.circular(AppRadiusTokens.mobileSm)
+                : BorderRadius.zero,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+              onTap: () {
+                widget.onTap();
+              },
+              onLongPress: widget.onLongPress,
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
+              hoverColor: Colors.transparent,
+              focusColor: colorScheme.primary.withValues(alpha: 0.08),
+              splashColor: colorScheme.primary.withValues(alpha: 0.06),
+              highlightColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: widget.artworkUrl,
+                      size: 44,
+                      borderRadius: AppRadiusTokens.mobileSm,
+                      semanticLabel: '《${widget.title}》封面',
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildTitle(context, selected: selected),
+                          const SizedBox(height: 1),
+                          Text(
+                            widget.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (widget.extraTrailing != null) ...[
+                      const SizedBox(width: 8),
+                      widget.extraTrailing!,
+                    ] else ...[
+                      const SizedBox(width: 8),
+                      SizedBox.square(
+                        dimension: 44,
+                        child: Icon(
+                          selected ? Icons.graphic_eq_rounded : widget.idleIcon,
+                          size: 20,
+                          color: selected
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
-        trailing: Icon(widget.idleIcon),
-        onTap: () {
-          widget.onTap();
-        },
       ),
     );
   }
 
-  Widget _buildTitle(BuildContext context) {
-    final titleStyle = widget.style == MusicTrackTileStyle.card
-        ? Theme.of(context).textTheme.titleMedium
-        : null;
+  Widget _buildTitle(BuildContext context, {bool selected = false}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compactRow =
+        AppBreakpoints.isCompact(context) &&
+        widget.style == MusicTrackTileStyle.row;
+    final titleStyle = switch (widget.style) {
+      MusicTrackTileStyle.card => theme.textTheme.titleMedium,
+      MusicTrackTileStyle.row =>
+        compactRow
+            ? theme.textTheme.bodyMedium?.copyWith(
+                color: selected ? colorScheme.primary : colorScheme.onSurface,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              )
+            : theme.textTheme.titleSmall?.copyWith(
+                color: selected ? colorScheme.primary : colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+      MusicTrackTileStyle.list => theme.textTheme.bodyMedium?.copyWith(
+        color: selected ? colorScheme.primary : colorScheme.onSurface,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+      ),
+    };
 
     return Text(
       widget.title,
