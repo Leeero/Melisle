@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 enum AppLayoutSize { compact, medium, expanded }
 
 abstract final class AppBreakpoints {
-  static const double mediumMinWidth = 860;
+  static const double mediumMinWidth = 1080;
   static const double expandedMinWidth = 1280;
 
   static AppLayoutSize of(BuildContext context) {

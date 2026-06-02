@@ -439,19 +439,41 @@ abstract final class AppTheme {
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurfaceVariant.withValues(alpha: 0.34);
+          }
           if (states.contains(WidgetState.selected)) {
             return isDark ? _darkOnSurface : _lightSurface;
           }
-          return colorScheme.onSurfaceVariant;
+          return colorScheme.surface;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.outlineVariant.withValues(alpha: 0.28);
+          }
           if (states.contains(WidgetState.selected)) {
-            return isDark
-                ? AppColorTokens.darkSuccess
-                : AppColorTokens.lightSuccess;
+            return colorScheme.primary;
           }
           return colorScheme.outlineVariant.withValues(
-            alpha: isDark ? 0.42 : 0.72,
+            alpha: isDark ? 0.50 : 0.78,
+          );
+        }),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return colorScheme.primary.withValues(alpha: 0.14);
+          }
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused)) {
+            return colorScheme.primary.withValues(alpha: 0.08);
+          }
+          return Colors.transparent;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.36 : 0.64,
           );
         }),
       ),

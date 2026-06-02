@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 abstract final class AppColorTokens {
   static const seed = Color(0xFF1A9480);
 
+  // Current Open Design source: design/desktop.html and design/mobile-ios.html.
   static const darkScaffold = Color(0xFF0C1315);
   static const darkSurface = Color(0xFF141C1E);
   static const darkSurfaceHigh = Color(0xFF1B2325);
@@ -10,9 +11,9 @@ abstract final class AppColorTokens {
   static const darkSurfaceSidebar = Color(0xFF101719);
 
   static const lightScaffold = Color(0xFFF7FCFC);
-  static const lightSurface = Color(0xFFFEFFFF);
+  static const lightSurface = Color(0xFFFFFFFF);
   static const lightSurfaceHigh = Color(0xFFFAFEFE);
-  static const lightSurfaceHighest = Color(0xFFEFF6F5);
+  static const lightSurfaceHighest = Color(0xFFF1F9F8);
   static const lightSurfaceSidebar = Color(0xFFF1F9F8);
 
   static const darkPrimary = Color(0xFF46B49E);
@@ -66,18 +67,26 @@ abstract final class AppColorTokens {
 }
 
 abstract final class AppRadiusTokens {
-  static const double shellContainer = 22;
-  static const double card = 14;
+  static const double desktopSm = 6;
+  static const double desktopMd = 10;
+  static const double desktopLg = 14;
+  static const double desktopXl = 20;
+  static const double mobileSm = 8;
+  static const double mobileMd = 12;
+  static const double mobileLg = 16;
+  static const double mobileXl = 24;
+  static const double shellContainer = desktopXl;
+  static const double card = desktopLg;
   static const double button = 999;
-  static const double input = 14;
-  static const double iconButton = 12;
-  static const double coverGrid = 14;
-  static const double coverDetail = 22;
+  static const double input = desktopMd;
+  static const double iconButton = mobileMd;
+  static const double coverGrid = desktopLg;
+  static const double coverDetail = desktopXl;
 }
 
 abstract final class AppSpacingTokens {
-  static const double pageTop = 20;
-  static const double pageTopCompact = 12;
+  static const double pageTop = 28;
+  static const double pageTopCompact = 18;
   static const double headerBottomGap = 14;
   static const double contentBottom = 24;
   static const double compactFieldBottomGap = 12;
@@ -86,9 +95,9 @@ abstract final class AppSpacingTokens {
   static const double cardPadding = 16;
   static const double headerPadding = 22;
 
-  static const double pageHorizontalCompact = 16;
-  static const double pageHorizontalMedium = 24;
-  static const double pageHorizontalExpanded = 24;
+  static const double pageHorizontalCompact = 24;
+  static const double pageHorizontalMedium = 36;
+  static const double pageHorizontalExpanded = 36;
 
   static const double shellOuterPadding = 0;
   static const double shellGap = 0;
@@ -96,8 +105,14 @@ abstract final class AppSpacingTokens {
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 220;
   static const double desktopMiniPlayerHeight = 72;
-  static const double mobileMiniPlayerHeight = 60;
+  static const double mobileMiniPlayerHeight = 58;
   static const double mobileTabContentHeight = 54;
+  static const double desktopMainContentPaddingX = 36;
+  static const double desktopMainContentPaddingY = 28;
+  static const double mobilePageX = 24;
+  static const double desktopCardGridMinWidth = 160;
+  static const double desktopCardGridGapX = 18;
+  static const double desktopCardGridGapY = 22;
 
   static const double playerHorizontalPadding = 28;
   static const double playerControlGap = 14;

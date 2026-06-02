@@ -66,30 +66,14 @@ class _MiniPlayerFrame extends StatelessWidget {
         height: AppSpacingTokens.desktopMiniPlayerHeight,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                colorScheme.surface.withValues(alpha: 0.96),
-                Color.alphaBlend(
-                  theme.musicWarmSoft.withValues(alpha: 0.28),
-                  colorScheme.surface,
-                ),
-              ],
-            ),
+            color: colorScheme.surface,
             border: Border(
               top: BorderSide(
-                color: Color.alphaBlend(
-                  theme.musicTeal.withValues(alpha: 0.16),
-                  colorScheme.outlineVariant,
+                color: colorScheme.outlineVariant.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.72 : 1,
                 ),
               ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withValues(alpha: 0.05),
-                blurRadius: 34,
-                offset: const Offset(0, -12),
-              ),
-            ],
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -106,7 +90,7 @@ class _MiniPlayerFrame extends StatelessWidget {
       child: SizedBox(
         height: AppSpacingTokens.mobileMiniPlayerHeight,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: DecoratedBox(
@@ -120,7 +104,7 @@ class _MiniPlayerFrame extends StatelessWidget {
                     ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
                 border: Border.all(
                   color: Color.alphaBlend(
                     theme.musicTeal.withValues(alpha: 0.18),
@@ -308,7 +292,7 @@ class _MiniTrackButton extends StatelessWidget {
         CachedArtwork(
           imageUrl: artworkUrl,
           size: 48,
-          borderRadius: 12,
+          borderRadius: AppRadiusTokens.desktopSm,
           sourceContext: sourceContext,
         ),
         const SizedBox(width: 12),
@@ -521,9 +505,9 @@ class _MiniTimelineState extends State<_MiniTimeline> {
           borderRadius: BorderRadius.circular(999),
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 4,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
             ),
             child: Slider(
               value: sliderValue,
@@ -577,17 +561,13 @@ class _MiniPlaybackModeButton extends StatelessWidget {
           onPressed: context.read<PlayerCubit>().cyclePlaybackMode,
           tooltip: '播放模式：${_playbackModeLabel(mode)}，点击切换',
           style: IconButton.styleFrom(
-            backgroundColor: selected ? theme.selectedWash : Colors.transparent,
+            backgroundColor: Colors.transparent,
             foregroundColor: foregroundColor,
-            side: BorderSide(
-              color: selected
-                  ? colorScheme.primary.withValues(alpha: 0.18)
-                  : Colors.transparent,
-            ),
-            minimumSize: const Size.square(44),
-            maximumSize: const Size.square(44),
+            side: BorderSide.none,
+            minimumSize: const Size.square(32),
+            maximumSize: const Size.square(32),
             padding: EdgeInsets.zero,
-            iconSize: 20,
+            iconSize: 18,
           ),
           icon: Icon(_playbackModeIcon(mode)),
         );
@@ -615,25 +595,20 @@ class _MiniControlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final size = compact ? 44.0 : (isPrimary ? 50.0 : 44.0);
+    final size = compact ? 44.0 : 36.0;
     return IconButton.filled(
       onPressed: onPressed,
       tooltip: tooltip,
       style: IconButton.styleFrom(
-        backgroundColor: isPrimary
-            ? Color.alphaBlend(
-                theme.musicRose.withValues(alpha: 0.12),
-                colorScheme.onSurface,
-              )
-            : Colors.transparent,
+        backgroundColor: isPrimary ? colorScheme.onSurface : Colors.transparent,
         foregroundColor: isPrimary
-            ? colorScheme.onPrimary
+            ? theme.scaffoldBackgroundColor
             : colorScheme.onSurfaceVariant,
         side: isPrimary ? BorderSide.none : BorderSide.none,
         minimumSize: Size.square(size),
         maximumSize: Size.square(size),
         padding: EdgeInsets.zero,
-        iconSize: compact ? (isPrimary ? 22 : 19) : (isPrimary ? 24 : 20),
+        iconSize: compact ? (isPrimary ? 22 : 19) : (isPrimary ? 18 : 18),
       ),
       icon: Icon(icon),
     );

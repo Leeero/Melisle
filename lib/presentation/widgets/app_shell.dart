@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
@@ -99,7 +100,9 @@ class _CompactShellScaffold extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.mobilePageX,
+              ),
               child: MiniPlayerBar(),
             ),
             SizedBox(height: hasMiniPlayer ? 2 : 0),
@@ -122,11 +125,16 @@ class _ShellBottomDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(top: hasMiniPlayer ? 0 : 5),
-        child: child,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(top: hasMiniPlayer ? 0 : 5),
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -177,6 +185,7 @@ class _ShellSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final path = GoRouterState.of(context).uri.path;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -234,22 +243,25 @@ class _ShellSidebar extends StatelessWidget {
               _ShellNavButton(
                 icon: Icons.home_rounded,
                 label: '首页',
-                selected: selectedIndex == 0,
+                selected: path == '/home',
                 onTap: () => onSelected(0),
               ),
               const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.search_rounded,
                 label: '搜索',
-                selected: false,
-                onTap: () => context.push('/search'),
+                selected: path == '/search',
+                onTap: () => onSelected(1),
               ),
               const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.library_music_rounded,
                 label: '媒体库',
-                selected: selectedIndex == 1,
-                onTap: () => onSelected(1),
+                selected:
+                    path == '/library' ||
+                    path.startsWith('/album/') ||
+                    path.startsWith('/artist/'),
+                onTap: () => onSelected(2),
               ),
               const SizedBox(height: 10),
               const _ShellSectionDivider(),
@@ -257,17 +269,14 @@ class _ShellSidebar extends StatelessWidget {
               _ShellNavButton(
                 icon: Icons.favorite_border_rounded,
                 label: '收藏',
-                selected: false,
-                onTap: () {
-                  onSelected(1);
-                  context.go('/library');
-                },
+                selected: path == '/favorites',
+                onTap: () => onSelected(3),
               ),
               const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.history_rounded,
                 label: '最近播放',
-                selected: false,
+                selected: path == '/history',
                 onTap: () {
                   onSelected(0);
                   context.go('/history');
@@ -277,8 +286,11 @@ class _ShellSidebar extends StatelessWidget {
               _ShellNavButton(
                 icon: Icons.queue_music_rounded,
                 label: '歌单',
-                selected: selectedIndex == 2,
-                onTap: () => onSelected(2),
+                selected: path.startsWith('/playlists'),
+                onTap: () {
+                  onSelected(2);
+                  context.go('/playlists');
+                },
               ),
               const SizedBox(height: 10),
               const _ShellSectionDivider(),
@@ -286,9 +298,9 @@ class _ShellSidebar extends StatelessWidget {
               _ShellNavButton(
                 icon: Icons.download_rounded,
                 label: '下载管理',
-                selected: false,
+                selected: path == '/downloads',
                 onTap: () {
-                  onSelected(3);
+                  onSelected(4);
                   context.go('/downloads');
                 },
               ),
@@ -296,8 +308,8 @@ class _ShellSidebar extends StatelessWidget {
               _ShellNavButton(
                 icon: Icons.settings_rounded,
                 label: '设置',
-                selected: selectedIndex == 3,
-                onTap: () => onSelected(3),
+                selected: path == '/settings',
+                onTap: () => onSelected(4),
               ),
             ],
           ),
@@ -353,20 +365,22 @@ class _ShellBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.88),
+        color: colorScheme.surface.withValues(alpha: isDark ? 0.82 : 0.88),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            color: colorScheme.outline.withValues(alpha: 0.72),
             width: 0.5,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.16 : 0.08),
             blurRadius: 24,
             offset: const Offset(0, -8),
           ),
@@ -375,7 +389,9 @@ class _ShellBottomBar extends StatelessWidget {
       child: SizedBox(
         height: AppSpacingTokens.mobileTabContentHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacingTokens.mobilePageX,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -388,26 +404,34 @@ class _ShellBottomBar extends StatelessWidget {
               ),
               Expanded(
                 child: _ShellBottomButton(
-                  icon: Icons.library_music_rounded,
-                  label: '媒体库',
+                  icon: Icons.search_rounded,
+                  label: '搜索',
                   selected: selectedIndex == 1,
                   onTap: () => onSelected(1),
                 ),
               ),
               Expanded(
                 child: _ShellBottomButton(
-                  icon: Icons.queue_music_rounded,
-                  label: '歌单',
+                  icon: Icons.library_music_rounded,
+                  label: '媒体库',
                   selected: selectedIndex == 2,
                   onTap: () => onSelected(2),
                 ),
               ),
               Expanded(
                 child: _ShellBottomButton(
-                  icon: Icons.settings_rounded,
-                  label: '设置',
+                  icon: Icons.favorite_border_rounded,
+                  label: '收藏',
                   selected: selectedIndex == 3,
                   onTap: () => onSelected(3),
+                ),
+              ),
+              Expanded(
+                child: _ShellBottomButton(
+                  icon: Icons.settings_rounded,
+                  label: '设置',
+                  selected: selectedIndex == 4,
+                  onTap: () => onSelected(4),
                 ),
               ),
             ],

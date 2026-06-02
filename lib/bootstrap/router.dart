@@ -8,6 +8,7 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.d
 import 'package:cross_platform_music_player/presentation/pages/album/album_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/artist/artist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/home/home_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/library/library_page.dart';
@@ -67,6 +68,17 @@ GoRouter createRouter(AuthCubit authCubit) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/search',
+                pageBuilder: (context, state) => _shellPage(
+                  state,
+                  SearchPage(initialQuery: state.uri.queryParameters['q']),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/library',
                 pageBuilder: (context, state) =>
                     _shellPage(state, const LibraryPage()),
@@ -91,10 +103,6 @@ GoRouter createRouter(AuthCubit authCubit) {
                   ),
                 ),
               ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
               GoRoute(
                 path: '/playlists',
                 pageBuilder: (context, state) =>
@@ -109,6 +117,15 @@ GoRouter createRouter(AuthCubit authCubit) {
                     playlist: state.extra as MusicPlaylist?,
                   ),
                 ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/favorites',
+                pageBuilder: (context, state) =>
+                    _shellPage(state, const FavoritesPage()),
               ),
             ],
           ),
@@ -153,11 +170,6 @@ GoRouter createRouter(AuthCubit authCubit) {
                 },
           );
         },
-      ),
-      GoRoute(
-        path: '/search',
-        builder: (context, state) =>
-            SearchPage(initialQuery: state.uri.queryParameters['q']),
       ),
     ],
   );
