@@ -45,9 +45,14 @@ void main() {
     expect(find.text('没有找到结果，换个关键词试试。'), findsOneWidget);
   });
 
-  testWidgets('SearchPage_results_defaultsToTracksAndShowsScopeTabs', (
+  testWidgets('SearchPage_results_defaultsToAllAndShowsScopeTabs', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
     );
@@ -60,14 +65,15 @@ void main() {
     expect(find.text('专辑 1'), findsOneWidget);
     expect(find.text('艺术家 1'), findsOneWidget);
     expect(find.text('歌单 1'), findsOneWidget);
-    expect(find.text('全部 4'), findsNothing);
+    expect(find.text('全部 4'), findsOneWidget);
     expect(find.text('夜曲'), findsOneWidget);
-    expect(find.text('私人雷达'), findsNothing);
+    expect(find.text('私人雷达'), findsOneWidget);
 
     await tester.tap(find.text('歌单 1'));
     await tester.pumpAndSettle();
 
     expect(find.text('私人雷达'), findsOneWidget);
+    expect(find.text('夜曲'), findsNothing);
   });
 
   testWidgets('SearchPage_recentSearchChip_syncsInputAndSearches', (
@@ -99,7 +105,7 @@ void main() {
     );
 
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('搜索音乐库'), findsOneWidget);
+    expect(find.text('歌曲、专辑、艺术家'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '夜曲');
     await tester.pump();
@@ -251,7 +257,7 @@ void main() {
 
     expect(find.text('4 项'), findsOneWidget);
     expect(find.text('歌曲 1'), findsOneWidget);
-    expect(find.text('全部 4'), findsNothing);
+    expect(find.text('全部 4'), findsOneWidget);
     expect(find.text('1 首'), findsOneWidget);
     expect(find.text('播放全部'), findsOneWidget);
     expect(find.text('加入队列'), findsOneWidget);

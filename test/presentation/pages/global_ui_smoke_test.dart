@@ -43,9 +43,9 @@ void main() {
       verify: () {
         expect(find.byType(AppContentPage), findsOneWidget);
         expect(find.text('设置'), findsWidgets);
+        expect(find.text('服务器'), findsOneWidget);
         expect(find.text('外观'), findsOneWidget);
         expect(find.text('播放'), findsOneWidget);
-        expect(find.text('媒体来源'), findsOneWidget);
       },
     );
   });

@@ -183,7 +183,7 @@ void main() {
     expect(find.text('收藏'), findsWidgets);
     expect(find.text('还没有收藏歌曲'), findsOneWidget);
     expect(find.text('在媒体库或播放页点亮爱心后，歌曲会集中显示在这里。'), findsOneWidget);
-    expect(find.byTooltip('返回'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
 
@@ -226,7 +226,7 @@ void main() {
     expect(find.text('播放历史'), findsWidgets);
     expect(find.text('还没有播放历史'), findsOneWidget);
     expect(find.text('开始播放后，最近听过的歌曲会自动记录在这里。'), findsOneWidget);
-    expect(find.byTooltip('返回'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
 }
