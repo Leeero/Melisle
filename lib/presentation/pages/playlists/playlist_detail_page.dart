@@ -12,9 +12,11 @@ import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   const PlaylistDetailPage({
@@ -50,9 +52,9 @@ class _PlaylistDetailView extends StatelessWidget {
 
     return BlocBuilder<PlaylistDetailCubit, PlaylistDetailState>(
       builder: (context, state) {
+        final isWide = AppBreakpoints.usesWideContent(context);
+
         return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(backgroundColor: Colors.transparent),
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -67,10 +69,23 @@ class _PlaylistDetailView extends StatelessWidget {
                   },
                   child: CustomScrollView(
                     slivers: [
+                      if (!isWide)
+                        SliverPadding(
+                          padding: AppPageLayout.sectionPadding(
+                            context,
+                            top: 2,
+                            bottom: 0,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: AppDetailBackNav(
+                              onPressed: () => _goBackToPlaylists(context),
+                            ),
+                          ),
+                        ),
                       SliverPadding(
                         padding: AppPageLayout.sectionPadding(
                           context,
-                          top: 10,
+                          top: isWide ? 10 : 2,
                           bottom: 10,
                         ),
                         sliver: SliverToBoxAdapter(
@@ -101,8 +116,7 @@ class _PlaylistDetailView extends StatelessWidget {
                                     context,
                                     bottom: state.isLoadingMore ? 12 : 28,
                                   ),
-                                  sliver:
-                                      AppBreakpoints.usesWideContent(context)
+                                  sliver: isWide
                                       ? SliverToBoxAdapter(
                                           child: MusicTrackTable(
                                             tracks: state.tracks,
@@ -121,26 +135,23 @@ class _PlaylistDetailView extends StatelessWidget {
                                             index,
                                           ) {
                                             final track = state.tracks[index];
-                                            return _PlaylistTrackRow(
-                                              isFirst: index == 0,
-                                              isLast:
-                                                  index ==
-                                                      state.tracks.length - 1 &&
-                                                  !state.isLoadingMore,
-                                              isWide: false,
-                                              child: MusicTrackTile.row(
-                                                isCurrent:
-                                                    track.id == currentTrackId,
-                                                artworkUrl: track.artworkUrl,
-                                                title: track.title,
-                                                subtitle:
-                                                    '${track.artistName} · ${track.albumTitle}',
-                                                onTap: () =>
-                                                    _playPlaylistFromIndex(
-                                                      context,
-                                                      index,
-                                                    ),
-                                              ),
+                                            return MusicTrackTile.row(
+                                              isCurrent:
+                                                  track.id == currentTrackId,
+                                              artworkUrl: track.artworkUrl,
+                                              title: track.title,
+                                              subtitle:
+                                                  '${track.artistName} · ${track.albumTitle}',
+                                              onTap: () =>
+                                                  _playPlaylistFromIndex(
+                                                    context,
+                                                    index,
+                                                  ),
+                                              onLongPress: () =>
+                                                  showTrackActionsSheet(
+                                                    context,
+                                                    track,
+                                                  ),
                                             );
                                           }, childCount: state.tracks.length),
                                         ),
@@ -181,44 +192,6 @@ Future<void> _playPlaylistFromIndex(
   );
 }
 
-class _PlaylistTrackRow extends StatelessWidget {
-  const _PlaylistTrackRow({
-    required this.child,
-    this.isFirst = false,
-    this.isLast = false,
-    this.isWide = true,
-  });
-
-  final Widget child;
-  final bool isFirst;
-  final bool isLast;
-  final bool isWide;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final radius = isWide ? 28.0 : 14.0;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: isWide ? 0.94 : 0.92),
-        borderRadius: BorderRadius.vertical(
-          top: isFirst ? Radius.circular(radius) : Radius.zero,
-          bottom: isLast ? Radius.circular(radius) : Radius.zero,
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          isWide ? 14 : 12,
-          isFirst ? 12 : 0,
-          isWide ? 14 : 12,
-          isLast ? 18 : 12,
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
 class _PlaylistHero extends StatelessWidget {
   const _PlaylistHero({
     required this.playlist,
@@ -248,29 +221,37 @@ class _PlaylistHero extends StatelessWidget {
 
         return AppDetailHeroFrame(
           padding: isWide
-              ? const EdgeInsets.all(22)
-              : const EdgeInsets.fromLTRB(0, 10, 0, 4),
-          compactGap: 18,
+              ? EdgeInsets.zero
+              : const EdgeInsets.fromLTRB(0, 16, 0, 24),
+          compactGap: 16,
           spacing: 28,
           coverBuilder: (context, isWide) {
             return _PlaylistHeroArtwork(
               imageUrl: playlist?.artworkUrl ?? '',
-              size: isWide ? 220 : 128,
+              size: isWide ? 188 : 208,
             );
           },
           contentBuilder: (context, isWide) {
+            final alignment = isWide
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center;
+            final trackCountLabel = tracksCount == 0
+                ? (playlist?.trackCount ?? 0)
+                : tracksCount;
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: alignment,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Wrap(
+                  alignment: isWide
+                      ? WrapAlignment.start
+                      : WrapAlignment.center,
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     const MetaPill(label: '歌单', size: MetaPillSize.compact),
                     MetaPill(
-                      label:
-                          '${tracksCount == 0 ? (playlist?.trackCount ?? 0) : tracksCount} 首',
+                      label: '$trackCountLabel 首',
                       size: MetaPillSize.compact,
                     ),
                   ],
@@ -280,18 +261,38 @@ class _PlaylistHero extends StatelessWidget {
                   playlist?.name ?? '歌单详情',
                   maxLines: isWide ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: isWide ? TextAlign.start : TextAlign.center,
                   style: titleStyle?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: colorScheme.onSurface,
                   ),
                 ),
-                SizedBox(height: isWide ? 24 : 10),
-                PlayAllButton(
-                  variant: isWide
-                      ? PlayAllButtonVariant.primary
-                      : PlayAllButtonVariant.compact,
-                  onPressed: tracksCount == 0 || isLoading ? null : onPlayAll,
-                  isLoading: isLoading,
+                const SizedBox(height: 8),
+                Text(
+                  '$trackCountLabel 首歌曲',
+                  textAlign: isWide ? TextAlign.start : TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: isWide ? 24 : 14),
+                Wrap(
+                  alignment: isWide
+                      ? WrapAlignment.start
+                      : WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    PlayAllButton(
+                      variant: isWide
+                          ? PlayAllButtonVariant.primary
+                          : PlayAllButtonVariant.compact,
+                      onPressed: tracksCount == 0 || isLoading
+                          ? null
+                          : onPlayAll,
+                      isLoading: isLoading,
+                    ),
+                  ],
                 ),
               ],
             );
@@ -300,6 +301,14 @@ class _PlaylistHero extends StatelessWidget {
       },
     );
   }
+}
+
+void _goBackToPlaylists(BuildContext context) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).maybePop();
+    return;
+  }
+  context.go('/playlists');
 }
 
 class _PlaylistHeroArtwork extends StatelessWidget {

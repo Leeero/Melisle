@@ -56,8 +56,6 @@ class _AlbumDetailView extends StatelessWidget {
         );
 
         return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(backgroundColor: Colors.transparent),
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -65,10 +63,23 @@ class _AlbumDetailView extends StatelessWidget {
               SafeArea(
                 child: CustomScrollView(
                   slivers: [
+                    if (!isWide)
+                      SliverPadding(
+                        padding: AppPageLayout.sectionPadding(
+                          context,
+                          top: 2,
+                          bottom: 0,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: AppDetailBackNav(
+                            onPressed: () => _goBackToLibrary(context),
+                          ),
+                        ),
+                      ),
                     SliverPadding(
                       padding: AppPageLayout.sectionPadding(
                         context,
-                        top: isWide ? 4 : 10,
+                        top: isWide ? 4 : 2,
                         bottom: isWide ? 18 : 10,
                       ),
                       sliver: SliverToBoxAdapter(
@@ -108,7 +119,7 @@ class _AlbumDetailView extends StatelessWidget {
                                   index,
                                 ) {
                                   final track = state.tracks[index];
-                                  final trackTile = MusicTrackTile.row(
+                                  return MusicTrackTile.row(
                                     isCurrent: track.id == currentTrackId,
                                     artworkUrl: track.artworkUrl,
                                     title: track.title,
@@ -118,12 +129,6 @@ class _AlbumDetailView extends StatelessWidget {
                                         _playAlbumFromIndex(context, index),
                                     onLongPress: () =>
                                         showTrackActionsSheet(context, track),
-                                  );
-
-                                  return _AlbumTrackRow(
-                                    isFirst: index == 0,
-                                    isLast: index == state.tracks.length - 1,
-                                    child: trackTile,
                                   );
                                 }, childCount: state.tracks.length),
                               ),
@@ -159,14 +164,14 @@ class _AlbumHero extends StatelessWidget {
 
         return AppDetailHeroFrame(
           padding: isWide
-              ? const EdgeInsets.all(22)
-              : const EdgeInsets.fromLTRB(0, 10, 0, 4),
-          compactGap: 18,
+              ? EdgeInsets.zero
+              : const EdgeInsets.fromLTRB(0, 16, 0, 24),
+          compactGap: 16,
           spacing: 28,
           coverBuilder: (context, isWide) {
             return _AlbumHeroArtwork(
               imageUrl: album?.artworkUrl ?? '',
-              size: isWide ? 220 : 128,
+              size: isWide ? 188 : 208,
               semanticLabel: '《$displayTitle》封面',
             );
           },
@@ -204,12 +209,17 @@ class _AlbumHeroSummary extends StatelessWidget {
     final titleStyle = isWide
         ? theme.textTheme.headlineMedium
         : theme.textTheme.headlineSmall;
+    final horizontalAlignment = isWide
+        ? CrossAxisAlignment.start
+        : CrossAxisAlignment.center;
+    final textAlign = isWide ? TextAlign.start : TextAlign.center;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: horizontalAlignment,
       mainAxisSize: MainAxisSize.min,
       children: [
         Wrap(
+          alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
           spacing: 8,
           runSpacing: 8,
           children: [
@@ -225,15 +235,17 @@ class _AlbumHeroSummary extends StatelessWidget {
           displayTitle,
           maxLines: isWide ? 2 : 1,
           overflow: TextOverflow.ellipsis,
+          textAlign: textAlign,
           style: titleStyle?.copyWith(
             fontWeight: FontWeight.w800,
             color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
-        _AlbumArtistLine(album: album),
+        _AlbumArtistLine(album: album, centered: !isWide),
         SizedBox(height: isWide ? 22 : 12),
         Wrap(
+          alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
           spacing: 12,
           runSpacing: 12,
           children: [
@@ -315,6 +327,14 @@ Future<void> _playAlbumFromIndex(BuildContext context, int startIndex) async {
   );
 }
 
+void _goBackToLibrary(BuildContext context) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).maybePop();
+    return;
+  }
+  context.go('/library');
+}
+
 int _trackCountLabel(MusicAlbum? album, int tracksCount) {
   return tracksCount == 0 ? (album?.trackCount ?? 0) : tracksCount;
 }
@@ -327,46 +347,11 @@ double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
   return hasMiniPlayer ? 168 : 96;
 }
 
-class _AlbumTrackRow extends StatelessWidget {
-  const _AlbumTrackRow({
-    required this.child,
-    this.isFirst = false,
-    this.isLast = false,
-  });
-
-  final Widget child;
-  final bool isFirst;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    const radius = 14.0;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.vertical(
-          top: isFirst ? const Radius.circular(radius) : Radius.zero,
-          bottom: isLast ? const Radius.circular(radius) : Radius.zero,
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          12,
-          isFirst ? 12 : 0,
-          12,
-          isLast ? 18 : 12,
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
 class _AlbumArtistLine extends StatelessWidget {
-  const _AlbumArtistLine({required this.album});
+  const _AlbumArtistLine({required this.album, required this.centered});
 
   final MusicAlbum? album;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
@@ -376,7 +361,11 @@ class _AlbumArtistLine extends StatelessWidget {
     ).textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     if (album == null) {
-      return Text('正在加载专辑曲目', textAlign: TextAlign.start, style: textStyle);
+      return Text(
+        '正在加载专辑曲目',
+        textAlign: centered ? TextAlign.center : TextAlign.start,
+        style: textStyle,
+      );
     }
 
     final year = album!.year?.toString() ?? '未知年份';
@@ -386,13 +375,13 @@ class _AlbumArtistLine extends StatelessWidget {
     if (artistId == null || artistId.isEmpty) {
       return Text(
         '$artistName · $year',
-        textAlign: TextAlign.start,
+        textAlign: centered ? TextAlign.center : TextAlign.start,
         style: textStyle,
       );
     }
 
     return Wrap(
-      alignment: WrapAlignment.start,
+      alignment: centered ? WrapAlignment.center : WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         ConstrainedBox(

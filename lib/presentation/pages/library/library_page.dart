@@ -95,14 +95,9 @@ class _LibraryViewState extends State<_LibraryView> {
         );
       },
       builder: (context, state) {
-        return DefaultTabController(
-          key: ValueKey(state.currentFilter.index),
-          length: 4,
-          initialIndex: state.currentFilter.index,
-          child: AppContentPage(
-            header: _LibraryHeader(state: state, controller: _searchController),
-            body: _buildBody(context, state, horizontalPadding, currentTrackId),
-          ),
+        return AppContentPage(
+          header: _LibraryHeader(state: state, controller: _searchController),
+          body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
     );
@@ -196,12 +191,19 @@ class _LibraryViewState extends State<_LibraryView> {
         sliver: SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
+              child: _LibrarySectionHeader(
+                title: '歌曲',
+                countLabel: _libraryTrackCountLabel(state),
+                action: PlayAllButton(
+                  onPressed: () => _playAllLibraryTracks(context, state),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
               child: MusicTrackTable(
                 tracks: state.tracks,
                 currentTrackId: currentTrackId,
-                trackCountLabel: state.totalTrackCount != null
-                    ? '${state.currentFilterCount} / ${state.totalTrackCount} 首'
-                    : '${state.currentFilterCount} 首',
+                showActionBar: false,
                 onTrackTap: (index, _) =>
                     PlayerNavigation.playTracksAndOpenPlayer(
                       context,
@@ -225,9 +227,16 @@ class _LibraryViewState extends State<_LibraryView> {
       sliver: SliverMainAxisGroup(
         slivers: [
           SliverToBoxAdapter(
+            child: _LibrarySectionHeader(
+              title: '歌曲',
+              countLabel: _libraryTrackCountLabel(state),
+            ),
+          ),
+          SliverToBoxAdapter(
             child: _MobileTrackActionBar(
               trackCount: state.currentFilterCount,
               totalTrackCount: state.totalTrackCount,
+              showCount: false,
               onPlayAll: () => _playAllLibraryTracks(context, state),
             ),
           ),
@@ -293,55 +302,76 @@ class _LibraryViewState extends State<_LibraryView> {
           horizontalPadding,
           18,
         ),
-        sliver: SliverList(
-          delegate: SliverChildBuilderDelegate((context, index) {
-            final album = state.albums[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CachedArtwork(
-                  imageUrl: album.artworkUrl,
-                  size: 48,
-                  borderRadius: 14,
-                ),
-                title: Text(
-                  album.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  [
-                    album.artistName,
-                    if (album.year != null) '${album.year}',
-                    '${album.trackCount} 首',
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () => context.push('/album/${album.id}', extra: album),
+        sliver: SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _LibrarySectionHeader(
+                title: '专辑',
+                countLabel: '${state.albums.length} 张',
               ),
-            );
-          }, childCount: state.albums.length),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final album = state.albums[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: CachedArtwork(
+                      imageUrl: album.artworkUrl,
+                      size: 48,
+                      borderRadius: 14,
+                    ),
+                    title: Text(
+                      album.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      [
+                        album.artistName,
+                        if (album.year != null) '${album.year}',
+                        '${album.trackCount} 首',
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () =>
+                        context.push('/album/${album.id}', extra: album),
+                  ),
+                );
+              }, childCount: state.albums.length),
+            ),
+          ],
         ),
       );
     }
 
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final album = state.albums[index];
-          return MusicAlbumGridCard(
-            album: album,
-            onTap: () => context.push('/album/${album.id}', extra: album),
-          );
-        }, childCount: state.albums.length),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: _albumGridCount(MediaQuery.sizeOf(context).width),
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 0.72,
-        ),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _LibrarySectionHeader(
+              title: '专辑',
+              countLabel: '${state.albums.length} 张',
+            ),
+          ),
+          SliverGrid(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final album = state.albums[index];
+              return MusicAlbumGridCard(
+                album: album,
+                onTap: () => context.push('/album/${album.id}', extra: album),
+              );
+            }, childCount: state.albums.length),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _albumGridCount(MediaQuery.sizeOf(context).width),
+              mainAxisSpacing: 18,
+              crossAxisSpacing: 18,
+              childAspectRatio: 0.72,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -362,7 +392,12 @@ class _LibraryViewState extends State<_LibraryView> {
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
       sliver: SliverMainAxisGroup(
         slivers: [
-          // Genre 筛选器
+          SliverToBoxAdapter(
+            child: _LibrarySectionHeader(
+              title: '艺术家',
+              countLabel: '${state.artists.length} 位',
+            ),
+          ),
           if (state.genres.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -394,7 +429,6 @@ class _LibraryViewState extends State<_LibraryView> {
                 ),
               ),
             ),
-          // 艺术家列表
           if (state.artists.isEmpty)
             const SliverToBoxAdapter(
               child: SizedBox(
@@ -491,31 +525,92 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 }
 
+String _librarySummaryLabel(LibraryState state) {
+  final query = state.searchQuery.trim();
+  final trackCount = state.totalTrackCount ?? state.tracks.length;
+  final parts = <String>[
+    if (trackCount > 0) '$trackCount 首歌曲',
+    if (state.albums.isNotEmpty) '${state.albums.length} 张专辑',
+    if (state.artists.isNotEmpty) '${state.artists.length} 位艺术家',
+  ];
+
+  final summary = parts.isEmpty ? '歌曲、专辑和艺术家会按音乐源实时展示。' : parts.join(' · ');
+  if (query.isEmpty) {
+    return state.status == LibraryStatus.loading && parts.isEmpty
+        ? '正在整理你的媒体库。'
+        : summary;
+  }
+  return '正在筛选「$query」 · $summary';
+}
+
+String _libraryTrackCountLabel(LibraryState state) {
+  final totalTrackCount = state.totalTrackCount;
+  if (totalTrackCount == null) {
+    return '${state.currentFilterCount} 首';
+  }
+  return '${state.currentFilterCount} / $totalTrackCount 首';
+}
+
+class _LibrarySectionHeader extends StatelessWidget {
+  const _LibrarySectionHeader({
+    required this.title,
+    required this.countLabel,
+    this.action,
+  });
+
+  final String title;
+  final String countLabel;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSectionTitleRow(
+      title: title,
+      badge: MetaPill(label: countLabel, size: MetaPillSize.compact),
+      action: action,
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+    );
+  }
+}
+
 class _MobileTrackActionBar extends StatelessWidget {
   const _MobileTrackActionBar({
-    required this.trackCount,
+    this.trackCount,
     this.totalTrackCount,
+    this.showCount = true,
     required this.onPlayAll,
   });
 
-  final int trackCount;
+  final int? trackCount;
   final int? totalTrackCount;
+  final bool showCount;
   final VoidCallback onPlayAll;
 
   @override
   Widget build(BuildContext context) {
+    final trackCount = this.trackCount;
+    final countLabel = trackCount == null
+        ? null
+        : totalTrackCount != null
+        ? '$trackCount / $totalTrackCount 首'
+        : '$trackCount 首';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       child: Row(
         children: [
-          MetaPill(
-            label: totalTrackCount != null
-                ? '$trackCount / $totalTrackCount 首'
-                : '$trackCount 首',
-            size: MetaPillSize.compact,
-          ),
-          const Spacer(),
-          PlayAllButton(onPressed: onPlayAll),
+          if (showCount && countLabel != null) ...[
+            MetaPill(label: countLabel, size: MetaPillSize.compact),
+            const Spacer(),
+            PlayAllButton(
+              onPressed: onPlayAll,
+              variant: PlayAllButtonVariant.primary,
+            ),
+          ] else
+            PlayAllButton(
+              onPressed: onPlayAll,
+              variant: PlayAllButtonVariant.primary,
+            ),
         ],
       ),
     );
@@ -599,13 +694,17 @@ class _LibraryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWide = AppBreakpoints.usesWideContent(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppPageHeader(
           title: '媒体库',
+          description: _librarySummaryLabel(state),
           automaticImplyLeading: false,
           hideTitleOnCompactWithCenter: false,
+          centerWidth: isWide ? 420 : null,
           center: AppSearchField(
             controller: controller,
             dense: true,
@@ -621,7 +720,7 @@ class _LibraryHeader extends StatelessWidget {
         const SizedBox(height: 14),
         AppScopeTabs<LibraryFilter>(
           semanticLabel: '媒体库分类',
-          variant: AppBreakpoints.usesWideContent(context)
+          variant: isWide
               ? AppScopeTabsVariant.underline
               : AppScopeTabsVariant.pill,
           selectedValue: state.currentFilter,
@@ -631,7 +730,6 @@ class _LibraryHeader extends StatelessWidget {
             AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
             AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
             AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-            AppScopeTabItem(value: LibraryFilter.favorites, label: '收藏'),
           ],
         ),
       ],

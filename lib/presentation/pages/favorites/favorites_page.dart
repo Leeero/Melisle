@@ -73,11 +73,7 @@ class _FavoritesViewState extends State<_FavoritesView> {
     return BlocBuilder<FavoritesListCubit, FavoritesListState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _FavoritesHeader(
-            count: state.tracks.length,
-            tracks: state.tracks,
-            hasMore: state.hasMore,
-          ),
+          header: _FavoritesHeader(state: state),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -125,22 +121,23 @@ class _FavoritesViewState extends State<_FavoritesView> {
           24,
         ),
         children: [
+          _FavoritesPlayAllToolbar(state: state),
+          const SizedBox(height: 12),
+          AppSectionTitleRow(
+            title: '收藏歌曲',
+            badge: MetaPill(
+              label: '${state.tracks.length} 首',
+              size: MetaPillSize.compact,
+            ),
+          ),
           MusicTrackTable(
             tracks: state.tracks,
             currentTrackId: currentTrackId,
-            trackCountLabel: '${state.tracks.length} 首',
+            showActionBar: false,
             onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
               context,
               tracks: state.tracks,
               startIndex: index,
-            ),
-            onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
-              context,
-              loadedTracks: state.tracks,
-              allLoaded: !state.hasMore,
-              fetchAll: () => context
-                  .read<MusicRepository>()
-                  .fetchFavoriteTracks(limit: 500, startIndex: 0),
             ),
             trailingBuilder: (context, track, _) =>
                 _FavoriteTrackActionButton(track: track, compact: true),
@@ -153,23 +150,33 @@ class _FavoritesViewState extends State<_FavoritesView> {
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      itemCount: state.tracks.length + 1,
+      itemCount: state.tracks.length + 3,
       itemBuilder: (context, index) {
-        if (index == state.tracks.length) {
+        if (index == 0) {
+          return _FavoritesPlayAllToolbar(state: state, expand: true);
+        }
+        if (index == 1) {
+          return AppSectionTitleRow(
+            title: '收藏歌曲',
+            badge: MetaPill(
+              label: '${state.tracks.length} 首',
+              size: MetaPillSize.compact,
+            ),
+          );
+        }
+        final trackIndex = index - 2;
+        if (trackIndex == state.tracks.length) {
           return _FavoritesPaginationFooter(state: state);
         }
 
-        final track = state.tracks[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _FavoriteTrackCard(
-            track: track,
-            currentTrackId: currentTrackId,
-            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: index,
-            ),
+        final track = state.tracks[trackIndex];
+        return _FavoriteTrackRow(
+          track: track,
+          currentTrackId: currentTrackId,
+          onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+            context,
+            tracks: state.tracks,
+            startIndex: trackIndex,
           ),
         );
       },
@@ -178,49 +185,50 @@ class _FavoritesViewState extends State<_FavoritesView> {
 }
 
 class _FavoritesHeader extends StatelessWidget {
-  const _FavoritesHeader({
-    required this.count,
-    required this.tracks,
-    required this.hasMore,
-  });
+  const _FavoritesHeader({required this.state});
 
-  final int count;
-  final List<MusicTrack> tracks;
-  final bool hasMore;
+  final FavoritesListState state;
 
   @override
   Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+    final count = state.tracks.length;
+
     return AppPageHeader(
       title: '收藏',
-      description: '你标记喜欢的歌曲',
-      leading: AppBackButton(onPressed: () => context.go('/home')),
+      description: count == 0 ? '你标记喜欢的歌曲' : '$count 首收藏歌曲',
       automaticImplyLeading: false,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MetaPill(label: '$count 首', size: MetaPillSize.compact),
-          if (count > 0) ...[
-            const SizedBox(width: 10),
-            PlayAllButton(
-              variant: PlayAllButtonVariant.iconOnly,
-              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: tracks,
-                allLoaded: !hasMore,
-                fetchAll: () => context
-                    .read<MusicRepository>()
-                    .fetchFavoriteTracks(limit: 500, startIndex: 0),
-              ),
-            ),
-          ],
-        ],
-      ),
+      trailing: compact
+          ? null
+          : MetaPill(label: '$count 首', size: MetaPillSize.compact),
     );
   }
 }
 
-class _FavoriteTrackCard extends StatelessWidget {
-  const _FavoriteTrackCard({
+class _FavoritesPlayAllToolbar extends StatelessWidget {
+  const _FavoritesPlayAllToolbar({required this.state, this.expand = false});
+
+  final FavoritesListState state;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = PlayAllButton(
+      variant: PlayAllButtonVariant.primary,
+      onPressed: state.tracks.isEmpty
+          ? null
+          : () => _playAllFavorites(context, state),
+    );
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: expand ? SizedBox(width: double.infinity, child: button) : button,
+    );
+  }
+}
+
+class _FavoriteTrackRow extends StatelessWidget {
+  const _FavoriteTrackRow({
     required this.track,
     required this.currentTrackId,
     required this.onTap,
@@ -232,7 +240,7 @@ class _FavoriteTrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MusicTrackTile.card(
+    return MusicTrackTile.row(
       isCurrent: track.id == currentTrackId,
       artworkUrl: track.artworkUrl,
       title: track.title,
@@ -244,6 +252,18 @@ class _FavoriteTrackCard extends StatelessWidget {
       extraTrailing: _FavoriteTrackActionButton(track: track),
     );
   }
+}
+
+Future<void> _playAllFavorites(BuildContext context, FavoritesListState state) {
+  return PlayerNavigation.playAllAndOpenPlayer(
+    context,
+    loadedTracks: state.tracks,
+    allLoaded: !state.hasMore,
+    fetchAll: () => context.read<MusicRepository>().fetchFavoriteTracks(
+      limit: 500,
+      startIndex: 0,
+    ),
+  );
 }
 
 class _FavoriteTrackActionButton extends StatelessWidget {

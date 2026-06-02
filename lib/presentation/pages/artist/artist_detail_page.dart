@@ -54,14 +54,13 @@ class _ArtistDetailView extends StatelessWidget {
 
     return BlocBuilder<ArtistCubit, ArtistState>(
       builder: (context, state) {
+        final isWide = AppBreakpoints.usesWideContent(context);
         final artist = state.artist ?? seed;
         final coverUrl =
             artist?.artworkUrl ??
             (state.albums.isNotEmpty ? state.albums.first.artworkUrl : null);
 
         return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(backgroundColor: Colors.transparent),
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -69,10 +68,23 @@ class _ArtistDetailView extends StatelessWidget {
               SafeArea(
                 child: CustomScrollView(
                   slivers: [
+                    if (!isWide)
+                      SliverPadding(
+                        padding: AppPageLayout.sectionPadding(
+                          context,
+                          top: 2,
+                          bottom: 0,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: AppDetailBackNav(
+                            onPressed: () => _goBackToLibrary(context),
+                          ),
+                        ),
+                      ),
                     SliverPadding(
                       padding: AppPageLayout.sectionPadding(
                         context,
-                        top: 10,
+                        top: isWide ? 10 : 2,
                         bottom: 18,
                       ),
                       sliver: SliverToBoxAdapter(
@@ -80,6 +92,14 @@ class _ArtistDetailView extends StatelessWidget {
                           artist: artist,
                           albumCount: state.albums.length,
                           topTrackCount: state.topTracks.length,
+                          onPlayTopTracks: state.topTracks.isEmpty
+                              ? null
+                              : () => PlayerNavigation.playAllAndOpenPlayer(
+                                  context,
+                                  loadedTracks: state.topTracks,
+                                  allLoaded: true,
+                                  fetchAll: () async => state.topTracks,
+                                ),
                         ),
                       ),
                     ),
@@ -117,7 +137,7 @@ class _ArtistDetailView extends StatelessWidget {
                             context,
                             bottom: 16,
                           ),
-                          sliver: AppBreakpoints.usesWideContent(context)
+                          sliver: isWide
                               ? SliverToBoxAdapter(
                                   child: MusicTrackTable(
                                     tracks: state.topTracks,
@@ -137,27 +157,19 @@ class _ArtistDetailView extends StatelessWidget {
                                     index,
                                   ) {
                                     final track = state.topTracks[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 10,
-                                      ),
-                                      child: MusicTrackTile.row(
-                                        isCurrent: track.id == currentTrackId,
-                                        artworkUrl: track.artworkUrl,
-                                        title: track.title,
-                                        subtitle: track.albumTitle,
-                                        onTap: () =>
-                                            PlayerNavigation.playTracksAndOpenPlayer(
-                                              context,
-                                              tracks: state.topTracks,
-                                              startIndex: index,
-                                            ),
-                                        onLongPress: () =>
-                                            showTrackActionsSheet(
-                                              context,
-                                              track,
-                                            ),
-                                      ),
+                                    return MusicTrackTile.row(
+                                      isCurrent: track.id == currentTrackId,
+                                      artworkUrl: track.artworkUrl,
+                                      title: track.title,
+                                      subtitle: track.albumTitle,
+                                      onTap: () =>
+                                          PlayerNavigation.playTracksAndOpenPlayer(
+                                            context,
+                                            tracks: state.topTracks,
+                                            startIndex: index,
+                                          ),
+                                      onLongPress: () =>
+                                          showTrackActionsSheet(context, track),
                                     );
                                   }, childCount: state.topTracks.length),
                                 ),
@@ -178,28 +190,53 @@ class _ArtistDetailView extends StatelessWidget {
                             context,
                             bottom: 28,
                           ),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 200,
-                                  mainAxisSpacing: 14,
-                                  crossAxisSpacing: 14,
-                                  childAspectRatio: 0.78,
+                          sliver: isWide
+                              ? SliverGrid(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                                        maxCrossAxisExtent: 200,
+                                        mainAxisSpacing: 22,
+                                        crossAxisSpacing: 18,
+                                        childAspectRatio: 0.78,
+                                      ),
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    final album = state.albums[index];
+                                    return MusicAlbumGridCard(
+                                      album: album,
+                                      onTap: () => context.push(
+                                        '/album/${album.id}',
+                                        extra: album,
+                                      ),
+                                    );
+                                  }, childCount: state.albums.length),
+                                )
+                              : SliverToBoxAdapter(
+                                  child: SizedBox(
+                                    height: 216,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: state.albums.length,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(width: 12),
+                                      itemBuilder: (context, index) {
+                                        final album = state.albums[index];
+                                        return SizedBox(
+                                          width: 150,
+                                          child: MusicAlbumGridCard(
+                                            album: album,
+                                            onTap: () => context.push(
+                                              '/album/${album.id}',
+                                              extra: album,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final album = state.albums[index];
-                              return MusicAlbumGridCard(
-                                album: album,
-                                onTap: () => context.push(
-                                  '/album/${album.id}',
-                                  extra: album,
-                                ),
-                              );
-                            }, childCount: state.albums.length),
-                          ),
                         ),
                       ],
                       if (state.albums.isEmpty && state.topTracks.isEmpty)
@@ -221,11 +258,13 @@ class _ArtistHero extends StatelessWidget {
     required this.artist,
     required this.albumCount,
     required this.topTrackCount,
+    required this.onPlayTopTracks,
   });
 
   final MusicArtist? artist;
   final int albumCount;
   final int topTrackCount;
+  final VoidCallback? onPlayTopTracks;
 
   @override
   Widget build(BuildContext context) {
@@ -238,25 +277,32 @@ class _ArtistHero extends StatelessWidget {
         : (artist?.trackCount ?? 0);
 
     return AppDetailHeroFrame(
-      compactGap: 18,
+      padding: AppBreakpoints.usesWideContent(context)
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(0, 16, 0, 24),
+      compactGap: 16,
       coverBuilder: (context, isWide) {
         return ClipOval(
           child: SizedBox(
-            width: isWide ? 180 : 150,
-            height: isWide ? 180 : 150,
+            width: isWide ? 200 : 220,
+            height: isWide ? 200 : 220,
             child: CachedArtwork(
               imageUrl: artist?.artworkUrl ?? '',
-              size: isWide ? 180 : 150,
+              size: isWide ? 200 : 220,
               borderRadius: 999,
             ),
           ),
         );
       },
-      contentBuilder: (context, _) {
+      contentBuilder: (context, isWide) {
+        final alignment = isWide
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center;
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: alignment,
           children: [
             Wrap(
+              alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
               spacing: 10,
               runSpacing: 10,
               children: [
@@ -274,6 +320,7 @@ class _ArtistHero extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               artist?.name ?? '艺术家',
+              textAlign: isWide ? TextAlign.start : TextAlign.center,
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -281,13 +328,29 @@ class _ArtistHero extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               '来自媒体库的全部作品',
+              textAlign: isWide ? TextAlign.start : TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 18),
+            PlayAllButton(
+              variant: isWide
+                  ? PlayAllButtonVariant.primary
+                  : PlayAllButtonVariant.compact,
+              onPressed: onPlayTopTracks,
             ),
           ],
         );
       },
     );
   }
+}
+
+void _goBackToLibrary(BuildContext context) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).maybePop();
+    return;
+  }
+  context.go('/library');
 }

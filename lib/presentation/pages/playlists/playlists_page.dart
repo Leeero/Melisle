@@ -106,59 +106,32 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
         return CustomScrollView(
           controller: _scrollController,
           slivers: [
-            if (!isWide)
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  0,
-                  horizontalPadding,
-                  24,
-                ),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final playlist = state.playlists[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: MusicPlaylistListTile(
-                        playlist: playlist,
-                        onTap: () => context.push(
-                          '/playlists/${playlist.id}',
-                          extra: playlist,
-                        ),
-                      ),
-                    );
-                  }, childCount: state.playlists.length),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  0,
-                  horizontalPadding,
-                  24,
-                ),
-                sliver: SliverGrid(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final playlist = state.playlists[index];
-                    return MusicPlaylistGridCard(
-                      playlist: playlist,
-                      onTap: () => context.push(
-                        '/playlists/${playlist.id}',
-                        extra: playlist,
-                      ),
-                    );
-                  }, childCount: state.playlists.length),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
-                      constraints.maxWidth,
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                0,
+                horizontalPadding,
+                24,
+              ),
+              sliver: SliverGrid(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final playlist = state.playlists[index];
+                  return MusicPlaylistGridCard(
+                    playlist: playlist,
+                    onTap: () => context.push(
+                      '/playlists/${playlist.id}',
+                      extra: playlist,
                     ),
-                    crossAxisSpacing: 24,
-                    mainAxisSpacing: 32,
-                    childAspectRatio: 0.8,
-                  ),
+                  );
+                }, childCount: state.playlists.length),
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: isWide ? 200 : 174,
+                  crossAxisSpacing: isWide ? 18 : 14,
+                  mainAxisSpacing: isWide ? 22 : 24,
+                  childAspectRatio: 0.78,
                 ),
               ),
+            ),
             SliverToBoxAdapter(child: _buildFooter(state)),
           ],
         );
@@ -208,6 +181,9 @@ class _PlaylistsHeader extends StatelessWidget {
       children: [
         AppPageHeader(
           title: '歌单',
+          description: state.searchQuery.isEmpty
+              ? '${state.playlists.length} 个歌单'
+              : '找到 ${state.playlists.length} 个匹配歌单',
           automaticImplyLeading: false,
           hideTitleOnCompactWithCenter: false,
           center: searchField,

@@ -12,7 +12,6 @@ import 'package:cross_platform_music_player/presentation/widgets/music/play_all_
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -84,6 +83,13 @@ class _HistoryView extends StatelessWidget {
           24,
         ),
         children: [
+          AppSectionTitleRow(
+            title: '最近播放',
+            badge: MetaPill(
+              label: '${state.tracks.length} 条',
+              size: MetaPillSize.compact,
+            ),
+          ),
           MusicTrackTable(
             tracks: state.tracks,
             currentTrackId: currentTrackId,
@@ -104,19 +110,27 @@ class _HistoryView extends StatelessWidget {
 
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      itemCount: state.tracks.length,
+      itemCount: state.tracks.length + 1,
       itemBuilder: (context, index) {
-        final track = state.tracks[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _HistoryTrackCard(
-            track: track,
-            currentTrackId: currentTrackId,
-            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: index,
+        if (index == 0) {
+          return AppSectionTitleRow(
+            title: '最近播放',
+            badge: MetaPill(
+              label: '${state.tracks.length} 条',
+              size: MetaPillSize.compact,
             ),
+          );
+        }
+
+        final trackIndex = index - 1;
+        final track = state.tracks[trackIndex];
+        return _HistoryTrackRow(
+          track: track,
+          currentTrackId: currentTrackId,
+          onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+            context,
+            tracks: state.tracks,
+            startIndex: trackIndex,
           ),
         );
       },
@@ -134,8 +148,7 @@ class _HistoryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppPageHeader(
       title: '播放历史',
-      description: '最近听过的歌曲',
-      leading: AppBackButton(onPressed: () => context.go('/home')),
+      description: '过去 7 天的播放记录',
       automaticImplyLeading: false,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -159,8 +172,8 @@ class _HistoryHeader extends StatelessWidget {
   }
 }
 
-class _HistoryTrackCard extends StatelessWidget {
-  const _HistoryTrackCard({
+class _HistoryTrackRow extends StatelessWidget {
+  const _HistoryTrackRow({
     required this.track,
     required this.currentTrackId,
     required this.onTap,
@@ -172,7 +185,7 @@ class _HistoryTrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MusicTrackTile.card(
+    return MusicTrackTile.row(
       isCurrent: track.id == currentTrackId,
       artworkUrl: track.artworkUrl,
       title: track.title,
@@ -182,6 +195,9 @@ class _HistoryTrackCard extends StatelessWidget {
       ].where((item) => item.isNotEmpty).join(' · '),
       statusLabel: _formatLastPlayed(track.lastPlayedAt),
       idleIcon: Icons.history_rounded,
+      extraTrailing: _HistoryPlayedAtButton(
+        label: _formatLastPlayed(track.lastPlayedAt),
+      ),
       onTap: onTap,
     );
   }
