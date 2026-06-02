@@ -1,343 +1,335 @@
 # Design
 
-## Design goals
+本文件是乐岛（Melisle）当前视觉还原工作的实现规范入口。视觉最终基准来自 `design/` 目录下的 Open Design 源文件；Flutter 代码实现、评审和验收都应优先对齐这些源文件。
 
-乐岛（Melisle）的界面服务于自托管音乐库的日常聆听：连接服务、浏览媒体库、管理收藏与歌单、开始播放、沉浸听歌。设计应保持精致、克制、有音乐感；让封面、曲目信息、歌词和播放状态成为主角。
+## Source Of Truth
 
-默认 register 为 product。设计语言需要有成熟工具的可信度，也要保留音乐播放器的情绪温度。避免把乐岛做成后台管理系统、模板化 SaaS、强刺激霓虹播放器或过度拟物的视觉实验。
+设计源优先级如下：
 
-## Theme strategy
+1. `design/desktop.html`
+   - 桌面端最终视觉基准。
+   - 覆盖左侧侧边栏、主内容区、底部 MiniPlayer、沉浸播放页、右侧播放队列、搜索、媒体库、详情页、下载管理和设置页。
+2. `design/mobile-ios.html`
+   - 移动端最终视觉基准。
+   - 覆盖 iOS 风格登录、底部 Tab、浮动 MiniPlayer、全屏播放页、底部 Sheet、媒体库、搜索、收藏、详情页和设置页。
+3. `design/index.html`
+   - 设计稿入口和高层设计系统说明。
+4. `design/assets/artwork/`
+   - 仅用于设计稿展示、截图基线和视觉对照。
+   - 生产代码不得把这些示例资源当作真实音乐数据源。
+5. `design/visual-restoration-plan.md`
+   - 当前视觉还原工作的阶段计划、进度清单、验证命令和差异记录。
 
-双模式均衡。深色适合夜间聆听、播放页和长时间沉浸；浅色适合白天管理音乐库、桌面整理和通勤环境。任何界面都不应只在一个主题下成立。
+`design-system/melisle/` 是历史参考，不再作为当前视觉还原主依据，除非任务明确要求使用它。
 
-物理场景：用户在桌面端整理 NAS 音乐库，也会在夜间低光环境打开播放页听完整张专辑；界面需要在日间清晰、夜间安静。
+## Product Register
 
-色彩策略为 Restrained：带品牌倾向的中性层级 + 一个主强调色 + 少量音乐氛围色。封面可以为详情页和播放页提供情绪色，但情绪色应像环境光，不应覆盖内容可读性。
+默认 register 为 product。乐岛是面向自托管音乐库用户的跨平台播放器，界面需要服务「连接服务、浏览媒体库、管理收藏与歌单、开始播放、沉浸聆听」这条路径。
 
-## Color system
+设计气质：精致、克制、有音乐感，接近 Apple 生态的成熟产品界面。界面应让封面、曲目信息、歌词、播放状态成为主角，不做后台管理系统、模板化 SaaS、强刺激霓虹播放器或过度拟物实验。
 
-当前代码使用 Material 3 `ColorScheme.fromSeed`，并通过 `AppColorTokens` 覆写关键色值。文档中的色值记录实现现状；后续可迁移为 OKLCH token，但视觉意图应保持低饱和、偏冷、柔和。
+## Theme Strategy
 
-### Core tokens
+双模式均衡：
 
-| Role | Dark | Light | Use |
+- 浅色用于桌面整理、白天浏览、媒体库管理。
+- 深色用于夜间聆听、播放页、长时间沉浸。
+- 任一页面都必须在浅色和深色下自然成立。
+
+色彩策略为 Restrained：带青绿色品牌倾向的中性层级 + 一个主强调色 + 少量音乐氛围色。封面主色可影响播放页和详情页氛围，但不得牺牲文字对比度。
+
+## Color Tokens
+
+`design/desktop.html` 与 `design/mobile-ios.html` 使用 OKLCH token。Flutter 中可使用以下 sRGB 映射值作为当前实现基准：
+
+| Role | Light | Dark | Use |
 |---|---:|---:|---|
-| Scaffold | `#090C12` | `#F6F8FC` | 页面底层背景 |
-| Surface | `#121723` | `#FBFCFF` | 内容容器、卡片基底 |
-| Surface High | `#171E2B` | `#F0F3F9` | 输入框、提升一级容器 |
-| Surface Highest | `#212A3B` | `#E4EAF3` | SnackBar、最高层级容器 |
-| Primary | `#9CA6FF` | `#6172E3` | 主操作、选中态、播放焦点 |
-| Primary Container | `#2B3150` | `#E0E4FF` | 当前播放、选中背景 |
-| Secondary | `#86D3D0` | `#4BA9A4` | 辅助强调、轻量状态 |
-| Secondary Container | `#1D333C` | `#D4F3F0` | 辅助容器 |
-| On Surface | `#E8ECF4` | Material 默认 | 主文本 |
-| On Surface Variant | `#ACB6C7` | `#5E687C` | 次要文本、图标 |
-| Outline | `#5A6478` | `#8A93A7` | 明确分隔线 |
-| Outline Variant | `#2A3342` | `#D8DFEA` | 轻边框、卡片描边 |
-| Lyric Highlight | `#ECA35B` | `#ECA35B` | 当前歌词行 |
+| Background | `#F7FCFC` | `#0C1315` | 页面底层背景 |
+| Surface | `#FFFFFF` | `#141C1E` | 主内容、卡片、列表组 |
+| Surface Raised | `#FAFEFE` | `#1B2325` | 输入框、提升容器 |
+| Sidebar Surface | `#F1F9F8` | `#101719` | 桌面侧边栏 |
+| Foreground | `#070F11` | `#E3E9E9` | 主文本 |
+| Foreground Secondary | `#444F52` | `#96A1A1` | 次级文本 |
+| Muted | `#6E7A7B` | `#697475` | 辅助文本、时间、弱图标 |
+| Border | `#D8DEDD` | `#2B3233` | 明确分割线 |
+| Border Light | `#E8ECEC` | `#222829` | 轻边框、列表分割线 |
+| Accent | `#1A9480` | `#46B49E` | 主操作、选中、当前状态 |
+| Accent Hover | `#00856F` | `#41C7AE` | Hover / pressed 强调 |
+| Accent Soft | `#D4F1E9` | `#062D26` | 选中背景、轻强调底色 |
+| Music Warm | `#D6A771` | `#CEA26F` | 音乐氛围暖色 |
+| Music Warm Soft | `#FDEDDC` | `#312313` | 暖色柔和背景 |
+| Music Rose | `#DC937C` | `#D6917B` | 播放页、封面氛围 |
+| Music Rose Soft | `#FFE8E0` | `#362019` | 当前播放、柔和选中 |
+| Music Teal | `#45A592` | `#5FB7A5` | 辅助音乐氛围 |
+| Music Teal Soft | `#D9F4ED` | `#122C26` | Hover wash、背景光 |
+| Music Ink | `#20373B` | `#BECECF` | 播放页歌词高亮 |
+| Success | `#308639` | `#46B49E` | 成功状态 |
+| Warning | `#CA8A10` | `#CEA26F` | 警告状态 |
+| Danger | `#C53637` | `#D6917B` | 破坏性操作、错误 |
 
-### Color rules
+### Color Rules
 
-- Primary 用于主要操作、当前选择、播放相关焦点，不用于纯装饰。
-- Secondary 用于辅助信息或轻量状态，不与 Primary 同时大面积竞争。
-- 深色模式靠 1px 低透明边框建立层级，少用阴影。
-- 浅色模式允许极轻阴影，但仍以边框和背景层级为主。
-- 不使用纯黑或纯白作为设计意图；当前浅色 Surface 为代码现状，新增设计应优先使用轻微染色的中性背景。
-- 封面取色只用于详情页和播放页氛围背景，必须叠加模糊和暗化以保护文字对比度。
+- Accent 只用于主操作、当前选择、播放相关焦点和链接，不用于纯装饰。
+- Hover wash 优先使用 `Music Teal Soft` 混合背景。
+- Selected wash 优先使用 `Music Warm Soft` 或 `Music Rose Soft` 混合背景。
+- 深色模式主要通过边框、表面层级和少量阴影建立深度。
+- 浅色模式可使用轻阴影，但普通内容不应强浮动。
+- 不使用纯黑或纯白作为暗色背景；设计稿中的白色 surface 是浅色主内容面。
+- 封面取色只用于播放页和详情页氛围，必须叠加柔化或暗化以保护可读性。
 
 ## Typography
 
-当前代码使用平台系统字体作为产品 UI 主字体，保留 `Righteous` 仅用于 display 层级和少量品牌/播放页时刻。这个策略优先保证中文界面、列表、按钮、设置项和桌面工具界面的稳定可信度。
+当前设计稿使用 Apple 生态字体栈：
 
-### Current implementation
+- Display: `SF Pro Display`, fallback to platform system UI.
+- Body: `SF Pro Text`, fallback to platform system UI.
+- Mono: `SF Mono`, fallback to platform monospace.
 
-| Level | Font | Weight | Letter spacing | Use |
-|---|---|---:|---:|---|
-| Display Large/Medium/Small | Righteous | 400 | 0 | 播放页歌名、品牌性标题 |
-| Headline Large/Medium | System UI | 700 | 0 | 专辑、艺术家、页面强标题 |
-| Headline Small | System UI | 700 | 0 | 区块标题 |
-| Title Large | System UI | 700 | 0 | AppBar、重要标题 |
-| Title Medium/Small | System UI | 600 | 0 | 列表项、卡片标题 |
-| Body Large/Medium | System UI | 400 | 0 | 正文、副标题 |
-| Body Small | System UI | 400 | 0 | 时间、说明、次要信息 |
-| Label Large | System UI | 600 | 0 | 按钮、Tab、Chip |
-| Label Medium/Small | System UI | 500 | 0 | 导航、MetaPill |
+Flutter 实现以平台系统字体为主，中文环境优先保证可读性。`Righteous` 可保留在品牌性或播放页展示文本中，但普通产品 UI 标签、按钮、列表、设置项不应使用 display 字体。
 
-### Type rules
+### Type Rules
 
-- 中文界面优先保证可读性，不为品牌感牺牲列表和按钮清晰度。
-- 正文行长控制在 65-75ch，音乐列表可更紧凑。
-- 普通产品 UI 不使用负字距；播放页 display 文本如需品牌感，可在局部组件内单独处理。
-- 时间、进度和计数使用等宽数字，避免播放进度跳动。
+- 桌面页面标题约 26px，移动页面标题约 31px。
+- Section title 桌面约 17px，移动约 18px。
+- 列表正文桌面约 13-14px，移动约 15px。
+- 时间、进度、大小等数字使用等宽数字。
+- 中文文案短、明确、服务任务，不使用夸张营销语。
+- 避免负字距成为 Flutter 全局规则；若需要紧凑标题，只在局部组件中处理。
 
-## Layout and spacing
-
-布局需要跨端一致，但不是同一套结构硬套所有屏幕。
+## Layout And Spacing
 
 ### Breakpoints
 
 | Width | Layout |
 |---:|---|
-| `<1080px` | 移动端模式：内容区 + MiniPlayerBar + 底部导航 |
-| `>=1080px` | 桌面端模式：左侧边栏 + 内容容器 + MiniPlayerBar |
+| `<1080px` | 移动端模式：内容区 + 浮动 MiniPlayer + 底部 Tab |
+| `>=1080px` | 桌面端模式：左侧 Sidebar + 主内容区 + 底部 MiniPlayer |
 
-### Spacing tokens
-
-| Token | Value | Use |
-|---|---:|---|
-| pageTop | 20 | 常规页面顶部 |
-| pageTopCompact | 12 | 紧凑页面顶部 |
-| headerBottomGap | 14 | Header 到内容 |
-| contentBottom | 24 | 列表底部 |
-| sectionGap | 24 | 区块间距 |
-| sectionTitleBottomGap | 16 | 标题到内容 |
-| cardPadding | 16 | 普通卡片内边距 |
-| headerPadding | 22 | Header 卡片内边距 |
-| pageHorizontalCompact | 16 | 移动端水平边距 |
-| pageHorizontalMedium | 24 | 中宽水平边距 |
-| shellOuterPadding | 14 | 桌面 Shell 外边距 |
-| shellGap | 14 | 侧边栏与内容间距 |
-| shellBottomInset | 10 | Shell 底部安全间距 |
-
-### Layout rules
-
-- 内容优先，不给每个元素都套容器。
-- 大面积内容使用清晰的滚动结构，列表页避免嵌套卡片。
-- 同一页面内间距应有节奏：Header、列表、底部状态不必使用完全相同 padding。
-- 桌面端可以提高信息密度，移动端优先触控目标和单手可达性。
-
-## Shape and elevation
-
-### Radius tokens
+### Desktop Layout Tokens
 
 | Token | Value | Use |
 |---|---:|---|
-| shellContainer | 22 | 桌面主内容容器 |
-| card | 14 | 普通卡片、列表项、底部导航容器 |
-| button | 999 | 胶囊主按钮 |
-| input | 14 | 输入框 |
-| iconButton | 12 | 图标按钮、TextButton 圆角 |
-| coverGrid | 14 | 网格封面 |
-| coverDetail | 22 | 详情页封面 |
+| sidebarWidth | 220 | 桌面左侧导航 |
+| miniPlayerHeight | 72 | 桌面底部 MiniPlayer |
+| mainContentPaddingX | 36 | 桌面主内容水平边距 |
+| mainContentPaddingY | 28 | 桌面主内容顶部边距 |
+| cardGridMinWidth | 160 | 桌面专辑/歌单网格最小宽度 |
+| cardGridGapX | 18 | 桌面卡片横向间距 |
+| cardGridGapY | 22 | 桌面卡片纵向间距 |
 
-### Elevation rules
+### Mobile Layout Tokens
 
-- 深色模式默认 elevation 0，通过 `outlineVariant` 边框和 surface 层级表达深度。
-- 浅色模式允许非常轻的 shadow，普通卡片默认接近平面，不使用强浮动感。
-- 普通页面避免 20px 以上的大圆角，播放页、详情封面和 shell 容器例外。
-- IconButton 默认无背景，仅在 hover、focus、pressed 时显示极轻 overlay。
-- FilledButton、OutlinedButton 和 TextButton 默认高度为 44px，PC 端批量操作应优先使用轻量按钮。
-- 当前播放项使用 primary container 与 primary 边框，而不是厚边条或高亮侧线。
-- 禁止用彩色左/右粗边框作为列表或卡片强调。
+| Token | Value | Use |
+|---|---:|---|
+| pageX | 24 | 移动端内容水平边距 |
+| tabContentHeight | 54 | 底部 Tab 内容高度 |
+| miniPlayerHeight | 58-60 | 移动端浮动 MiniPlayer |
+| safeBottom | platform safe area | 底部系统安全区 |
+| cardScrollGap | 12 | 横向卡片间距 |
+| libraryGridGap | 14 / 12 | 移动媒体库网格纵横间距 |
+
+### Layout Rules
+
+- 桌面端使用固定侧边栏和底部播放器，不把移动端底部抽屉模式直接搬到桌面。
+- 移动端使用底部 5 Tab：首页、搜索、媒体库、收藏、设置。
+- 内容区底部必须预留 MiniPlayer + Tab + SafeArea 空间，避免遮挡列表末尾。
+- 设计稿中的 iPhone 外框、Dynamic Island、模拟状态栏属于展示 chrome，不进入生产 App。
+- 页面内容优先，不给所有内容套重型卡片。
+
+## Shape And Elevation
+
+| Design Token | Desktop | Mobile | Use |
+|---|---:|---:|---|
+| radiusSm | 6 | 8 | 导航项、缩略封面、紧凑行 |
+| radiusMd | 10 | 12 | 搜索框、小容器 |
+| radiusLg | 14 | 16 | 卡片、普通封面 |
+| radiusXl | 20 | 24 | 大封面、Sheet、Hero |
+| radiusFull | 9999 | 9999 | 胶囊按钮、圆形按钮 |
+
+### Elevation Rules
+
+- 桌面侧边栏和 MiniPlayer 以边框为主，不使用重阴影。
+- 移动 MiniPlayer 和底部 Tab 使用半透明 surface、轻边框、blur 和轻阴影。
+- 专辑/歌单卡片以封面为视觉主体，hover 或 press 反馈应轻。
+- 当前播放项使用柔和选中背景和 accent 文本，不使用粗侧边条。
 
 ## Components
 
-### App shell
+### App Shell
 
-桌面端使用窄侧边栏，包含 Logo、首页、媒体库、歌单、设置。移动端使用底部导航，并与 MiniPlayerBar 共同形成底部 Dock。导航项保持四个一级入口，收藏入口位于媒体库 Tab 内，不再作为一级导航。
+桌面端：
 
-### Page header
+- 左侧 Sidebar 宽 220px。
+- Sidebar 分组：主入口、资料库、管理。
+- 主内容区独立滚动，padding 约 `28px 36px`。
+- 底部 MiniPlayer 高 72px，位于主内容列底部。
+- 播放队列为右侧滑出面板。
 
-页面 Header 用于标题、说明、搜索和局部筛选。Header 应保持轻量，不把所有统计都塞成指标区。
+移动端：
 
-`AppPageHeader` 是页面标题区的统一入口，支持返回按钮、标题、说明、中心槽位和右侧操作。搜索页、媒体库、下载管理等常规页面不再各自手写 Header Row。
+- 内容区从顶部安全区下方开始滚动。
+- 底部有浮动 MiniPlayer，位于 Tab Bar 上方。
+- Tab Bar 包含首页、搜索、媒体库、收藏、设置。
+- 播放队列和播放设置使用底部 Sheet。
 
-- 返回按钮使用 `AppBackButton`，44×44px，无常驻背景，仅在 hover、focus、pressed 时出现轻量 overlay。
-- PC 端 Header 采用同一基线：标题在左，搜索或筛选作为中心任务，统计和次要操作在右。
-- 移动端 Header 优先保留返回和主任务；当中心槽位是搜索框时，可以隐藏标题，避免横向拥挤。
-- 媒体库这类需要保留页面身份的场景，移动端标题在上、搜索框在下。
+### Search
 
-媒体库 Header 当前包含：标题、搜索框、Tab（歌曲 / 专辑 / 艺术家 / 收藏）。搜索为手动提交，不随输入实时触发。
+桌面搜索框：
 
-### Search field
+- 胶囊形。
+- 背景接近 surface，带轻边框和 blur。
+- Focus 时 accent 边框和低透明 focus ring。
+- 清除按钮仅在有输入时显示。
 
-`AppSearchField` 是全局搜索输入组件，适用于搜索页、媒体库和后续歌单内搜索。
+移动搜索框：
 
-- PC 端 dense 模式默认高度约 46px，与轻量操作按钮和 Header 基线协调。
-- 清空按钮使用极简关闭图标，不使用白色圆底或额外容器。
-- Focus 状态通过细边框、轻微表面层级和低透明阴影表达，不引入强发光。
-- 组件内部管理可选 `FocusNode`、语义标签、清空动作和提交动作；页面只保留业务行为。
+- iOS 风格圆角矩形，高约 40px。
+- Focus 时显示「取消」。
+- 最近搜索/分类使用轻量 chip。
 
-### Tabs and pills
+### Cards
 
-媒体库分类、搜索结果分类和同类页面筛选使用 `AppScopeTabs`。移动端使用 pill 形态，桌面端使用 underline 形态，文字始终居中，不再由页面各自实现 hover 和 selected 状态。
+专辑和歌单：
 
-- `AppScopeTabsVariant.underline` 用于 PC 端主内容分类，例如搜索结果、媒体库 Tab。
-- `AppScopeTabsVariant.pill` 用于移动端或局部横向筛选，例如搜索结果分类、艺术家流派筛选。
-- MetaPill 只用于轻量统计，例如歌曲数、已加载数、播放时间，不承担主要导航。
+- 封面优先，文字为辅。
+- 桌面网格 `minmax(160px, 1fr)`。
+- 移动端横向滚动卡片宽约 150px，媒体库网格最小宽约 118px。
+- Hover 显示低透明播放 overlay；移动端 press 轻微缩放。
 
-### Action buttons
+艺术家：
 
-`AppActionButton` 用于 PC 端批量和次级操作，例如播放全部、加入队列、重试、清空。它默认无常驻背景，通过 hover、focus、pressed overlay 表达反馈。
+- 圆形封面。
+- 标题居中。
+- 不使用图标卡片替代真实头像或封面。
 
-- Primary tone 只用于当前页面最重要的轻量动作，例如播放全部、重试。
-- Neutral tone 用于加入队列、清空、次要跳转。
-- 重要提交仍可使用 Material `FilledButton`，但列表页和工具栏中的批量动作优先用 `AppActionButton` 或 `PlayAllButton`。
+### Track Lists
 
-### Track list item
+桌面：
 
-歌曲项应突出封面、标题、艺术家和专辑。当前播放项可更明显，但不能破坏列表节奏。
+- 使用紧凑表格语言。
+- 列结构：序号、标题/艺术家、专辑、时长、操作。
+- Hover 时显示行操作。
+- 当前播放使用 accent 与柔和背景。
 
-- 封面：48-58px，圆角 14-20。
-- 标题：Title Medium，单行省略。
-- 副标题：Body Medium，使用 onSurfaceVariant。
-- 当前播放：primaryContainer 背景、primary 细边框、`graphic_eq_rounded`。
-- 普通项：surface 低透明背景、outlineVariant 细边框。
+移动：
 
-### Track table
+- 使用 iOS 列表语言，默认底部分割线。
+- 行高不小于 52px。
+- 当前播放使用柔和选中背景、圆角和 accent 标题。
+- 操作按钮触控区域不小于 44px。
 
-`MusicTrackTable` 是 PC 端歌曲列表的统一表格组件，适用于搜索、媒体库、专辑详情、艺术家详情和歌单详情。移动端仍使用 `MusicTrackTile` 触控列表。
+### Detail Pages
 
-- 列结构：序号、封面、歌曲 / 歌手、歌手、专辑、时长、行内操作。
-- hover 只影响当前行，不能污染相邻行。
-- 当前播放使用 `graphic_eq_rounded` 和 primaryContainer，不使用粗边条。
-- 行内操作保持极简图标视觉，图标可为 18px，但实际按钮命中区必须为 44×44px。页面通过回调提供收藏、加入队列等业务动作。
-- 表格可关闭 action bar，用于详情页中已有 hero 主操作的场景。
+桌面：
 
-### Album and playlist grid
+- Hero 为横向布局：左封面/头像，右标题、meta、操作。
+- 专辑/歌单封面为圆角矩形；艺术家头像为圆形。
+- 下方曲目列表使用桌面 track table。
 
-网格以封面为主，文字为辅。避免相同尺寸的图标卡片网格。专辑、歌单卡片可以 hover 轻微缩放，但不做复杂进场动画。
+移动：
 
-- `MusicAlbumGridCard` 是专辑网格默认组件，首页、搜索、媒体库和艺术家详情中的专辑入口应优先复用它。
-- `MusicPlaylistGridCard` 和 `MusicPlaylistListTile` 是歌单列表默认组件。PC 端优先网格，移动端优先列表。
-- 网格封面使用 `AppRadiusTokens.coverGrid`，普通容器使用 `AppRadiusTokens.card`。不要在页面内重新手写 20px 以上普通卡片圆角。
-- 卡片 hover 只允许轻微 scale、低透明遮罩或极轻阴影；不要叠加装饰性渐变、毛玻璃或强光效。
-- 封面角标只用于对象本身的轻量 meta，例如歌单歌曲数，不承担主要导航或营销文案。
+- 顶部返回入口。
+- 封面/头像居中。
+- 标题、meta、主操作居中。
+- 曲目使用移动 track item。
 
-### Detail hero
+### Player Page
 
-`AppDetailHeroFrame` 是专辑、艺术家和歌单详情页的统一身份展示容器。详情页可以使用封面氛围背景，但 hero 内部结构应保持一致。
+桌面：
 
-- PC 端使用横向结构：封面/头像在左，标题、meta 和主操作在右。
-- 移动端使用纵向结构：封面/头像居中，标题、meta 和播放入口位于下方。
-- 专辑和歌单封面使用 `AppRadiusTokens.coverDetail`；艺术家头像保持圆形，但仍放在同一 hero 框架里。
-- 主操作使用 `PlayAllButton`，次操作使用 `AppActionButton`。不要在详情页单独手写圆形播放按钮或自定义大按钮。
-- PC 端曲目列表复用 `MusicTrackTable`，移动端曲目列表复用 `MusicTrackTile`。
+- 全屏沉浸层。
+- 三列主体：封面与曲目信息、歌词、播放队列。
+- 底部仅承载进度和核心控制。
+- 音量、播放设置、更多操作使用靠近控制区的小浮层。
 
-### Player page
+移动：
 
-播放页是情绪最强的界面。允许使用封面模糊背景、唱片旋转、歌词高亮和更大的视觉焦点，但必须保持控制区清晰可用。
+- 全屏播放页。
+- 顶部关闭、标题、更多。
+- 主体包含大封面、歌曲信息、歌词滚动。
+- 底部为进度、核心控制、扩展操作。
+- 更多、音量、播放设置使用底部 Sheet。
 
-- PC 端采用稳定工作区，而不是移动页横向拉伸。默认结构为封面舞台、歌词舞台、播放工具三列，底部只保留进度和核心播放控制。
-- 封面区承载当前曲目信息和收藏动作；歌词区直接展示歌词内容，不再在歌词内部嵌套额外卡片。
-- 播放工具在 PC 端使用右侧工具面板，下载、睡眠定时、队列、音质和音量保持同一行式工具语言。
-- 移动端必须提供显式「封面 / 歌词」分段切换入口，手势只能作为辅助，不作为发现模式的唯一入口。
-- 播放页弹层使用实底 surface、轻边框和少量阴影。除队列等复杂操作外，桌面端优先使用靠近工具栏的轻量弹层，不套用移动端底部抽屉。
-- 控制区不承担过多信息。歌名、专辑、收藏等上下文信息应位于封面舞台或移动端曲目信息区，底部控制只服务播放。
+### Queue
 
-### Bottom sheets
+桌面：
 
-底部抽屉用于播放队列、音质选择、睡眠定时和曲目操作。移动端使用平台习惯，桌面端避免把简单操作都变成移动式抽屉。
+- 右侧滑出队列面板，宽约 360px。
+- 当前播放项使用 accent soft 背景。
 
-- 移动端底部抽屉统一使用 `AppSheetScaffold`：实底 surface、22px 顶部圆角、细顶边框、统一拖拽把手和标题说明区。
-- Sheet 内选择项优先使用 `AppOptionTile`，选中态用 primaryContainer、细边框和 radio/check，不使用装饰渐变或大面积高饱和色。
-- 高风险动作不能在 Sheet 或列表中即时执行。清空队列、删除下载、退出登录、清理缓存等必须先进入确认弹窗。
-- 桌面端优先使用靠近触发点的轻量弹层；只有复杂队列管理或需要长列表时才使用较大的浮层。
+移动：
 
-### Dialogs
+- 底部 Sheet，左右 pageX 缩进，顶部圆角 24px。
+- 顶部拖拽把手和「完成」操作。
+- 列表行使用封面、标题、艺术家、时长。
 
-确认弹窗使用 `showAppConfirmationDialog`。弹窗应短文案、明确后果、按钮右对齐，危险动作使用 error 色但保持 TextButton 极简风格。
+### Settings
 
-### State views
+设置页使用分组列表语言：
 
-`AppBodyStateView` 和 `AppSliverStateView` 用于加载、空状态和错误状态。状态文案应说明原因和下一步，而不是只显示「暂无内容」。
+- 分组标题为小号 muted 文本。
+- 设置行包含标题、说明、右侧值、chevron 或 toggle。
+- 移动端保留 iOS 风格圆角 group。
+- 高风险动作如退出登录必须确认。
 
-- 基础调用仍可只传 `message`，兼容旧页面。
-- 新页面优先传入 `icon`、`title`、`description` 和操作按钮，形成更完整的空状态。
-- 加载态可继续使用居中 spinner；列表密集页面后续可逐步替换为 skeleton。
+### Downloads
+
+下载管理使用工具页语言：
+
+- 顶部可展示存储/音质信息分组。
+- 下载项与歌曲列表共享视觉语言。
+- 删除下载必须确认并反馈结果。
 
 ## Motion
 
-动效服务于反馈、状态变化和播放氛围。
-
 | Motion | Duration | Curve | Use |
 |---|---:|---|---|
-| Tap feedback | 140ms | ease out | 按钮按压 |
-| Hover / selected state | 180ms | ease out | 背景、边框、颜色 |
-| Text/content switch | 220-260ms | ease out | 歌曲信息切换 |
-| Lyric scroll | 320ms | easeOutCubic | 当前歌词定位 |
-| Tonearm | 500ms | easeInOut | 播放/暂停唱针 |
-| Volume fade | 600ms | linear | 淡入淡出 |
+| Tap / hover | 150ms | ease out | 按钮、列表、卡片反馈 |
+| Normal transition | 250ms | ease out | 背景、边框、颜色 |
+| Screen entrance | 300-320ms | cubic-bezier(0.2, 0, 0.13, 1) | 页面切换 |
+| Player overlay | 380-420ms | cubic-bezier(0.2, 0, 0.13, 1) | 播放页打开 |
+| Sheet entrance | 240ms | cubic-bezier(0.2, 0, 0.13, 1) | 移动底部 Sheet |
+| Lyric current line | 420-450ms | same music curve | 当前歌词高亮与缩放 |
 
-Rules:
-
-- 不做装饰性页面加载编舞。
-- 列表滚动中避免复杂动画和大面积 blur。
-- 不动画 layout 属性，优先使用 opacity、transform、color。
-- 播放状态动画可有仪式感，但不能拖慢控制响应。
-
-## Copy and language
-
-- 用户可见文案使用简体中文。
-- 文案短、明确、直接服务任务。
-- 空状态说明下一步，而不是只说「暂无内容」。
-- 不使用夸张营销语，不把播放器写成 SaaS 产品介绍。
-- 不使用破折号式堆砌；用逗号、冒号、句号或括号。
+动效只服务于反馈、状态切换和播放氛围。不做装饰性页面加载编舞，不动画昂贵 layout 属性。
 
 ## Accessibility
 
-- 所有播放、收藏、下载、队列、返回、关闭等图标操作需要 tooltip 或 Semantics。
-- 触控目标不小于 44×44px。
-- Slider 需要提供 `semanticFormatterCallback`，音量读作百分比，播放进度读作时间。
-- 紧凑列表或桌面表格中的图标按钮可以视觉收窄，但实际可点击区域仍需保持 44×44px。
-- 深浅主题都需满足 WCAG AA 对比度。
-- 空状态、错误状态和加载状态不能只依赖颜色表达。
-- 支持字体缩放，标题和列表项需要合理截断而不是溢出。
-- 后续动效应兼容减少动态效果偏好。
+- 所有播放、暂停、上一首、下一首、队列、收藏、下载、关闭、返回、更多操作都需要 tooltip 或语义标签。
+- 触控目标不小于 44x44px。
+- Slider 需要提供语义格式化，播放进度读作时间，音量读作百分比。
+- 当前播放和当前歌词行需要可读屏理解。
+- 深浅主题均需满足 WCAG AA 对比度。
+- 长标题、长艺术家名、长专辑名必须省略或换行，不能溢出。
+- 支持系统字体缩放，关键布局至少检查 1.0 到 1.3。
 
-## Page patterns
+## Implementation Policy
 
-### Login
+- 优先更新共享 token 和共享组件，再更新页面。
+- 真实 App 使用后端数据和现有 Cubit/Repository，不使用设计稿假数据替代业务数据。
+- 保留现有功能：登录、会话恢复、搜索、播放、切歌、歌词、收藏、队列、音质、睡眠定时、下载、设置保存、路由跳转。
+- 每阶段参考 `design/visual-restoration-plan.md` 更新进度。
+- 每阶段先跑相关测试，再跑 `flutter analyze`，最后做桌面/移动手动 smoke test。
 
-品牌首印象 + 快速连接。宽屏分栏，窄屏上下排列。登录表单清晰优先，品牌装饰保持低噪声。
+## Validation
 
-### Home
+常用验证命令：
 
-快速开始聆听。包含搜索入口、推荐内容、最近播放、常听内容和最近加入。避免把首页做成指标面板。
+```bash
+flutter test test/widget_test.dart
+flutter test test/presentation/pages/global_ui_smoke_test.dart
+flutter test test/presentation/widgets/music_track_table_test.dart
+flutter test test/presentation/widgets/app_modal_test.dart
+flutter test test/presentation/widgets/lyric_view_test.dart
+flutter test test/presentation/blocs/search/search_cubit_test.dart
+flutter test test/presentation/pages/search/search_page_test.dart
+flutter test test/presentation/blocs/playlist_detail_cubit_test.dart
+flutter analyze
+```
 
-- 搜索入口应贴近 `AppSearchField` 的形态，轻边框、低背景、无毛玻璃。
-- 今日推荐和最近加入使用专辑网格语言，不再为首页单独设计大封面卡片。
-- 最近播放可以保留当前播放标记和播放 hover，但只用低透明遮罩，不用渐变遮罩。
-- 首页区块之间保持清楚节奏，但不引入额外 hero 或统计卡片。
+完整验收：
 
-### Library
-
-媒体库承载歌曲、专辑、艺术家、收藏四个 Tab。搜索手动提交。歌曲与收藏都应提供歌曲数和播放全部入口，视觉和交互保持一致。
-
-### Playlists
-
-歌单列表用于浏览和进入详情。歌单详情移动端将播放全部入口放在歌单标题下方，列表本身保持紧凑、低圆角、适合连续浏览。
-
-- 歌单列表 PC 端使用 `MusicPlaylistGridCard`，移动端使用 `MusicPlaylistListTile`。
-- 歌单详情复用 `AppDetailHeroFrame`，曲目列表在 PC 端使用 `MusicTrackTable`。
-- 歌单卡片与专辑卡片有亲缘关系，差异只通过歌曲数角标和文案表达。
-
-### Details
-
-专辑、艺术家、歌单详情可以使用封面氛围背景。Hero 展示身份信息和主操作，列表继续承担播放入口。
-
-- 专辑、艺术家和歌单详情统一使用 `AppDetailHeroFrame`。
-- 详情封面、hero 框和列表外观来自 token，不在页面内硬编码大圆角。
-- 详情页允许比普通列表页更有音乐氛围，但操作按钮仍采用全局按钮系统。
-
-### Player
-
-沉浸式聆听核心。封面、唱片、歌词和控制区建立音乐感。控制必须始终清晰、可触达、响应快。
-
-### Settings and downloads
-
-设置、下载管理更偏工具界面。使用更清晰的分组和更低情绪强度，不引入多余装饰。
-
-- 设置分组使用轻量 surface 列表，不使用额外渐变、玻璃或大阴影。设置项 hover 只显示低透明 surfaceContainerHigh。
-- 设置项 hover 只能有一个状态源。若外层容器已经处理 hover/pressed 背景，内部不要再使用带默认 hover overlay 的 `ListTile`。
-- 设置项 hover 背景不做淡入淡出动画，避免鼠标快速移动时上一项延迟淡出造成相邻两项同时高亮。
-- 设置中的选择操作可以在移动端使用统一 Sheet；桌面端后续可逐步迁移为 popover，但同样复用 `AppOptionTile` 语义。
-- 下载列表是文件管理场景。删除离线文件必须确认，并在完成后给出 SnackBar 反馈。
-- 下载项视觉以封面、标题、状态、大小为主，删除和取消按钮保持 44px 点击区和 tooltip。
-
-## Design debt and recommendations
-
-- 字体系统已迁移为系统 UI 主字体，后续需要逐页检查 headline/display 的使用是否过度。
-- 颜色 token 可逐步补充 OKLCH 表达，减少十六进制在极亮或极暗场景下的不可控偏色。
-- 收藏已并入媒体库，旧的独立收藏页规范应视为历史，不再作为新设计入口。
-- 组件状态需要持续补齐 hover、focus、active、disabled、loading、error，尤其是自定义列表项和卡片。
+```bash
+flutter test
+flutter analyze
+```

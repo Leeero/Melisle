@@ -1,7 +1,7 @@
 # Melisle Visual Restoration Plan
 
-> Last updated: 2026-06-01
-> Status: Planned
+> Last updated: 2026-06-02
+> Status: In Progress
 > Scope: Restore the Flutter UI to the current Open Design sources in `design/` while preserving all existing product functions.
 
 ## 1. Purpose
@@ -28,7 +28,7 @@ Use these files as the visual source of truth, in this order:
 
 Historical references:
 
-- `design.md` should be updated to point to this source order.
+- `design.md` now points to this source order.
 - `design-system/melisle/` is historical reference only unless a task explicitly asks to use it.
 
 ## 3. Non-Negotiable Rules
@@ -109,8 +109,8 @@ Goal: make the design source explicit and capture comparison evidence before cha
 
 Tasks:
 
-- [ ] Update `design.md` so it points to `design/desktop.html` and `design/mobile-ios.html` as the current source of truth.
-- [ ] Mark `design-system/melisle/` as historical reference.
+- [x] Update `design.md` so it points to `design/desktop.html` and `design/mobile-ios.html` as the current source of truth.
+- [x] Mark `design-system/melisle/` as historical reference.
 - [ ] Capture prototype screenshots:
   - [ ] Desktop login
   - [ ] Desktop home
@@ -148,7 +148,9 @@ flutter analyze lib/shared/theme lib/presentation
 
 Notes:
 
-- Pending.
+- `design.md` has been rewritten as the current implementation spec for visual restoration.
+- Automatic screenshot baseline capture is currently blocked in the local shell: Playwright and Chromium/Chrome CLIs are not available, and the Browser plugin screenshot workflow does not expose a callable runtime in this session.
+- Keep screenshot capture tasks open until a browser runtime is available.
 
 ### Phase 1: Theme And Layout Tokens
 
@@ -162,11 +164,11 @@ Primary files:
 
 Tasks:
 
-- [ ] Align light and dark color tokens with the design source.
-- [ ] Align surface, border, accent, music warm, rose, teal, and muted roles.
-- [ ] Align radius tokens for desktop and mobile usage.
-- [ ] Align spacing tokens for desktop sidebar, mini player, mobile tab bar, and mobile page padding.
-- [ ] Ensure buttons, inputs, cards, list tiles, chips, sliders, and dialogs use these tokens.
+- [x] Align light and dark color tokens with the design source.
+- [x] Align surface, border, accent, music warm, rose, teal, and muted roles.
+- [x] Align radius tokens for desktop and mobile usage.
+- [x] Align spacing tokens for desktop sidebar, mini player, mobile tab bar, and mobile page padding.
+- [x] Ensure buttons, inputs, cards, list tiles, chips, sliders, and dialogs use these tokens.
 - [ ] Keep typography system-font based, with display font only for brand-like moments where already appropriate.
 - [ ] Remove or reduce obvious token drift caused by historical `design-system/melisle` values.
 
@@ -179,7 +181,12 @@ flutter test test/widget_test.dart
 
 Notes:
 
-- Pending.
+- First implementation pass completed in `lib/shared/theme/app_tokens.dart`, `lib/shared/theme/app_breakpoints.dart`, and `lib/shared/theme/app_motion.dart`.
+- Desktop breakpoint is now `>=1080px`, matching the Open Design layout split.
+- Mobile page padding, mobile mini player height, desktop sidebar width, desktop mini player height, and desktop content padding tokens now match the design source.
+- Light surface values now match the Open Design source. Existing component themes already consume these shared tokens.
+- Typography remains system-font based with `Righteous` reserved for display moments. A later page-level pass should audit overuse of display styles.
+- Historical token drift is reduced at the shared-token level. Remaining drift should be handled as pages/components are restored.
 
 ### Phase 2: App Shell, Navigation, And Mini Player
 
@@ -193,14 +200,14 @@ Primary files:
 
 Tasks:
 
-- [ ] Desktop: restore `220px` sidebar, grouped nav sections, compact nav rows, and sidebar surface.
-- [ ] Desktop: restore main content padding and scroll behavior.
-- [ ] Desktop: restore bottom mini player as a flat `72px` bar with track info, controls, progress, mode, volume, and expand action.
-- [ ] Mobile: restore floating mini player above the tab bar.
-- [ ] Mobile: restore bottom 5-tab structure: 首页, 搜索, 媒体库, 收藏, 设置.
-- [ ] Confirm whether current product routing should expose favorites as a top-level mobile tab.
-- [ ] Normalize bottom insets so content is never hidden behind mini player or tab bar.
-- [ ] Preserve mini player tap-to-open-player behavior.
+- [x] Desktop: restore `220px` sidebar, grouped nav sections, compact nav rows, and sidebar surface.
+- [x] Desktop: restore main content padding and scroll behavior.
+- [x] Desktop: restore bottom mini player as a flat `72px` bar with track info, controls, progress, mode, volume, and expand action.
+- [x] Mobile: restore floating mini player above the tab bar.
+- [x] Mobile: restore bottom 5-tab structure: 首页, 搜索, 媒体库, 收藏, 设置.
+- [x] Confirm whether current product routing should expose favorites as a top-level mobile tab.
+- [x] Normalize bottom insets so content is never hidden behind mini player or tab bar.
+- [x] Preserve mini player tap-to-open-player behavior.
 
 Validation:
 
@@ -218,7 +225,14 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- First shell pass completed in `lib/bootstrap/router.dart` and `lib/presentation/widgets/app_shell.dart`.
+- Search and favorites are now shell branches so mobile can expose the Open Design 5-tab structure.
+- Playlists remain available from the desktop sidebar and under the library branch, preserving current product navigation.
+- Downloads remain available from the desktop sidebar under the settings branch.
+- Desktop MiniPlayer is now a flat `72px` surface with a top divider, compact `36px` transport controls, a `3px` progress track, and no decorative gradient or shadow.
+- Mobile bottom dock now uses the design-source semi-transparent blur layer, and the floating MiniPlayer keeps the design-source rounded surface above the tab bar.
+- Mini player tap-to-open-player behavior was preserved.
+- Exact visual QA still needs real screenshots once browser/runtime screenshot capture is available.
 
 ### Phase 3: Shared Component Vocabulary
 
@@ -239,28 +253,28 @@ Primary component groups:
 
 Tasks:
 
-- [ ] Restore search fields:
-  - [ ] Desktop pill search with blur, border, focus ring, clear action.
-  - [ ] Mobile iOS search field with cancel action.
-- [ ] Restore section titles and "查看全部" action style.
-- [ ] Restore album and playlist cards with cover-first layout, hover or press states.
-- [ ] Restore artist cards as circular covers with centered text.
-- [ ] Restore desktop track table:
-  - [ ] Columns: number, title/artist, album, duration, actions.
-  - [ ] Compact row height.
-  - [ ] Hover background.
-  - [ ] Current row accent treatment.
-- [ ] Restore mobile track item:
-  - [ ] Border-bottom list language.
-  - [ ] Press wash.
-  - [ ] Current row selected wash.
-- [ ] Restore buttons:
-  - [ ] Primary pill button.
-  - [ ] Ghost pill button.
-  - [ ] Round player control button.
-- [ ] Restore settings group, settings row, and toggle visuals.
-- [ ] Restore desktop player popovers.
-- [ ] Restore mobile player action sheet and option tile visuals.
+- [x] Restore search fields:
+  - [x] Desktop pill search with blur, border, focus ring, clear action.
+  - [x] Mobile iOS search field with cancel action.
+- [x] Restore section titles and "查看全部" action style.
+- [x] Restore album and playlist cards with cover-first layout, hover or press states.
+- [x] Restore artist cards as circular covers with centered text.
+- [x] Restore desktop track table:
+  - [x] Columns: number, title/artist, album, duration, actions.
+  - [x] Compact row height.
+  - [x] Hover background.
+  - [x] Current row accent treatment.
+- [x] Restore mobile track item:
+  - [x] Border-bottom list language.
+  - [x] Press wash.
+  - [x] Current row selected wash.
+- [x] Restore buttons:
+  - [x] Primary pill button.
+  - [x] Ghost pill button.
+  - [x] Round player control button.
+- [x] Restore settings group, settings row, and toggle visuals.
+- [x] Restore desktop player popovers.
+- [x] Restore mobile player action sheet and option tile visuals.
 
 Validation:
 
@@ -272,7 +286,13 @@ flutter analyze
 
 Notes:
 
-- Pending.
+- First shared-component pass completed in `lib/presentation/widgets/layout/page_layout.dart`, `lib/presentation/widgets/music/music_track_tile.dart`, `lib/presentation/widgets/music/music_track_table.dart`, `lib/presentation/widgets/music/music_album_cards.dart`, `lib/presentation/widgets/music/music_playlist_card.dart`, `lib/presentation/widgets/music/music_artist_card.dart`, `lib/presentation/widgets/controls/app_action_button.dart`, and `lib/presentation/widgets/controls/app_modal.dart`.
+- `AppSearchField` now supports desktop pill search with blur, clear action, accent focus ring, and mobile iOS-style cancel behavior.
+- Section titles, album/playlist cards, artist cards, desktop track table rows, mobile track items, primary/ghost action buttons, mobile sheets, option tiles, settings grouped rows, toggles, desktop player popovers, and round player controls now share the Open Design visual vocabulary.
+- Settings groups now use compact grouped-list surfaces, muted section labels, design-source row density, hover/press wash, and the shared low-saturation switch theme.
+- Desktop player sleep timer, quality, and queue surfaces now use the design-source popover language: light blur, `18px` radius, soft border, low shadow, and compact option rows.
+- Round player controls now use the Open Design foreground-circle treatment with subdued hover/press feedback and no decorative pulse.
+- Screenshot-based visual QA remains open until a browser/runtime screenshot workflow is available.
 
 ### Phase 4: Login And Home
 
@@ -285,24 +305,24 @@ Primary files:
 
 Tasks:
 
-- [ ] Desktop login:
-  - [ ] Restore centered connect card.
-  - [ ] Restore service selector with disc visual.
-  - [ ] Restore input field spacing and status pill.
-  - [ ] Preserve login validation and error handling.
-- [ ] Mobile login:
-  - [ ] Restore brand hero.
-  - [ ] Restore service pills.
-  - [ ] Restore settings-group-like input rows.
-  - [ ] Preserve login validation and error handling.
-- [ ] Desktop home:
-  - [ ] Restore recommendation hero with stacked covers.
-  - [ ] Restore "继续播放", "最近添加", and "推荐艺术家" sections.
-- [ ] Mobile home:
-  - [ ] Restore horizontal recommendation cards.
-  - [ ] Restore horizontal album and artist scrollers.
-- [ ] Use real repository data where available.
-- [ ] Keep empty, loading, and error states clear.
+- [x] Desktop login:
+  - [x] Restore centered connect card.
+  - [x] Restore service selector with disc visual.
+  - [x] Restore input field spacing and status pill.
+  - [x] Preserve login validation and error handling.
+- [x] Mobile login:
+  - [x] Restore brand hero.
+  - [x] Restore service pills.
+  - [x] Restore settings-group-like input rows.
+  - [x] Preserve login validation and error handling.
+- [x] Desktop home:
+  - [x] Restore recommendation hero with stacked covers.
+  - [x] Restore "继续播放", "最近添加", and "推荐艺术家" sections.
+- [x] Mobile home:
+  - [x] Restore horizontal recommendation cards.
+  - [x] Restore horizontal album and artist scrollers.
+- [x] Use real repository data where available.
+- [x] Keep empty, loading, and error states clear.
 
 Validation:
 
@@ -320,7 +340,11 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- Implemented in `lib/presentation/pages/login/login_page.dart` and `lib/presentation/pages/home/home_page.dart`.
+- Login now switches between the desktop centered connect card and the mobile hero/service-pill/settings-group layout while keeping the same `AuthCubit.login` validation, loading, error, and status handling.
+- Home now uses real `HomeState` data for the desktop recommendation hero, mobile recommendation cards, "继续播放", "最近添加", and "推荐艺术家". Artist cards are derived only from real album/track `artistId` data; the section is hidden when the backend data cannot support artist navigation.
+- Partial section failures remain visible as an inline retry banner, while full loading, empty, and failure states continue to use the shared body state view.
+- Screenshot-based visual QA remains open until a browser/runtime screenshot workflow is available.
 
 ### Phase 5: Search And Library
 
@@ -333,22 +357,22 @@ Primary files:
 
 Tasks:
 
-- [ ] Desktop search:
-  - [ ] Restore pill search field.
-  - [ ] Restore underline result tabs.
-  - [ ] Restore track table and result grids.
-- [ ] Mobile search:
-  - [ ] Restore search field with cancel action.
-  - [ ] Restore chips.
-  - [ ] Restore track list and horizontal result cards.
-- [ ] Desktop library:
-  - [ ] Restore tabs and table or grids by scope.
-  - [ ] Restore play-all toolbar.
-- [ ] Mobile library:
-  - [ ] Restore segmented tabs.
-  - [ ] Restore song list, album grid, and artist grid.
-- [ ] Confirm favorite scope placement against the new mobile top-level 收藏 tab.
-- [ ] Preserve search debouncing, submission, recent searches, and navigation.
+- [x] Desktop search:
+  - [x] Restore pill search field.
+  - [x] Restore underline result tabs.
+  - [x] Restore track table and result grids.
+- [x] Mobile search:
+  - [x] Restore search field with cancel action.
+  - [x] Restore chips.
+  - [x] Restore track list and horizontal result cards.
+- [x] Desktop library:
+  - [x] Restore tabs and table or grids by scope.
+  - [x] Restore play-all toolbar.
+- [x] Mobile library:
+  - [x] Restore segmented tabs.
+  - [x] Restore song list, album grid, and artist grid.
+- [x] Confirm favorite scope placement against the new mobile top-level 收藏 tab.
+- [x] Preserve search debouncing, submission, recent searches, and navigation.
 
 Validation:
 
@@ -368,7 +392,16 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- Implemented in `lib/presentation/pages/search/search_page.dart`, `lib/presentation/pages/library/library_page.dart`, and the shared `AppSearchField` in `lib/presentation/widgets/layout/page_layout.dart`.
+- Search now defaults to the design's `全部` scope, with desktop underline tabs, desktop track table plus album/artist/playlist grids, mobile cancel-capable search field, chips, track list, and horizontal result cards.
+- Library now exposes only the design's `歌曲 / 专辑 / 艺术家` scopes in-page. 收藏 remains available through the top-level 收藏 route/tab and the existing hidden compatibility branch is preserved for old state paths.
+- Library headers and sections use only real Cubit data. Full album/artist totals are shown only after those scopes have loaded; no prototype counts or artwork were introduced.
+- Compact `AppSearchField` now uses a 46px field/suffix slot so the clear and cancel actions meet the 44px touch target requirement.
+- Validation completed:
+  - `flutter test test/presentation/pages/search/search_page_test.dart`
+  - `flutter test test/presentation/blocs/search/search_cubit_test.dart`
+  - `flutter analyze lib/presentation/widgets/layout/page_layout.dart lib/presentation/pages/search/search_page.dart lib/presentation/pages/library/library_page.dart`
+  - `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart`
 
 ### Phase 6: Details, Favorites, History, And Playlists
 
@@ -385,24 +418,24 @@ Primary files:
 
 Tasks:
 
-- [ ] Desktop album detail:
-  - [ ] Restore left cover, right metadata, action row, track table.
-- [ ] Desktop artist detail:
-  - [ ] Restore round artist image, metadata, action row, popular tracks, albums.
-- [ ] Desktop playlist list and detail:
-  - [ ] Restore card grid.
-  - [ ] Restore detail hero and track table.
-- [ ] Mobile detail pages:
-  - [ ] Restore back nav.
-  - [ ] Restore centered cover or avatar.
-  - [ ] Restore action buttons.
-  - [ ] Restore mobile track list.
-- [ ] Favorites:
-  - [ ] Restore mobile top-level favorite page.
-  - [ ] Preserve favorite toggling and removal behavior.
-- [ ] History:
-  - [ ] Match the same mobile track list and desktop table vocabulary.
-- [ ] Keep large playlist pagination and loading feedback.
+- [x] Desktop album detail:
+  - [x] Restore left cover, right metadata, action row, track table.
+- [x] Desktop artist detail:
+  - [x] Restore round artist image, metadata, action row, popular tracks, albums.
+- [x] Desktop playlist list and detail:
+  - [x] Restore card grid.
+  - [x] Restore detail hero and track table.
+- [x] Mobile detail pages:
+  - [x] Restore back nav.
+  - [x] Restore centered cover or avatar.
+  - [x] Restore action buttons.
+  - [x] Restore mobile track list.
+- [x] Favorites:
+  - [x] Restore mobile top-level favorite page.
+  - [x] Preserve favorite toggling and removal behavior.
+- [x] History:
+  - [x] Match the same mobile track list and desktop table vocabulary.
+- [x] Keep large playlist pagination and loading feedback.
 
 Validation:
 
@@ -422,7 +455,15 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- Implemented in `lib/presentation/widgets/layout/page_layout.dart`, `lib/presentation/pages/album/album_detail_page.dart`, `lib/presentation/pages/artist/artist_detail_page.dart`, `lib/presentation/pages/playlists/playlists_page.dart`, `lib/presentation/pages/playlists/playlist_detail_page.dart`, `lib/presentation/pages/favorites/favorites_page.dart`, and `lib/presentation/pages/history/history_page.dart`.
+- Detail pages now use the Open Design object-page structure: desktop left cover or avatar with right metadata/actions and desktop track table; mobile explicit `返回` nav, centered cover/avatar, centered metadata/actions, and mobile track rows.
+- Playlist list now uses the cover-first card grid vocabulary while preserving search, pagination, and navigation to playlist detail.
+- Favorites is treated as the mobile top-level 收藏 surface: no extra back button, real count summary, play-all action, mobile track rows, and existing favorite removal behavior.
+- History now uses the same desktop table and mobile row vocabulary as the restored track surfaces.
+- Prototype-only album favorite, artist follow, playlist download, and more actions were not introduced as non-functional buttons. Existing production actions remain: play all, individual play, track long-press actions, favorite toggling/removal where supported, and playlist pagination.
+- Validation completed:
+  - `flutter analyze lib/presentation/widgets/layout/page_layout.dart lib/presentation/pages/album/album_detail_page.dart lib/presentation/pages/artist/artist_detail_page.dart lib/presentation/pages/playlists/playlists_page.dart lib/presentation/pages/playlists/playlist_detail_page.dart lib/presentation/pages/favorites/favorites_page.dart lib/presentation/pages/history/history_page.dart test/widget_test.dart`
+  - `flutter test test/presentation/blocs/playlist_detail_cubit_test.dart test/widget_test.dart test/presentation/pages/global_ui_smoke_test.dart`
 
 ### Phase 7: Player, Lyrics, Queue, And Playback Sheets
 
@@ -439,24 +480,24 @@ Primary files:
 
 Tasks:
 
-- [ ] Desktop player:
-  - [ ] Restore fullscreen overlay layout.
-  - [ ] Restore three-column body: cover/track info, lyrics, queue.
-  - [ ] Restore bottom progress and playback controls.
-  - [ ] Restore desktop player popovers for volume, settings, and more actions.
-- [ ] Mobile player:
-  - [ ] Restore fullscreen player overlay layout.
-  - [ ] Restore large cover, track info, lyric scroll, progress, controls, and extras.
-  - [ ] Preserve explicit lyrics or artwork mode if production UX still needs it.
-- [ ] Lyrics:
-  - [ ] Restore current-line scale, color, mask fade, and scrolling feel.
-  - [ ] Preserve seek, lyric sync offset, loading, no-lyrics, and error states.
-- [ ] Queue:
-  - [ ] Desktop: right slide-in queue panel.
-  - [ ] Mobile: bottom queue sheet with handle and "完成" action.
-- [ ] Playback sheets:
-  - [ ] Mobile action sheet for more, settings, and volume.
-  - [ ] Preserve quality, sleep timer, download, favorite, and queue actions.
+- [x] Desktop player:
+  - [x] Restore fullscreen overlay layout.
+  - [x] Restore three-column body: cover/track info, lyrics, queue.
+  - [x] Restore bottom progress and playback controls.
+  - [x] Restore desktop player popovers for volume, settings, and more actions.
+- [x] Mobile player:
+  - [x] Restore fullscreen player overlay layout.
+  - [x] Restore large cover, track info, lyric scroll, progress, controls, and extras.
+  - [x] Preserve explicit lyrics or artwork mode if production UX still needs it.
+- [x] Lyrics:
+  - [x] Restore current-line scale, color, mask fade, and scrolling feel.
+  - [x] Preserve seek, lyric sync offset, loading, no-lyrics, and error states.
+- [x] Queue:
+  - [x] Desktop: right slide-in queue panel.
+  - [x] Mobile: bottom queue sheet with handle and "完成" action.
+- [x] Playback sheets:
+  - [x] Mobile action sheet for more, settings, and volume.
+  - [x] Preserve quality, sleep timer, download, favorite, and queue actions.
 
 Validation:
 
@@ -483,7 +524,16 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- Implemented in `lib/presentation/pages/player/player_page.dart`, `lib/presentation/widgets/lyric_view.dart`, `lib/presentation/widgets/queue_sheet.dart`, `lib/presentation/widgets/quality_picker_sheet.dart`, and `lib/presentation/widgets/sleep_timer_sheet.dart`.
+- Desktop player now matches the Open Design immersive structure: fullscreen playback page, cover and metadata column, centered lyric column, "接下来" queue preview, bottom progress, transport controls, extras, desktop volume, quality, sleep timer, more actions, and a right slide-in full queue panel.
+- Mobile player now follows the Open Design fullscreen sequence: top bar, large rounded artwork, centered track info, lyric scroll, progress, transport controls, favorite, volume, and settings extras. The former segmented artwork or lyrics switch was intentionally removed because the design source uses a single continuous playback surface.
+- Lyrics keep real sync behavior and seeking through `LyricView`, while restoring stronger current-line emphasis, fade spacing, and scrolling feel.
+- Queue behavior still uses the real `PlayerCubit` queue: play by index, remove, clear, and drag reorder. Mobile keeps the bottom sheet handle and "完成" action.
+- Playback sheets preserve real quality, sleep timer, download, favorite, volume, and queue actions. Prototype-only or fake share actions were not introduced.
+- Validation completed:
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/widgets/lyric_view_test.dart test/domain/entities/lyric_sync_engine_test.dart test/domain/entities/play_queue_test.dart test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze lib/presentation/pages/player/player_page.dart lib/presentation/widgets/lyric_view.dart lib/presentation/widgets/queue_sheet.dart lib/presentation/widgets/quality_picker_sheet.dart lib/presentation/widgets/sleep_timer_sheet.dart lib/presentation/widgets/track_actions_sheet.dart`
+  - `git diff --check`
 
 ### Phase 8: Settings And Downloads
 
@@ -496,17 +546,17 @@ Primary files:
 
 Tasks:
 
-- [ ] Settings:
-  - [ ] Restore grouped sections: 服务器, 播放, 外观, 下载, 关于.
-  - [ ] Restore rows with title, description, trailing value, chevron, or toggle.
-  - [ ] Preserve current richer settings that do not exist in the prototype.
-  - [ ] Preserve custom artwork and lyrics source configuration.
-  - [ ] Add confirmation for logout if not already present.
-- [ ] Downloads:
-  - [ ] Restore storage summary group.
-  - [ ] Restore downloaded track table/list style.
-  - [ ] Preserve pending downloads, completed downloads, cancel, remove, and reload behavior.
-  - [ ] Keep destructive delete confirmation.
+- [x] Settings:
+  - [x] Restore grouped sections: 服务器, 播放, 外观, 下载, 关于.
+  - [x] Restore rows with title, description, trailing value, chevron, or toggle.
+  - [x] Preserve current richer settings that do not exist in the prototype.
+  - [x] Preserve custom artwork and lyrics source configuration.
+  - [x] Add confirmation for logout if not already present.
+- [x] Downloads:
+  - [x] Restore storage summary group.
+  - [x] Restore downloaded track table/list style.
+  - [x] Preserve pending downloads, completed downloads, cancel, remove, and reload behavior.
+  - [x] Keep destructive delete confirmation.
 
 Validation:
 
@@ -529,7 +579,17 @@ Manual smoke:
 
 Notes:
 
-- Pending.
+- Implemented in `lib/presentation/pages/settings/settings_page.dart`, `lib/presentation/pages/downloads/downloads_page.dart`, and `test/presentation/pages/global_ui_smoke_test.dart`.
+- Settings now follows the Open Design grouped-list order: 服务器, 播放, 外观, 下载, 关于. Rows use title, description, trailing value, chevron, or existing action behavior.
+- Server rows are backed by the real `AuthCubit` session: server URL, backend API type, account name, and logout confirmation.
+- Playback keeps the real default quality and track-gap settings. Prototype-only gapless and volume-normalization toggles were not added because no persisted production setting exists for them.
+- Appearance keeps theme selection and preserves the richer custom artwork and lyrics source configuration, including enable toggles, URL fields, tests, and status banners.
+- Downloads settings preserve the existing downloads route and cache cleanup confirmation. Wi-Fi-only download was not added because the current app has no persisted setting for it.
+- Downloads page now always shows a storage summary group based on real downloads and pending jobs, then renders pending jobs, a desktop downloaded-track table, or a mobile downloaded-track list. Cancel, remove, reload, and destructive delete confirmation are preserved.
+- Validation completed:
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze lib/presentation/pages/settings/settings_page.dart lib/presentation/pages/downloads/downloads_page.dart test/presentation/pages/global_ui_smoke_test.dart`
+  - `git diff --check`
 
 ### Phase 9: Final Visual QA
 
@@ -571,7 +631,7 @@ Tasks:
 - [ ] Test empty, loading, failure, and pagination states.
 - [ ] Check hover, focus, pressed, selected, disabled, and loading states.
 - [ ] Remove obsolete one-off styling where shared components now cover the design.
-- [ ] Document intentional differences.
+- [x] Document intentional differences.
 
 Final validation:
 
@@ -582,13 +642,23 @@ flutter analyze
 
 Notes:
 
-- Pending.
+- Full automated validation completed:
+  - `/Users/lero/flutter-sdk/bin/flutter test`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze`
+  - `git diff --check`
+- Screenshot comparison remains open. Browser automation tools are not callable in this session, and `chromium`, `google-chrome`, and `playwright` CLIs are unavailable. `/Applications/Google Chrome.app` exists, but Phase 9 still needs a seeded Flutter screenshot harness or manual browser/app capture to compare authenticated pages against `design/desktop.html` and `design/mobile-ios.html`.
+- Manual visual QA tasks remain unchecked: light/dark themes, long text, text scale, missing artwork, failed artwork load, empty/loading/failure/pagination states, and interactive states.
+- No production UI should introduce prototype-only controls just to match static screenshots. Intentional differences are recorded below.
 
 ## 6. Iteration Log
 
 | Date | Phase | Summary | Validation | Remaining Risk |
 |---|---|---|---|---|
-| 2026-06-01 | Planning | Created this restoration tracker from `design/` source files. | Not run, documentation only. | `design.md` still needs source alignment. |
+| 2026-06-01 | Planning | Created this restoration tracker from `design/` source files. | Not run, documentation only. | Resolved by Phase 0 source alignment. |
+| 2026-06-01 | Phase 0 | Started restoration execution. Aligned `design.md` to the current Open Design sources and marked historical design-system references. | `flutter analyze lib/shared/theme lib/presentation` passed. | Screenshot baseline automation is blocked by missing browser runtime. |
+| 2026-06-01 | Phase 1 | Aligned shared visual tokens, breakpoint, motion durations, surface values, radii, and spacing with the Open Design source. | `flutter analyze lib/shared/theme lib/presentation` passed; `flutter test test/widget_test.dart test/presentation/pages/global_ui_smoke_test.dart` passed. | Page-level components still need detailed visual restoration. |
+| 2026-06-01 | Phase 2 | Continued shell restoration. Flattened desktop MiniPlayer, added mobile dock blur, restored mobile 5-tab navigation, and synced desktop sidebar paths. | `flutter analyze lib/presentation/widgets/app_shell.dart lib/presentation/widgets/mini_player_bar.dart lib/bootstrap/router.dart` passed; `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart` passed. | Screenshot-based visual QA is still blocked by missing browser runtime. |
+| 2026-06-01 | Phase 3 | Completed shared component vocabulary restoration: search fields, section titles, album/playlist/artist cards, desktop track table, mobile track items, action buttons, settings grouped rows/toggles, mobile sheets, desktop player popovers, and round player controls. | `flutter test test/presentation/widgets/music_track_table_test.dart test/presentation/widgets/app_modal_test.dart` passed; `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart` passed; `flutter analyze lib/shared/theme lib/presentation` passed. | Screenshot-based visual QA remains blocked by missing browser/runtime screenshot workflow. |
 
 ## 7. Intentional Difference Log
 
@@ -597,6 +667,8 @@ Record any deviation from the prototype here. Each entry must explain why the Fl
 | Surface | Difference | Reason | Approved |
 |---|---|---|---|
 | Mobile prototype frame | Do not render iPhone frame, Dynamic Island, or fake status bar in production app. | These are prototype presentation chrome, not app UI. | Yes |
+| Settings | Do not add prototype-only Wi-Fi-only download, gapless playback, or volume-normalization toggles until persisted production settings exist. | Avoid fake controls and parallel sources of truth. Current real settings are theme, default quality, track gap, custom artwork source, and custom lyrics source. | Yes |
+| Downloads | The storage group summarizes real downloaded rows and pending jobs instead of using prototype counts, storage paths, or file sizes. | Production must reflect actual local download state and not design-sample values. | Yes |
 
 ## 8. Useful Commands
 
@@ -620,4 +692,3 @@ Run full validation before considering the restoration complete:
 flutter test
 flutter analyze
 ```
-
