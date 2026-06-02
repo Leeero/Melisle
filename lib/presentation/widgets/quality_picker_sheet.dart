@@ -30,6 +30,10 @@ class QualityPickerSheet extends StatelessWidget {
         return AppSheetScaffold(
           title: '播放音质',
           description: '下一首起生效；无损仅在源文件为无损时生效。',
+          trailing: TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('完成'),
+          ),
           child: RadioGroup<AudioQuality>(
             groupValue: state.quality,
             onChanged: (value) async {

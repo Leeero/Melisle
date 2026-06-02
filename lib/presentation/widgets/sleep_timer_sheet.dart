@@ -50,6 +50,10 @@ class SleepTimerSheet extends StatelessWidget {
                       ? '将在本曲结束后自动暂停'
                       : '剩余 ${_formatRemaining(remaining!)}')
                 : '时间到后将自动暂停播放。',
+            trailing: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('完成'),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,

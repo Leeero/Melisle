@@ -50,7 +50,7 @@ class _LyricViewState extends State<LyricView> {
   int? _lastScrolledIndex;
 
   static const Duration _autoScrollResumeDelay = Duration(seconds: 3);
-  static const double _verticalPadding = 120;
+  static const double _verticalPadding = 80;
 
   @override
   void initState() {
@@ -246,30 +246,32 @@ class _LyricLineTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final style =
-        (isCurrent ? theme.textTheme.titleLarge : theme.textTheme.titleMedium)
+        (isCurrent
+                ? theme.textTheme.headlineSmall
+                : theme.textTheme.titleMedium)
             ?.copyWith(
-              fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+              fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
               color: isCurrent
                   ? theme.lyricHighlight
-                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              height: 1.28,
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.58),
+              height: isCurrent ? 1.56 : 1.78,
             ) ??
         TextStyle(
-          fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
           color: isCurrent
               ? theme.lyricHighlight
-              : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-          height: 1.28,
+              : colorScheme.onSurfaceVariant.withValues(alpha: 0.58),
+          height: isCurrent ? 1.56 : 1.78,
         );
 
     Widget content = AnimatedScale(
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
+      duration: const Duration(milliseconds: 420),
+      curve: AppMotion.enter,
       scale: isCurrent ? currentScale : 1.0,
       alignment: Alignment.center,
       child: AnimatedDefaultTextStyle(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 420),
+        curve: AppMotion.enter,
         style: style,
         child: Text(
           line.text,
@@ -295,7 +297,7 @@ class _LyricLineTile extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Align(alignment: alignment, child: content),
         ),
       ),

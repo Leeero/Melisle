@@ -39,14 +39,24 @@ class QueueSheet extends StatelessWidget {
               title: '播放队列',
               description: '${headerState.queue.length} 首歌曲',
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              trailing: headerState.queue.isEmpty
-                  ? null
-                  : AppActionButton(
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (headerState.queue.isNotEmpty) ...[
+                    AppActionButton(
                       icon: Icons.delete_sweep_rounded,
                       label: '清空',
                       tone: AppActionButtonTone.danger,
                       onPressed: () => _confirmClearQueue(context),
                     ),
+                    const SizedBox(width: 6),
+                  ],
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('完成'),
+                  ),
+                ],
+              ),
               child: Expanded(
                 child: BlocBuilder<PlayerCubit, PlayerViewState>(
                   buildWhen: (prev, next) =>
@@ -144,7 +154,7 @@ class _QueueItem extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.zero,
       child: Dismissible(
         key: ValueKey('dismiss-${track.id}-$index'),
         direction: DismissDirection.endToStart,
@@ -153,7 +163,7 @@ class _QueueItem extends StatelessWidget {
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             color: colorScheme.errorContainer.withValues(alpha: 0.72),
           ),
           child: Icon(
@@ -161,7 +171,7 @@ class _QueueItem extends StatelessWidget {
             color: colorScheme.onErrorContainer,
           ),
         ),
-        child: MusicTrackTile.card(
+        child: MusicTrackTile.row(
           title: track.title,
           subtitle: [
             track.artistName,
