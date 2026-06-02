@@ -58,14 +58,6 @@ class _DownloadsPageState extends State<DownloadsPage> {
             return BlocBuilder<DownloadsCubit, DownloadsState>(
               builder: (context, state) {
                 final pendingJobs = state.jobs.values.toList();
-                if (rows.isEmpty && pendingJobs.isEmpty) {
-                  return const AppBodyStateView.message(
-                    message: '还没有下载内容',
-                    description: '在歌曲操作中选择下载后，离线曲目会显示在这里。',
-                    icon: Icons.download_for_offline_outlined,
-                  );
-                }
-
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
@@ -74,31 +66,49 @@ class _DownloadsPageState extends State<DownloadsPage> {
                     AppPageLayout.contentBottomInset,
                   ),
                   children: [
+                    _DownloadStorageGroup(rows: rows, pendingJobs: pendingJobs),
+                    const SizedBox(height: 24),
                     if (pendingJobs.isNotEmpty)
                       _DownloadSection(
                         label: '进行中',
-                        children: [
-                          for (final job in pendingJobs) _JobRow(job: job),
-                        ],
+                        child: _DownloadSectionBody(
+                          children: [
+                            for (final job in pendingJobs) _JobRow(job: job),
+                          ],
+                        ),
                       ),
                     if (pendingJobs.isNotEmpty && rows.isNotEmpty)
                       const _DownloadSectionSpacer(),
                     if (rows.isNotEmpty)
                       _DownloadSection(
                         label: '已下载',
-                        children: [
-                          for (final row in rows)
-                            _DownloadRow(
-                              record: row,
-                              onDelete: () async {
-                                await context.read<DownloadsCubit>().remove(
-                                  row.trackId,
-                                );
-                                _reload();
-                              },
-                            ),
-                        ],
+                        child: AppBreakpoints.isCompact(context)
+                            ? _DownloadSectionBody(
+                                children: [
+                                  for (final row in rows)
+                                    _DownloadRow(
+                                      record: row,
+                                      onDelete: () async {
+                                        await context
+                                            .read<DownloadsCubit>()
+                                            .remove(row.trackId);
+                                        _reload();
+                                      },
+                                    ),
+                                ],
+                              )
+                            : _DownloadTable(
+                                rows: rows,
+                                onDelete: (row) async {
+                                  await context.read<DownloadsCubit>().remove(
+                                    row.trackId,
+                                  );
+                                  _reload();
+                                },
+                              ),
                       ),
+                    if (rows.isEmpty && pendingJobs.isEmpty)
+                      const _DownloadsEmptyState(),
                   ],
                 );
               },
@@ -115,7 +125,7 @@ class _DownloadsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppPageHeader(title: '下载管理');
+    return const AppPageHeader(title: '下载管理', description: '管理离线缓存、下载任务和本地存储。');
   }
 }
 
@@ -132,6 +142,169 @@ class _DownloadsSectionTitle extends StatelessWidget {
       titleStyle: Theme.of(
         context,
       ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    );
+  }
+}
+
+class _DownloadStorageGroup extends StatelessWidget {
+  const _DownloadStorageGroup({required this.rows, required this.pendingJobs});
+
+  final List<Download> rows;
+  final List<DownloadJob> pendingJobs;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final totalBytes = rows.fold<int>(0, (sum, row) => sum + row.fileSize);
+
+    return _DownloadInfoGroup(
+      title: '存储',
+      children: [
+        _DownloadInfoRow(
+          title: '下载音质',
+          description: '离线请求使用当前服务可用音质。',
+          value: '自动',
+        ),
+        _DownloadInfoDivider(colorScheme: colorScheme),
+        _DownloadInfoRow(
+          title: '本地存储',
+          description: _storageDescription(rows.length, pendingJobs.length),
+          value: _formatBytes(totalBytes),
+        ),
+      ],
+    );
+  }
+}
+
+class _DownloadInfoGroup extends StatelessWidget {
+  const _DownloadInfoGroup({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(
+        compact ? AppRadiusTokens.mobileLg + 2 : AppRadiusTokens.desktopLg + 4,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surface.withValues(alpha: compact ? 0.96 : 0.72),
+          borderRadius: BorderRadius.circular(
+            compact
+                ? AppRadiusTokens.mobileLg + 2
+                : AppRadiusTokens.desktopLg + 4,
+          ),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(
+              alpha: compact ? 0.70 : 0.56,
+            ),
+            width: compact ? 0.75 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, compact ? 13 : 16, 20, 8),
+              child: Text(
+                title,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: compact ? 0 : 0.32,
+                ),
+              ),
+            ),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadInfoRow extends StatelessWidget {
+  const _DownloadInfoRow({
+    required this.title,
+    required this.description,
+    required this.value,
+  });
+
+  final String title;
+  final String description;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 16 : 20,
+        vertical: compact ? 11 : 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontSize: compact ? 15 : 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.muted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.muted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DownloadInfoDivider extends StatelessWidget {
+  const _DownloadInfoDivider({required this.colorScheme});
+
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 0.75,
+      indent: AppBreakpoints.isCompact(context) ? 16 : 20,
+      color: colorScheme.outlineVariant.withValues(alpha: 0.72),
     );
   }
 }
@@ -227,27 +400,200 @@ class _DownloadRowState extends State<_DownloadRow> {
             ),
           ),
           tooltip: '删除下载',
-          onPressed: () => _confirmDelete(context),
+          onPressed: () =>
+              _confirmDeleteDownload(context, widget.record, widget.onDelete),
         ),
       ),
     );
   }
+}
 
-  Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showAppConfirmationDialog(
-      context: context,
-      title: '删除下载',
-      message: '将删除《${widget.record.title}》的本地离线文件，不会影响媒体库中的原始歌曲。',
-      confirmLabel: '删除',
-      icon: Icons.delete_outline_rounded,
-      tone: AppModalTone.danger,
+class _DownloadTable extends StatelessWidget {
+  const _DownloadTable({required this.rows, required this.onDelete});
+
+  final List<Download> rows;
+  final Future<void> Function(Download row) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DownloadSectionDivider(
+      child: Column(
+        children: [
+          const _DownloadTableHeader(),
+          for (var i = 0; i < rows.length; i++)
+            _DownloadTableRow(
+              index: i,
+              record: rows[i],
+              onDelete: () => onDelete(rows[i]),
+            ),
+        ],
+      ),
     );
-    if (!confirmed || !context.mounted) return;
-    await widget.onDelete();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('已删除下载：${widget.record.title}')));
+  }
+}
+
+class _DownloadTableHeader extends StatelessWidget {
+  const _DownloadTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+      child: Row(
+        children: [
+          const SizedBox(width: 34),
+          Expanded(child: _DownloadTableHeaderText('标题')),
+          SizedBox(width: 190, child: _DownloadTableHeaderText('专辑')),
+          SizedBox(width: 92, child: _DownloadTableHeaderText('大小')),
+          const SizedBox(width: 44),
+        ],
+      ),
+    );
+  }
+}
+
+class _DownloadTableHeaderText extends StatelessWidget {
+  const _DownloadTableHeaderText(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: Theme.of(context).muted,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _DownloadTableRow extends StatefulWidget {
+  const _DownloadTableRow({
+    required this.index,
+    required this.record,
+    required this.onDelete,
+  });
+
+  final int index;
+  final Download record;
+  final Future<void> Function() onDelete;
+
+  @override
+  State<_DownloadTableRow> createState() => _DownloadTableRowState();
+}
+
+class _DownloadTableRowState extends State<_DownloadTableRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: AppMotion.micro,
+        curve: AppMotion.standard,
+        margin: const EdgeInsets.symmetric(vertical: 1),
+        decoration: BoxDecoration(
+          color: _hovered
+              ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.56)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 34,
+                child: Text(
+                  '${widget.index + 1}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.record.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.record.artistName ?? '未知艺术家',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 190,
+                child: Text(
+                  widget.record.albumTitle ?? '未知专辑',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 92,
+                child: Text(
+                  _formatBytes(widget.record.fileSize),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  tooltip: '删除下载',
+                  onPressed: () => _confirmDeleteDownload(
+                    context,
+                    widget.record,
+                    widget.onDelete,
+                  ),
+                  style: IconButton.styleFrom(
+                    side: BorderSide.none,
+                    foregroundColor: _hovered
+                        ? colorScheme.error
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -377,10 +723,10 @@ class _DownloadSectionBody extends StatelessWidget {
 }
 
 class _DownloadSection extends StatelessWidget {
-  const _DownloadSection({required this.label, required this.children});
+  const _DownloadSection({required this.label, required this.child});
 
   final String label;
-  final List<Widget> children;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +734,7 @@ class _DownloadSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _DownloadsSectionTitle(label: label),
-        _DownloadSectionBody(children: children),
+        child,
       ],
     );
   }
@@ -399,6 +745,49 @@ class _DownloadSectionSpacer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(height: 24);
+}
+
+class _DownloadsEmptyState extends StatelessWidget {
+  const _DownloadsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 38),
+      child: AppBodyStateView.message(
+        message: '还没有下载内容',
+        description: '在歌曲操作中选择下载后，离线曲目会显示在这里。',
+        icon: Icons.download_for_offline_outlined,
+      ),
+    );
+  }
+}
+
+Future<void> _confirmDeleteDownload(
+  BuildContext context,
+  Download record,
+  Future<void> Function() onDelete,
+) async {
+  final confirmed = await showAppConfirmationDialog(
+    context: context,
+    title: '删除下载',
+    message: '将删除《${record.title}》的本地离线文件，不会影响媒体库中的原始歌曲。',
+    confirmLabel: '删除',
+    icon: Icons.delete_outline_rounded,
+    tone: AppModalTone.danger,
+  );
+  if (!confirmed || !context.mounted) return;
+  await onDelete();
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text('已删除下载：${record.title}')));
+}
+
+String _storageDescription(int completedCount, int pendingCount) {
+  final completed = '$completedCount 首已下载';
+  if (pendingCount <= 0) return completed;
+  return '$completed · $pendingCount 个任务进行中';
 }
 
 String _formatBytes(int bytes) {
