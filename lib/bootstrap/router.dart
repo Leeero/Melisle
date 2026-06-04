@@ -137,6 +137,11 @@ GoRouter createRouter(AuthCubit authCubit) {
                     _shellPage(state, const SettingsPage()),
               ),
               GoRoute(
+                path: '/settings/media-sources',
+                pageBuilder: (context, state) =>
+                    _shellPage(state, const CustomMediaSourcesPage()),
+              ),
+              GoRoute(
                 path: '/downloads',
                 pageBuilder: (context, state) =>
                     _shellPage(state, const DownloadsPage()),

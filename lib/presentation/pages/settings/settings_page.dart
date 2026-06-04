@@ -4,7 +4,6 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
@@ -47,13 +46,15 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: AppPageLayout.sectionGap),
               const _SettingsSection(title: '播放', child: _PlaybackCard()),
               const SizedBox(height: AppPageLayout.sectionGap),
-              const _SettingsSection(
+              _SettingsSection(
                 title: '外观',
                 child: Column(
                   children: [
-                    _AppearanceCard(),
-                    SizedBox(height: 14),
-                    _CustomMediaSourcesCard(),
+                    const _AppearanceCard(),
+                    const SizedBox(height: 14),
+                    AppBreakpoints.isCompact(context)
+                        ? const _CustomMediaSourcesEntryCard()
+                        : const _CustomMediaSourcesCard(),
                   ],
                 ),
               ),
@@ -67,6 +68,57 @@ class SettingsPage extends StatelessWidget {
                 title: '关于',
                 child: _AboutCard(colorScheme: colorScheme),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class CustomMediaSourcesPage extends StatelessWidget {
+  const CustomMediaSourcesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
+      buildWhen: (a, b) => a.isLoading != b.isLoading,
+      builder: (context, state) {
+        if (state.isLoading) {
+          return const AppContentPage(
+            header: AppPageHeader(title: '歌词与封面'),
+            body: AppBodyStateView.loading(),
+          );
+        }
+
+        final horizontalPadding = AppPageLayout.horizontalPadding(context);
+        final compact = AppBreakpoints.isCompact(context);
+
+        return AppContentPage(
+          header: AppPageHeader(
+            title: '歌词与封面',
+            description: compact ? null : '配置自定义媒体来源地址。',
+            titleMaxWidth: compact ? 220 : 300,
+            leading: AppBackButton(
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).maybePop();
+                  return;
+                }
+                context.go('/settings');
+              },
+            ),
+          ),
+          body: ListView(
+            padding: EdgeInsets.only(
+              left: horizontalPadding,
+              right: horizontalPadding,
+              bottom: AppPageLayout.contentBottomInset,
+            ),
+            children: [
+              const _CustomMediaSourcesOverviewCard(),
+              const SizedBox(height: 14),
+              const _CustomMediaSourcesCard(showIntro: false),
             ],
           ),
         );
@@ -557,8 +609,162 @@ String _gapLabel(Duration gap) {
   return '${gap.inSeconds} 秒';
 }
 
+class _CustomMediaSourcesEntryCard extends StatelessWidget {
+  const _CustomMediaSourcesEntryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
+      buildWhen: (a, b) =>
+          a.customArtworkSourceEnabled != b.customArtworkSourceEnabled ||
+          a.customArtworkSourceUrl != b.customArtworkSourceUrl ||
+          a.customLyricsSourceEnabled != b.customLyricsSourceEnabled ||
+          a.customLyricsSourceUrl != b.customLyricsSourceUrl,
+      builder: (context, state) {
+        final enabledCount = _customMediaSourcesEnabledCount(state);
+        return _SettingsGroupSurface(
+          child: _HoverableListTile(
+            title: const Text('自定义歌词与封面'),
+            subtitle: const Text('配置封面代理、歌词服务或自建接口。'),
+            trailing: _SettingValue(
+              label: _customMediaSourcesSummaryLabel(state),
+              chevron: true,
+              emphasized: enabledCount > 0,
+            ),
+            onTap: () => context.push('/settings/media-sources'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CustomMediaSourcesOverviewCard extends StatelessWidget {
+  const _CustomMediaSourcesOverviewCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
+      buildWhen: (a, b) =>
+          a.customArtworkSourceEnabled != b.customArtworkSourceEnabled ||
+          a.customArtworkSourceUrl != b.customArtworkSourceUrl ||
+          a.customLyricsSourceEnabled != b.customLyricsSourceEnabled ||
+          a.customLyricsSourceUrl != b.customLyricsSourceUrl,
+      builder: (context, state) {
+        return _SettingsGroupSurface(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            AppBreakpoints.isCompact(context) ? 14 : 16,
+            16,
+            16,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '自定义媒体来源',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontSize: AppBreakpoints.isCompact(context) ? 15 : 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.24,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '启用并填写地址后优先使用自定义来源，不可用时回退到服务器内置来源。',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MediaSourceStatusPill(
+                    icon: Icons.image_search_rounded,
+                    label: '封面',
+                    enabled:
+                        state.customArtworkSourceEnabled &&
+                        state.customArtworkSourceUrl.trim().isNotEmpty,
+                  ),
+                  _MediaSourceStatusPill(
+                    icon: Icons.lyrics_rounded,
+                    label: '歌词',
+                    enabled:
+                        state.customLyricsSourceEnabled &&
+                        state.customLyricsSourceUrl.trim().isNotEmpty,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MediaSourceStatusPill extends StatelessWidget {
+  const _MediaSourceStatusPill({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final background = enabled
+        ? theme.selectedWash.withValues(alpha: 0.74)
+        : theme.hoverWash.withValues(alpha: 0.42);
+    final foreground = enabled ? colorScheme.primary : theme.muted;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+        border: Border.all(
+          color: enabled
+              ? colorScheme.primary.withValues(alpha: 0.16)
+              : colorScheme.outlineVariant.withValues(alpha: 0.36),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: foreground),
+            const SizedBox(width: 6),
+            Text(
+              '$label${enabled ? '已启用' : '使用内置'}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CustomMediaSourcesCard extends StatefulWidget {
-  const _CustomMediaSourcesCard();
+  const _CustomMediaSourcesCard({this.showIntro = true});
+
+  final bool showIntro;
 
   @override
   State<_CustomMediaSourcesCard> createState() =>
@@ -624,18 +830,23 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('自定义歌词与封面', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Tooltip(
-                message: '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
-                child: Text(
-                  '配置歌词和封面的自定义来源地址。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+              if (widget.showIntro) ...[
+                Text(
+                  '自定义歌词与封面',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Tooltip(
+                  message: '歌词和封面的来源优先级：开启后优先使用填写的自定义地址。地址会自动保存，可随时启用或停用。',
+                  child: Text(
+                    '配置歌词和封面的自定义来源地址。',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               _SourceSection(
                 icon: Icons.image_search_rounded,
                 title: '歌曲封面来源',
@@ -683,6 +894,34 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
   }
 }
 
+int _customMediaSourcesEnabledCount(AppSettingsState state) {
+  var count = 0;
+  if (state.customArtworkSourceEnabled &&
+      state.customArtworkSourceUrl.trim().isNotEmpty) {
+    count += 1;
+  }
+  if (state.customLyricsSourceEnabled &&
+      state.customLyricsSourceUrl.trim().isNotEmpty) {
+    count += 1;
+  }
+  return count;
+}
+
+String _customMediaSourcesSummaryLabel(AppSettingsState state) {
+  final hasArtworkUrl = state.customArtworkSourceUrl.trim().isNotEmpty;
+  final hasLyricsUrl = state.customLyricsSourceUrl.trim().isNotEmpty;
+  final enabledCount = _customMediaSourcesEnabledCount(state);
+
+  if (enabledCount > 0) return '$enabledCount 项启用';
+  if (state.customArtworkSourceEnabled ||
+      state.customLyricsSourceEnabled ||
+      hasArtworkUrl ||
+      hasLyricsUrl) {
+    return '待配置';
+  }
+  return '未启用';
+}
+
 class _SourceSection extends StatelessWidget {
   const _SourceSection({
     required this.icon,
@@ -718,36 +957,43 @@ class _SourceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
     final addressIsEmpty = controller.text.trim().isEmpty;
     final isTesting = testState.status == SourceTestStatus.testing;
     final useCustomSource = enabled && !addressIsEmpty;
     final statusLabel = useCustomSource
         ? customEnabledLabel
         : (enabled ? emptyAddressLabel : builtinEnabledLabel);
-    final statusBackground = useCustomSource
-        ? colorScheme.tertiaryContainer
-        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
-    final statusForeground = useCustomSource
-        ? colorScheme.onTertiaryContainer
-        : colorScheme.onSurfaceVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Semantics(
               label: title,
               child: Container(
-                width: 40,
-                height: 40,
+                width: compact ? 38 : 40,
+                height: compact ? 38 : 40,
                 decoration: BoxDecoration(
-                  color: colorScheme.secondaryContainer.withValues(alpha: 0.68),
-                  borderRadius: BorderRadius.circular(14),
+                  color: enabled
+                      ? theme.selectedWash.withValues(alpha: 0.74)
+                      : theme.hoverWash.withValues(alpha: 0.54),
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+                  border: Border.all(
+                    color: enabled
+                        ? colorScheme.primary.withValues(alpha: 0.14)
+                        : colorScheme.outlineVariant.withValues(alpha: 0.28),
+                  ),
                 ),
-                child: Icon(icon, color: colorScheme.onSecondaryContainer),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: enabled ? colorScheme.primary : theme.muted,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -760,17 +1006,22 @@ class _SourceSection extends StatelessWidget {
                       Flexible(
                         child: Text(
                           title,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
                         ),
                       ),
                       if (tooltipMessage != null) ...[
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Tooltip(
                           message: tooltipMessage!,
                           child: Icon(
                             Icons.info_outline_rounded,
-                            size: 18,
-                            color: colorScheme.onSurfaceVariant,
+                            size: 17,
+                            color: theme.muted,
                           ),
                         ),
                       ],
@@ -779,93 +1030,353 @@ class _SourceSection extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.muted,
+                      fontSize: 12,
+                      height: 1.35,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-            Semantics(
-              label: '${enabled ? '关闭' : '开启'} $title',
-              child: Switch.adaptive(value: enabled, onChanged: onToggle),
+            _SourceToggle(
+              value: enabled,
+              semanticLabel: '${enabled ? '关闭' : '开启'} $title',
+              onChanged: onToggle,
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Semantics(
+        _SourceStatusBand(
           label: statusLabel,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusBackground,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              statusLabel,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: statusForeground,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          active: useCustomSource,
+          warning: enabled && addressIsEmpty,
         ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: controller,
-          autocorrect: false,
-          enableSuggestions: false,
-          keyboardType: TextInputType.url,
-          textInputAction: TextInputAction.done,
-          maxLines: 2,
-          minLines: 1,
-          decoration: InputDecoration(
-            labelText: '自定义地址',
+        if (enabled) ...[
+          const SizedBox(height: 10),
+          _SourceUrlField(
+            controller: controller,
             hintText: hintText,
-            helperText: enabled
-                ? (addressIsEmpty
-                      ? '已开启，但当前地址为空，暂时仍使用对应数据源的内置地址。'
-                      : '已开启：优先使用此地址；若不可用，会回退到对应数据源的内置地址。')
-                : '未开启：当前直接使用对应数据源的内置地址。',
-            prefixIcon: const Icon(Icons.link_rounded),
+            isTesting: isTesting,
+            testingLabel: testingLabel,
+            onTest: addressIsEmpty || isTesting ? null : onTest,
           ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Tooltip(
-              message: '测试当前地址是否可用',
-              child: TextButton.icon(
-                onPressed: addressIsEmpty || isTesting ? null : onTest,
-                icon: isTesting
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colorScheme.primary,
+          const SizedBox(height: 8),
+          _SourceHelperText(
+            text: addressIsEmpty ? '地址为空时会继续使用内置来源。' : '优先使用此地址，不可用时自动回退。',
+          ),
+          if (testState.message != null) ...[
+            const SizedBox(height: 12),
+            _SourceTestBanner(testState: testState),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _SourceToggle extends StatefulWidget {
+  const _SourceToggle({
+    required this.value,
+    required this.semanticLabel,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final String semanticLabel;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  State<_SourceToggle> createState() => _SourceToggleState();
+}
+
+class _SourceToggleState extends State<_SourceToggle> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final active = widget.value;
+    final trackColor = active
+        ? colorScheme.primary
+        : colorScheme.onSurfaceVariant.withValues(alpha: 0.18);
+
+    return Semantics(
+      label: widget.semanticLabel,
+      button: true,
+      toggled: active,
+      child: SizedBox(
+        width: 50,
+        height: 44,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+            onTap: () => widget.onChanged(!active),
+            onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
+            hoverColor: Colors.transparent,
+            focusColor: colorScheme.primary.withValues(alpha: 0.08),
+            splashColor: colorScheme.primary.withValues(alpha: 0.08),
+            highlightColor: Colors.transparent,
+            child: Center(
+              child: AnimatedScale(
+                duration: AppMotion.micro,
+                curve: AppMotion.enter,
+                scale: _pressed ? 0.96 : 1,
+                child: AnimatedContainer(
+                  duration: AppMotion.micro,
+                  curve: AppMotion.enter,
+                  width: 42,
+                  height: 26,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: trackColor,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: active
+                          ? colorScheme.primary.withValues(alpha: 0)
+                          : colorScheme.outlineVariant.withValues(alpha: 0.56),
+                    ),
+                  ),
+                  alignment: active
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.onSurface.withValues(alpha: 0.14),
+                          blurRadius: 7,
+                          offset: const Offset(0, 2),
                         ),
-                      )
-                    : const Icon(Icons.network_check_rounded, size: 18),
-                label: Text(isTesting ? testingLabel : '测试地址'),
-                style: AppActionButtonStyle.text(
-                  context,
-                  tone: AppActionButtonTone.primary,
-                  dense: false,
+                      ],
+                    ),
+                    child: const SizedBox(width: 22, height: 22),
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-        if (testState.message != null) ...[
-          const SizedBox(height: 12),
-          _SourceTestBanner(testState: testState),
-        ],
-      ],
+      ),
+    );
+  }
+}
+
+class _SourceStatusBand extends StatelessWidget {
+  const _SourceStatusBand({
+    required this.label,
+    required this.active,
+    required this.warning,
+  });
+
+  final String label;
+  final bool active;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = active
+        ? colorScheme.primary
+        : warning
+        ? theme.musicWarm
+        : theme.muted;
+    final background = active
+        ? theme.selectedWash.withValues(alpha: 0.72)
+        : warning
+        ? theme.musicWarmSoft.withValues(alpha: 0.58)
+        : theme.hoverWash.withValues(alpha: 0.42);
+    final borderColor = active
+        ? colorScheme.primary.withValues(alpha: 0.16)
+        : warning
+        ? theme.musicWarm.withValues(alpha: 0.18)
+        : colorScheme.outlineVariant.withValues(alpha: 0.32);
+
+    return Semantics(
+      label: label,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+          border: Border.all(color: borderColor),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 7, 11, 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                active
+                    ? Icons.check_circle_rounded
+                    : warning
+                    ? Icons.info_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 16,
+                color: foreground,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: foreground,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceUrlField extends StatelessWidget {
+  const _SourceUrlField({
+    required this.controller,
+    required this.hintText,
+    required this.isTesting,
+    required this.testingLabel,
+    required this.onTest,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final bool isTesting;
+  final String testingLabel;
+  final Future<void> Function()? onTest;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return TextField(
+      controller: controller,
+      autocorrect: false,
+      enableSuggestions: false,
+      keyboardType: TextInputType.url,
+      textInputAction: TextInputAction.done,
+      minLines: 1,
+      maxLines: 2,
+      cursorColor: colorScheme.primary,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: colorScheme.onSurface,
+        fontSize: 15,
+        height: 1.28,
+      ),
+      decoration: InputDecoration(
+        labelText: '自定义地址',
+        hintText: hintText,
+        helperText: null,
+        prefixIcon: const Icon(Icons.link_rounded, size: 18),
+        suffixIcon: _SourceInlineTestButton(
+          isTesting: isTesting,
+          testingLabel: testingLabel,
+          onPressed: onTest,
+        ),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 52,
+          minHeight: 52,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+        hintStyle: theme.textTheme.bodySmall?.copyWith(
+          color: theme.muted.withValues(alpha: 0.72),
+          fontSize: 13,
+          height: 1.28,
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceHelperText extends StatelessWidget {
+  const _SourceHelperText({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.muted,
+        fontSize: 12,
+        height: 1.35,
+      ),
+    );
+  }
+}
+
+class _SourceInlineTestButton extends StatelessWidget {
+  const _SourceInlineTestButton({
+    required this.isTesting,
+    required this.testingLabel,
+    required this.onPressed,
+  });
+
+  final bool isTesting;
+  final String testingLabel;
+  final Future<void> Function()? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Tooltip(
+      message: isTesting ? testingLabel : '测试地址',
+      child: SizedBox.square(
+        dimension: 46,
+        child: IconButton(
+          onPressed: onPressed == null ? null : () => onPressed!(),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 46, height: 46),
+          icon: isTesting
+              ? SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colorScheme.primary,
+                  ),
+                )
+              : const Icon(Icons.network_check_rounded, size: 18),
+          style:
+              IconButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                disabledForegroundColor: theme.muted.withValues(alpha: 0.48),
+                backgroundColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+                ),
+              ).copyWith(
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.disabled)) {
+                    return Colors.transparent;
+                  }
+                  if (states.contains(WidgetState.pressed) ||
+                      states.contains(WidgetState.hovered) ||
+                      states.contains(WidgetState.focused)) {
+                    return theme.hoverWash.withValues(alpha: 0.72);
+                  }
+                  return Colors.transparent;
+                }),
+                overlayColor: WidgetStateProperty.all(Colors.transparent),
+              ),
+        ),
+      ),
     );
   }
 }
