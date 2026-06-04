@@ -25,6 +25,14 @@ class LibraryCubit extends Cubit<LibraryState> {
   final MusicRepository _musicRepository;
 
   Future<void> load() async {
+    emit(
+      state.copyWith(
+        status: LibraryStatus.loading,
+        hasMore: true,
+        isLoadingMore: false,
+        errorMessage: null,
+      ),
+    );
     await _loadGenres();
     await _loadCurrentFilter(reset: true);
   }
@@ -55,6 +63,7 @@ class LibraryCubit extends Cubit<LibraryState> {
 
     emit(
       state.copyWith(
+        status: LibraryStatus.loading,
         currentFilter: filter,
         searchQuery: '',
         hasMore: true,
