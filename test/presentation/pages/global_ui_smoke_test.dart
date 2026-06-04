@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
@@ -23,6 +25,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/library/library_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/playlists/playlist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -31,6 +34,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets('SettingsPage_responsiveSmoke_hasNoLayoutExceptions', (
@@ -52,6 +56,60 @@ void main() {
     );
   });
 
+  testWidgets('SettingsPage_mobileCustomMediaSources_opensDetailPage', (
+    tester,
+  ) async {
+    final harness = await _SettingsHarness.create();
+    addTearDown(harness.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/settings',
+      routes: [
+        GoRoute(
+          path: '/settings',
+          builder: (_, _) => const Scaffold(body: SettingsPage()),
+        ),
+        GoRoute(
+          path: '/settings/media-sources',
+          builder: (_, _) => const Scaffold(body: CustomMediaSourcesPage()),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await _pumpMobile(
+      tester,
+      build: () => harness.wrapRouter(router),
+      verify: () {
+        expect(find.text('设置'), findsWidgets);
+        expect(find.text('自定义歌词与封面'), findsOneWidget);
+        expect(find.text('歌曲封面来源'), findsNothing);
+        expect(find.text('歌词来源'), findsNothing);
+      },
+    );
+
+    await tester.tap(find.text('自定义歌词与封面'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('返回'), findsOneWidget);
+    expect(find.text('歌词与封面'), findsWidgets);
+    expect(find.text('自定义媒体来源'), findsOneWidget);
+    expect(find.text('歌曲封面来源'), findsOneWidget);
+    expect(find.text('歌词来源'), findsOneWidget);
+    expect(find.text('自定义地址'), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('开启 歌曲封面来源'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 180));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('自定义地址'), findsOneWidget);
+    expect(find.byTooltip('测试地址'), findsOneWidget);
+  });
+
   testWidgets('DownloadsPage_responsiveSmoke_hasNoLayoutExceptions', (
     tester,
   ) async {
@@ -67,6 +125,33 @@ void main() {
         expect(find.text('还没有下载内容'), findsOneWidget);
       },
     );
+  });
+
+  testWidgets('LibraryPage_mobileLoadingState_hidesEmptyState', (tester) async {
+    final repository = _DelayedLibraryRepository();
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await _pumpMobile(
+      tester,
+      build: () => MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<MusicRepository>.value(value: repository),
+        ],
+        child: BlocProvider<PlayerCubit>.value(
+          value: playerCubit,
+          child: const MaterialApp(home: Scaffold(body: LibraryPage())),
+        ),
+      ),
+      verify: () {
+        expect(find.text('媒体库'), findsWidgets);
+        expect(find.text('正在加载歌曲'), findsOneWidget);
+        expect(find.text('当前还没有歌曲。'), findsNothing);
+      },
+    );
+
+    repository.completeTracks();
+    await tester.pump();
   });
 
   testWidgets('QueueSheet_emptyState_keepsResponsiveSheetStructure', (
@@ -242,6 +327,25 @@ class _SettingsHarness {
           BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
         ],
         child: MaterialApp(home: Scaffold(body: child)),
+      ),
+    );
+  }
+
+  Widget wrapRouter(GoRouter router) {
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<MusicRepository>.value(value: repository),
+        RepositoryProvider<SettingsRepository>.value(value: settingsRepository),
+        RepositoryProvider<CustomMediaSourceResolver>.value(
+          value: mediaSourceResolver,
+        ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthCubit>.value(value: authCubit),
+          BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+        ],
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
   }
@@ -483,6 +587,28 @@ class _FakeMusicRepository implements MusicRepository {
 
   @override
   Future<SearchResults> search(String query) async => SearchResults.empty;
+}
+
+class _DelayedLibraryRepository extends _FakeMusicRepository {
+  _DelayedLibraryRepository() : _tracksCompleter = Completer();
+
+  final Completer<PaginatedResult<MusicTrack>> _tracksCompleter;
+
+  void completeTracks({List<MusicTrack> tracks = const []}) {
+    if (_tracksCompleter.isCompleted) return;
+    _tracksCompleter.complete(
+      PaginatedResult<MusicTrack>(items: tracks, totalCount: tracks.length),
+    );
+  }
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    return _tracksCompleter.future;
+  }
 }
 
 class _FakeSettingsRepository implements SettingsRepository {
