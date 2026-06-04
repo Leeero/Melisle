@@ -683,13 +683,14 @@ class AppSectionTitleRow extends StatelessWidget {
 }
 
 class AppBodyStateView extends StatelessWidget {
-  const AppBodyStateView.loading({super.key})
-    : message = null,
-      title = null,
-      description = null,
-      icon = null,
-      action = null,
-      _isLoading = true;
+  const AppBodyStateView.loading({
+    super.key,
+    this.title = '正在加载内容',
+    this.description = '请稍候，数据会在完成后自动显示。',
+  }) : message = null,
+       icon = null,
+       action = null,
+       _isLoading = true;
 
   const AppBodyStateView.message({
     super.key,
@@ -710,7 +711,7 @@ class AppBodyStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return AppLoadingView(title: title, description: description);
     }
 
     final theme = Theme.of(context);
@@ -750,14 +751,101 @@ class AppBodyStateView extends StatelessWidget {
   }
 }
 
+class AppLoadingView extends StatelessWidget {
+  const AppLoadingView({
+    super.key,
+    this.title = '正在加载内容',
+    this.description = '请稍候，数据会在完成后自动显示。',
+  });
+
+  final String? title;
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+    final title = this.title;
+    final description = this.description;
+
+    return Semantics(
+      label: title ?? '正在加载',
+      liveRegion: true,
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppPageLayout.horizontalPadding(context),
+            vertical: compact ? 28 : 32,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox.square(
+                  dimension: compact ? 48 : 52,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        strokeWidth: compact ? 2.4 : 2.6,
+                        color: colorScheme.primary,
+                        backgroundColor: colorScheme.outlineVariant.withValues(
+                          alpha: 0.36,
+                        ),
+                      ),
+                      Icon(
+                        Icons.library_music_rounded,
+                        size: compact ? 20 : 22,
+                        color: colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+                if (title != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontSize: compact ? 15 : 16,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+                if (description != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.muted,
+                      fontSize: compact ? 12 : 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AppSliverStateView extends StatelessWidget {
-  const AppSliverStateView.loading({super.key})
-    : message = null,
-      title = null,
-      description = null,
-      icon = null,
-      action = null,
-      _isLoading = true;
+  const AppSliverStateView.loading({
+    super.key,
+    this.title = '正在加载内容',
+    this.description = '请稍候，数据会在完成后自动显示。',
+  }) : message = null,
+       icon = null,
+       action = null,
+       _isLoading = true;
 
   const AppSliverStateView.message({
     super.key,
@@ -780,7 +868,7 @@ class AppSliverStateView extends StatelessWidget {
     return SliverFillRemaining(
       hasScrollBody: false,
       child: _isLoading
-          ? const AppBodyStateView.loading()
+          ? AppBodyStateView.loading(title: title, description: description)
           : AppBodyStateView.message(
               message: message!,
               title: title,

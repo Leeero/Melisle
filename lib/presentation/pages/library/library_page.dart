@@ -100,13 +100,11 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
     String? currentTrackId,
   ) {
-    // 初始加载（所有列表都空时显示全屏加载）
-    if (state.status == LibraryStatus.loading &&
-        state.tracks.isEmpty &&
-        state.albums.isEmpty &&
-        state.artists.isEmpty &&
-        state.playlists.isEmpty) {
-      return const AppBodyStateView.loading();
+    if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
+      return AppBodyStateView.loading(
+        title: _libraryLoadingTitle(state.currentFilter),
+        description: '请稍候，加载完成后会自动显示。',
+      );
     }
 
     if (state.status == LibraryStatus.failure && state.isCurrentFilterEmpty) {
@@ -524,6 +522,16 @@ class _LibraryViewState extends State<_LibraryView> {
     final count = ((availableWidth + gap) / (minTileWidth + gap)).floor();
     return count.clamp(2, 4).toInt();
   }
+}
+
+String _libraryLoadingTitle(LibraryFilter filter) {
+  return switch (filter) {
+    LibraryFilter.tracks => '正在加载歌曲',
+    LibraryFilter.albums => '正在加载专辑',
+    LibraryFilter.artists => '正在加载艺术家',
+    LibraryFilter.playlists => '正在加载歌单',
+    LibraryFilter.favorites => '正在加载收藏',
+  };
 }
 
 String _librarySummaryLabel(LibraryState state) {
