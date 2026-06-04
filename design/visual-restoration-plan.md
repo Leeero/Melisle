@@ -1,6 +1,6 @@
 # Melisle Visual Restoration Plan
 
-> Last updated: 2026-06-02
+> Last updated: 2026-06-03
 > Status: In Progress
 > Scope: Restore the Flutter UI to the current Open Design sources in `design/` while preserving all existing product functions.
 
@@ -231,6 +231,8 @@ Notes:
 - Downloads remain available from the desktop sidebar under the settings branch.
 - Desktop MiniPlayer is now a flat `72px` surface with a top divider, compact `36px` transport controls, a `3px` progress track, and no decorative gradient or shadow.
 - Mobile bottom dock now uses the design-source semi-transparent blur layer, and the floating MiniPlayer keeps the design-source rounded surface above the tab bar.
+- Mobile bottom Tab Bar now owns its safe-area background, top hairline, `54px` tab content rhythm, `24px` horizontal inset, muted inactive state, accent active state, and `0.62` pressed opacity to match `design/mobile-ios.html`.
+- Mobile MiniPlayer now matches the design-source `60px` floating bar, `42px` cover, compact typography, `36px` primary play control, and `40px` secondary control rhythm. The prototype next-track button is intentionally replaced by the production queue button.
 - Mini player tap-to-open-player behavior was preserved.
 - Exact visual QA still needs real screenshots once browser/runtime screenshot capture is available.
 
@@ -319,7 +321,7 @@ Tasks:
   - [x] Restore recommendation hero with stacked covers.
   - [x] Restore "继续播放", "最近添加", and "推荐艺术家" sections.
 - [x] Mobile home:
-  - [x] Restore horizontal recommendation cards.
+  - [x] Restore compact single recommendation hero aligned with desktop.
   - [x] Restore horizontal album and artist scrollers.
 - [x] Use real repository data where available.
 - [x] Keep empty, loading, and error states clear.
@@ -342,7 +344,8 @@ Notes:
 
 - Implemented in `lib/presentation/pages/login/login_page.dart` and `lib/presentation/pages/home/home_page.dart`.
 - Login now switches between the desktop centered connect card and the mobile hero/service-pill/settings-group layout while keeping the same `AuthCubit.login` validation, loading, error, and status handling.
-- Home now uses real `HomeState` data for the desktop recommendation hero, mobile recommendation cards, "继续播放", "最近添加", and "推荐艺术家". Artist cards are derived only from real album/track `artistId` data; the section is hidden when the backend data cannot support artist navigation.
+- Home now uses real `HomeState` data for the shared desktop/mobile recommendation hero, "继续播放", "最近添加", and "推荐艺术家". Artist cards are derived only from real album/track `artistId` data; the section is hidden when the backend data cannot support artist navigation.
+- The recommendation "查看歌曲" action opens the actual recommended track list instead of routing to the generic search page.
 - Partial section failures remain visible as an inline retry banner, while full loading, empty, and failure states continue to use the shared body state view.
 - Screenshot-based visual QA remains open until a browser/runtime screenshot workflow is available.
 
@@ -394,6 +397,9 @@ Notes:
 
 - Implemented in `lib/presentation/pages/search/search_page.dart`, `lib/presentation/pages/library/library_page.dart`, and the shared `AppSearchField` in `lib/presentation/widgets/layout/page_layout.dart`.
 - Search now defaults to the design's `全部` scope, with desktop underline tabs, desktop track table plus album/artist/playlist grids, mobile cancel-capable search field, chips, track list, and horizontal result cards.
+- Search follow-up refinement on 2026-06-02 tightened the result page against `design/desktop.html` and `design/mobile-ios.html`: desktop tabs now use pure category labels like the prototype, desktop result grids are constrained to the design's `720px / 980px` rhythm with a `132px` minimum card column, and mobile search tracks now use the prototype list row structure: index, title/artist/album, duration, and a more-actions button without artwork.
+- Search empty state now uses the shared `SearchEmptyView` in `lib/presentation/widgets/search/search_empty_view.dart`. The old "搜索分类" label has been replaced by "热门搜索", using music-focused query chips while keeping recent search restore, clear, undo, and click-to-search behavior.
+- Search page tests were updated to assert the design-source initial chips, pure scope-tab labels, mobile section count, and responsive smoke behavior.
 - Library now exposes only the design's `歌曲 / 专辑 / 艺术家` scopes in-page. 收藏 remains available through the top-level 收藏 route/tab and the existing hidden compatibility branch is preserved for old state paths.
 - Library headers and sections use only real Cubit data. Full album/artist totals are shown only after those scopes have loaded; no prototype counts or artwork were introduced.
 - Compact `AppSearchField` now uses a 46px field/suffix slot so the clear and cancel actions meet the 44px touch target requirement.
@@ -402,6 +408,16 @@ Notes:
   - `flutter test test/presentation/blocs/search/search_cubit_test.dart`
   - `flutter analyze lib/presentation/widgets/layout/page_layout.dart lib/presentation/pages/search/search_page.dart lib/presentation/pages/library/library_page.dart`
   - `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart`
+- Follow-up validation after the 2026-06-02 search refinement:
+  - `dart format lib/presentation/pages/search/search_page.dart test/presentation/pages/search/search_page_test.dart`
+  - `flutter test test/presentation/pages/search/search_page_test.dart --timeout 60s`
+  - `flutter analyze lib/presentation/pages/search/search_page.dart test/presentation/pages/search/search_page_test.dart`
+  - `git diff --check` passed.
+- Follow-up validation after the shared search empty-state refinement:
+  - `dart format lib/presentation/pages/search/search_page.dart lib/presentation/widgets/search/search_empty_view.dart test/presentation/pages/search/search_page_test.dart`
+  - `flutter test test/presentation/pages/search/search_page_test.dart --timeout 60s`
+  - `flutter analyze lib/presentation/pages/search/search_page.dart lib/presentation/widgets/search/search_empty_view.dart test/presentation/pages/search/search_page_test.dart`
+  - `git diff --check` passed.
 
 ### Phase 6: Details, Favorites, History, And Playlists
 
@@ -430,11 +446,13 @@ Tasks:
   - [x] Restore centered cover or avatar.
   - [x] Restore action buttons.
   - [x] Restore mobile track list.
+  - [x] Restore mobile playlist detail as a dedicated centered hero plus numbered track list.
 - [x] Favorites:
   - [x] Restore mobile top-level favorite page.
   - [x] Preserve favorite toggling and removal behavior.
 - [x] History:
   - [x] Match the same mobile track list and desktop table vocabulary.
+  - [x] Restore compact mobile header with back navigation, large title, and non-overflowing play-all action.
 - [x] Keep large playlist pagination and loading feedback.
 
 Validation:
@@ -458,12 +476,24 @@ Notes:
 - Implemented in `lib/presentation/widgets/layout/page_layout.dart`, `lib/presentation/pages/album/album_detail_page.dart`, `lib/presentation/pages/artist/artist_detail_page.dart`, `lib/presentation/pages/playlists/playlists_page.dart`, `lib/presentation/pages/playlists/playlist_detail_page.dart`, `lib/presentation/pages/favorites/favorites_page.dart`, and `lib/presentation/pages/history/history_page.dart`.
 - Detail pages now use the Open Design object-page structure: desktop left cover or avatar with right metadata/actions and desktop track table; mobile explicit `返回` nav, centered cover/avatar, centered metadata/actions, and mobile track rows.
 - Playlist list now uses the cover-first card grid vocabulary while preserving search, pagination, and navigation to playlist detail.
+- Mobile playlist detail now uses a compressed detail hero: explicit back nav, smaller centered cover, two-line safe title, lightweight track count, and a single top-level play action. Track-level actions now live in the song list, where each row exposes play, favorite, and add-to-queue controls.
 - Favorites is treated as the mobile top-level 收藏 surface: no extra back button, real count summary, play-all action, mobile track rows, and existing favorite removal behavior.
-- History now uses the same desktop table and mobile row vocabulary as the restored track surfaces.
+- History now uses the same desktop table and mobile row vocabulary as the restored track surfaces. Its mobile header uses a dedicated action row for back navigation and the shared compact play-all button, followed by the large mobile title without the secondary description; desktop uses the shared compact play-all button for consistency with other track surfaces.
 - Prototype-only album favorite, artist follow, playlist download, and more actions were not introduced as non-functional buttons. Existing production actions remain: play all, individual play, track long-press actions, favorite toggling/removal where supported, and playlist pagination.
 - Validation completed:
   - `flutter analyze lib/presentation/widgets/layout/page_layout.dart lib/presentation/pages/album/album_detail_page.dart lib/presentation/pages/artist/artist_detail_page.dart lib/presentation/pages/playlists/playlists_page.dart lib/presentation/pages/playlists/playlist_detail_page.dart lib/presentation/pages/favorites/favorites_page.dart lib/presentation/pages/history/history_page.dart test/widget_test.dart`
   - `flutter test test/presentation/blocs/playlist_detail_cubit_test.dart test/widget_test.dart test/presentation/pages/global_ui_smoke_test.dart`
+- Follow-up validation after the 2026-06-03 mobile playlist-detail refinement:
+  - `/Users/lero/flutter-sdk/bin/dart format lib/presentation/pages/playlists/playlist_detail_page.dart test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/blocs/playlist_detail_cubit_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze lib/presentation/pages/playlists/playlist_detail_page.dart test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze`
+- Follow-up validation after compressing the mobile playlist-detail hero and moving actions into track rows:
+  - `/Users/lero/flutter-sdk/bin/dart format lib/presentation/pages/playlists/playlist_detail_page.dart test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/blocs/playlist_detail_cubit_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/pages/global_ui_smoke_test.dart`
+  - `/Users/lero/flutter-sdk/bin/flutter analyze lib/presentation/pages/playlists/playlist_detail_page.dart test/presentation/pages/global_ui_smoke_test.dart`
 
 ### Phase 7: Player, Lyrics, Queue, And Playback Sheets
 
@@ -494,7 +524,7 @@ Tasks:
   - [x] Preserve seek, lyric sync offset, loading, no-lyrics, and error states.
 - [x] Queue:
   - [x] Desktop: right slide-in queue panel.
-  - [x] Mobile: bottom queue sheet with handle and "完成" action.
+  - [x] Mobile: bottom queue sheet with handle, title/count header, row removal, and drag reorder.
 - [x] Playback sheets:
   - [x] Mobile action sheet for more, settings, and volume.
   - [x] Preserve quality, sleep timer, download, favorite, and queue actions.
@@ -528,7 +558,7 @@ Notes:
 - Desktop player now matches the Open Design immersive structure: fullscreen playback page, cover and metadata column, centered lyric column, "接下来" queue preview, bottom progress, transport controls, extras, desktop volume, quality, sleep timer, more actions, and a right slide-in full queue panel.
 - Mobile player now follows the Open Design fullscreen sequence: top bar, large rounded artwork, centered track info, lyric scroll, progress, transport controls, favorite, volume, and settings extras. The former segmented artwork or lyrics switch was intentionally removed because the design source uses a single continuous playback surface.
 - Lyrics keep real sync behavior and seeking through `LyricView`, while restoring stronger current-line emphasis, fade spacing, and scrolling feel.
-- Queue behavior still uses the real `PlayerCubit` queue: play by index, remove, clear, and drag reorder. Mobile keeps the bottom sheet handle and "完成" action.
+- Queue behavior still uses the real `PlayerCubit` queue: play by index, remove, and drag reorder. Mobile keeps the bottom sheet handle, moves the count into the title row, removes the top "清空" and "完成" actions, and exposes per-row remove plus a softer drag handle style.
 - Playback sheets preserve real quality, sleep timer, download, favorite, volume, and queue actions. Prototype-only or fake share actions were not introduced.
 - Validation completed:
   - `/Users/lero/flutter-sdk/bin/flutter test test/presentation/widgets/lyric_view_test.dart test/domain/entities/lyric_sync_engine_test.dart test/domain/entities/play_queue_test.dart test/presentation/pages/global_ui_smoke_test.dart`
@@ -658,7 +688,9 @@ Notes:
 | 2026-06-01 | Phase 0 | Started restoration execution. Aligned `design.md` to the current Open Design sources and marked historical design-system references. | `flutter analyze lib/shared/theme lib/presentation` passed. | Screenshot baseline automation is blocked by missing browser runtime. |
 | 2026-06-01 | Phase 1 | Aligned shared visual tokens, breakpoint, motion durations, surface values, radii, and spacing with the Open Design source. | `flutter analyze lib/shared/theme lib/presentation` passed; `flutter test test/widget_test.dart test/presentation/pages/global_ui_smoke_test.dart` passed. | Page-level components still need detailed visual restoration. |
 | 2026-06-01 | Phase 2 | Continued shell restoration. Flattened desktop MiniPlayer, added mobile dock blur, restored mobile 5-tab navigation, and synced desktop sidebar paths. | `flutter analyze lib/presentation/widgets/app_shell.dart lib/presentation/widgets/mini_player_bar.dart lib/bootstrap/router.dart` passed; `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart` passed. | Screenshot-based visual QA is still blocked by missing browser runtime. |
+| 2026-06-02 | Phase 2 follow-up | Refined the mobile bottom Tab Bar and MiniPlayer to match the Open Design layout, safe-area chrome, inactive/active colors, pressed opacity, compact controls, and tab navigation behavior. | `/Users/lero/flutter-sdk/bin/flutter analyze lib/presentation/widgets/app_shell.dart lib/presentation/widgets/mini_player_bar.dart test/widget_test.dart` passed; `/Users/lero/flutter-sdk/bin/flutter test test/widget_test.dart --timeout 60s` passed; `git diff --check` passed. | Screenshot-based mobile comparison remains open. |
 | 2026-06-01 | Phase 3 | Completed shared component vocabulary restoration: search fields, section titles, album/playlist/artist cards, desktop track table, mobile track items, action buttons, settings grouped rows/toggles, mobile sheets, desktop player popovers, and round player controls. | `flutter test test/presentation/widgets/music_track_table_test.dart test/presentation/widgets/app_modal_test.dart` passed; `flutter test test/presentation/pages/global_ui_smoke_test.dart test/widget_test.dart` passed; `flutter analyze lib/shared/theme lib/presentation` passed. | Screenshot-based visual QA remains blocked by missing browser/runtime screenshot workflow. |
+| 2026-06-03 | Phase 6 follow-up | Rebuilt mobile playlist detail with a compressed centered hero, single top-level play action, numbered mobile track rows, row-level play/favorite/add-to-queue controls, safe bottom spacing, and a mobile smoke test for long titles and row overflow. | `/Users/lero/flutter-sdk/bin/flutter test test/presentation/blocs/playlist_detail_cubit_test.dart` passed; `/Users/lero/flutter-sdk/bin/flutter test test/presentation/pages/global_ui_smoke_test.dart` passed; `/Users/lero/flutter-sdk/bin/flutter analyze` passed. | Screenshot-based mobile comparison remains open. |
 
 ## 7. Intentional Difference Log
 
@@ -669,6 +701,8 @@ Record any deviation from the prototype here. Each entry must explain why the Fl
 | Mobile prototype frame | Do not render iPhone frame, Dynamic Island, or fake status bar in production app. | These are prototype presentation chrome, not app UI. | Yes |
 | Settings | Do not add prototype-only Wi-Fi-only download, gapless playback, or volume-normalization toggles until persisted production settings exist. | Avoid fake controls and parallel sources of truth. Current real settings are theme, default quality, track gap, custom artwork source, and custom lyrics source. | Yes |
 | Downloads | The storage group summarizes real downloaded rows and pending jobs instead of using prototype counts, storage paths, or file sizes. | Production must reflect actual local download state and not design-sample values. | Yes |
+| Mobile MiniPlayer | Replace the prototype next-track button with the current queue button. | The app already exposes queue as the mobile secondary MiniPlayer action, and the user explicitly requested preserving that production interaction. | Yes |
+| Mobile playlist detail | Do not show the prototype playlist-level download action or a top-level add-to-queue action. | Playlist-level download is not currently a production capability, and the user requested removing the top add-to-queue button. Queueing is exposed as a real track-level action instead. | Yes |
 
 ## 8. Useful Commands
 
