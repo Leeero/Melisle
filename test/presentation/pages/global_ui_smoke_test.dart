@@ -18,10 +18,12 @@ import 'package:cross_platform_music_player/infrastructure/database/app_database
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/playlists/playlist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
@@ -83,6 +85,65 @@ void main() {
       },
     );
   });
+
+  testWidgets('PlaylistDetailPage_mobileSmoke_hasNoLayoutExceptions', (
+    tester,
+  ) async {
+    final playlist = MusicPlaylist(
+      id: 'playlist-1',
+      name: '很长很长的深夜独处歌单标题用于验证移动端换行和视觉层级',
+      artworkUrl: '',
+      trackCount: 3,
+    );
+    final repository = _FakeMusicRepository(playlistTracks: _playlistTracks());
+    final playerCubit = _FakeQueuePlayerCubit();
+    final favoritesCubit = FavoritesCubit(repository);
+    final settingsRepository = _FakeSettingsRepository();
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      settingsRepository,
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(favoritesCubit.close);
+    addTearDown(settingsCubit.close);
+
+    await _pumpMobile(
+      tester,
+      build: () => MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<MusicRepository>.value(value: repository),
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: MaterialApp(
+            home: PlaylistDetailPage(
+              playlistId: playlist.id,
+              playlist: playlist,
+            ),
+          ),
+        ),
+      ),
+      verify: () {
+        expect(find.text('播放'), findsOneWidget);
+        expect(find.text('加入队列'), findsNothing);
+        expect(find.text('歌曲'), findsOneWidget);
+        expect(find.text('夜曲'), findsOneWidget);
+        expect(find.text('红豆'), findsOneWidget);
+        expect(find.byTooltip('播放歌曲'), findsNWidgets(3));
+        expect(find.byTooltip('收藏'), findsNWidgets(3));
+        expect(find.byTooltip('加入队列'), findsNWidgets(3));
+      },
+    );
+  });
 }
 
 Future<void> _pumpForSizes(
@@ -105,6 +166,26 @@ Future<void> _pumpForSizes(
     expect(tester.takeException(), isNull);
     verify();
   }
+}
+
+Future<void> _pumpMobile(
+  WidgetTester tester, {
+  required Widget Function() build,
+  required VoidCallback verify,
+}) async {
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+
+  await tester.pumpWidget(build());
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 120));
+  await tester.pump(const Duration(milliseconds: 320));
+
+  expect(tester.takeException(), isNull);
+  verify();
 }
 
 class _SettingsHarness {
@@ -246,7 +327,40 @@ class _FakeQueuePlayerCubit extends Cubit<PlayerViewState>
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+List<MusicTrack> _playlistTracks() {
+  return const [
+    MusicTrack(
+      id: 'track-1',
+      title: '夜曲',
+      artistName: '周杰伦',
+      albumTitle: '十一月的萧邦',
+      artworkUrl: '',
+      duration: Duration(minutes: 3, seconds: 46),
+    ),
+    MusicTrack(
+      id: 'track-2',
+      title: '红豆',
+      artistName: '王菲',
+      albumTitle: '唱游',
+      artworkUrl: '',
+      duration: Duration(minutes: 5, seconds: 12),
+    ),
+    MusicTrack(
+      id: 'track-3',
+      title: '很长很长的歌曲标题用于验证移动端歌单详情行内容不会横向溢出',
+      artistName: '很长很长的艺术家名称',
+      albumTitle: '很长很长的专辑名称',
+      artworkUrl: '',
+      duration: Duration(minutes: 4, seconds: 38),
+    ),
+  ];
+}
+
 class _FakeMusicRepository implements MusicRepository {
+  _FakeMusicRepository({this.playlistTracks = const []});
+
+  final List<MusicTrack> playlistTracks;
+
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
 
@@ -293,7 +407,10 @@ class _FakeMusicRepository implements MusicRepository {
     String playlistId, {
     int? limit,
     int startIndex = 0,
-  }) async => [];
+  }) async {
+    final effectiveLimit = limit ?? playlistTracks.length;
+    return playlistTracks.skip(startIndex).take(effectiveLimit).toList();
+  }
 
   @override
   Future<String> getStreamUrl(

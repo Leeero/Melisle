@@ -14,6 +14,7 @@ import 'package:cross_platform_music_player/infrastructure/database/app_database
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/search/search_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
@@ -29,7 +30,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('输入关键词开始搜索'), findsOneWidget);
+    expect(find.text('热门搜索'), findsOneWidget);
+    expect(find.text('周杰伦'), findsOneWidget);
+    expect(find.text('搜索分类'), findsNothing);
+    expect(find.text('输入关键词探索音乐库'), findsNothing);
+    expect(find.text('继续刚才的搜索'), findsNothing);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
 
@@ -61,18 +66,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('歌曲 1'), findsOneWidget);
-    expect(find.text('专辑 1'), findsOneWidget);
-    expect(find.text('艺术家 1'), findsOneWidget);
-    expect(find.text('歌单 1'), findsOneWidget);
-    expect(find.text('全部 4'), findsOneWidget);
+    expect(_scopeTab('歌曲'), findsOneWidget);
+    expect(_scopeTab('专辑'), findsOneWidget);
+    expect(_scopeTab('艺术家'), findsOneWidget);
+    expect(_scopeTab('歌单'), findsNothing);
+    expect(_scopeTab('全部'), findsOneWidget);
+    expect(find.text('1 首'), findsWidgets);
     expect(find.text('夜曲'), findsOneWidget);
     expect(find.text('私人雷达'), findsOneWidget);
 
-    await tester.tap(find.text('歌单 1'));
+    await tester.tap(_scopeTab('专辑'));
     await tester.pumpAndSettle();
 
-    expect(find.text('私人雷达'), findsOneWidget);
+    expect(find.text('十一月的萧邦'), findsOneWidget);
     expect(find.text('夜曲'), findsNothing);
   });
 
@@ -160,7 +166,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('艺术家 1'));
+    await tester.tap(_scopeTab('艺术家'));
     await tester.pumpAndSettle();
 
     expect(find.text('周杰伦'), findsWidgets);
@@ -185,14 +191,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('专辑 1'));
+    await tester.tap(_scopeTab('专辑'));
     await tester.pumpAndSettle();
 
     expect(find.byType(MusicAlbumGridCard), findsOneWidget);
     expect(find.text('十一月的萧邦'), findsOneWidget);
     expect(find.text('夜曲'), findsNothing);
 
-    await tester.tap(find.text('艺术家 1'));
+    await tester.tap(_scopeTab('艺术家'));
     await tester.pumpAndSettle();
 
     expect(find.byType(MusicArtistGridCard), findsOneWidget);
@@ -220,7 +226,7 @@ void main() {
     await tester.tap(find.text('撤销'));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(ActionChip, '夜曲'), findsOneWidget);
+    expect(find.text('夜曲'), findsOneWidget);
   });
 
   testWidgets('SearchPage_mobileWidth_rendersResults', (tester) async {
@@ -237,8 +243,56 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('歌曲'), findsOneWidget);
-    expect(find.text('专辑 1'), findsOneWidget);
+    expect(_scopeTab('歌曲'), findsOneWidget);
+    expect(_scopeTab('全部'), findsOneWidget);
+    expect(_scopeTab('歌单'), findsNothing);
+    expect(find.text('1 首'), findsOneWidget);
+    expect(_scopeTab('专辑'), findsOneWidget);
+    expect(find.byTooltip('加入队列'), findsOneWidget);
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.byType(MusicArtistGridCard), findsOneWidget);
+    final tabsRect = tester.getRect(
+      find.byWidgetPredicate((widget) => widget is AppScopeTabs),
+    );
+    expect(tabsRect.left, moreOrLessEquals(390 - tabsRect.right, epsilon: 0.1));
+
+    await tester.tap(_scopeTab('专辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.byType(MusicAlbumGridCard), findsOneWidget);
+
+    await tester.tap(_scopeTab('艺术家'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.byType(MusicArtistGridCard), findsOneWidget);
+  });
+
+  testWidgets('SearchPage_mobileArtistGrid_fitsLongArtistNames', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _longArtistResults()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), '独立音乐');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    await tester.tap(_scopeTab('艺术家'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.byType(MusicArtistGridCard), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('SearchPage_wideWidth_rendersResults', (tester) async {
@@ -255,12 +309,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('4 项'), findsOneWidget);
-    expect(find.text('歌曲 1'), findsOneWidget);
-    expect(find.text('全部 4'), findsOneWidget);
-    expect(find.text('1 首'), findsOneWidget);
-    expect(find.text('播放全部'), findsOneWidget);
-    expect(find.text('加入队列'), findsOneWidget);
+    expect(_scopeTab('歌曲'), findsOneWidget);
+    expect(_scopeTab('全部'), findsOneWidget);
+    expect(_scopeTab('歌单'), findsNothing);
+    expect(find.text('1 首'), findsWidgets);
+    expect(find.text('播放全部'), findsNothing);
+    expect(find.text('加入队列'), findsNothing);
+    expect(find.byTooltip('加入队列'), findsOneWidget);
   });
 
   testWidgets('SearchPage_responsiveSmoke_hasNoLayoutExceptions', (
@@ -283,9 +338,14 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(AppContentPage), findsOneWidget);
-      expect(find.text('歌曲 1'), findsOneWidget);
+      expect(_scopeTab('歌曲'), findsOneWidget);
     }
   });
+}
+
+Finder _scopeTab(String label) {
+  final tabs = find.byWidgetPredicate((widget) => widget is AppScopeTabs);
+  return find.descendant(of: tabs, matching: find.text(label));
 }
 
 Widget _buildSearchPage({
@@ -342,6 +402,34 @@ SearchResults _results() {
         name: '私人雷达',
         artworkUrl: '',
         trackCount: 30,
+      ),
+    ],
+  );
+}
+
+SearchResults _longArtistResults() {
+  return const SearchResults(
+    artists: [
+      MusicArtist(
+        id: 'artist-long-1',
+        name: '声音碎片收集者与漫长夏夜合奏团',
+        artworkUrl: '',
+        albumCount: 3,
+        trackCount: 42,
+      ),
+      MusicArtist(
+        id: 'artist-long-2',
+        name: '北方海岸线独立音乐计划',
+        artworkUrl: '',
+        albumCount: 2,
+        trackCount: 28,
+      ),
+      MusicArtist(
+        id: 'artist-long-3',
+        name: '雾岛黄昏唱片室',
+        artworkUrl: '',
+        albumCount: 1,
+        trackCount: 16,
       ),
     ],
   );

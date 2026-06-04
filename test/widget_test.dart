@@ -22,12 +22,18 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -101,6 +107,248 @@ void main() {
     expect(button, findsOneWidget);
     expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
     expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('mobile shell renders design bottom tab bar and navigates', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    final repository = _FakeMusicRepository(session: _authenticatedSession);
+    final settingsRepository = _FakeSettingsRepository();
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final authCubit = AuthCubit(
+      loginWithEmby: LoginWithEmby(repository),
+      restoreSession: RestoreSession(repository),
+      logout: Logout(repository),
+    );
+    final playerCubit = PlayerCubit(
+      repository: repository,
+      controller: AudioPlayerHandler(mediaSourceResolver: mediaSourceResolver),
+    );
+    final settingsCubit = AppSettingsCubit(
+      settingsRepository,
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    final favoritesCubit = FavoritesCubit(repository);
+    final downloadsCubit = DownloadsCubit(
+      repository: repository,
+      database: database,
+      cacheManager: AudioCacheManager(),
+    );
+
+    await tester.pumpWidget(
+      MusicPlayerApp(
+        repository: repository,
+        settingsRepository: settingsRepository,
+        mediaSourceResolver: mediaSourceResolver,
+        database: database,
+        authCubit: authCubit,
+        playerCubit: playerCubit,
+        settingsCubit: settingsCubit,
+        favoritesCubit: favoritesCubit,
+        downloadsCubit: downloadsCubit,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    for (final label in const ['首页', '搜索', '媒体库', '收藏', '设置']) {
+      expect(find.text(label), findsWidgets);
+    }
+
+    await tester.tap(find.text('搜索').last);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('歌曲、专辑、艺术家'), findsOneWidget);
+  });
+
+  testWidgets('mobile mini player keeps queue button and touch targets', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    final track = MusicTrack(
+      id: 'track-1',
+      title: '夜曲',
+      artistName: '周杰伦',
+      albumTitle: '十一月的萧邦',
+      artworkUrl: '',
+      duration: const Duration(minutes: 3, seconds: 46),
+    );
+    final playerCubit = _MiniPlayerCubit(
+      PlayerViewState(queue: [track], currentIndex: 0),
+    );
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(settingsCubit.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SizedBox.shrink(),
+              bottomNavigationBar: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: MiniPlayerBar(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('夜曲'), findsOneWidget);
+    expect(find.text('周杰伦'), findsOneWidget);
+    expect(find.byTooltip('播放'), findsOneWidget);
+    expect(find.byTooltip('当前播放列表'), findsOneWidget);
+    expect(tester.getSize(find.byTooltip('播放')).width, 44);
+    expect(tester.getSize(find.byTooltip('播放')).height, 44);
+    expect(tester.getSize(find.byTooltip('当前播放列表')).width, 44);
+    expect(tester.getSize(find.byTooltip('当前播放列表')).height, 44);
+  });
+
+  testWidgets('mobile queue sheet uses restored header and row actions', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    final tracks = [
+      const MusicTrack(
+        id: 'queue-1',
+        title: '夜曲',
+        artistName: '周杰伦',
+        albumTitle: '十一月的萧邦',
+        artworkUrl: '',
+        duration: Duration(minutes: 3, seconds: 46),
+      ),
+      const MusicTrack(
+        id: 'queue-2',
+        title: '晴天',
+        artistName: '周杰伦',
+        albumTitle: '叶惠美',
+        artworkUrl: '',
+        duration: Duration(minutes: 4, seconds: 29),
+      ),
+    ];
+    final playerCubit = _MiniPlayerCubit(
+      PlayerViewState(queue: tracks, currentIndex: 0, isPlaying: true),
+    );
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(settingsCubit.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: const MaterialApp(home: Scaffold(body: QueueSheet())),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('播放队列'), findsOneWidget);
+    expect(find.text('2 首歌曲'), findsOneWidget);
+    expect(find.text('清空'), findsNothing);
+    expect(find.text('完成'), findsNothing);
+    expect(find.byTooltip('移出队列'), findsNWidgets(2));
+    expect(find.byTooltip('拖拽排序'), findsNWidgets(2));
+  });
+
+  testWidgets('mobile playlist grid card keeps title within compact cell', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(settingsCubit.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: BlocProvider<AppSettingsCubit>.value(
+          value: settingsCubit,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 164,
+                  height: 210,
+                  child: MusicPlaylistGridCard(
+                    playlist: const MusicPlaylist(
+                      id: 'playlist-overflow',
+                      name: '一个非常非常长的移动端测试歌单标题',
+                      artworkUrl: '',
+                      trackCount: 128,
+                    ),
+                    onTap: () {},
+                    artworkRadius: AppRadiusTokens.mobileMd,
+                    compact: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('一个非常非常长的移动端测试歌单标题'), findsOneWidget);
   });
 
   testWidgets('dense app action button keeps a 44px touch target', (
@@ -201,6 +449,7 @@ void main() {
       repository: repository,
       controller: AudioPlayerHandler(mediaSourceResolver: mediaSourceResolver),
     );
+    addTearDown(database.close);
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
@@ -229,9 +478,96 @@ void main() {
     expect(find.byTooltip('返回'), findsNothing);
     expect(find.byType(AppContentPage), findsOneWidget);
   });
+
+  testWidgets('history page with tracks keeps mobile header responsive', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    final repository = _FakeMusicRepository();
+    final settingsRepository = _FakeSettingsRepository();
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      settingsRepository,
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    await database.insertPlayHistory(
+      PlayHistoryCompanion.insert(
+        trackId: 'history-track-1',
+        title: '最近听过的歌',
+        artistName: const Value('测试艺术家'),
+        albumTitle: const Value('测试专辑'),
+        playedAtMs: DateTime(2026, 1, 1, 9, 30).millisecondsSinceEpoch,
+      ),
+    );
+    final playerCubit = PlayerCubit(
+      repository: repository,
+      controller: AudioPlayerHandler(mediaSourceResolver: mediaSourceResolver),
+    );
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<AppDatabase>.value(value: database),
+          RepositoryProvider<SettingsRepository>.value(
+            value: settingsRepository,
+          ),
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+          ],
+          child: MaterialApp(
+            initialRoute: '/history',
+            routes: {
+              '/': (_) => const Scaffold(body: Text('Root')),
+              '/history': (_) => const HistoryPage(),
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('返回'), findsOneWidget);
+    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.text('播放历史'), findsWidgets);
+    expect(find.text('最近听过的歌'), findsOneWidget);
+  });
+}
+
+const _authenticatedSession = AuthSession(
+  serverUrl: 'https://music.example.test',
+  userId: 'user-1',
+  userName: '测试用户',
+  accessToken: 'token',
+  backendType: MusicBackendType.navidrome,
+);
+
+class _MiniPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
+  _MiniPlayerCubit(super.initialState);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeMusicRepository implements MusicRepository {
+  _FakeMusicRepository({this.session});
+
+  final AuthSession? session;
+
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
 
@@ -291,15 +627,13 @@ class _FakeMusicRepository implements MusicRepository {
     required String serverUrl,
     required String username,
     required String password,
-  }) {
-    throw UnimplementedError();
-  }
+  }) async => session ?? _authenticatedSession;
 
   @override
   Future<void> logout() async {}
 
   @override
-  Future<AuthSession?> restoreSession() async => null;
+  Future<AuthSession?> restoreSession() async => session;
 
   @override
   Future<void> setFavorite(String itemId, bool value) async {}
