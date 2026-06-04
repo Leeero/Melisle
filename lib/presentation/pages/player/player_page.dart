@@ -144,6 +144,7 @@ class _MobileLayoutState extends State<_MobileLayout> {
         return Column(
           children: [
             _PlayerTopBar(
+              compact: true,
               onMorePressed: () =>
                   _showMobileMoreActionsSheet(context, track: widget.track),
             ),
@@ -340,14 +341,40 @@ class _MobileLyricView extends StatelessWidget {
           );
         }
 
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final currentColor = Color.lerp(
+          colorScheme.onSurface,
+          theme.musicRose,
+          theme.brightness == Brightness.dark ? 0.52 : 0.42,
+        )!;
+        final inactiveColor = colorScheme.onSurfaceVariant.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.62 : 0.56,
+        );
+
         return LyricView(
           lines: state.lyrics,
           currentIndex: state.currentLyricIndex,
           textAlign: TextAlign.center,
           alignment: Alignment.center,
           maxTextWidth: 340,
-          currentScale: 1.04,
+          currentScale: 1.025,
           showCurrentLineButton: false,
+          linePadding: const EdgeInsets.symmetric(vertical: 3),
+          currentTextStyle: theme.textTheme.titleLarge?.copyWith(
+            color: currentColor,
+            fontSize: 19,
+            fontWeight: FontWeight.w600,
+            height: 1.74,
+            letterSpacing: 0,
+          ),
+          inactiveTextStyle: theme.textTheme.bodyLarge?.copyWith(
+            color: inactiveColor,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            height: 2.04,
+            letterSpacing: 0,
+          ),
           onLineTap: (i) => context.read<PlayerCubit>().seekToLyricIndex(i),
         );
       },
@@ -960,9 +987,10 @@ class _DesktopExtrasBar extends StatelessWidget {
 }
 
 class _PlayerTopBar extends StatelessWidget {
-  const _PlayerTopBar({this.onMorePressed});
+  const _PlayerTopBar({this.onMorePressed, this.compact = false});
 
   final VoidCallback? onMorePressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -974,6 +1002,51 @@ class _PlayerTopBar extends StatelessWidget {
       context,
     ).clamp(12.0, 24.0).toDouble();
     final morePressed = onMorePressed;
+    final theme = Theme.of(context);
+
+    if (compact) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacingTokens.playerHorizontalPadding,
+          6,
+          AppSpacingTokens.playerHorizontalPadding,
+          8,
+        ),
+        child: Row(
+          children: [
+            _ControlButton(
+              icon: Icons.keyboard_arrow_down_rounded,
+              onTap: () => Navigator.of(context).pop(),
+              tooltip: '返回',
+              size: 44,
+              iconSize: 24,
+            ),
+            Expanded(
+              child: Text(
+                '正在播放',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+            if (morePressed != null)
+              _ControlButton(
+                icon: Icons.more_horiz_rounded,
+                onTap: morePressed,
+                tooltip: '更多设置',
+                size: 44,
+                iconSize: 22,
+              )
+            else
+              const SizedBox.square(dimension: 44),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1275,8 +1348,20 @@ class _PlaybackModeButtonState extends State<_PlaybackModeButton> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isActiveMode =
-        !widget.subtle && widget.mode != PlaybackModeOption.sequence;
+    final isMobileStyle = widget.subtle;
+    final isActiveMode = widget.mode != PlaybackModeOption.sequence;
+
+    if (isMobileStyle) {
+      return _ControlButton(
+        icon: _playbackModeIcon(widget.mode),
+        onTap: widget.onTap,
+        tooltip: '播放模式：${_playbackModeLabel(widget.mode)}，点击切换',
+        size: 46,
+        iconSize: 22,
+        active: isActiveMode,
+      );
+    }
+
     final foregroundColor = isActiveMode
         ? colorScheme.primary
         : (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant);
@@ -3002,6 +3087,7 @@ class _ControlButton extends StatefulWidget {
     this.tooltip,
     this.size,
     this.iconSize,
+    this.active = false,
   });
 
   final IconData icon;
@@ -3010,6 +3096,7 @@ class _ControlButton extends StatefulWidget {
   final String? tooltip;
   final double? size;
   final double? iconSize;
+  final bool active;
 
   @override
   State<_ControlButton> createState() => _ControlButtonState();
@@ -3039,6 +3126,8 @@ class _ControlButtonState extends State<_ControlButton> {
                     : Colors.transparent));
     final foregroundColor = widget.isPrimary
         ? colorScheme.surface
+        : widget.active
+        ? colorScheme.primary
         : (_hovered || _pressed
               ? colorScheme.onSurface
               : colorScheme.onSurfaceVariant);

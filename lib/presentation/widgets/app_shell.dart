@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
@@ -87,15 +85,11 @@ class _CompactShellScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasMiniPlayer = context.select<PlayerCubit, bool>(
-      (cubit) => cubit.state.currentTrack != null,
-    );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: navigationShell,
       bottomNavigationBar: _ShellBottomDock(
-        hasMiniPlayer: hasMiniPlayer,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -105,7 +99,6 @@ class _CompactShellScaffold extends StatelessWidget {
               ),
               child: MiniPlayerBar(),
             ),
-            SizedBox(height: hasMiniPlayer ? 2 : 0),
             _ShellBottomBar(
               selectedIndex: selectedIndex,
               onSelected: onSelected,
@@ -118,23 +111,16 @@ class _CompactShellScaffold extends StatelessWidget {
 }
 
 class _ShellBottomDock extends StatelessWidget {
-  const _ShellBottomDock({required this.child, required this.hasMiniPlayer});
+  const _ShellBottomDock({required this.child});
 
   final Widget child;
-  final bool hasMiniPlayer;
 
   @override
   Widget build(BuildContext context) {
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.only(top: hasMiniPlayer ? 0 : 5),
-            child: child,
-          ),
-        ),
+        child: child,
       ),
     );
   }
@@ -368,73 +354,92 @@ class _ShellBottomBar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final selectedColor = Color.lerp(
+      colorScheme.primary,
+      theme.musicTeal,
+      0.18,
+    )!;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: isDark ? 0.82 : 0.88),
+        color: colorScheme.surface.withValues(alpha: 0.86),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outline.withValues(alpha: 0.72),
+            color: Color.alphaBlend(
+              theme.musicTeal.withValues(alpha: 0.14),
+              colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
             width: 0.5,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: isDark ? 0.16 : 0.08),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.12 : 0.06),
             blurRadius: 24,
             offset: const Offset(0, -8),
           ),
         ],
       ),
-      child: SizedBox(
-        height: AppSpacingTokens.mobileTabContentHeight,
+      child: SafeArea(
+        top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacingTokens.mobilePageX,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _ShellBottomButton(
-                  icon: Icons.home_rounded,
-                  label: '首页',
-                  selected: selectedIndex == 0,
-                  onTap: () => onSelected(0),
-                ),
+          padding: const EdgeInsets.only(top: 5),
+          child: SizedBox(
+            height: AppSpacingTokens.mobileTabContentHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.mobilePageX,
               ),
-              Expanded(
-                child: _ShellBottomButton(
-                  icon: Icons.search_rounded,
-                  label: '搜索',
-                  selected: selectedIndex == 1,
-                  onTap: () => onSelected(1),
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ShellBottomButton(
+                      icon: Icons.home_rounded,
+                      label: '首页',
+                      selected: selectedIndex == 0,
+                      selectedColor: selectedColor,
+                      onTap: () => onSelected(0),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ShellBottomButton(
+                      icon: Icons.search_rounded,
+                      label: '搜索',
+                      selected: selectedIndex == 1,
+                      selectedColor: selectedColor,
+                      onTap: () => onSelected(1),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ShellBottomButton(
+                      icon: Icons.library_music_rounded,
+                      label: '媒体库',
+                      selected: selectedIndex == 2,
+                      selectedColor: selectedColor,
+                      onTap: () => onSelected(2),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ShellBottomButton(
+                      icon: Icons.favorite_border_rounded,
+                      label: '收藏',
+                      selected: selectedIndex == 3,
+                      selectedColor: selectedColor,
+                      onTap: () => onSelected(3),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ShellBottomButton(
+                      icon: Icons.settings_rounded,
+                      label: '设置',
+                      selected: selectedIndex == 4,
+                      selectedColor: selectedColor,
+                      onTap: () => onSelected(4),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: _ShellBottomButton(
-                  icon: Icons.library_music_rounded,
-                  label: '媒体库',
-                  selected: selectedIndex == 2,
-                  onTap: () => onSelected(2),
-                ),
-              ),
-              Expanded(
-                child: _ShellBottomButton(
-                  icon: Icons.favorite_border_rounded,
-                  label: '收藏',
-                  selected: selectedIndex == 3,
-                  onTap: () => onSelected(3),
-                ),
-              ),
-              Expanded(
-                child: _ShellBottomButton(
-                  icon: Icons.settings_rounded,
-                  label: '设置',
-                  selected: selectedIndex == 4,
-                  onTap: () => onSelected(4),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -442,57 +447,72 @@ class _ShellBottomBar extends StatelessWidget {
   }
 }
 
-class _ShellBottomButton extends StatelessWidget {
+class _ShellBottomButton extends StatefulWidget {
   const _ShellBottomButton({
     required this.icon,
     required this.label,
     required this.selected,
+    required this.selectedColor,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
+  final Color selectedColor;
   final VoidCallback onTap;
 
   @override
+  State<_ShellBottomButton> createState() => _ShellBottomButtonState();
+}
+
+class _ShellBottomButtonState extends State<_ShellBottomButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final color = widget.selected ? widget.selectedColor : theme.muted;
 
     return Semantics(
-      label: label,
+      label: widget.label,
       button: true,
-      selected: selected,
+      selected: widget.selected,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
+          onHighlightChanged: (value) => setState(() => _pressed = value),
           borderRadius: BorderRadius.circular(12),
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
-          child: SizedBox(
-            height: AppSpacingTokens.mobileTabContentHeight,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 22,
-                  color: selected
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          child: AnimatedOpacity(
+            duration: AppMotion.micro,
+            curve: AppMotion.standard,
+            opacity: _pressed ? 0.62 : 1,
+            child: SizedBox(
+              height: AppSpacingTokens.mobileTabContentHeight,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(widget.icon, size: 22, color: color),
+                  const SizedBox(height: 3),
+                  Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontSize: 10,
+                      height: 1,
+                      fontWeight: widget.selected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

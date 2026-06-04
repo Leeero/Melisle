@@ -88,9 +88,9 @@ class _MiniPlayerFrame extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: SizedBox(
-        height: AppSpacingTokens.mobileMiniPlayerHeight,
+        height: 60,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+          borderRadius: BorderRadius.circular(18),
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: DecoratedBox(
@@ -104,7 +104,7 @@ class _MiniPlayerFrame extends StatelessWidget {
                     ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: Color.alphaBlend(
                     theme.musicTeal.withValues(alpha: 0.18),
@@ -121,7 +121,7 @@ class _MiniPlayerFrame extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 11),
+                padding: const EdgeInsets.fromLTRB(11, 0, 10, 0),
                 child: child,
               ),
             ),
@@ -132,7 +132,7 @@ class _MiniPlayerFrame extends StatelessWidget {
   }
 }
 
-class _CompactMiniPlayer extends StatelessWidget {
+class _CompactMiniPlayer extends StatefulWidget {
   const _CompactMiniPlayer({
     required this.trackTitle,
     required this.artistName,
@@ -146,79 +146,102 @@ class _CompactMiniPlayer extends StatelessWidget {
   final ArtworkSourceContext sourceContext;
 
   @override
+  State<_CompactMiniPlayer> createState() => _CompactMiniPlayerState();
+}
+
+class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Semantics(
-      label: '当前播放：$trackTitle，$artistName。点击展开播放页。',
+      label: '当前播放：${widget.trackTitle}，${widget.artistName}。点击展开播放页。',
       button: true,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           onTap: () => PlayerNavigation.openPlayerPage(context),
-          child: Row(
-            children: [
-              CachedArtwork(
-                imageUrl: artworkUrl,
-                size: 44,
-                borderRadius: 16,
-                sourceContext: sourceContext,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trackTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+          onHighlightChanged: (value) => setState(() => _pressed = value),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: AnimatedScale(
+            duration: AppMotion.micro,
+            curve: AppMotion.standard,
+            scale: _pressed ? 0.992 : 1,
+            child: AnimatedSlide(
+              duration: AppMotion.micro,
+              curve: AppMotion.standard,
+              offset: _pressed ? const Offset(0, 0.012) : Offset.zero,
+              child: Row(
+                children: [
+                  CachedArtwork(
+                    imageUrl: widget.artworkUrl,
+                    size: 42,
+                    borderRadius: 12,
+                    sourceContext: widget.sourceContext,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.trackTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 14,
+                            height: 1.15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.artistName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.muted,
+                            fontSize: 12,
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      artistName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              BlocBuilder<PlayerCubit, PlayerViewState>(
-                buildWhen: (prev, next) =>
-                    prev.isPlaying != next.isPlaying ||
-                    prev.isLoading != next.isLoading,
-                builder: (context, state) {
-                  return _MiniControlButton(
-                    icon: state.isLoading
-                        ? Icons.downloading_rounded
-                        : (state.isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded),
-                    onPressed: context.read<PlayerCubit>().togglePlayback,
-                    isPrimary: true,
+                  ),
+                  const SizedBox(width: 10),
+                  BlocBuilder<PlayerCubit, PlayerViewState>(
+                    buildWhen: (prev, next) =>
+                        prev.isPlaying != next.isPlaying ||
+                        prev.isLoading != next.isLoading,
+                    builder: (context, state) {
+                      return _MiniControlButton(
+                        icon: state.isLoading
+                            ? Icons.downloading_rounded
+                            : (state.isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded),
+                        onPressed: context.read<PlayerCubit>().togglePlayback,
+                        isPrimary: true,
+                        compact: true,
+                        tooltip: state.isPlaying ? '暂停' : '播放',
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _MiniControlButton(
+                    icon: Icons.queue_music_rounded,
+                    onPressed: () => _showMiniQueueSheet(context),
                     compact: true,
-                    tooltip: state.isPlaying ? '暂停' : '播放',
-                  );
-                },
+                    tooltip: '当前播放列表',
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              _MiniControlButton(
-                icon: Icons.queue_music_rounded,
-                onPressed: () => _showMiniQueueSheet(context),
-                compact: true,
-                tooltip: '当前播放列表',
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -576,7 +599,7 @@ class _MiniPlaybackModeButton extends StatelessWidget {
   }
 }
 
-class _MiniControlButton extends StatelessWidget {
+class _MiniControlButton extends StatefulWidget {
   const _MiniControlButton({
     required this.icon,
     required this.onPressed,
@@ -592,25 +615,91 @@ class _MiniControlButton extends StatelessWidget {
   final bool compact;
 
   @override
+  State<_MiniControlButton> createState() => _MiniControlButtonState();
+}
+
+class _MiniControlButtonState extends State<_MiniControlButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final size = compact ? 44.0 : 36.0;
+    if (widget.compact) {
+      final visualSize = widget.isPrimary ? 36.0 : 40.0;
+      final foreground = widget.isPrimary
+          ? theme.scaffoldBackgroundColor
+          : colorScheme.onSurface;
+      final background = widget.isPrimary
+          ? Color.lerp(colorScheme.onSurface, theme.musicRose, 0.12)!
+          : (_pressed ? colorScheme.outlineVariant : Colors.transparent);
+
+      return Tooltip(
+        message: widget.tooltip ?? '',
+        child: Semantics(
+          button: true,
+          label: widget.tooltip,
+          child: SizedBox.square(
+            dimension: 44,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onPressed,
+                onHighlightChanged: (value) => setState(() => _pressed = value),
+                borderRadius: BorderRadius.circular(22),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Center(
+                  child: AnimatedScale(
+                    duration: AppMotion.micro,
+                    curve: AppMotion.standard,
+                    scale: _pressed && widget.isPrimary ? 0.96 : 1,
+                    child: AnimatedOpacity(
+                      duration: AppMotion.micro,
+                      curve: AppMotion.standard,
+                      opacity: _pressed && widget.isPrimary ? 0.92 : 1,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: background,
+                          shape: BoxShape.circle,
+                        ),
+                        child: SizedBox.square(
+                          dimension: visualSize,
+                          child: Icon(
+                            widget.icon,
+                            size: widget.isPrimary ? 16 : 20,
+                            color: foreground,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    const size = 36.0;
     return IconButton.filled(
-      onPressed: onPressed,
-      tooltip: tooltip,
+      onPressed: widget.onPressed,
+      tooltip: widget.tooltip,
       style: IconButton.styleFrom(
-        backgroundColor: isPrimary ? colorScheme.onSurface : Colors.transparent,
-        foregroundColor: isPrimary
+        backgroundColor: widget.isPrimary
+            ? colorScheme.onSurface
+            : Colors.transparent,
+        foregroundColor: widget.isPrimary
             ? theme.scaffoldBackgroundColor
             : colorScheme.onSurfaceVariant,
-        side: isPrimary ? BorderSide.none : BorderSide.none,
+        side: BorderSide.none,
         minimumSize: Size.square(size),
         maximumSize: Size.square(size),
         padding: EdgeInsets.zero,
-        iconSize: compact ? (isPrimary ? 22 : 19) : (isPrimary ? 18 : 18),
+        iconSize: 18,
       ),
-      icon: Icon(icon),
+      icon: Icon(widget.icon),
     );
   }
 }

@@ -1,9 +1,9 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,26 +37,8 @@ class QueueSheet extends StatelessWidget {
           builder: (context, headerState) {
             return AppSheetScaffold(
               title: '播放队列',
-              description: '${headerState.queue.length} 首歌曲',
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (headerState.queue.isNotEmpty) ...[
-                    AppActionButton(
-                      icon: Icons.delete_sweep_rounded,
-                      label: '清空',
-                      tone: AppActionButtonTone.danger,
-                      onPressed: () => _confirmClearQueue(context),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('完成'),
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+              trailing: _QueueCountLabel(count: headerState.queue.length),
               child: Expanded(
                 child: BlocBuilder<PlayerCubit, PlayerViewState>(
                   buildWhen: (prev, next) =>
@@ -98,19 +80,6 @@ class QueueSheet extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmClearQueue(BuildContext context) async {
-    final confirmed = await showAppConfirmationDialog(
-      context: context,
-      title: '清空播放队列',
-      message: '将移除当前队列中的所有歌曲，正在播放的内容也会停止。',
-      confirmLabel: '清空',
-      icon: Icons.delete_sweep_rounded,
-      tone: AppModalTone.danger,
-    );
-    if (!confirmed || !context.mounted) return;
-    context.read<PlayerCubit>().clearQueue();
-  }
-
   /// Proxy decorator for the dragged item — adds elevation and scale.
   static Widget _proxyDecorator(
     Widget child,
@@ -120,14 +89,29 @@ class QueueSheet extends StatelessWidget {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
-        final t = Curves.easeInOut.transform(animation.value);
-        final elevation = 4.0 * t;
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final t = AppMotion.enter.transform(animation.value);
         return Material(
-          color: Colors.transparent,
-          elevation: elevation,
-          shadowColor: Colors.black26,
-          borderRadius: BorderRadius.circular(20),
-          child: Transform.scale(scale: 1.0 + 0.02 * t, child: child),
+          color: colorScheme.surface,
+          shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.14),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.10 * t),
+                  blurRadius: 22 * t,
+                  offset: Offset(0, 8 * t),
+                ),
+              ],
+            ),
+            child: Transform.scale(scale: 1.0 + 0.012 * t, child: child),
+          ),
         );
       },
       child: child,
@@ -185,9 +169,9 @@ class _QueueItem extends StatelessWidget {
               Navigator.of(context).pop();
             }
           },
-          extraTrailing: _QueueDragHandle(
+          extraTrailing: _QueueItemActions(
             index: index,
-            colorScheme: colorScheme,
+            onRemove: () => context.read<PlayerCubit>().removeQueueItem(index),
           ),
         ),
       ),
@@ -195,11 +179,59 @@ class _QueueItem extends StatelessWidget {
   }
 }
 
-class _QueueDragHandle extends StatelessWidget {
-  const _QueueDragHandle({required this.index, required this.colorScheme});
+class _QueueCountLabel extends StatelessWidget {
+  const _QueueCountLabel({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 1),
+      child: Text(
+        '$count 首歌曲',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.muted,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueItemActions extends StatelessWidget {
+  const _QueueItemActions({required this.index, required this.onRemove});
 
   final int index;
-  final ColorScheme colorScheme;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _QueueActionButton(
+          icon: Icons.close_rounded,
+          tooltip: '移出队列',
+          tone: _QueueActionTone.danger,
+          onPressed: onRemove,
+        ),
+        const SizedBox(width: 2),
+        _QueueDragHandle(index: index),
+      ],
+    );
+  }
+}
+
+class _QueueDragHandle extends StatelessWidget {
+  const _QueueDragHandle({required this.index});
+
+  final int index;
 
   @override
   Widget build(BuildContext context) {
@@ -210,14 +242,83 @@ class _QueueDragHandle extends StatelessWidget {
         message: '拖拽排序',
         child: ReorderableDragStartListener(
           index: index,
+          child: const _QueueActionChrome(
+            icon: Icons.drag_indicator_rounded,
+            tone: _QueueActionTone.neutral,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _QueueActionTone { neutral, danger }
+
+class _QueueActionButton extends StatelessWidget {
+  const _QueueActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.tone = _QueueActionTone.neutral,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final _QueueActionTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        label: tooltip,
+        button: true,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(18),
+          hoverColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          child: _QueueActionChrome(icon: icon, tone: tone),
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueActionChrome extends StatelessWidget {
+  const _QueueActionChrome({required this.icon, required this.tone});
+
+  final IconData icon;
+  final _QueueActionTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final danger = tone == _QueueActionTone.danger;
+    final foreground = danger ? colorScheme.error : theme.muted;
+    final background = danger
+        ? colorScheme.errorContainer.withValues(alpha: 0.18)
+        : theme.hoverWash.withValues(alpha: 0.58);
+    final border = danger
+        ? colorScheme.error.withValues(alpha: 0.18)
+        : colorScheme.outlineVariant.withValues(alpha: 0.54);
+
+    return SizedBox.square(
+      dimension: 44,
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: border),
+          ),
           child: SizedBox.square(
-            dimension: 44,
-            child: Center(
-              child: Icon(
-                Icons.drag_handle_rounded,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
+            dimension: 36,
+            child: Icon(icon, size: 18, color: foreground),
           ),
         ),
       ),

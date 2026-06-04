@@ -24,6 +24,9 @@ class LyricView extends StatefulWidget {
     this.maxTextWidth,
     this.currentScale = 1.05,
     this.showCurrentLineButton = true,
+    this.currentTextStyle,
+    this.inactiveTextStyle,
+    this.linePadding = const EdgeInsets.symmetric(vertical: 6),
   });
 
   final List<LyricLine> lines;
@@ -37,6 +40,9 @@ class LyricView extends StatefulWidget {
   final double? maxTextWidth;
   final double currentScale;
   final bool showCurrentLineButton;
+  final TextStyle? currentTextStyle;
+  final TextStyle? inactiveTextStyle;
+  final EdgeInsetsGeometry linePadding;
 
   @override
   State<LyricView> createState() => _LyricViewState();
@@ -172,6 +178,9 @@ class _LyricViewState extends State<LyricView> {
                   alignment: widget.alignment,
                   maxTextWidth: widget.maxTextWidth,
                   currentScale: widget.currentScale,
+                  currentTextStyle: widget.currentTextStyle,
+                  inactiveTextStyle: widget.inactiveTextStyle,
+                  linePadding: widget.linePadding,
                   onTap: widget.onLineTap == null
                       ? null
                       : () => _handleLineTap(index),
@@ -228,7 +237,10 @@ class _LyricLineTile extends StatelessWidget {
     required this.textAlign,
     required this.alignment,
     required this.currentScale,
+    required this.linePadding,
     this.maxTextWidth,
+    this.currentTextStyle,
+    this.inactiveTextStyle,
     this.onTap,
   });
 
@@ -237,7 +249,10 @@ class _LyricLineTile extends StatelessWidget {
   final TextAlign textAlign;
   final Alignment alignment;
   final double currentScale;
+  final EdgeInsetsGeometry linePadding;
   final double? maxTextWidth;
+  final TextStyle? currentTextStyle;
+  final TextStyle? inactiveTextStyle;
   final VoidCallback? onTap;
 
   @override
@@ -245,7 +260,7 @@ class _LyricLineTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final style =
+    final fallbackStyle =
         (isCurrent
                 ? theme.textTheme.headlineSmall
                 : theme.textTheme.titleMedium)
@@ -263,6 +278,8 @@ class _LyricLineTile extends StatelessWidget {
               : colorScheme.onSurfaceVariant.withValues(alpha: 0.58),
           height: isCurrent ? 1.56 : 1.78,
         );
+    final style =
+        (isCurrent ? currentTextStyle : inactiveTextStyle) ?? fallbackStyle;
 
     Widget content = AnimatedScale(
       duration: const Duration(milliseconds: 420),
@@ -297,7 +314,7 @@ class _LyricLineTile extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: linePadding,
           child: Align(alignment: alignment, child: content),
         ),
       ),

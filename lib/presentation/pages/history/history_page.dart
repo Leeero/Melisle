@@ -146,28 +146,80 @@ class _HistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+    final canPop = Navigator.of(context).canPop();
+    final playAllButton = count == 0
+        ? null
+        : PlayAllButton(
+            variant: PlayAllButtonVariant.compact,
+            onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+              context,
+              loadedTracks: tracks,
+              allLoaded: true,
+              fetchAll: () async => tracks,
+            ),
+          );
+
+    if (compact) {
+      return _MobileHistoryHeader(canPop: canPop, playAllButton: playAllButton);
+    }
+
     return AppPageHeader(
       title: '播放历史',
       description: '过去 7 天的播放记录',
-      automaticImplyLeading: false,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           MetaPill(label: '$count 条', size: MetaPillSize.compact),
-          if (count > 0) ...[
+          if (playAllButton != null) ...[
             const SizedBox(width: 10),
-            PlayAllButton(
-              variant: PlayAllButtonVariant.iconOnly,
-              onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-                context,
-                loadedTracks: tracks,
-                allLoaded: true,
-                fetchAll: () async => tracks,
-              ),
-            ),
+            playAllButton,
           ],
         ],
       ),
+    );
+  }
+}
+
+class _MobileHistoryHeader extends StatelessWidget {
+  const _MobileHistoryHeader({required this.canPop, this.playAllButton});
+
+  final bool canPop;
+  final Widget? playAllButton;
+
+  @override
+  Widget build(BuildContext context) {
+    final showActionRow = canPop || playAllButton != null;
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showActionRow) ...[
+          Row(
+            children: [
+              if (canPop)
+                AppBackButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              const Spacer(),
+              ?playAllButton,
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        Text(
+          '播放历史',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.headlineLarge?.copyWith(
+            fontSize: 31,
+            height: 1.12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
     );
   }
 }

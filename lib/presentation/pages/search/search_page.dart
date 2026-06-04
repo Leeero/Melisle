@@ -19,8 +19,8 @@ import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/search/search_empty_view.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,12 +28,22 @@ import 'package:go_router/go_router.dart';
 
 enum _SearchScope { all, tracks, albums, artists, playlists }
 
-const _visibleSearchScopes = [
+const _searchTypeScopes = [
   _SearchScope.all,
   _SearchScope.tracks,
   _SearchScope.albums,
   _SearchScope.artists,
-  _SearchScope.playlists,
+];
+
+const _hotSearchQueries = [
+  '周杰伦',
+  '夜曲',
+  '林俊杰',
+  '王菲',
+  '华语流行',
+  '独立民谣',
+  '睡前播放',
+  '整理音乐库',
 ];
 
 extension _SearchScopeInfo on _SearchScope {
@@ -81,13 +91,15 @@ extension _SearchScopeInfo on _SearchScope {
 List<AppScopeTabItem<_SearchScope>> _searchScopeItems(
   SearchResults results, {
   bool withIcons = true,
+  bool withCounts = true,
+  List<_SearchScope> scopes = _searchTypeScopes,
 }) {
   return [
-    for (final scope in _visibleSearchScopes)
+    for (final scope in scopes)
       AppScopeTabItem(
         value: scope,
         label: scope.label,
-        count: scope.count(results),
+        count: withCounts ? scope.count(results) : null,
         icon: withIcons ? scope.icon : null,
         semanticLabel: '查看${scope.label}结果',
       ),
@@ -193,9 +205,6 @@ class _SearchViewState extends State<_SearchView> {
             header: _SearchHeader(
               controller: _controller,
               focusNode: _focusNode,
-              resultCount: state.query.trim().isEmpty || state.results.isEmpty
-                  ? null
-                  : state.results.totalCount,
               onClear: _clearQuery,
               onChanged: _onQueryChanged,
               onSubmitted: _submitQuery,
@@ -219,7 +228,6 @@ class _SearchHeader extends StatelessWidget {
   const _SearchHeader({
     required this.controller,
     required this.focusNode,
-    required this.resultCount,
     required this.onClear,
     required this.onChanged,
     required this.onSubmitted,
@@ -227,7 +235,6 @@ class _SearchHeader extends StatelessWidget {
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final int? resultCount;
   final VoidCallback onClear;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
@@ -241,11 +248,8 @@ class _SearchHeader extends StatelessWidget {
       children: [
         AppPageHeader(
           title: '搜索',
-          description: compact ? null : '查找歌曲、专辑、艺术家和歌单',
+          description: null,
           hideTitleOnCompactWithCenter: false,
-          trailing: compact || resultCount == null
-              ? null
-              : MetaPill(label: '$resultCount 项', size: MetaPillSize.compact),
         ),
         SizedBox(height: compact ? 12 : 18),
         ConstrainedBox(
@@ -356,6 +360,9 @@ class _SearchResultsContent extends StatelessWidget {
             horizontalPadding: horizontalPadding,
           );
         }
+        final effectiveScope = selectedScope == _SearchScope.playlists
+            ? _SearchScope.all
+            : selectedScope;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
@@ -371,19 +378,26 @@ class _SearchResultsContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppScopeTabs<_SearchScope>(
-                    semanticLabel: '搜索结果分类',
-                    variant: AppScopeTabsVariant.underline,
-                    items: _searchScopeItems(results, withIcons: false),
-                    selectedValue: selectedScope,
-                    onChanged: onScopeChanged,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: AppScopeTabs<_SearchScope>(
+                      semanticLabel: '搜索结果分类',
+                      variant: AppScopeTabsVariant.underline,
+                      items: _searchScopeItems(
+                        results,
+                        withIcons: false,
+                        withCounts: false,
+                      ),
+                      selectedValue: effectiveScope,
+                      onChanged: onScopeChanged,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   if (isLoading) const _SearchLoadingBanner(),
-                  if (selectedScope.apply(results).isEmpty)
-                    _ScopedNoResults(selectedScope: selectedScope)
+                  if (effectiveScope.apply(results).isEmpty)
+                    _ScopedNoResults(selectedScope: effectiveScope)
                   else
-                    _WideSearchResults(results: selectedScope.apply(results)),
+                    _WideSearchResults(results: effectiveScope.apply(results)),
                 ],
               ),
             ),
@@ -458,10 +472,16 @@ class _SearchNoResultsState extends StatelessWidget {
           ),
           if (recentQueries.isNotEmpty) ...[
             const SizedBox(height: AppSpacingTokens.sectionGap),
-            _RecentSearchSection(
-              queries: recentQueries,
-              onSelected: onSelected,
-              showClearAction: false,
+            SearchChipGroup(
+              title: '最近搜索',
+              chips: [
+                for (final query in recentQueries)
+                  SearchSuggestionChip(
+                    label: query,
+                    icon: Icons.history_rounded,
+                    onPressed: () => onSelected(query),
+                  ),
+              ],
             ),
           ],
         ],
@@ -626,8 +646,11 @@ class _CompactSearchResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scopedResults = selectedScope.apply(results);
-    final showAll = selectedScope == _SearchScope.all;
+    final effectiveScope = selectedScope == _SearchScope.playlists
+        ? _SearchScope.all
+        : selectedScope;
+    final scopedResults = effectiveScope.apply(results);
+    final showAll = effectiveScope == _SearchScope.all;
 
     return CustomScrollView(
       slivers: [
@@ -642,9 +665,14 @@ class _CompactSearchResults extends StatelessWidget {
             child: AppScopeTabs<_SearchScope>(
               semanticLabel: '搜索结果分类',
               variant: AppScopeTabsVariant.pill,
-              items: _searchScopeItems(results),
-              selectedValue: selectedScope,
+              items: _searchScopeItems(
+                results,
+                withIcons: false,
+                withCounts: false,
+              ),
+              selectedValue: effectiveScope,
               onChanged: onScopeChanged,
+              fillWidth: true,
             ),
           ),
         ),
@@ -659,7 +687,7 @@ class _CompactSearchResults extends StatelessWidget {
             delegate: SliverChildListDelegate([
               if (isLoading) const _SearchLoadingBanner(),
               if (scopedResults.isEmpty)
-                _ScopedNoResults(selectedScope: selectedScope),
+                _ScopedNoResults(selectedScope: effectiveScope),
               if (scopedResults.tracks.isNotEmpty)
                 _SectionHeader(
                   title: '歌曲',
@@ -680,19 +708,21 @@ class _CompactSearchResults extends StatelessWidget {
               itemCount: scopedResults.tracks.length,
               itemBuilder: (context, index) {
                 final track = scopedResults.tracks[index];
-                return MusicTrackTile.card(
-                  artworkUrl: track.artworkUrl,
-                  title: track.title,
-                  subtitle: '${track.artistName} · ${track.albumTitle}',
-                  isCurrent: false,
-                  onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: scopedResults.tracks,
-                    startIndex: index,
+                return _CompactSearchTrackRow(
+                  index: index,
+                  track: track,
+                  onTap: () => unawaited(
+                    PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: scopedResults.tracks,
+                      startIndex: index,
+                    ),
                   ),
+                  onAddToQueue: () =>
+                      unawaited(_addTracksToQueue(context, [track])),
                 );
               },
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              separatorBuilder: (context, index) => const SizedBox.shrink(),
             ),
           ),
         if (scopedResults.tracks.isNotEmpty)
@@ -702,12 +732,11 @@ class _CompactSearchResults extends StatelessWidget {
         _CompactAlbumGrid(
           albums: scopedResults.albums,
           horizontalPadding: horizontalPadding,
-          horizontal: showAll || selectedScope == _SearchScope.albums,
+          horizontal: showAll,
         ),
         _CompactArtistGrid(
           artists: scopedResults.artists,
           horizontalPadding: horizontalPadding,
-          horizontal: showAll || selectedScope == _SearchScope.artists,
         ),
         _CompactPlaylistSection(
           title: '歌单',
@@ -738,6 +767,174 @@ class _SectionHeader extends StatelessWidget {
       titleStyle: Theme.of(
         context,
       ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    );
+  }
+}
+
+class _TrackDurationLabel extends StatelessWidget {
+  const _TrackDurationLabel({required this.duration});
+
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 42,
+      child: Text(
+        _formatDuration(duration),
+        textAlign: TextAlign.right,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).muted,
+          fontSize: 13,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactSearchTrackRow extends StatefulWidget {
+  const _CompactSearchTrackRow({
+    required this.index,
+    required this.track,
+    required this.onTap,
+    required this.onAddToQueue,
+  });
+
+  final int index;
+  final MusicTrack track;
+  final VoidCallback onTap;
+  final VoidCallback onAddToQueue;
+
+  @override
+  State<_CompactSearchTrackRow> createState() => _CompactSearchTrackRowState();
+}
+
+class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final track = widget.track;
+
+    return Semantics(
+      label: '播放《${track.title}》',
+      button: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
+          ),
+        ),
+        child: AnimatedContainer(
+          duration: AppMotion.micro,
+          curve: AppMotion.enter,
+          constraints: const BoxConstraints(minHeight: 52),
+          decoration: BoxDecoration(
+            color: _pressed ? theme.hoverWash : Colors.transparent,
+            borderRadius: _pressed
+                ? BorderRadius.circular(AppRadiusTokens.mobileSm)
+                : BorderRadius.zero,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+              onTap: widget.onTap,
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
+              hoverColor: Colors.transparent,
+              focusColor: colorScheme.primary.withValues(alpha: 0.08),
+              splashColor: colorScheme.primary.withValues(alpha: 0.06),
+              highlightColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 30,
+                      child: Text(
+                        '${widget.index + 1}',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.muted,
+                          fontSize: 13,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            track.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            '${track.artistName} · ${track.albumTitle}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _TrackDurationLabel(duration: track.duration),
+                    const SizedBox(width: 2),
+                    SizedBox.square(
+                      dimension: 44,
+                      child: IconButton(
+                        onPressed: widget.onAddToQueue,
+                        tooltip: '加入队列',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 44,
+                          height: 44,
+                        ),
+                        icon: Icon(
+                          Icons.playlist_add_rounded,
+                          size: 20,
+                          color: theme.muted,
+                        ),
+                        style: IconButton.styleFrom(
+                          foregroundColor: theme.muted,
+                          backgroundColor: Colors.transparent,
+                          tapTargetSize: MaterialTapTargetSize.padded,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppRadiusTokens.mobileSm,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -853,12 +1050,10 @@ class _CompactArtistGrid extends StatelessWidget {
   const _CompactArtistGrid({
     required this.artists,
     required this.horizontalPadding,
-    this.horizontal = false,
   });
 
   final List<MusicArtist> artists;
   final double horizontalPadding;
-  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -868,47 +1063,47 @@ class _CompactArtistGrid extends StatelessWidget {
 
     final screenWidth = MediaQuery.sizeOf(context).width;
 
-    if (horizontal) {
-      return _CompactCardScroller(
-        title: '艺术家',
-        countLabel: '${artists.length} 个结果',
-        horizontalPadding: horizontalPadding,
-        itemCount: artists.length,
-        itemBuilder: (context, index) {
-          final artist = artists[index];
-          return SizedBox(
-            width: 132,
-            child: MusicArtistGridCard(
-              artist: artist,
-              onTap: () => context.push('/artist/${artist.id}', extra: artist),
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            0,
+            horizontalPadding,
+            0,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: _SectionHeader(
+              title: '艺术家',
+              countLabel: '${artists.length} 个结果',
             ),
-          );
-        },
-      );
-    }
-
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0,
-        horizontalPadding,
-        AppSpacingTokens.sectionGap,
-      ),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final artist = artists[index];
-          return MusicArtistGridCard(
-            artist: artist,
-            onTap: () => context.push('/artist/${artist.id}', extra: artist),
-          );
-        }, childCount: artists.length),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: _artistGridCount(screenWidth),
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 0.7,
+          ),
         ),
-      ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            0,
+            horizontalPadding,
+            AppSpacingTokens.sectionGap,
+          ),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final artist = artists[index];
+              return MusicArtistGridCard(
+                artist: artist,
+                onTap: () =>
+                    context.push('/artist/${artist.id}', extra: artist),
+              );
+            }, childCount: artists.length),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _artistGridCount(screenWidth),
+              mainAxisSpacing: 18,
+              crossAxisSpacing: 18,
+              childAspectRatio: 0.7,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -969,7 +1164,10 @@ class _SearchGridSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeader(title: title, countLabel: countLabel),
-          child,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: child,
+          ),
         ],
       ),
     );
@@ -988,10 +1186,10 @@ class _SearchAlbumGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: albums.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
+        crossAxisCount: _searchResultGridCount(
           MediaQuery.sizeOf(context).width,
         ),
-        mainAxisSpacing: 18,
+        mainAxisSpacing: 22,
         crossAxisSpacing: 18,
         childAspectRatio: 0.72,
       ),
@@ -1018,8 +1216,10 @@ class _SearchArtistGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: artists.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _artistGridCount(MediaQuery.sizeOf(context).width),
-        mainAxisSpacing: 18,
+        crossAxisCount: _searchResultGridCount(
+          MediaQuery.sizeOf(context).width,
+        ),
+        mainAxisSpacing: 22,
         crossAxisSpacing: 18,
         childAspectRatio: 0.7,
       ),
@@ -1041,15 +1241,17 @@ class _SearchPlaylistGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = AppBreakpoints.isCompact(context);
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: playlists.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
+        crossAxisCount: _searchResultGridCount(
           MediaQuery.sizeOf(context).width,
         ),
-        mainAxisSpacing: 18,
+        mainAxisSpacing: 22,
         crossAxisSpacing: 18,
         childAspectRatio: 0.72,
       ),
@@ -1059,6 +1261,10 @@ class _SearchPlaylistGrid extends StatelessWidget {
           playlist: playlist,
           onTap: () =>
               context.push('/playlists/${playlist.id}', extra: playlist),
+          artworkRadius: isCompact
+              ? AppRadiusTokens.mobileMd
+              : AppRadiusTokens.coverGrid,
+          compact: isCompact,
         );
       },
     );
@@ -1097,6 +1303,8 @@ class _CompactPlaylistSection extends StatelessWidget {
             playlist: playlist,
             onTap: () =>
                 context.push('/playlists/${playlist.id}', extra: playlist),
+            artworkRadius: AppRadiusTokens.mobileMd,
+            compact: true,
           ),
         );
       },
@@ -1166,29 +1374,24 @@ class _TrackSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MusicTrackTable(
-      tracks: tracks,
-      onTrackTap: (index, _) => unawaited(
-        PlayerNavigation.playTracksAndOpenPlayer(
-          context,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: '歌曲', countLabel: '${tracks.length} 首'),
+        MusicTrackTable(
           tracks: tracks,
-          startIndex: index,
-        ),
-      ),
-      onPlayAll: tracks.isEmpty
-          ? null
-          : () => unawaited(
-              PlayerNavigation.playTracksAndOpenPlayer(
-                context,
-                tracks: tracks,
-                startIndex: 0,
-              ),
+          showActionBar: false,
+          onTrackTap: (index, _) => unawaited(
+            PlayerNavigation.playTracksAndOpenPlayer(
+              context,
+              tracks: tracks,
+              startIndex: index,
             ),
-      onAddAllToQueue: tracks.isEmpty
-          ? null
-          : () => unawaited(_addTracksToQueue(context, tracks)),
-      onAddTrackToQueue: (track) =>
-          unawaited(_addTracksToQueue(context, [track])),
+          ),
+          onAddTrackToQueue: (track) =>
+              unawaited(_addTracksToQueue(context, [track])),
+        ),
+      ],
     );
   }
 }
@@ -1224,6 +1427,19 @@ int _artistGridCount(double width) {
   return 3;
 }
 
+int _searchResultGridCount(double width) {
+  final contentWidth = width > 980 ? 980 : width;
+  final count = ((contentWidth + 18) / (132 + 18)).floor();
+  return count.clamp(2, 6).toInt();
+}
+
+String _formatDuration(Duration duration) {
+  final totalSeconds = duration.inSeconds;
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
 class _SearchStartView extends StatelessWidget {
   const _SearchStartView({required this.queries, required this.onSelected});
 
@@ -1233,135 +1449,34 @@ class _SearchStartView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SearchStateScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SearchMessagePanel(
-            icon: Icons.search_rounded,
-            title: '输入关键词开始搜索',
-            message: '可以搜索歌曲、专辑、艺术家和歌单。',
-          ),
-          const SizedBox(height: AppSpacingTokens.sectionGap),
-          if (queries.isNotEmpty)
-            _RecentSearchSection(queries: queries, onSelected: onSelected)
-          else
-            _SearchExampleSection(onSelected: onSelected),
-        ],
+      child: SearchEmptyView(
+        hotQueries: _hotSearchQueries,
+        recentQueries: queries,
+        onQuerySelected: onSelected,
+        onClearRecent: queries.isEmpty
+            ? null
+            : () => _clearRecentSearches(context, queries),
       ),
     );
   }
 }
 
-class _SearchExampleSection extends StatelessWidget {
-  const _SearchExampleSection({required this.onSelected});
-
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    const examples = ['夜曲', '十一月的萧邦', '周杰伦', '私人雷达'];
-
-    return _SearchChipSection(
-      title: '可以试试',
-      action: null,
-      children: [
-        for (final query in examples)
-          ActionChip(
-            avatar: const Icon(Icons.north_east_rounded, size: 16),
-            label: Text(query),
-            onPressed: () => onSelected(query),
-          ),
-      ],
-    );
-  }
-}
-
-class _RecentSearchSection extends StatelessWidget {
-  const _RecentSearchSection({
-    required this.queries,
-    required this.onSelected,
-    this.showClearAction = true,
-  });
-
-  final List<String> queries;
-  final ValueChanged<String> onSelected;
-  final bool showClearAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SearchChipSection(
-      title: '最近搜索',
-      action: showClearAction
-          ? TextButton.icon(
-              onPressed: () {
-                final previousQueries = List<String>.of(queries);
-                final cubit = context.read<SearchCubit>();
-                unawaited(cubit.clearRecent());
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: const Text('已清空最近搜索'),
-                      behavior: SnackBarBehavior.floating,
-                      action: SnackBarAction(
-                        label: '撤销',
-                        onPressed: () =>
-                            unawaited(cubit.restoreRecent(previousQueries)),
-                      ),
-                    ),
-                  );
-              },
-              icon: const Icon(Icons.delete_outline_rounded, size: 18),
-              label: const Text('清空'),
-            )
-          : null,
-      children: [
-        for (final query in queries)
-          ActionChip(
-            avatar: const Icon(Icons.history_rounded, size: 16),
-            label: Text(query),
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            side: BorderSide(
-              color: Theme.of(
-                context,
-              ).colorScheme.outlineVariant.withValues(alpha: 0.6),
-            ),
-            onPressed: () => onSelected(query),
-          ),
-      ],
-    );
-  }
-}
-
-class _SearchChipSection extends StatelessWidget {
-  const _SearchChipSection({
-    required this.title,
-    required this.children,
-    this.action,
-  });
-
-  final String title;
-  final List<Widget> children;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppSectionTitleRow(
-          title: title,
-          padding: EdgeInsets.zero,
-          titleStyle: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          action: action,
+void _clearRecentSearches(BuildContext context, List<String> queries) {
+  final previousQueries = List<String>.of(queries);
+  final cubit = context.read<SearchCubit>();
+  unawaited(cubit.clearRecent());
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: const Text('已清空最近搜索'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: '撤销',
+          onPressed: () => unawaited(cubit.restoreRecent(previousQueries)),
         ),
-        const SizedBox(height: 10),
-        Wrap(spacing: 8, runSpacing: 8, children: children),
-      ],
+      ),
     );
-  }
 }
 
 class _SearchStateScrollView extends StatelessWidget {

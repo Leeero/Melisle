@@ -10,9 +10,11 @@ import 'package:cross_platform_music_player/presentation/blocs/home/home_state.d
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -131,15 +133,16 @@ class _HomeView extends StatelessWidget {
             horizontalPadding: horizontalPadding,
           ),
 
-        if (compact) ...[
-          if (recommendationArtwork.isNotEmpty)
-            _mobileRecommendationSection(
-              context,
-              albums: recommendationAlbums,
-              tracks: recommendationTracks,
-              horizontalPadding: horizontalPadding,
-            ),
+        if (recommendationArtwork.isNotEmpty)
+          _recommendationHeroSection(
+            context,
+            albums: recommendationAlbums,
+            tracks: recommendationTracks,
+            artwork: recommendationArtwork,
+            horizontalPadding: horizontalPadding,
+          ),
 
+        if (compact) ...[
           if (state.recentlyPlayed.isNotEmpty)
             _recentTracksSection(
               context,
@@ -162,15 +165,6 @@ class _HomeView extends StatelessWidget {
               horizontalPadding: horizontalPadding,
             ),
         ] else ...[
-          if (recommendationArtwork.isNotEmpty)
-            _desktopRecommendationHero(
-              context,
-              albums: recommendationAlbums,
-              tracks: recommendationTracks,
-              artwork: recommendationArtwork,
-              horizontalPadding: horizontalPadding,
-            ),
-
           if (state.recentlyPlayed.isNotEmpty)
             _recentTracksSection(
               context,
@@ -348,13 +342,14 @@ class _HomeView extends StatelessWidget {
     );
   }
 
-  SliverPadding _desktopRecommendationHero(
+  SliverPadding _recommendationHeroSection(
     BuildContext context, {
     required List<MusicAlbum> albums,
     required List<MusicTrack> tracks,
     required List<_ArtworkSeed> artwork,
     required double horizontalPadding,
   }) {
+    final compact = AppBreakpoints.isCompact(context);
     final primaryAlbum = albums.isNotEmpty ? albums.first : null;
     final primaryTrack = tracks.isNotEmpty ? tracks.first : null;
     final title = primaryTrack != null
@@ -370,7 +365,12 @@ class _HomeView extends StatelessWidget {
         : '${albums.length} 张专辑 · ${albums.fold<int>(0, (sum, album) => sum + album.trackCount)} 首';
 
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 32),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        compact ? AppSpacingTokens.sectionGap : 32,
+      ),
       sliver: SliverToBoxAdapter(
         child: _RecommendationHero(
           title: title,
@@ -392,89 +392,33 @@ class _HomeView extends StatelessWidget {
                 ),
           secondaryLabel: tracks.isNotEmpty ? '查看歌曲' : '查看专辑',
           onSecondaryPressed: () => tracks.isNotEmpty
-              ? context.push('/search')
+              ? _showRecommendationTracks(context, tracks)
               : context.go('/library'),
         ),
       ),
     );
   }
 
-  SliverPadding _mobileRecommendationSection(
-    BuildContext context, {
-    required List<MusicAlbum> albums,
-    required List<MusicTrack> tracks,
-    required double horizontalPadding,
-  }) {
-    final cards = <Widget>[];
-    if (albums.isNotEmpty) {
-      for (final album in albums.take(4)) {
-        cards.add(
-          _MobileRecommendationCard(
-            artworkUrl: album.artworkUrl,
-            title: album.title,
-            description:
-                '${album.artistName} · ${album.trackCount} 首${album.year == null ? '' : ' · ${album.year}'}',
-            buttonLabel: tracks.isNotEmpty ? '播放推荐' : '查看专辑',
-            onPressed: tracks.isNotEmpty
-                ? () => PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: tracks,
-                    startIndex: 0,
-                  )
-                : () => context.push('/album/${album.id}', extra: album),
+  Future<void> _showRecommendationTracks(
+    BuildContext context,
+    List<MusicTrack> tracks,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<PlayerCubit>(),
+        child: _RecommendationTracksSheet(
+          tracks: tracks,
+          description: _trackCaption(tracks),
+          onTrackSelected: (index) => PlayerNavigation.playTracksAndOpenPlayer(
+            context,
+            tracks: tracks,
+            startIndex: index,
           ),
-        );
-      }
-    } else {
-      final displayTracks = tracks.take(4).toList();
-      for (var index = 0; index < displayTracks.length; index += 1) {
-        final track = displayTracks[index];
-        cards.add(
-          _MobileRecommendationCard(
-            artworkUrl: track.artworkUrl,
-            title: track.title,
-            description: track.albumTitle.isNotEmpty
-                ? '${track.artistName} · ${track.albumTitle}'
-                : track.artistName,
-            buttonLabel: index == 0 ? '播放推荐' : '开始播放',
-            onPressed: () => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: tracks,
-              startIndex: index,
-            ),
-          ),
-        );
-      }
-    }
-
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0,
-        horizontalPadding,
-        AppSpacingTokens.sectionGap,
-      ),
-      sliver: SliverMainAxisGroup(
-        slivers: [
-          SliverToBoxAdapter(
-            child: AppSectionTitleRow(
-              title: '今日推荐',
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 12),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 168,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: cards.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) => cards[index],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -750,6 +694,66 @@ class _HomeView extends StatelessWidget {
   }
 }
 
+class _RecommendationTracksSheet extends StatelessWidget {
+  const _RecommendationTracksSheet({
+    required this.tracks,
+    required this.description,
+    required this.onTrackSelected,
+  });
+
+  final List<MusicTrack> tracks;
+  final String description;
+  final Future<void> Function(int index) onTrackSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentTrackId = context.watch<PlayerCubit>().state.currentTrack?.id;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.36,
+      maxChildSize: 0.92,
+      builder: (context, scrollController) {
+        return AppSheetScaffold(
+          title: '今日推荐',
+          description: description,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          trailing: TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('完成'),
+          ),
+          child: Expanded(
+            child: ListView.separated(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+              itemCount: tracks.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final track = tracks[index];
+                final subtitle = track.albumTitle.isNotEmpty
+                    ? '${track.artistName} · ${track.albumTitle}'
+                    : track.artistName;
+
+                return MusicTrackTile.row(
+                  title: track.title,
+                  subtitle: subtitle,
+                  artworkUrl: track.artworkUrl,
+                  isCurrent: track.id == currentTrackId,
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await onTrackSelected(index);
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _DesktopHomeHeader extends StatelessWidget {
   const _DesktopHomeHeader();
 
@@ -828,18 +832,23 @@ class _RecommendationHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+    final radius = compact
+        ? AppRadiusTokens.mobileXl
+        : AppRadiusTokens.desktopXl;
+    final shadowAlpha = compact
+        ? (theme.brightness == Brightness.dark ? 0.10 : 0.04)
+        : (theme.brightness == Brightness.dark ? 0.18 : 0.06);
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopXl),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.18 : 0.06,
-            ),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: colorScheme.shadow.withValues(alpha: shadowAlpha),
+            blurRadius: compact ? 12 : 18,
+            offset: compact ? const Offset(0, 4) : const Offset(0, 8),
           ),
         ],
         gradient: LinearGradient(
@@ -849,7 +858,7 @@ class _RecommendationHero extends StatelessWidget {
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopXl),
+        borderRadius: BorderRadius.circular(radius),
         child: Stack(
           children: [
             Positioned(
@@ -869,40 +878,164 @@ class _RecommendationHero extends StatelessWidget {
               ),
             ),
             ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 220),
+              constraints: BoxConstraints(minHeight: compact ? 0 : 220),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 26,
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 18 : 28,
+                  vertical: compact ? 18 : 26,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _RecommendationCopy(
+                child: compact
+                    ? _CompactRecommendationCard(
+                        seed: artwork.first,
                         title: title,
                         description: description,
                         primaryLabel: primaryLabel,
                         secondaryLabel: secondaryLabel,
                         onPrimaryPressed: onPrimaryPressed,
                         onSecondaryPressed: onSecondaryPressed,
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: _RecommendationCopy(
+                              title: title,
+                              description: description,
+                              primaryLabel: primaryLabel,
+                              secondaryLabel: secondaryLabel,
+                              onPrimaryPressed: onPrimaryPressed,
+                              onSecondaryPressed: onSecondaryPressed,
+                            ),
+                          ),
+                          const SizedBox(width: 28),
+                          SizedBox(
+                            width: 280,
+                            height: 166,
+                            child: _RecommendationStack(
+                              artwork: artwork,
+                              caption: caption,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 28),
-                    SizedBox(
-                      width: 280,
-                      height: 166,
-                      child: _RecommendationStack(
-                        artwork: artwork,
-                        caption: caption,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CompactRecommendationCard extends StatelessWidget {
+  const _CompactRecommendationCard({
+    required this.seed,
+    required this.title,
+    required this.description,
+    required this.primaryLabel,
+    required this.secondaryLabel,
+    required this.onSecondaryPressed,
+    this.onPrimaryPressed,
+  });
+
+  final _ArtworkSeed seed;
+  final String title;
+  final String description;
+  final String primaryLabel;
+  final String secondaryLabel;
+  final VoidCallback? onPrimaryPressed;
+  final VoidCallback onSecondaryPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        CachedArtwork(
+          imageUrl: seed.artworkUrl,
+          size: 86,
+          borderRadius: 18,
+          semanticLabel: '《${seed.title}》封面',
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '今日推荐',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontSize: 20,
+                  height: 1.14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.45,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: onPrimaryPressed,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 15),
+                    label: Text(primaryLabel),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      textStyle: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onSecondaryPressed,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      textStyle: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                    child: Text(secondaryLabel),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -927,6 +1060,7 @@ class _RecommendationCopy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final compact = AppBreakpoints.isCompact(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -937,7 +1071,7 @@ class _RecommendationCopy extends StatelessWidget {
             color: theme.colorScheme.primary,
             fontWeight: FontWeight.w700,
             fontSize: 11,
-            letterSpacing: 1.1,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: 10),
@@ -945,11 +1079,11 @@ class _RecommendationCopy extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Text(
             title,
-            maxLines: 2,
+            maxLines: compact ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: 32,
-              height: 1.08,
+              fontSize: compact ? 25 : 32,
+              height: compact ? 1.14 : 1.08,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -959,7 +1093,7 @@ class _RecommendationCopy extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Text(
             description,
-            maxLines: 3,
+            maxLines: compact ? 2 : 3,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -968,21 +1102,45 @@ class _RecommendationCopy extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton.icon(
-              onPressed: onPrimaryPressed,
-              icon: const Icon(Icons.play_arrow_rounded, size: 19),
-              label: Text(primaryLabel),
-            ),
-            const SizedBox(width: 10),
-            TextButton(
-              onPressed: onSecondaryPressed,
-              child: Text(secondaryLabel),
-            ),
-          ],
-        ),
+        if (compact)
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: onPrimaryPressed,
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: Text(primaryLabel),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onSecondaryPressed,
+                child: Text(secondaryLabel),
+              ),
+            ],
+          )
+        else
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton.icon(
+                onPressed: onPrimaryPressed,
+                icon: const Icon(Icons.play_arrow_rounded, size: 19),
+                label: Text(primaryLabel),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: onSecondaryPressed,
+                child: Text(secondaryLabel),
+              ),
+            ],
+          ),
       ],
     );
   }
@@ -1099,131 +1257,6 @@ class _HeroCaption extends StatelessWidget {
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileRecommendationCard extends StatelessWidget {
-  const _MobileRecommendationCard({
-    required this.artworkUrl,
-    required this.title,
-    required this.description,
-    required this.buttonLabel,
-    required this.onPressed,
-  });
-
-  final String artworkUrl;
-  final String title;
-  final String description;
-  final String buttonLabel;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return SizedBox(
-      width: 286,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(22),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: colorScheme.outlineVariant),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [colorScheme.surface, colorScheme.surfaceContainerHigh],
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -40,
-                  top: -28,
-                  child: _HomeRadialWash(
-                    size: 160,
-                    color: colorScheme.primary.withValues(alpha: 0.16),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      CachedArtwork(
-                        imageUrl: artworkUrl,
-                        size: 92,
-                        borderRadius: 20,
-                        semanticLabel: '《$title》封面',
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '为你整理',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontSize: 20,
-                                height: 1.14,
-                              ),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.45,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: onPressed,
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 15,
-                              ),
-                              label: Text(buttonLabel),
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size(0, 34),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 7,
-                                ),
-                                textStyle: theme.textTheme.labelMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -1376,14 +1409,45 @@ class _HomeViewAllButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final compact = AppBreakpoints.isCompact(context);
+    final textStyle = theme.textTheme.labelMedium?.copyWith(
+      fontSize: compact ? 14 : 13,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0,
+    );
+
     return Semantics(
       label: '查看全部',
       button: true,
-      child: TextButton.icon(
+      child: TextButton(
         onPressed: onPressed,
-        iconAlignment: IconAlignment.end,
-        label: const Text('查看全部'),
-        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 2),
+          ),
+          visualDensity: VisualDensity.compact,
+          foregroundColor: WidgetStatePropertyAll(theme.colorScheme.primary),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return theme.colorScheme.primary.withValues(alpha: 0.08);
+            }
+            if (states.contains(WidgetState.focused)) {
+              return theme.colorScheme.primary.withValues(alpha: 0.06);
+            }
+            return Colors.transparent;
+          }),
+          textStyle: WidgetStateProperty.resolveWith((states) {
+            final hovered = !compact && states.contains(WidgetState.hovered);
+            return textStyle?.copyWith(
+              decoration: hovered
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
+            );
+          }),
+        ),
+        child: const Text('查看全部'),
       ),
     );
   }
