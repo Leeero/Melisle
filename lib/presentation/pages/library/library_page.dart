@@ -13,15 +13,16 @@ import 'package:cross_platform_music_player/presentation/blocs/library/library_c
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
-import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -53,13 +54,11 @@ class _LibraryView extends StatefulWidget {
 
 class _LibraryViewState extends State<_LibraryView> {
   late final ScrollController _scrollController;
-  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _searchController = TextEditingController();
   }
 
   @override
@@ -67,7 +66,6 @@ class _LibraryViewState extends State<_LibraryView> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -86,17 +84,10 @@ class _LibraryViewState extends State<_LibraryView> {
       (cubit) => cubit.state.currentTrack?.id,
     );
 
-    return BlocConsumer<LibraryCubit, LibraryState>(
-      listener: (context, state) {
-        if (_searchController.text == state.searchQuery) return;
-        _searchController.value = TextEditingValue(
-          text: state.searchQuery,
-          selection: TextSelection.collapsed(offset: state.searchQuery.length),
-        );
-      },
+    return BlocBuilder<LibraryCubit, LibraryState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _LibraryHeader(state: state, controller: _searchController),
+          header: _LibraryHeader(state: state),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -113,7 +104,8 @@ class _LibraryViewState extends State<_LibraryView> {
     if (state.status == LibraryStatus.loading &&
         state.tracks.isEmpty &&
         state.albums.isEmpty &&
-        state.artists.isEmpty) {
+        state.artists.isEmpty &&
+        state.playlists.isEmpty) {
       return const AppBodyStateView.loading();
     }
 
@@ -151,6 +143,11 @@ class _LibraryViewState extends State<_LibraryView> {
               state,
               horizontalPadding,
             ),
+            LibraryFilter.playlists => _buildPlaylistSliver(
+              context,
+              state,
+              horizontalPadding,
+            ),
             LibraryFilter.favorites => SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
@@ -158,7 +155,7 @@ class _LibraryViewState extends State<_LibraryView> {
                 horizontalPadding,
                 18,
               ),
-              sliver: _LibraryFavoritesSliver(searchQuery: state.searchQuery),
+              sliver: const _LibraryFavoritesSliver(),
             ),
           },
           if (state.currentFilter != LibraryFilter.favorites)
@@ -175,7 +172,7 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.tracks.isEmpty) {
-      return const AppSliverStateView.message(message: '当前没有匹配的歌曲。试试其他关键词吧。');
+      return const AppSliverStateView.message(message: '当前还没有歌曲。');
     }
 
     final isWide = AppBreakpoints.usesWideContent(context);
@@ -227,35 +224,24 @@ class _LibraryViewState extends State<_LibraryView> {
       sliver: SliverMainAxisGroup(
         slivers: [
           SliverToBoxAdapter(
-            child: _LibrarySectionHeader(
-              title: '歌曲',
-              countLabel: _libraryTrackCountLabel(state),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: _MobileTrackActionBar(
-              trackCount: state.currentFilterCount,
-              totalTrackCount: state.totalTrackCount,
-              showCount: false,
+            child: _MobileLibraryTrackSectionHeader(
+              countLabel: _libraryTrackSummaryCountLabel(state),
               onPlayAll: () => _playAllLibraryTracks(context, state),
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final track = state.tracks[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: MusicTrackTile.card(
-                  isCurrent: track.id == currentTrackId,
-                  artworkUrl: track.artworkUrl,
-                  title: track.title,
-                  subtitle: '${track.artistName} · ${track.albumTitle}',
-                  onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                    context,
-                    tracks: state.tracks,
-                    startIndex: index,
-                  ),
+              return _MobileLibraryTrackRow(
+                track: track,
+                index: index,
+                isCurrent: track.id == currentTrackId,
+                onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                  context,
+                  tracks: state.tracks,
+                  startIndex: index,
                 ),
+                onMore: () => showTrackActionsSheet(context, track),
               );
             }, childCount: state.tracks.length),
           ),
@@ -273,9 +259,6 @@ class _LibraryViewState extends State<_LibraryView> {
         final result = await context.read<MusicRepository>().fetchTracks(
           limit: 500,
           startIndex: 0,
-          searchQuery: state.searchQuery.trim().isEmpty
-              ? null
-              : state.searchQuery.trim(),
         );
         return result.items;
       },
@@ -288,63 +271,11 @@ class _LibraryViewState extends State<_LibraryView> {
     double horizontalPadding,
   ) {
     if (state.albums.isEmpty) {
-      return const AppSliverStateView.message(message: '当前没有匹配的专辑。试试其他关键词吧。');
+      return const AppSliverStateView.message(message: '当前还没有专辑。');
     }
 
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final isNarrow = screenWidth < 380;
-
-    if (isNarrow) {
-      return SliverPadding(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          0,
-          horizontalPadding,
-          18,
-        ),
-        sliver: SliverMainAxisGroup(
-          slivers: [
-            SliverToBoxAdapter(
-              child: _LibrarySectionHeader(
-                title: '专辑',
-                countLabel: '${state.albums.length} 张',
-              ),
-            ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final album = state.albums[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CachedArtwork(
-                      imageUrl: album.artworkUrl,
-                      size: 48,
-                      borderRadius: 14,
-                    ),
-                    title: Text(
-                      album.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      [
-                        album.artistName,
-                        if (album.year != null) '${album.year}',
-                        '${album.trackCount} 首',
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () =>
-                        context.push('/album/${album.id}', extra: album),
-                  ),
-                );
-              }, childCount: state.albums.length),
-            ),
-          ],
-        ),
-      );
-    }
+    final isCompact = AppBreakpoints.isCompact(context);
 
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
@@ -362,13 +293,17 @@ class _LibraryViewState extends State<_LibraryView> {
               return MusicAlbumGridCard(
                 album: album,
                 onTap: () => context.push('/album/${album.id}', extra: album),
+                artworkRadius: isCompact
+                    ? AppRadiusTokens.mobileMd
+                    : AppRadiusTokens.coverGrid,
+                compact: isCompact,
               );
             }, childCount: state.albums.length),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: _albumGridCount(MediaQuery.sizeOf(context).width),
-              mainAxisSpacing: 18,
-              crossAxisSpacing: 18,
-              childAspectRatio: 0.72,
+              crossAxisCount: _albumGridCount(screenWidth),
+              mainAxisSpacing: isCompact ? 14 : 18,
+              crossAxisSpacing: isCompact ? 12 : 18,
+              childAspectRatio: isCompact ? 0.80 : 0.72,
             ),
           ),
         ],
@@ -384,9 +319,12 @@ class _LibraryViewState extends State<_LibraryView> {
     if (state.artists.isEmpty && state.genres.isEmpty) {
       return const SliverPadding(
         padding: EdgeInsets.only(bottom: 18),
-        sliver: AppSliverStateView.message(message: '当前没有匹配的艺术家。试试其他关键词吧。'),
+        sliver: AppSliverStateView.message(message: '当前还没有艺术家。'),
       );
     }
+
+    final isWide = AppBreakpoints.usesWideContent(context);
+    final isCompact = AppBreakpoints.isCompact(context);
 
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
@@ -398,7 +336,7 @@ class _LibraryViewState extends State<_LibraryView> {
               countLabel: '${state.artists.length} 位',
             ),
           ),
-          if (state.genres.isNotEmpty)
+          if (isWide && state.genres.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -433,7 +371,7 @@ class _LibraryViewState extends State<_LibraryView> {
             const SliverToBoxAdapter(
               child: SizedBox(
                 height: 120,
-                child: Center(child: Text('当前没有匹配的艺术家。')),
+                child: Center(child: Text('当前还没有艺术家。')),
               ),
             )
           else
@@ -444,17 +382,65 @@ class _LibraryViewState extends State<_LibraryView> {
                   artist: artist,
                   onTap: () =>
                       context.push('/artist/${artist.id}', extra: artist),
+                  compact: isCompact,
                 );
               }, childCount: state.artists.length),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _artistGridCount(
                   MediaQuery.sizeOf(context).width,
                 ),
-                mainAxisSpacing: 18,
-                crossAxisSpacing: 18,
-                childAspectRatio: 0.7,
+                mainAxisSpacing: isWide ? 18 : 14,
+                crossAxisSpacing: isWide ? 18 : 12,
+                childAspectRatio: isWide ? 0.7 : 0.96,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaylistSliver(
+    BuildContext context,
+    LibraryState state,
+    double horizontalPadding,
+  ) {
+    if (state.playlists.isEmpty) {
+      return const AppSliverStateView.message(message: '当前还没有歌单。');
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = AppBreakpoints.isCompact(context);
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _LibrarySectionHeader(
+              title: '歌单',
+              countLabel: '${state.playlists.length} 个',
+            ),
+          ),
+          SliverGrid(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final playlist = state.playlists[index];
+              return MusicPlaylistGridCard(
+                playlist: playlist,
+                onTap: () =>
+                    context.push('/playlists/${playlist.id}', extra: playlist),
+                artworkRadius: isCompact
+                    ? AppRadiusTokens.mobileMd
+                    : AppRadiusTokens.coverGrid,
+                compact: isCompact,
+              );
+            }, childCount: state.playlists.length),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _albumGridCount(screenWidth),
+              mainAxisSpacing: isCompact ? 14 : 22,
+              crossAxisSpacing: isCompact ? 12 : 18,
+              childAspectRatio: isCompact ? 0.80 : 0.78,
+            ),
+          ),
         ],
       ),
     );
@@ -514,33 +500,45 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 
   int _albumGridCount(double width) {
+    if (AppBreakpoints.isCompactWidth(width)) {
+      return _mobileLibraryGridCount(width);
+    }
     return AppBreakpoints.adaptiveAlbumGridCount(width);
   }
 
   int _artistGridCount(double width) {
+    if (AppBreakpoints.isCompactWidth(width)) {
+      return _mobileLibraryGridCount(width);
+    }
     if (width >= 1200) return 8;
     if (width >= 900) return 6;
     if (width >= 600) return 4;
     return 3;
   }
+
+  int _mobileLibraryGridCount(double width) {
+    const minTileWidth = 118.0;
+    const gap = 12.0;
+    const horizontalPadding = AppSpacingTokens.pageHorizontalCompact * 2;
+    final availableWidth = width - horizontalPadding;
+    final count = ((availableWidth + gap) / (minTileWidth + gap)).floor();
+    return count.clamp(2, 4).toInt();
+  }
 }
 
 String _librarySummaryLabel(LibraryState state) {
-  final query = state.searchQuery.trim();
   final trackCount = state.totalTrackCount ?? state.tracks.length;
   final parts = <String>[
-    if (trackCount > 0) '$trackCount 首歌曲',
-    if (state.albums.isNotEmpty) '${state.albums.length} 张专辑',
-    if (state.artists.isNotEmpty) '${state.artists.length} 位艺术家',
+    if (trackCount > 0) '$trackCount 首',
+    if (state.albums.isNotEmpty) '${state.albums.length} 专辑',
+    if (state.artists.isNotEmpty) '${state.artists.length} 艺术家',
+    if (state.playlists.isNotEmpty) '${state.playlists.length} 歌单',
   ];
 
-  final summary = parts.isEmpty ? '歌曲、专辑和艺术家会按音乐源实时展示。' : parts.join(' · ');
-  if (query.isEmpty) {
-    return state.status == LibraryStatus.loading && parts.isEmpty
-        ? '正在整理你的媒体库。'
-        : summary;
+  if (state.status == LibraryStatus.loading && parts.isEmpty) {
+    return '正在整理你的媒体库。';
   }
-  return '正在筛选「$query」 · $summary';
+  return parts.isEmpty ? '歌曲、专辑、艺术家和歌单会按音乐源实时展示。' : parts.join(' · ');
 }
 
 String _libraryTrackCountLabel(LibraryState state) {
@@ -549,6 +547,16 @@ String _libraryTrackCountLabel(LibraryState state) {
     return '${state.currentFilterCount} 首';
   }
   return '${state.currentFilterCount} / $totalTrackCount 首';
+}
+
+String _libraryTrackSummaryCountLabel(LibraryState state) {
+  return '${state.totalTrackCount ?? state.currentFilterCount} 首';
+}
+
+String _formatTrackDuration(Duration duration) {
+  final minutes = duration.inMinutes;
+  final seconds = duration.inSeconds % 60;
+  return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 }
 
 class _LibrarySectionHeader extends StatelessWidget {
@@ -574,44 +582,296 @@ class _LibrarySectionHeader extends StatelessWidget {
 }
 
 class _MobileTrackActionBar extends StatelessWidget {
-  const _MobileTrackActionBar({
-    this.trackCount,
-    this.totalTrackCount,
-    this.showCount = true,
-    required this.onPlayAll,
-  });
+  const _MobileTrackActionBar({this.trackCount, required this.onPlayAll});
 
   final int? trackCount;
-  final int? totalTrackCount;
-  final bool showCount;
   final VoidCallback onPlayAll;
 
   @override
   Widget build(BuildContext context) {
     final trackCount = this.trackCount;
-    final countLabel = trackCount == null
-        ? null
-        : totalTrackCount != null
-        ? '$trackCount / $totalTrackCount 首'
-        : '$trackCount 首';
+    final countLabel = trackCount == null ? null : '$trackCount 首';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 14),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: _MobileLibraryPlayAllButton(
+          onPressed: onPlayAll,
+          countLabel: countLabel,
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileLibraryTrackSectionHeader extends StatelessWidget {
+  const _MobileLibraryTrackSectionHeader({
+    required this.countLabel,
+    required this.onPlayAll,
+  });
+
+  final String countLabel;
+  final VoidCallback onPlayAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
       child: Row(
         children: [
-          if (showCount && countLabel != null) ...[
-            MetaPill(label: countLabel, size: MetaPillSize.compact),
-            const Spacer(),
-            PlayAllButton(
-              onPressed: onPlayAll,
-              variant: PlayAllButtonVariant.primary,
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 2,
+              children: [
+                Text(
+                  '歌曲',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  countLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
             ),
-          ] else
-            PlayAllButton(
-              onPressed: onPlayAll,
-              variant: PlayAllButtonVariant.primary,
-            ),
+          ),
+          const SizedBox(width: 12),
+          _MobileLibraryPlayAllInlineButton(onPressed: onPlayAll),
         ],
+      ),
+    );
+  }
+}
+
+class _MobileLibraryPlayAllInlineButton extends StatefulWidget {
+  const _MobileLibraryPlayAllInlineButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_MobileLibraryPlayAllInlineButton> createState() =>
+      _MobileLibraryPlayAllInlineButtonState();
+}
+
+class _MobileLibraryPlayAllInlineButtonState
+    extends State<_MobileLibraryPlayAllInlineButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      label: '播放全部歌曲',
+      button: true,
+      child: Tooltip(
+        message: '播放全部',
+        child: SizedBox(
+          height: 44,
+          child: Center(
+            child: AnimatedScale(
+              duration: AppMotion.micro,
+              curve: AppMotion.enter,
+              scale: _pressed ? 0.98 : 1,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+                  onTap: widget.onPressed,
+                  onHighlightChanged: (pressed) =>
+                      setState(() => _pressed = pressed),
+                  splashColor: colorScheme.primary.withValues(alpha: 0.08),
+                  highlightColor: Colors.transparent,
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: theme.brightness == Brightness.dark
+                            ? 0.54
+                            : 0.72,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppRadiusTokens.button,
+                      ),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 34,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.play_arrow_rounded,
+                              size: 17,
+                              color: colorScheme.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '播放全部',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                                height: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileLibraryPlayAllButton extends StatefulWidget {
+  const _MobileLibraryPlayAllButton({required this.onPressed, this.countLabel});
+
+  final VoidCallback onPressed;
+  final String? countLabel;
+
+  @override
+  State<_MobileLibraryPlayAllButton> createState() =>
+      _MobileLibraryPlayAllButtonState();
+}
+
+class _MobileLibraryPlayAllButtonState
+    extends State<_MobileLibraryPlayAllButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final countLabel = widget.countLabel;
+
+    return Semantics(
+      label: '全部播放',
+      button: true,
+      child: Tooltip(
+        message: '全部播放',
+        child: AnimatedScale(
+          duration: AppMotion.micro,
+          curve: AppMotion.enter,
+          scale: _pressed ? 0.98 : 1,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+              onTap: widget.onPressed,
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
+              splashColor: colorScheme.onPrimary.withValues(alpha: 0.08),
+              highlightColor: Colors.transparent,
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.18),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 40),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      8,
+                      6,
+                      countLabel == null ? 14 : 12,
+                      6,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onPrimary.withValues(
+                              alpha: 0.16,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.play_arrow_rounded,
+                            size: 19,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '全部播放',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
+                          ),
+                        ),
+                        if (countLabel != null) ...[
+                          const SizedBox(width: 9),
+                          Container(
+                            width: 1,
+                            height: 14,
+                            color: colorScheme.onPrimary.withValues(
+                              alpha: 0.22,
+                            ),
+                          ),
+                          const SizedBox(width: 9),
+                          Text(
+                            countLabel,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onPrimary.withValues(
+                                alpha: 0.78,
+                              ),
+                              fontWeight: FontWeight.w500,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -686,11 +946,170 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
   }
 }
 
+class _MobileLibraryTrackRow extends StatefulWidget {
+  const _MobileLibraryTrackRow({
+    required this.track,
+    required this.index,
+    required this.isCurrent,
+    required this.onTap,
+    required this.onMore,
+  });
+
+  final MusicTrack track;
+  final int index;
+  final bool isCurrent;
+  final Future<void> Function() onTap;
+  final VoidCallback onMore;
+
+  @override
+  State<_MobileLibraryTrackRow> createState() => _MobileLibraryTrackRowState();
+}
+
+class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final subtitle = [
+      widget.track.artistName,
+      widget.track.albumTitle,
+    ].where((item) => item.isNotEmpty).join(' · ');
+    final selected = widget.isCurrent;
+
+    return Semantics(
+      label: '播放《${widget.track.title}》',
+      button: true,
+      selected: selected,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
+          ),
+        ),
+        child: AnimatedContainer(
+          duration: AppMotion.micro,
+          curve: AppMotion.enter,
+          constraints: const BoxConstraints(minHeight: 52),
+          decoration: BoxDecoration(
+            color: selected
+                ? theme.selectedWash
+                : _pressed
+                ? theme.hoverWash
+                : Colors.transparent,
+            borderRadius: selected || _pressed
+                ? BorderRadius.circular(AppRadiusTokens.mobileSm)
+                : BorderRadius.zero,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+              onTap: widget.onTap,
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
+              hoverColor: Colors.transparent,
+              focusColor: colorScheme.primary.withValues(alpha: 0.08),
+              splashColor: colorScheme.primary.withValues(alpha: 0.06),
+              highlightColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Text(
+                        '${widget.index + 1}',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: selected
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.78,
+                                ),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.track.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: selected
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatTrackDuration(widget.track.duration),
+                      maxLines: 1,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    SizedBox.square(
+                      dimension: 44,
+                      child: IconButton(
+                        onPressed: widget.onMore,
+                        icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                        tooltip: '更多操作',
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: colorScheme.onSurfaceVariant,
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.padded,
+                          side: BorderSide.none,
+                          shape: const CircleBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({required this.state, required this.controller});
+  const _LibraryHeader({required this.state});
 
   final LibraryState state;
-  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -704,18 +1123,6 @@ class _LibraryHeader extends StatelessWidget {
           description: _librarySummaryLabel(state),
           automaticImplyLeading: false,
           hideTitleOnCompactWithCenter: false,
-          centerWidth: isWide ? 420 : null,
-          center: AppSearchField(
-            controller: controller,
-            dense: true,
-            hintText: _searchHint(state.currentFilter),
-            semanticLabel: '搜索媒体库',
-            onClear: () {
-              controller.clear();
-              context.read<LibraryCubit>().search('');
-            },
-            onSubmitted: (value) => context.read<LibraryCubit>().search(value),
-          ),
         ),
         const SizedBox(height: 14),
         AppScopeTabs<LibraryFilter>(
@@ -726,23 +1133,16 @@ class _LibraryHeader extends StatelessWidget {
           selectedValue: state.currentFilter,
           onChanged: (filter) =>
               context.read<LibraryCubit>().changeFilter(filter),
+          fillWidth: !isWide,
           items: const [
             AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
             AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
             AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
+            AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
           ],
         ),
       ],
     );
-  }
-
-  String _searchHint(LibraryFilter filter) {
-    return switch (filter) {
-      LibraryFilter.tracks => '搜索当前歌曲',
-      LibraryFilter.albums => '搜索当前专辑',
-      LibraryFilter.artists => '搜索当前艺术家',
-      LibraryFilter.favorites => '搜索当前歌曲',
-    };
   }
 }
 
@@ -795,9 +1195,7 @@ class _GenreChip extends StatelessWidget {
 }
 
 class _LibraryFavoritesSliver extends StatelessWidget {
-  const _LibraryFavoritesSliver({this.searchQuery});
-
-  final String? searchQuery;
+  const _LibraryFavoritesSliver();
 
   @override
   Widget build(BuildContext context) {
@@ -835,14 +1233,7 @@ class _LibraryFavoritesSliver extends StatelessWidget {
             );
           }
 
-          final query = searchQuery?.trim().toLowerCase() ?? '';
-          final filteredTracks = query.isEmpty
-              ? state.tracks
-              : state.tracks.where((track) {
-                  return track.title.toLowerCase().contains(query) ||
-                      track.artistName.toLowerCase().contains(query) ||
-                      track.albumTitle.toLowerCase().contains(query);
-                }).toList();
+          final filteredTracks = state.tracks;
 
           if (filteredTracks.isEmpty) {
             return SliverToBoxAdapter(
@@ -850,9 +1241,7 @@ class _LibraryFavoritesSliver extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 32),
                 child: Center(
                   child: Text(
-                    query.isEmpty
-                        ? '还没有收藏歌曲，去媒体库挑几首喜欢的吧。'
-                        : '没有找到匹配的收藏歌曲，换个关键词试试。',
+                    '还没有收藏歌曲，去媒体库挑几首喜欢的吧。',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -874,9 +1263,8 @@ class _LibraryFavoritesSliver extends StatelessWidget {
                   onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
                     context,
                     loadedTracks: filteredTracks,
-                    allLoaded: !state.hasMore || query.isNotEmpty,
+                    allLoaded: !state.hasMore,
                     fetchAll: () async {
-                      if (query.isNotEmpty) return filteredTracks;
                       final cubit = context.read<FavoritesListCubit>();
                       final tracks = <MusicTrack>[...state.tracks];
                       while (cubit.state.hasMore) {
@@ -913,7 +1301,7 @@ class _LibraryFavoritesSliver extends StatelessWidget {
                   );
                 }, childCount: filteredTracks.length),
               ),
-              _LibraryFavoritesFooter(state: state, query: query),
+              _LibraryFavoritesFooter(state: state),
             ],
           );
         },
@@ -923,17 +1311,12 @@ class _LibraryFavoritesSliver extends StatelessWidget {
 }
 
 class _LibraryFavoritesFooter extends StatelessWidget {
-  const _LibraryFavoritesFooter({required this.state, required this.query});
+  const _LibraryFavoritesFooter({required this.state});
 
   final FavoritesListState state;
-  final String query;
 
   @override
   Widget build(BuildContext context) {
-    if (query.isNotEmpty) {
-      return const SliverToBoxAdapter(child: SizedBox(height: 14));
-    }
-
     if (state.errorMessage != null &&
         !state.isLoadingMore &&
         state.status == FavoritesListStatus.failure) {

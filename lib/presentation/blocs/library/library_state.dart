@@ -1,11 +1,12 @@
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
-enum LibraryFilter { tracks, albums, artists, favorites }
+enum LibraryFilter { tracks, albums, artists, playlists, favorites }
 
 class LibraryState {
   const LibraryState({
@@ -16,6 +17,7 @@ class LibraryState {
     this.totalTrackCount,
     this.albums = const [],
     this.artists = const [],
+    this.playlists = const [],
     this.genres = const [],
     this.selectedGenreId,
     this.hasMore = true,
@@ -34,6 +36,7 @@ class LibraryState {
   final int? totalTrackCount;
   final List<MusicAlbum> albums;
   final List<MusicArtist> artists;
+  final List<MusicPlaylist> playlists;
   final List<Genre> genres;
   final String? selectedGenreId;
   final bool hasMore;
@@ -45,6 +48,7 @@ class LibraryState {
       LibraryFilter.tracks => tracks.isEmpty,
       LibraryFilter.albums => albums.isEmpty,
       LibraryFilter.artists => artists.isEmpty,
+      LibraryFilter.playlists => playlists.isEmpty,
       LibraryFilter.favorites => true,
     };
   }
@@ -54,6 +58,7 @@ class LibraryState {
       LibraryFilter.tracks => tracks.length,
       LibraryFilter.albums => albums.length,
       LibraryFilter.artists => artists.length,
+      LibraryFilter.playlists => playlists.length,
       LibraryFilter.favorites => 0,
     };
   }
@@ -66,6 +71,7 @@ class LibraryState {
     int? totalTrackCount,
     List<MusicAlbum>? albums,
     List<MusicArtist>? artists,
+    List<MusicPlaylist>? playlists,
     List<Genre>? genres,
     Object? selectedGenreId = _sentinel,
     bool? hasMore,
@@ -80,6 +86,7 @@ class LibraryState {
       totalTrackCount: totalTrackCount ?? this.totalTrackCount,
       albums: albums ?? this.albums,
       artists: artists ?? this.artists,
+      playlists: playlists ?? this.playlists,
       genres: genres ?? this.genres,
       selectedGenreId: identical(selectedGenreId, _sentinel)
           ? this.selectedGenreId

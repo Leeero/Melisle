@@ -162,6 +162,25 @@ class LibraryCubit extends Cubit<LibraryState> {
             ),
           );
           break;
+        case LibraryFilter.playlists:
+          final startIndex = reset ? 0 : state.playlists.length;
+          final playlists = await _musicRepository
+              .fetchPlaylists(
+                limit: _pageSize,
+                startIndex: startIndex,
+                searchQuery: searchQuery,
+              )
+              .timeout(_requestTimeout);
+          emit(
+            state.copyWith(
+              status: LibraryStatus.success,
+              playlists: reset ? playlists : [...state.playlists, ...playlists],
+              hasMore: playlists.length == _pageSize,
+              isLoadingMore: false,
+              errorMessage: null,
+            ),
+          );
+          break;
         case LibraryFilter.favorites:
           emit(
             state.copyWith(

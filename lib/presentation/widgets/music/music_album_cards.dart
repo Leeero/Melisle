@@ -10,12 +10,14 @@ class MusicAlbumGridCard extends StatefulWidget {
     required this.onTap,
     this.artworkRadius = AppRadiusTokens.coverGrid,
     this.scaleOnHover = 1.012,
+    this.compact = false,
   });
 
   final MusicAlbum album;
   final VoidCallback onTap;
   final double artworkRadius;
   final double scaleOnHover;
+  final bool compact;
 
   @override
   State<MusicAlbumGridCard> createState() => _MusicAlbumGridCardState();
@@ -31,6 +33,25 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
     final colorScheme = theme.colorScheme;
     final album = widget.album;
     final textTheme = theme.textTheme;
+    final compact = widget.compact;
+    final contentPadding = compact
+        ? const EdgeInsets.symmetric(horizontal: 4)
+        : EdgeInsets.zero;
+    final titleStyle = compact
+        ? textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.22,
+          )
+        : textTheme.titleMedium;
+    final subtitleStyle = compact
+        ? textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 12,
+            height: 1.18,
+          )
+        : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     return Semantics(
       label: '打开专辑《${album.title}》',
@@ -50,99 +71,105 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(widget.artworkRadius),
-                    onTap: widget.onTap,
-                    onHighlightChanged: (pressed) =>
-                        setState(() => _pressed = pressed),
-                    child: AnimatedContainer(
-                      duration: AppMotion.micro,
-                      curve: AppMotion.enter,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          widget.artworkRadius,
-                        ),
-                        boxShadow: _hovered
-                            ? [
-                                BoxShadow(
-                                  color: theme.musicRose.withValues(
-                                    alpha: theme.brightness == Brightness.dark
-                                        ? 0.18
-                                        : 0.14,
+              Padding(
+                padding: contentPadding,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(widget.artworkRadius),
+                      onTap: widget.onTap,
+                      onHighlightChanged: (pressed) =>
+                          setState(() => _pressed = pressed),
+                      child: AnimatedContainer(
+                        duration: AppMotion.micro,
+                        curve: AppMotion.enter,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            widget.artworkRadius,
+                          ),
+                          boxShadow: _hovered
+                              ? [
+                                  BoxShadow(
+                                    color: theme.musicRose.withValues(
+                                      alpha: theme.brightness == Brightness.dark
+                                          ? 0.18
+                                          : 0.14,
+                                    ),
+                                    blurRadius: compact ? 14 : 18,
+                                    offset: Offset(0, compact ? 5 : 7),
                                   ),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 7),
-                                ),
-                              ]
-                            : const <BoxShadow>[],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          widget.artworkRadius,
+                                ]
+                              : const <BoxShadow>[],
                         ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final artworkSize = constraints.maxWidth;
-                                return CachedArtwork(
-                                  imageUrl: album.artworkUrl,
-                                  size: artworkSize,
-                                  borderRadius: 0,
-                                  semanticLabel: '《${album.title}》专辑封面',
-                                );
-                              },
-                            ),
-                            AnimatedOpacity(
-                              duration: AppMotion.micro,
-                              curve: AppMotion.enter,
-                              opacity: _hovered ? 1 : 0,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: AppColorTokens.darkScaffold.withValues(
-                                    alpha: 0.10,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            widget.artworkRadius,
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final artworkSize = constraints.maxWidth;
+                                  return CachedArtwork(
+                                    imageUrl: album.artworkUrl,
+                                    size: artworkSize,
+                                    borderRadius: 0,
+                                    semanticLabel: '《${album.title}》专辑封面',
+                                  );
+                                },
+                              ),
+                              AnimatedOpacity(
+                                duration: AppMotion.micro,
+                                curve: AppMotion.enter,
+                                opacity: _hovered ? 1 : 0,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: AppColorTokens.darkScaffold
+                                        .withValues(alpha: 0.10),
                                   ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.play_circle_fill_rounded,
-                                    size: 42,
-                                    color: AppColorTokens.lightScaffold
-                                        .withValues(alpha: 0.88),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.play_circle_fill_rounded,
+                                      size: compact ? 34 : 42,
+                                      color: AppColorTokens.lightScaffold
+                                          .withValues(alpha: 0.88),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                album.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium,
+              SizedBox(height: compact ? 7 : 10),
+              Padding(
+                padding: contentPadding,
+                child: Text(
+                  album.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                [
-                  album.artistName,
-                  if (album.year != null) '${album.year}',
-                  '${album.trackCount} 首',
-                ].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+              SizedBox(height: compact ? 1 : 2),
+              Padding(
+                padding: contentPadding,
+                child: Text(
+                  [
+                    album.artistName,
+                    if (album.year != null) '${album.year}',
+                    '${album.trackCount} 首',
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: subtitleStyle,
                 ),
               ),
             ],

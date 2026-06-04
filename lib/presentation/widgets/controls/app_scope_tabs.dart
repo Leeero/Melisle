@@ -27,6 +27,7 @@ class AppScopeTabs<T> extends StatelessWidget {
     required this.onChanged,
     this.variant,
     this.semanticLabel = '分类',
+    this.fillWidth = false,
   });
 
   final List<AppScopeTabItem<T>> items;
@@ -34,6 +35,7 @@ class AppScopeTabs<T> extends StatelessWidget {
   final ValueChanged<T> onChanged;
   final AppScopeTabsVariant? variant;
   final String semanticLabel;
+  final bool fillWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -43,28 +45,41 @@ class AppScopeTabs<T> extends StatelessWidget {
         (AppBreakpoints.usesWideContent(context)
             ? AppScopeTabsVariant.underline
             : AppScopeTabsVariant.pill);
-    final tabs = SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          for (var index = 0; index < items.length; index++) ...[
-            _AppScopeTab(
+    final fillAvailableWidth =
+        fillWidth && effectiveVariant == AppScopeTabsVariant.pill;
+    final tabGap = effectiveVariant == AppScopeTabsVariant.underline
+        ? 18.0
+        : 2.0;
+    final tabChildren = [
+      for (var index = 0; index < items.length; index++) ...[
+        if (fillAvailableWidth)
+          Expanded(
+            child: _AppScopeTab(
               item: items[index],
               selected: items[index].value == selectedValue,
               variant: effectiveVariant,
+              compact: fillAvailableWidth,
               onPressed: () => onChanged(items[index].value),
             ),
-            if (index != items.length - 1)
-              SizedBox(
-                width: effectiveVariant == AppScopeTabsVariant.underline
-                    ? 18
-                    : 2,
-              ),
-          ],
-        ],
-      ),
-    );
+          )
+        else
+          _AppScopeTab(
+            item: items[index],
+            selected: items[index].value == selectedValue,
+            variant: effectiveVariant,
+            compact: false,
+            onPressed: () => onChanged(items[index].value),
+          ),
+        if (index != items.length - 1) SizedBox(width: tabGap),
+      ],
+    ];
+    final tabs = fillAvailableWidth
+        ? Row(children: tabChildren)
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(children: tabChildren),
+          );
 
     return Semantics(
       label: semanticLabel,
@@ -101,12 +116,14 @@ class _AppScopeTab<T> extends StatefulWidget {
     required this.item,
     required this.selected,
     required this.variant,
+    required this.compact,
     required this.onPressed,
   });
 
   final AppScopeTabItem<T> item;
   final bool selected;
   final AppScopeTabsVariant variant;
+  final bool compact;
   final VoidCallback onPressed;
 
   @override
@@ -121,7 +138,9 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final active = widget.selected || _hovered || _focused;
+    final active = widget.compact
+        ? widget.selected
+        : widget.selected || _hovered || _focused;
     final isUnderline = widget.variant == AppScopeTabsVariant.underline;
 
     return Semantics(
@@ -147,15 +166,24 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
             onFocusChange: (value) => setState(() => _focused = value),
             onTap: widget.onPressed,
             child: AnimatedContainer(
-              duration: AppMotion.micro,
+              duration: widget.compact ? Duration.zero : AppMotion.micro,
               curve: AppMotion.enter,
               constraints: BoxConstraints(minWidth: isUnderline ? 0 : 0),
               height: isUnderline ? 40 : 34,
-              padding: EdgeInsets.symmetric(horizontal: isUnderline ? 0 : 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: isUnderline
+                    ? 0
+                    : widget.compact
+                    ? 6
+                    : 14,
+              ),
               decoration: _decoration(context),
               alignment: Alignment.center,
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: widget.compact
+                    ? MainAxisSize.max
+                    : MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (widget.item.icon != null) ...[
                     Icon(
@@ -170,6 +198,8 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                   Text(
                     widget.item.displayLabel,
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
                         (isUnderline
                                 ? theme.textTheme.labelLarge
@@ -212,7 +242,9 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
     return BoxDecoration(
       color: widget.selected
           ? colorScheme.surface
-          : (_hovered || _focused ? theme.hoverWash : Colors.transparent),
+          : (!widget.compact && (_hovered || _focused)
+                ? theme.hoverWash
+                : Colors.transparent),
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
         color: widget.selected

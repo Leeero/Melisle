@@ -10,12 +10,14 @@ class MusicPlaylistGridCard extends StatefulWidget {
     required this.onTap,
     this.artworkRadius = AppRadiusTokens.coverGrid,
     this.scaleOnHover = 1.012,
+    this.compact = false,
   });
 
   final MusicPlaylist playlist;
   final VoidCallback onTap;
   final double artworkRadius;
   final double scaleOnHover;
+  final bool compact;
 
   @override
   State<MusicPlaylistGridCard> createState() => _MusicPlaylistGridCardState();
@@ -31,6 +33,25 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
     final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
     final textTheme = theme.textTheme;
+    final compact = widget.compact;
+    final contentPadding = compact
+        ? const EdgeInsets.symmetric(horizontal: 4)
+        : EdgeInsets.zero;
+    final titleStyle = compact
+        ? textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.22,
+          )
+        : textTheme.titleMedium;
+    final subtitleStyle = compact
+        ? textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 12,
+            height: 1.18,
+          )
+        : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     return Semantics(
       label: '打开歌单《${playlist.name}》',
@@ -50,102 +71,110 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(widget.artworkRadius),
-                    onTap: widget.onTap,
-                    onHighlightChanged: (pressed) =>
-                        setState(() => _pressed = pressed),
-                    child: AnimatedContainer(
-                      duration: AppMotion.short,
-                      curve: AppMotion.enter,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          widget.artworkRadius,
-                        ),
-                        boxShadow: _hovered
-                            ? [
-                                BoxShadow(
-                                  color: theme.musicTeal.withValues(
-                                    alpha: theme.brightness == Brightness.dark
-                                        ? 0.18
-                                        : 0.14,
+              Padding(
+                padding: contentPadding,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(widget.artworkRadius),
+                      onTap: widget.onTap,
+                      onHighlightChanged: (pressed) =>
+                          setState(() => _pressed = pressed),
+                      child: AnimatedContainer(
+                        duration: AppMotion.short,
+                        curve: AppMotion.enter,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            widget.artworkRadius,
+                          ),
+                          boxShadow: _hovered
+                              ? [
+                                  BoxShadow(
+                                    color: theme.musicTeal.withValues(
+                                      alpha: theme.brightness == Brightness.dark
+                                          ? 0.18
+                                          : 0.14,
+                                    ),
+                                    blurRadius: compact ? 14 : 18,
+                                    offset: Offset(0, compact ? 5 : 7),
                                   ),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 7),
-                                ),
-                              ]
-                            : const <BoxShadow>[],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          widget.artworkRadius,
+                                ]
+                              : const <BoxShadow>[],
                         ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                return CachedArtwork(
-                                  imageUrl: playlist.artworkUrl,
-                                  size: constraints.maxWidth,
-                                  borderRadius: 0,
-                                  semanticLabel: '《${playlist.name}》歌单封面',
-                                );
-                              },
-                            ),
-                            Positioned(
-                              right: 8,
-                              bottom: 8,
-                              child: _PlaylistCountBadge(
-                                count: playlist.trackCount,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            widget.artworkRadius,
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return CachedArtwork(
+                                    imageUrl: playlist.artworkUrl,
+                                    size: constraints.maxWidth,
+                                    borderRadius: 0,
+                                    semanticLabel: '《${playlist.name}》歌单封面',
+                                  );
+                                },
                               ),
-                            ),
-                            Positioned.fill(
-                              child: AnimatedOpacity(
-                                duration: AppMotion.micro,
-                                curve: AppMotion.enter,
-                                opacity: _hovered ? 1 : 0,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: AppColorTokens.darkScaffold
-                                        .withValues(alpha: 0.12),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.play_circle_fill_rounded,
-                                      size: 42,
-                                      color: AppColorTokens.lightScaffold
-                                          .withValues(alpha: 0.88),
+                              Positioned(
+                                right: compact ? 6 : 8,
+                                bottom: compact ? 6 : 8,
+                                child: _PlaylistCountBadge(
+                                  count: playlist.trackCount,
+                                  compact: compact,
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: AnimatedOpacity(
+                                  duration: AppMotion.micro,
+                                  curve: AppMotion.enter,
+                                  opacity: _hovered ? 1 : 0,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: AppColorTokens.darkScaffold
+                                          .withValues(alpha: 0.12),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.play_circle_fill_rounded,
+                                        size: compact ? 34 : 42,
+                                        color: AppColorTokens.lightScaffold
+                                            .withValues(alpha: 0.88),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                playlist.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium,
+              SizedBox(height: compact ? 7 : 10),
+              Padding(
+                padding: contentPadding,
+                child: Text(
+                  playlist.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '${playlist.trackCount} 首歌曲',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+              SizedBox(height: compact ? 1 : 2),
+              Padding(
+                padding: contentPadding,
+                child: Text(
+                  '${playlist.trackCount} 首歌曲',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: subtitleStyle,
                 ),
               ),
             ],
@@ -249,9 +278,10 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
 }
 
 class _PlaylistCountBadge extends StatelessWidget {
-  const _PlaylistCountBadge({required this.count});
+  const _PlaylistCountBadge({required this.count, this.compact = false});
 
   final int count;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -261,21 +291,26 @@ class _PlaylistCountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 6 : 8,
+          vertical: compact ? 3 : 4,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.queue_music_rounded,
-              size: 13,
-              color: Color(0xFFF6F8FC),
+              size: compact ? 11 : 13,
+              color: const Color(0xFFF6F8FC),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: compact ? 3 : 4),
             Text(
               '$count',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: const Color(0xFFF6F8FC),
                 fontWeight: FontWeight.w700,
+                fontSize: compact ? 10 : null,
+                height: 1,
               ),
             ),
           ],

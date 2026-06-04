@@ -122,6 +122,10 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
                       '/playlists/${playlist.id}',
                       extra: playlist,
                     ),
+                    artworkRadius: isWide
+                        ? AppRadiusTokens.coverGrid
+                        : AppRadiusTokens.mobileMd,
+                    compact: !isWide,
                   );
                 }, childCount: state.playlists.length),
                 gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
