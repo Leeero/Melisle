@@ -11,7 +11,6 @@ import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_b
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
@@ -90,7 +89,13 @@ class _PlaylistDetailView extends StatelessWidget {
   ) {
     return [
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 10, bottom: 10),
+        padding: AppPageLayout.sectionPadding(context, top: 10, bottom: 8),
+        sliver: SliverToBoxAdapter(
+          child: AppDetailBackNav(onPressed: () => _goBackToPlaylists(context)),
+        ),
+      ),
+      SliverPadding(
+        padding: AppPageLayout.sectionPadding(context, top: 2, bottom: 24),
         sliver: SliverToBoxAdapter(
           child: _PlaylistHero(
             playlist: playlist,
@@ -758,84 +763,69 @@ class _PlaylistHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final trackCountLabel = tracksCount == 0
+        ? (playlist?.trackCount ?? 0)
+        : tracksCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = AppBreakpoints.usesWideContentWidth(
-          constraints.maxWidth,
-        );
-        final titleStyle = isWide
-            ? theme.textTheme.headlineMedium
-            : theme.textTheme.headlineSmall;
+        final coverSize = constraints.maxWidth < 820 ? 172.0 : 200.0;
 
-        return AppDetailHeroFrame(
-          padding: isWide
-              ? EdgeInsets.zero
-              : const EdgeInsets.fromLTRB(0, 16, 0, 24),
-          compactGap: 16,
-          spacing: 28,
-          coverBuilder: (context, isWide) {
-            return _PlaylistHeroArtwork(
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _PlaylistHeroArtwork(
               imageUrl: playlist?.artworkUrl ?? '',
-              size: isWide ? 188 : 208,
-            );
-          },
-          contentBuilder: (context, isWide) {
-            final alignment = isWide
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.center;
-            final trackCountLabel = tracksCount == 0
-                ? (playlist?.trackCount ?? 0)
-                : tracksCount;
-            return Column(
-              crossAxisAlignment: alignment,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Wrap(
-                  alignment: isWide
-                      ? WrapAlignment.start
-                      : WrapAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
+              size: coverSize,
+            ),
+            const SizedBox(width: 28),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const MetaPill(label: '歌单', size: MetaPillSize.compact),
-                    MetaPill(
-                      label: '$trackCountLabel 首',
-                      size: MetaPillSize.compact,
+                    Text(
+                      '歌单',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.32,
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  playlist?.name ?? '歌单详情',
-                  maxLines: isWide ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: isWide ? TextAlign.start : TextAlign.center,
-                  style: titleStyle?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '$trackCountLabel 首歌曲',
-                  textAlign: isWide ? TextAlign.start : TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                SizedBox(height: isWide ? 24 : 14),
-                Wrap(
-                  alignment: isWide
-                      ? WrapAlignment.start
-                      : WrapAlignment.center,
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
+                    const SizedBox(height: 6),
+                    Text(
+                      playlist?.name ?? '歌单详情',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontSize: 32,
+                        height: 1.12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$trackCountLabel 首歌曲',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     PlayAllButton(
-                      variant: isWide
-                          ? PlayAllButtonVariant.primary
-                          : PlayAllButtonVariant.compact,
+                      variant: PlayAllButtonVariant.primary,
                       onPressed: tracksCount == 0 || isLoading
                           ? null
                           : onPlayAll,
@@ -843,9 +833,9 @@ class _PlaylistHero extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         );
       },
     );

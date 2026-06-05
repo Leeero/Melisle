@@ -1,6 +1,5 @@
-import 'dart:async';
-
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
+import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -11,10 +10,11 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
 
   final FetchPlaylists _fetchPlaylists;
 
-  Timer? _searchDebounce;
-
   Future<void> load() async {
     await _loadPage(reset: true);
+    while (state.status == PlaylistsStatus.success && state.hasMore) {
+      await _loadPage(reset: false);
+    }
   }
 
   Future<void> loadMore() async {
@@ -28,16 +28,16 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
   }
 
   void search(String query) {
-    _searchDebounce?.cancel();
-    emit(state.copyWith(searchQuery: query, errorMessage: null));
-    _searchDebounce = Timer(const Duration(milliseconds: 280), () {
-      unawaited(_loadPage(reset: true));
-    });
+    emit(
+      state.copyWith(
+        searchQuery: query,
+        playlists: _filterPlaylists(state.allPlaylists, query),
+        errorMessage: null,
+      ),
+    );
   }
 
   Future<void> _loadPage({required bool reset}) async {
-    final query = state.searchQuery.trim();
-
     if (reset) {
       emit(
         state.copyWith(
@@ -54,14 +54,18 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
     try {
       final playlists = await _fetchPlaylists(
         limit: _pageSize,
-        startIndex: reset ? 0 : state.playlists.length,
-        searchQuery: query.isEmpty ? null : query,
+        startIndex: reset ? 0 : state.allPlaylists.length,
       );
+      final allPlaylists = reset
+          ? playlists
+          : _appendUniquePlaylists(state.allPlaylists, playlists);
+      final hasNewItems = allPlaylists.length > state.allPlaylists.length;
       emit(
         state.copyWith(
           status: PlaylistsStatus.success,
-          playlists: reset ? playlists : [...state.playlists, ...playlists],
-          hasMore: playlists.length == _pageSize,
+          allPlaylists: allPlaylists,
+          playlists: _filterPlaylists(allPlaylists, state.searchQuery),
+          hasMore: playlists.length == _pageSize && (reset || hasNewItems),
           isLoadingMore: false,
           errorMessage: null,
         ),
@@ -77,9 +81,31 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
     }
   }
 
-  @override
-  Future<void> close() async {
-    _searchDebounce?.cancel();
-    return super.close();
+  List<MusicPlaylist> _appendUniquePlaylists(
+    List<MusicPlaylist> existing,
+    List<MusicPlaylist> incoming,
+  ) {
+    final seenIds = existing.map((playlist) => playlist.id).toSet();
+    final merged = <MusicPlaylist>[...existing];
+    for (final playlist in incoming) {
+      if (seenIds.add(playlist.id)) {
+        merged.add(playlist);
+      }
+    }
+    return merged;
+  }
+
+  List<MusicPlaylist> _filterPlaylists(
+    List<MusicPlaylist> playlists,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return playlists;
+
+    return playlists
+        .where(
+          (playlist) => playlist.name.toLowerCase().contains(normalizedQuery),
+        )
+        .toList(growable: false);
   }
 }
