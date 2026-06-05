@@ -22,6 +22,11 @@ Thumbs.db
 # Design system docs (local reference only, not needed for build)
 design-system/
 
+# Local development secrets
+.env/*
+!.env/
+!.env/*.example.json
+
 # Dart / Flutter / Pub
 .dart_tool/
 .flutter-plugins

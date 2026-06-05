@@ -69,6 +69,20 @@ flutter run -d ios
 flutter run -d android
 ```
 
+本地开发时可以使用开发登录变量避免每次重启后手动输入账号。先复制示例文件：
+
+```bash
+cp .env/dev_login.example.json .env/dev_login.json
+```
+
+然后把 `.env/dev_login.json` 中的服务器地址、用户名和密码 / Token 改成自己的本地开发配置，再通过 `--dart-define-from-file` 运行：
+
+```bash
+flutter run -d macos --dart-define-from-file=.env/dev_login.json
+```
+
+`.env/dev_login.json` 已加入 Git 忽略规则，不要把真实登录信息提交到远端。
+
 ## 常用命令
 
 ```bash

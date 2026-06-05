@@ -1,5 +1,6 @@
 export 'auth/auth_cubit.dart';
 export 'auth/auth_state.dart';
+export 'auth/dev_login_credentials.dart';
 export 'artist/artist_cubit.dart';
 export 'artist/artist_state.dart';
 export 'downloads/downloads_cubit.dart';

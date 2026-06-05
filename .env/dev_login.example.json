@@ -1,0 +1,6 @@
+{
+  "MELISLE_DEV_LOGIN_ENABLED": true,
+  "MELISLE_DEV_LOGIN_SERVER_URL": "https://music.example.com",
+  "MELISLE_DEV_LOGIN_USERNAME": "your-username",
+  "MELISLE_DEV_LOGIN_PASSWORD": "your-password-or-token"
+}

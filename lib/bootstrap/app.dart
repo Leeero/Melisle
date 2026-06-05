@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
 import 'package:cross_platform_music_player/bootstrap/bloc_observer.dart';
 import 'package:cross_platform_music_player/bootstrap/desktop_integration.dart';
+import 'package:cross_platform_music_player/bootstrap/dev_login_environment.dart';
 import 'package:cross_platform_music_player/bootstrap/router.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
@@ -100,6 +101,7 @@ final class AppBootstrap {
       loginWithEmby: LoginWithEmby(repository),
       restoreSession: RestoreSession(repository),
       logout: Logout(repository),
+      devLoginCredentials: DevLoginEnvironment.credentials(),
     );
 
     // 初始化 audio_service —— 负责锁屏 / 通知 / NowPlaying / SMTC。
