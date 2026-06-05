@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
+import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/pages/album/album_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/artist/artist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
@@ -19,6 +20,7 @@ import 'package:cross_platform_music_player/presentation/pages/playlists/playlis
 import 'package:cross_platform_music_player/presentation/pages/search/search_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/app_shell.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -80,8 +82,14 @@ GoRouter createRouter(AuthCubit authCubit) {
             routes: [
               GoRoute(
                 path: '/library',
-                pageBuilder: (context, state) =>
-                    _shellPage(state, const LibraryPage()),
+                pageBuilder: (context, state) => _shellPage(
+                  state,
+                  LibraryPage(
+                    initialFilter: _libraryFilterFromQuery(
+                      state.uri.queryParameters['tab'],
+                    ),
+                  ),
+                ),
               ),
               GoRoute(
                 path: '/album/:albumId',
@@ -155,21 +163,40 @@ GoRouter createRouter(AuthCubit authCubit) {
         pageBuilder: (context, state) {
           return CustomTransitionPage<void>(
             key: state.pageKey,
+            transitionDuration: const Duration(milliseconds: 380),
+            reverseTransitionDuration: const Duration(milliseconds: 260),
             child: const PlayerPage(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  // iOS/Android: 从底部滑入的 Material 风格转场。
+                  final curved = CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  );
+                  final compact = AppBreakpoints.isCompactWidth(
+                    MediaQuery.sizeOf(context).width,
+                  );
+
+                  if (!compact) {
+                    return FadeTransition(
+                      opacity: curved,
+                      child: ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.985,
+                          end: 1,
+                        ).animate(curved),
+                        child: child,
+                      ),
+                    );
+                  }
+
+                  // 移动端：从底部滑入的全屏播放页转场。
                   final tween = Tween<Offset>(
                     begin: const Offset(0, 1),
                     end: Offset.zero,
                   );
                   return SlideTransition(
-                    position: tween.animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    ),
+                    position: tween.animate(curved),
                     child: child,
                   );
                 },
@@ -182,6 +209,15 @@ GoRouter createRouter(AuthCubit authCubit) {
 
 NoTransitionPage<void> _shellPage(GoRouterState state, Widget child) {
   return NoTransitionPage<void>(key: state.pageKey, child: child);
+}
+
+LibraryFilter _libraryFilterFromQuery(String? tab) {
+  return switch (tab) {
+    'albums' => LibraryFilter.albums,
+    'artists' => LibraryFilter.artists,
+    'playlists' => LibraryFilter.playlists,
+    _ => LibraryFilter.tracks,
+  };
 }
 
 class GoRouterRefreshStream extends ChangeNotifier {

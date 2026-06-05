@@ -29,16 +29,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 class LibraryPage extends StatelessWidget {
-  const LibraryPage({super.key});
+  const LibraryPage({super.key, this.initialFilter = LibraryFilter.tracks});
+
+  final LibraryFilter initialFilter;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
+      key: ValueKey(initialFilter),
       create: (context) => LibraryCubit(
         FetchLibraryTracks(context.read<MusicRepository>()),
         FetchLibraryAlbums(context.read<MusicRepository>()),
         FetchLibraryArtists(context.read<MusicRepository>()),
         context.read<MusicRepository>(),
+        initialFilter: initialFilter,
       )..load(),
       child: const _LibraryView(),
     );
@@ -1122,6 +1126,28 @@ class _LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWide = AppBreakpoints.usesWideContent(context);
+    final tabs = AppScopeTabs<LibraryFilter>(
+      semanticLabel: '媒体库分类',
+      variant: isWide
+          ? AppScopeTabsVariant.underline
+          : AppScopeTabsVariant.pill,
+      selectedValue: state.currentFilter,
+      onChanged: (filter) => context.read<LibraryCubit>().changeFilter(filter),
+      fillWidth: !isWide,
+      tabGap: isWide ? 34 : null,
+      items: isWide
+          ? const [
+              AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
+              AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
+              AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
+            ]
+          : const [
+              AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
+              AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
+              AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
+              AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
+            ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1133,22 +1159,7 @@ class _LibraryHeader extends StatelessWidget {
           hideTitleOnCompactWithCenter: false,
         ),
         const SizedBox(height: 14),
-        AppScopeTabs<LibraryFilter>(
-          semanticLabel: '媒体库分类',
-          variant: isWide
-              ? AppScopeTabsVariant.underline
-              : AppScopeTabsVariant.pill,
-          selectedValue: state.currentFilter,
-          onChanged: (filter) =>
-              context.read<LibraryCubit>().changeFilter(filter),
-          fillWidth: !isWide,
-          items: const [
-            AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
-            AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
-            AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-            AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
-          ],
-        ),
+        if (isWide) SizedBox(width: 420, child: tabs) else tabs,
       ],
     );
   }

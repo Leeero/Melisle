@@ -1333,6 +1333,8 @@ class _SourceInlineTestButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final hoverBackground = theme.hoverWash.withValues(alpha: 0.72);
+    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return Tooltip(
       message: isTesting ? testingLabel : '测试地址',
@@ -1364,14 +1366,14 @@ class _SourceInlineTestButton extends StatelessWidget {
               ).copyWith(
                 backgroundColor: WidgetStateProperty.resolveWith((states) {
                   if (states.contains(WidgetState.disabled)) {
-                    return Colors.transparent;
+                    return idleBackground;
                   }
                   if (states.contains(WidgetState.pressed) ||
                       states.contains(WidgetState.hovered) ||
                       states.contains(WidgetState.focused)) {
-                    return theme.hoverWash.withValues(alpha: 0.72);
+                    return hoverBackground;
                   }
-                  return Colors.transparent;
+                  return idleBackground;
                 }),
                 overlayColor: WidgetStateProperty.all(Colors.transparent),
               ),
@@ -1408,11 +1410,14 @@ class _HoverableListTileState extends State<_HoverableListTile> {
     final colorScheme = Theme.of(context).colorScheme;
     final compact = AppBreakpoints.isCompact(context);
     final enabled = widget.onTap != null;
+    final hoverBackground = theme.hoverWash.withValues(alpha: 0.56);
+    final pressedBackground = theme.hoverWash.withValues(alpha: 0.74);
+    final idleBackground = hoverBackground.withValues(alpha: 0);
     final backgroundColor = _pressed && enabled
-        ? theme.hoverWash.withValues(alpha: 0.74)
+        ? pressedBackground
         : _hovered && enabled
-        ? theme.hoverWash.withValues(alpha: 0.56)
-        : Colors.transparent;
+        ? hoverBackground
+        : idleBackground;
 
     return MouseRegion(
       onEnter: (_) {

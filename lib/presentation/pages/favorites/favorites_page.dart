@@ -121,15 +121,6 @@ class _FavoritesViewState extends State<_FavoritesView> {
           24,
         ),
         children: [
-          _FavoritesPlayAllToolbar(state: state),
-          const SizedBox(height: 12),
-          AppSectionTitleRow(
-            title: '收藏歌曲',
-            badge: MetaPill(
-              label: '${state.tracks.length} 首',
-              size: MetaPillSize.compact,
-            ),
-          ),
           MusicTrackTable(
             tracks: state.tracks,
             currentTrackId: currentTrackId,
@@ -193,14 +184,18 @@ class _FavoritesHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
     final count = state.tracks.length;
+    final playAllButton = count == 0
+        ? null
+        : PlayAllButton(
+            variant: PlayAllButtonVariant.compact,
+            onPressed: () => _playAllFavorites(context, state),
+          );
 
     return AppPageHeader(
       title: '收藏',
       description: count == 0 ? '你标记喜欢的歌曲' : '$count 首收藏歌曲',
       automaticImplyLeading: false,
-      trailing: compact
-          ? null
-          : MetaPill(label: '$count 首', size: MetaPillSize.compact),
+      trailing: compact ? null : playAllButton,
     );
   }
 }

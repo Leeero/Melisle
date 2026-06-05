@@ -83,17 +83,9 @@ class _HistoryView extends StatelessWidget {
           24,
         ),
         children: [
-          AppSectionTitleRow(
-            title: '最近播放',
-            badge: MetaPill(
-              label: '${state.tracks.length} 条',
-              size: MetaPillSize.compact,
-            ),
-          ),
           MusicTrackTable(
             tracks: state.tracks,
             currentTrackId: currentTrackId,
-            trackCountLabel: '${state.tracks.length} 条',
             showActionBar: false,
             onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
               context,
@@ -167,16 +159,7 @@ class _HistoryHeader extends StatelessWidget {
     return AppPageHeader(
       title: '播放历史',
       description: '过去 7 天的播放记录',
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MetaPill(label: '$count 条', size: MetaPillSize.compact),
-          if (playAllButton != null) ...[
-            const SizedBox(width: 10),
-            playAllButton,
-          ],
-        ],
-      ),
+      trailing: playAllButton,
     );
   }
 }

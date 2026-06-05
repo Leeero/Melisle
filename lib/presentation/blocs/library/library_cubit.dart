@@ -13,8 +13,9 @@ class LibraryCubit extends Cubit<LibraryState> {
     this._fetchLibraryTracks,
     this._fetchLibraryAlbums,
     this._fetchLibraryArtists,
-    this._musicRepository,
-  ) : super(const LibraryState.initial());
+    this._musicRepository, {
+    LibraryFilter initialFilter = LibraryFilter.tracks,
+  }) : super(LibraryState.initial(currentFilter: initialFilter));
 
   static const _pageSize = 30;
   static const _requestTimeout = Duration(seconds: 30);

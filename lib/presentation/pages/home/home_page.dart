@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/application/usecases/fetch_latest_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_random_albums.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
@@ -10,10 +12,13 @@ import 'package:cross_platform_music_player/presentation/blocs/home/home_state.d
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -45,8 +50,15 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  bool _showDesktopRecommendationTracks = false;
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +121,21 @@ class _HomeView extends StatelessWidget {
     final recommendationTracks = _recommendationTracks(state);
     final recommendationArtwork = _recommendationArtwork(state);
     final recommendedArtists = _recommendedArtists(state);
+    final showingDesktopRecommendationTracks =
+        !compact &&
+        _showDesktopRecommendationTracks &&
+        recommendationTracks.isNotEmpty;
+
+    if (showingDesktopRecommendationTracks) {
+      return _RecommendationTracksDesktopView(
+        tracks: recommendationTracks,
+        artwork: recommendationArtwork,
+        description: _trackCaption(recommendationTracks),
+        currentTrackId: currentTrackId,
+        onBackPressed: () =>
+            setState(() => _showDesktopRecommendationTracks = false),
+      );
+    }
 
     return CustomScrollView(
       slivers: [
@@ -391,9 +418,17 @@ class _HomeView extends StatelessWidget {
                   extra: primaryAlbum,
                 ),
           secondaryLabel: tracks.isNotEmpty ? '查看歌曲' : '查看专辑',
-          onSecondaryPressed: () => tracks.isNotEmpty
-              ? _showRecommendationTracks(context, tracks)
-              : context.go('/library'),
+          onSecondaryPressed: () {
+            if (tracks.isEmpty) {
+              context.go('/library');
+              return;
+            }
+            if (AppBreakpoints.usesWideContent(context)) {
+              setState(() => _showDesktopRecommendationTracks = true);
+              return;
+            }
+            _showRecommendationTracks(context, tracks);
+          },
         ),
       ),
     );
@@ -483,8 +518,9 @@ class _HomeView extends StatelessWidget {
           else
             SliverLayoutBuilder(
               builder: (context, constraints) {
-                final columnCount = AppBreakpoints.adaptiveAlbumGridCount(
+                final columnCount = _homeDesktopGridCount(
                   constraints.crossAxisExtent,
+                  maxColumns: 5,
                 );
                 return SliverGrid(
                   delegate: SliverChildBuilderDelegate((context, index) {
@@ -503,7 +539,10 @@ class _HomeView extends StatelessWidget {
                     crossAxisCount: columnCount,
                     crossAxisSpacing: 18,
                     mainAxisSpacing: 22,
-                    childAspectRatio: 0.78,
+                    mainAxisExtent: _homeDesktopSquareCardExtent(
+                      constraints.crossAxisExtent,
+                      columnCount,
+                    ),
                   ),
                 );
               },
@@ -566,7 +605,7 @@ class _HomeView extends StatelessWidget {
           else
             SliverLayoutBuilder(
               builder: (context, constraints) {
-                final columnCount = AppBreakpoints.adaptiveAlbumGridCount(
+                final columnCount = _homeDesktopGridCount(
                   constraints.crossAxisExtent,
                 );
                 return SliverGrid(
@@ -583,7 +622,10 @@ class _HomeView extends StatelessWidget {
                     crossAxisCount: columnCount,
                     crossAxisSpacing: 18,
                     mainAxisSpacing: 22,
-                    childAspectRatio: 0.78,
+                    mainAxisExtent: _homeDesktopSquareCardExtent(
+                      constraints.crossAxisExtent,
+                      columnCount,
+                    ),
                   ),
                 );
               },
@@ -615,7 +657,9 @@ class _HomeView extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               action: compact
                   ? null
-                  : _HomeViewAllButton(onPressed: () => context.go('/library')),
+                  : _HomeViewAllButton(
+                      onPressed: () => context.go('/library?tab=artists'),
+                    ),
             ),
           ),
           if (compact)
@@ -644,8 +688,9 @@ class _HomeView extends StatelessWidget {
           else
             SliverLayoutBuilder(
               builder: (context, constraints) {
-                final columnCount = AppBreakpoints.adaptiveAlbumGridCount(
+                final columnCount = _homeDesktopGridCount(
                   constraints.crossAxisExtent,
+                  minCardWidth: 148,
                 );
                 return SliverGrid(
                   delegate: SliverChildBuilderDelegate((context, index) {
@@ -660,7 +705,10 @@ class _HomeView extends StatelessWidget {
                     crossAxisCount: columnCount,
                     crossAxisSpacing: 18,
                     mainAxisSpacing: 22,
-                    childAspectRatio: 0.86,
+                    mainAxisExtent: _homeDesktopArtistCardExtent(
+                      constraints.crossAxisExtent,
+                      columnCount,
+                    ),
                   ),
                 );
               },
@@ -692,6 +740,270 @@ class _HomeView extends StatelessWidget {
     if (hours > 0) return '$hours 小时';
     return '$minutes 分钟';
   }
+}
+
+int _homeDesktopGridCount(
+  double width, {
+  double minCardWidth = 160,
+  int maxColumns = 7,
+}) {
+  final count =
+      ((width + _homeDesktopGridGap) / (minCardWidth + _homeDesktopGridGap))
+          .floor();
+  return count.clamp(2, maxColumns).toInt();
+}
+
+const _homeDesktopGridGap = 18.0;
+
+double _homeDesktopTileWidth(double width, int columnCount) {
+  final totalGap = _homeDesktopGridGap * (columnCount - 1);
+  return (width - totalGap) / columnCount;
+}
+
+double _homeDesktopSquareCardExtent(double width, int columnCount) {
+  final tileWidth = _homeDesktopTileWidth(width, columnCount);
+  return tileWidth + 66;
+}
+
+double _homeDesktopArtistCardExtent(double width, int columnCount) {
+  final tileWidth = _homeDesktopTileWidth(width, columnCount);
+  return tileWidth * 0.78 + 68;
+}
+
+class _RecommendationTracksDesktopView extends StatelessWidget {
+  const _RecommendationTracksDesktopView({
+    required this.tracks,
+    required this.artwork,
+    required this.description,
+    required this.currentTrackId,
+    required this.onBackPressed,
+  });
+
+  final List<MusicTrack> tracks;
+  final List<_ArtworkSeed> artwork;
+  final String description;
+  final String? currentTrackId;
+  final VoidCallback onBackPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final horizontalPadding = AppPageLayout.horizontalPadding(context);
+    final countLabel = '${tracks.length} 首';
+
+    return Column(
+      children: [
+        Padding(
+          padding: AppPageLayout.headerPadding(context),
+          child: AppPageHeader(
+            title: '今日推荐',
+            description: '根据最近播放和服务器记录整理',
+            leading: AppBackButton(onPressed: onBackPressed),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MetaPill(label: description, size: MetaPillSize.compact),
+                const SizedBox(width: 10),
+                AppActionButton(
+                  icon: Icons.play_arrow_rounded,
+                  label: '播放全部',
+                  tone: AppActionButtonTone.primary,
+                  onPressed: () => unawaited(
+                    PlayerNavigation.playTracksAndOpenPlayer(
+                      context,
+                      tracks: tracks,
+                      startIndex: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              0,
+              horizontalPadding,
+              24,
+            ),
+            children: [
+              _RecommendationTracksOverview(
+                tracks: tracks,
+                artwork: artwork,
+                description: description,
+              ),
+              const SizedBox(height: 24),
+              AppSectionTitleRow(
+                title: '推荐歌曲',
+                badge: MetaPill(label: countLabel, size: MetaPillSize.compact),
+              ),
+              MusicTrackTable(
+                tracks: tracks,
+                currentTrackId: currentTrackId,
+                showActionBar: false,
+                onTrackTap: (index, _) => unawaited(
+                  PlayerNavigation.playTracksAndOpenPlayer(
+                    context,
+                    tracks: tracks,
+                    startIndex: index,
+                  ),
+                ),
+                onAddTrackToQueue: (track) => unawaited(
+                  _addRecommendationTracksToQueue(context, [track]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationTracksOverview extends StatelessWidget {
+  const _RecommendationTracksOverview({
+    required this.tracks,
+    required this.artwork,
+    required this.description,
+  });
+
+  final List<MusicTrack> tracks;
+  final List<_ArtworkSeed> artwork;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primaryTrack = tracks.first;
+    final title = '继续从《${primaryTrack.title}》开始';
+    final subtitle = primaryTrack.albumTitle.isNotEmpty
+        ? '${primaryTrack.artistName} · ${primaryTrack.albumTitle}'
+        : primaryTrack.artistName;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopXl),
+        border: Border.all(
+          color: Color.alphaBlend(
+            theme.musicTeal.withValues(alpha: 0.18),
+            colorScheme.outlineVariant,
+          ),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              theme.musicWarmSoft.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.30 : 0.46,
+              ),
+              colorScheme.surface,
+            ),
+            colorScheme.surfaceContainerHigh,
+          ],
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopXl),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -72,
+              top: -96,
+              child: _HomeRadialWash(
+                size: 240,
+                color: theme.musicTeal.withValues(alpha: 0.18),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '推荐队列',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontSize: 26,
+                            height: 1.14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        MetaPill(
+                          label: description,
+                          size: MetaPillSize.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 34),
+                  SizedBox(
+                    width: 260,
+                    height: 154,
+                    child: _RecommendationStack(
+                      artwork: artwork,
+                      caption: description,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _addRecommendationTracksToQueue(
+  BuildContext context,
+  List<MusicTrack> tracks,
+) async {
+  if (tracks.isEmpty) return;
+  final player = context.read<PlayerCubit>();
+  for (final track in tracks) {
+    await player.addToQueue(track);
+  }
+  if (!context.mounted) return;
+  final message = tracks.length == 1
+      ? '已加入队列：${tracks.first.title}'
+      : '已加入队列：${tracks.length} 首歌曲';
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
 }
 
 class _RecommendationTracksSheet extends StatelessWidget {

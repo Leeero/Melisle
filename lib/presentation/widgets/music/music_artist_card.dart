@@ -35,9 +35,14 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
     return Semantics(
       label: '打开艺术家《${artist.name}》',
       button: true,
+      onTap: widget.onTap,
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
         child: AnimatedScale(
           duration: AppMotion.short,
           curve: AppMotion.enter,
@@ -46,10 +51,12 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
               : _hovered
               ? 1.012
               : 1,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: widget.onTap,
-            onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapUp: (_) => setState(() => _pressed = false),
+            onTapCancel: () => setState(() => _pressed = false),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final textScaler = MediaQuery.textScalerOf(context);

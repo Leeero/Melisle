@@ -25,7 +25,9 @@ class LibraryState {
     this.errorMessage,
   });
 
-  const LibraryState.initial() : this(status: LibraryStatus.initial);
+  const LibraryState.initial({
+    LibraryFilter currentFilter = LibraryFilter.tracks,
+  }) : this(status: LibraryStatus.initial, currentFilter: currentFilter);
 
   static const _sentinel = Object();
 

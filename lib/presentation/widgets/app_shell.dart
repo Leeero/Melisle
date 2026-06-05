@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
@@ -542,65 +543,101 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
   bool _hovered = false;
   bool _focused = false;
 
+  void _setHovered(bool value) {
+    if (_hovered == value) return;
+    setState(() => _hovered = value);
+  }
+
+  void _setFocused(bool value) {
+    if (_focused == value) return;
+    setState(() => _focused = value);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final highlighted = _hovered || _focused;
+    final radius = BorderRadius.circular(AppRadiusTokens.iconButton - 6);
+    final hoverBackground = Color.alphaBlend(
+      theme.musicTealSoft.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.64 : 0.54,
+      ),
+      theme.surfaceSidebar,
+    );
+    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return Semantics(
       label: widget.label,
       button: true,
       selected: widget.selected,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onTap,
-          onHover: (value) => setState(() => _hovered = value),
-          onFocusChange: (value) => setState(() => _focused = value),
-          borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton - 6),
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          child: AnimatedContainer(
-            duration: AppMotion.micro,
-            curve: AppMotion.enter,
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 34),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: widget.selected
-                  ? colorScheme.primaryContainer
-                  : (highlighted
-                        ? colorScheme.outlineVariant.withValues(alpha: 0.74)
-                        : Colors.transparent),
-              borderRadius: BorderRadius.circular(
-                AppRadiusTokens.iconButton - 6,
-              ),
-              border: Border.all(color: Colors.transparent),
+      onTap: widget.onTap,
+      child: Shortcuts(
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        child: Actions(
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                widget.onTap();
+                return null;
+              },
             ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 18,
-                  color: widget.selected
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  widget.label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          },
+          child: Focus(
+            onFocusChange: _setFocused,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => _setHovered(true),
+              onExit: (_) => _setHovered(false),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
+                child: AnimatedContainer(
+                  duration: AppMotion.micro,
+                  curve: AppMotion.enter,
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 34),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
                     color: widget.selected
-                        ? colorScheme.primary
-                        : highlighted
-                        ? colorScheme.onSurface
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: widget.selected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                        ? colorScheme.primaryContainer
+                        : (highlighted ? hoverBackground : idleBackground),
+                    borderRadius: radius,
+                    border: Border.all(color: Colors.transparent),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        widget.icon,
+                        size: 18,
+                        color: widget.selected
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        widget.label,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: widget.selected
+                              ? colorScheme.primary
+                              : highlighted
+                              ? colorScheme.onSurface
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: widget.selected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

@@ -28,6 +28,7 @@ class AppScopeTabs<T> extends StatelessWidget {
     this.variant,
     this.semanticLabel = '分类',
     this.fillWidth = false,
+    this.tabGap,
   });
 
   final List<AppScopeTabItem<T>> items;
@@ -36,6 +37,7 @@ class AppScopeTabs<T> extends StatelessWidget {
   final AppScopeTabsVariant? variant;
   final String semanticLabel;
   final bool fillWidth;
+  final double? tabGap;
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +49,9 @@ class AppScopeTabs<T> extends StatelessWidget {
             : AppScopeTabsVariant.pill);
     final fillAvailableWidth =
         fillWidth && effectiveVariant == AppScopeTabsVariant.pill;
-    final tabGap = effectiveVariant == AppScopeTabsVariant.underline
-        ? 18.0
-        : 2.0;
+    final tabGap =
+        this.tabGap ??
+        (effectiveVariant == AppScopeTabsVariant.underline ? 18.0 : 2.0);
     final tabChildren = [
       for (var index = 0; index < items.length; index++) ...[
         if (fillAvailableWidth)

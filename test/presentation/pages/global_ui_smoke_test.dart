@@ -26,8 +26,10 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_vie
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/library/library_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/player/player_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/playlists/playlist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:drift/native.dart';
@@ -171,6 +173,95 @@ void main() {
     );
   });
 
+  testWidgets('PlayerPage_desktopSmoke_usesLivePreviewAndDesktopQueue', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+
+    final tracks = _playlistTracks();
+    final repository = _FakeMusicRepository(playlistTracks: tracks);
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final playerCubit = _FakeQueuePlayerCubit(
+      PlayerViewState(
+        queue: tracks,
+        currentIndex: 0,
+        isPlaying: true,
+        position: const Duration(minutes: 1, seconds: 18),
+        duration: tracks.first.duration,
+      ),
+    );
+    final favoritesCubit = FavoritesCubit(repository);
+    final downloadsCubit = DownloadsCubit(
+      repository: repository,
+      database: database,
+      cacheManager: AudioCacheManager(),
+    );
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(favoritesCubit.close);
+    addTearDown(downloadsCubit.close);
+    addTearDown(settingsCubit.close);
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<MusicRepository>.value(value: repository),
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+            BlocProvider<DownloadsCubit>.value(value: downloadsCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: const MaterialApp(home: PlayerPage()),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('正在播放'), findsOneWidget);
+    expect(find.text('夜曲'), findsOneWidget);
+    expect(find.text('红豆'), findsOneWidget);
+
+    playerCubit.updateState(
+      PlayerViewState(
+        queue: [tracks[0], tracks[2]],
+        currentIndex: 0,
+        isPlaying: true,
+        position: const Duration(minutes: 1, seconds: 18),
+        duration: tracks.first.duration,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(find.text('红豆'), findsNothing);
+    expect(find.text('很长很长的歌曲标题用于验证移动端歌单详情行内容不会横向溢出'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('播放队列').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('播放队列'), findsOneWidget);
+    expect(find.text('清空'), findsOneWidget);
+  });
+
   testWidgets('PlaylistDetailPage_mobileSmoke_hasNoLayoutExceptions', (
     tester,
   ) async {
@@ -228,6 +319,74 @@ void main() {
         expect(find.byTooltip('加入队列'), findsNWidgets(3));
       },
     );
+  });
+
+  testWidgets('PlaylistDetailPage_desktopHero_usesSideBySideLayout', (
+    tester,
+  ) async {
+    final playlist = MusicPlaylist(
+      id: 'playlist-1',
+      name: '深夜独处',
+      artworkUrl: '',
+      trackCount: 3,
+    );
+    final repository = _FakeMusicRepository(playlistTracks: _playlistTracks());
+    final playerCubit = _FakeQueuePlayerCubit();
+    final favoritesCubit = FavoritesCubit(repository);
+    final settingsRepository = _FakeSettingsRepository();
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      settingsRepository,
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(favoritesCubit.close);
+    addTearDown(settingsCubit.close);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<MusicRepository>.value(value: repository),
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: MaterialApp(
+            home: PlaylistDetailPage(
+              playlistId: playlist.id,
+              playlist: playlist,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('返回'), findsOneWidget);
+    expect(find.text('深夜独处'), findsOneWidget);
+    expect(find.text('播放全部'), findsOneWidget);
+
+    final coverRect = tester.getRect(find.byType(CachedArtwork).first);
+    final titleRect = tester.getRect(find.text('深夜独处'));
+
+    expect(titleRect.left, greaterThan(coverRect.right));
+    expect(titleRect.top, lessThan(coverRect.bottom));
+    expect(titleRect.bottom, greaterThan(coverRect.top));
   });
 }
 
@@ -425,7 +584,9 @@ class _QueueHarness {
 
 class _FakeQueuePlayerCubit extends Cubit<PlayerViewState>
     implements PlayerCubit {
-  _FakeQueuePlayerCubit() : super(const PlayerViewState());
+  _FakeQueuePlayerCubit([super.initialState = const PlayerViewState()]);
+
+  void updateState(PlayerViewState state) => emit(state);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

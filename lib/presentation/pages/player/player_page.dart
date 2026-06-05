@@ -564,7 +564,7 @@ class _DesktopLayout extends StatelessWidget {
                               SizedBox(width: minorGap),
                               SizedBox(
                                 width: queueWidth,
-                                child: _DesktopQueuePreview(state: state),
+                                child: const _DesktopQueuePreview(),
                               ),
                             ],
                           );
@@ -572,7 +572,7 @@ class _DesktopLayout extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _DesktopBottomBar(state: state, track: track),
+                    _DesktopBottomBar(track: track),
                     SizedBox(
                       height:
                           AppSpacingTokens.shellBottomInset +
@@ -726,18 +726,12 @@ class _DesktopLyricStage extends StatelessWidget {
 }
 
 class _DesktopQueuePreview extends StatelessWidget {
-  const _DesktopQueuePreview({required this.state});
-
-  final PlayerViewState state;
+  const _DesktopQueuePreview();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final nextItems = <({int index, MusicTrack track})>[
-      for (var i = state.currentIndex + 1; i < state.queue.length; i++)
-        (index: i, track: state.queue[i]),
-    ].take(6).toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 18, 0, 18),
@@ -764,20 +758,42 @@ class _DesktopQueuePreview extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              if (nextItems.isEmpty)
-                Text(
-                  '队列已到末尾',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                )
-              else
-                for (final item in nextItems)
-                  _DesktopQueuePreviewItem(
-                    track: item.track,
-                    onTap: () =>
-                        context.read<PlayerCubit>().playIndex(item.index),
-                  ),
+              BlocBuilder<PlayerCubit, PlayerViewState>(
+                buildWhen: (prev, next) =>
+                    prev.queue != next.queue ||
+                    prev.currentIndex != next.currentIndex,
+                builder: (context, state) {
+                  final nextItems = <({int index, MusicTrack track})>[
+                    for (
+                      var i = state.currentIndex + 1;
+                      i < state.queue.length;
+                      i++
+                    )
+                      (index: i, track: state.queue[i]),
+                  ].take(6).toList();
+
+                  if (nextItems.isEmpty) {
+                    return Text(
+                      '队列已到末尾',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final item in nextItems)
+                        _DesktopQueuePreviewItem(
+                          track: item.track,
+                          onTap: () =>
+                              context.read<PlayerCubit>().playIndex(item.index),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -804,6 +820,8 @@ class _DesktopQueuePreviewItemState extends State<_DesktopQueuePreviewItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final hoverBackground = colorScheme.surface.withValues(alpha: 0.70);
+    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -814,15 +832,17 @@ class _DesktopQueuePreviewItemState extends State<_DesktopQueuePreviewItem> {
           duration: AppMotion.micro,
           curve: AppMotion.enter,
           decoration: BoxDecoration(
-            color: _hovered
-                ? colorScheme.surface.withValues(alpha: 0.70)
-                : Colors.transparent,
+            color: _hovered ? hoverBackground : idleBackground,
             borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+              hoverColor: Colors.transparent,
+              focusColor: colorScheme.primary.withValues(alpha: 0.08),
+              splashColor: colorScheme.primary.withValues(alpha: 0.06),
+              highlightColor: Colors.transparent,
               onTap: widget.onTap,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -881,9 +901,8 @@ class _DesktopQueuePreviewItemState extends State<_DesktopQueuePreviewItem> {
 }
 
 class _DesktopBottomBar extends StatelessWidget {
-  const _DesktopBottomBar({required this.state, required this.track});
+  const _DesktopBottomBar({required this.track});
 
-  final PlayerViewState state;
   final MusicTrack track;
 
   @override
@@ -896,11 +915,14 @@ class _DesktopBottomBar extends StatelessWidget {
           child: _ProgressTimeline(),
         ),
         const SizedBox(height: 10),
-        const _PlaybackControls(showQueueButton: true),
+        _PlaybackControls(
+          showQueueButton: true,
+          onQueuePressed: () => _showDesktopQueueDialog(context),
+        ),
         const SizedBox(height: 10),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
-          child: _DesktopExtrasBar(state: state, track: track),
+          child: _DesktopExtrasBar(track: track),
         ),
       ],
     );
@@ -908,9 +930,8 @@ class _DesktopBottomBar extends StatelessWidget {
 }
 
 class _DesktopExtrasBar extends StatelessWidget {
-  const _DesktopExtrasBar({required this.state, required this.track});
+  const _DesktopExtrasBar({required this.track});
 
-  final PlayerViewState state;
   final MusicTrack track;
 
   @override
@@ -962,19 +983,32 @@ class _DesktopExtrasBar extends StatelessWidget {
         const Spacer(),
         SizedBox(width: 132, child: _DesktopVolumeControl(compact: true)),
         const Spacer(),
-        _PlayerExtraIconButton(
-          icon: Icons.high_quality_rounded,
-          tooltip: '播放音质：${state.quality.label}',
-          active: state.quality != AudioQuality.auto,
-          onPressed: () => _showDesktopQualityDialog(context),
-        ),
-        _PlayerExtraIconButton(
-          icon: state.sleepRemaining != null || state.sleepEndOfTrack
-              ? Icons.bedtime_rounded
-              : Icons.bedtime_outlined,
-          tooltip: '睡眠定时',
-          active: state.sleepRemaining != null || state.sleepEndOfTrack,
-          onPressed: () => _showDesktopSleepTimerDialog(context),
+        BlocBuilder<PlayerCubit, PlayerViewState>(
+          buildWhen: (prev, next) =>
+              prev.quality != next.quality ||
+              prev.sleepRemaining != next.sleepRemaining ||
+              prev.sleepEndOfTrack != next.sleepEndOfTrack,
+          builder: (context, state) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PlayerExtraIconButton(
+                  icon: Icons.high_quality_rounded,
+                  tooltip: '播放音质：${state.quality.label}',
+                  active: state.quality != AudioQuality.auto,
+                  onPressed: () => _showDesktopQualityDialog(context),
+                ),
+                _PlayerExtraIconButton(
+                  icon: state.sleepRemaining != null || state.sleepEndOfTrack
+                      ? Icons.bedtime_rounded
+                      : Icons.bedtime_outlined,
+                  tooltip: '睡眠定时',
+                  active: state.sleepRemaining != null || state.sleepEndOfTrack,
+                  onPressed: () => _showDesktopSleepTimerDialog(context),
+                ),
+              ],
+            );
+          },
         ),
         _PlayerExtraIconButton(
           icon: Icons.queue_music_rounded,
@@ -1233,10 +1267,12 @@ class _PlaybackControls extends StatelessWidget {
   const _PlaybackControls({
     this.showQueueButton = false,
     this.subtleModeButton = false,
+    this.onQueuePressed,
   });
 
   final bool showQueueButton;
   final bool subtleModeButton;
+  final VoidCallback? onQueuePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1308,7 +1344,14 @@ class _PlaybackControls extends StatelessWidget {
                           const SizedBox(width: controlGap),
                           _ControlButton(
                             icon: Icons.queue_music_rounded,
-                            onTap: () => QueueSheet.show(context),
+                            onTap: () {
+                              final handler = onQueuePressed;
+                              if (handler != null) {
+                                handler();
+                                return;
+                              }
+                              QueueSheet.show(context);
+                            },
                             tooltip: '播放队列',
                             size: 46,
                             iconSize: 22,
@@ -2218,13 +2261,16 @@ class _DesktopPopoverOptionRowState extends State<_DesktopPopoverOptionRow> {
     final toneColor = widget.destructive
         ? colorScheme.error
         : colorScheme.primary;
+    final hoverBackground = theme.hoverWash.withValues(alpha: 0.56);
+    final pressedBackground = theme.hoverWash.withValues(alpha: 0.78);
+    final idleBackground = hoverBackground.withValues(alpha: 0);
     final backgroundColor = selected
         ? theme.selectedWash.withValues(alpha: 0.72)
         : _pressed
-        ? theme.hoverWash.withValues(alpha: 0.78)
+        ? pressedBackground
         : _hovered
-        ? theme.hoverWash.withValues(alpha: 0.56)
-        : Colors.transparent;
+        ? hoverBackground
+        : idleBackground;
     final borderColor = selected
         ? toneColor.withValues(alpha: 0.26)
         : colorScheme.outlineVariant.withValues(alpha: _hovered ? 0.30 : 0);
@@ -2774,12 +2820,14 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
       widget.track.artistName,
       if (widget.track.albumTitle.isNotEmpty) widget.track.albumTitle,
     ].where((value) => value.isNotEmpty).join(' · ');
+    final hoverBackground = colorScheme.outlineVariant.withValues(alpha: 0.34);
+    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     final baseColor = widget.isCurrent
         ? colorScheme.primaryContainer.withValues(alpha: 0.58)
         : _hovered
-        ? colorScheme.outlineVariant.withValues(alpha: 0.34)
-        : Colors.transparent;
+        ? hoverBackground
+        : idleBackground;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -2790,6 +2838,10 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+            hoverColor: Colors.transparent,
+            focusColor: colorScheme.primary.withValues(alpha: 0.08),
+            splashColor: colorScheme.primary.withValues(alpha: 0.06),
+            highlightColor: Colors.transparent,
             onTap: () async {
               await context.read<PlayerCubit>().playIndex(widget.index);
             },
@@ -3113,6 +3165,12 @@ class _ControlButtonState extends State<_ControlButton> {
     final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
     final btnSize = widget.size ?? (widget.isPrimary ? 60 : 42);
     final icnSize = widget.iconSize ?? (widget.isPrimary ? 30 : 22);
+    final neutralHoverBackground = colorScheme.outlineVariant.withValues(
+      alpha: 0.48,
+    );
+    final neutralPressedBackground = colorScheme.surfaceContainerHighest
+        .withValues(alpha: 0.66);
+    final neutralIdleBackground = neutralHoverBackground.withValues(alpha: 0);
 
     final backgroundColor = widget.isPrimary
         ? Color.alphaBlend(
@@ -3120,10 +3178,8 @@ class _ControlButtonState extends State<_ControlButton> {
             colorScheme.onSurface,
           )
         : (_pressed
-              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.66)
-              : (_hovered
-                    ? colorScheme.outlineVariant.withValues(alpha: 0.48)
-                    : Colors.transparent));
+              ? neutralPressedBackground
+              : (_hovered ? neutralHoverBackground : neutralIdleBackground));
     final foregroundColor = widget.isPrimary
         ? colorScheme.surface
         : widget.active
@@ -3174,6 +3230,10 @@ class _ControlButtonState extends State<_ControlButton> {
     double icnSize,
     ColorScheme colorScheme,
   ) {
+    final neutralBorderColor = colorScheme.outlineVariant.withValues(
+      alpha: _hovered || _pressed ? 0.32 : 0,
+    );
+
     return AnimatedContainer(
       duration: AppMotion.micro,
       curve: AppMotion.standard,
@@ -3182,13 +3242,7 @@ class _ControlButtonState extends State<_ControlButton> {
       decoration: BoxDecoration(
         color: backgroundColor,
         shape: BoxShape.circle,
-        border: widget.isPrimary
-            ? null
-            : Border.all(
-                color: _hovered || _pressed
-                    ? colorScheme.outlineVariant.withValues(alpha: 0.32)
-                    : Colors.transparent,
-              ),
+        border: widget.isPrimary ? null : Border.all(color: neutralBorderColor),
         boxShadow: [
           if (widget.isPrimary)
             BoxShadow(

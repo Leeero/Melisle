@@ -487,6 +487,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                     autofocus: widget.autofocus,
                     enabled: widget.enabled,
                     textInputAction: TextInputAction.search,
+                    textAlignVertical: TextAlignVertical.center,
                     style: inputTextStyle,
                     decoration: InputDecoration(
                       labelText: widget.labelText,
@@ -500,7 +501,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                       disabledBorder: InputBorder.none,
                       errorBorder: InputBorder.none,
                       focusedErrorBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      contentPadding: EdgeInsets.zero,
                       prefixIcon: const Icon(CupertinoIcons.search, size: 18),
                       prefixIconConstraints: BoxConstraints(
                         minWidth: compact ? 40 : 44,
