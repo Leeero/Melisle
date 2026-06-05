@@ -47,8 +47,13 @@ class HistoryCubit extends Cubit<HistoryState> {
       artworkUrl: row.artworkUrl ?? '',
       albumId: row.albumId,
       artistId: row.artistId,
-      duration: Duration.zero,
+      duration: _durationFromStoredMs(row.durationPlayedMs),
       lastPlayedAt: DateTime.fromMillisecondsSinceEpoch(row.playedAtMs),
     );
+  }
+
+  Duration _durationFromStoredMs(int milliseconds) {
+    if (milliseconds <= 0) return Duration.zero;
+    return Duration(milliseconds: milliseconds);
   }
 }

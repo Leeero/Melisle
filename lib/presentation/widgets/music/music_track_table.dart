@@ -442,6 +442,7 @@ class _MusicTrackTableIconButton extends StatelessWidget {
 }
 
 String _formatTrackDuration(Duration duration) {
+  if (duration <= Duration.zero) return '--:--';
   final minutes = duration.inMinutes;
   final seconds = duration.inSeconds % 60;
   return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';

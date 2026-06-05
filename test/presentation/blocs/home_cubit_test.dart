@@ -3,8 +3,11 @@ import 'package:cross_platform_music_player/application/usecases/fetch_random_al
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/home/home_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/home/home_state.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -79,6 +82,33 @@ void main() {
             s.albums.isEmpty,
       );
       expect(intermediateWithRandom, isTrue);
+    });
+
+    test('本地最近播放保留歌曲时长', () async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      const duration = Duration(minutes: 3, seconds: 42);
+      await database.insertPlayHistory(
+        PlayHistoryCompanion.insert(
+          trackId: 'local-track',
+          title: '本地播放记录',
+          artistName: const Value('测试艺术家'),
+          albumTitle: const Value('测试专辑'),
+          playedAtMs: DateTime(2026, 1, 1, 9, 30).millisecondsSinceEpoch,
+          durationPlayedMs: Value(duration.inMilliseconds),
+        ),
+      );
+      final fakeRepo = _FakeRepo(albums: _fakeAlbums(count: 6));
+      final cubit = HomeCubit(
+        FetchLatestAlbums(fakeRepo),
+        FetchRandomAlbums(fakeRepo),
+        fakeRepo,
+        database: database,
+      );
+
+      await cubit.load();
+
+      expect(cubit.state.recentlyPlayed.single.duration, duration);
     });
   });
 

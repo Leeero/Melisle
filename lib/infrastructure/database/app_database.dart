@@ -42,6 +42,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<MostPlayedRow>> mostPlayed({int limit = 40}) async {
     final countExpr = playHistory.id.count();
     final lastExpr = playHistory.playedAtMs.max();
+    final durationExpr = playHistory.durationPlayedMs.max();
     final query = selectOnly(playHistory)
       ..addColumns([
         playHistory.trackId,
@@ -53,6 +54,7 @@ class AppDatabase extends _$AppDatabase {
         playHistory.artworkUrl,
         countExpr,
         lastExpr,
+        durationExpr,
       ])
       ..groupBy([playHistory.trackId])
       ..orderBy([OrderingTerm.desc(countExpr), OrderingTerm.desc(lastExpr)])
@@ -71,6 +73,7 @@ class AppDatabase extends _$AppDatabase {
           artworkUrl: r.read(playHistory.artworkUrl),
           playCount: r.read(countExpr) ?? 0,
           lastPlayedAtMs: r.read(lastExpr) ?? 0,
+          durationMs: r.read(durationExpr) ?? 0,
         ),
     ];
   }
@@ -164,6 +167,7 @@ class MostPlayedRow {
     required this.title,
     required this.playCount,
     required this.lastPlayedAtMs,
+    required this.durationMs,
     this.artistName,
     this.albumTitle,
     this.albumId,
@@ -180,6 +184,7 @@ class MostPlayedRow {
   final String? artworkUrl;
   final int playCount;
   final int lastPlayedAtMs;
+  final int durationMs;
 }
 
 LazyDatabase _openConnection() {

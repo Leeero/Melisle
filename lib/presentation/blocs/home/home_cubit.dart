@@ -218,7 +218,7 @@ class HomeCubit extends Cubit<HomeState> {
             artworkUrl: r.artworkUrl ?? '',
             albumId: r.albumId,
             artistId: r.artistId,
-            duration: Duration.zero,
+            duration: _durationFromStoredMs(r.durationPlayedMs),
             lastPlayedAt: DateTime.fromMillisecondsSinceEpoch(r.playedAtMs),
           ),
         );
@@ -245,7 +245,7 @@ class HomeCubit extends Cubit<HomeState> {
             artworkUrl: r.artworkUrl ?? '',
             albumId: r.albumId,
             artistId: r.artistId,
-            duration: Duration.zero,
+            duration: _durationFromStoredMs(r.durationMs),
             playCount: r.playCount,
             lastPlayedAt: r.lastPlayedAtMs == 0
                 ? null
@@ -255,6 +255,11 @@ class HomeCubit extends Cubit<HomeState> {
     } catch (_) {
       return const [];
     }
+  }
+
+  Duration _durationFromStoredMs(int milliseconds) {
+    if (milliseconds <= 0) return Duration.zero;
+    return Duration(milliseconds: milliseconds);
   }
 
   void _emitPartialSuccess({

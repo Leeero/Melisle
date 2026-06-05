@@ -932,6 +932,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
             artistId: Value(track.artistId),
             artworkUrl: Value(track.artworkUrl),
             playedAtMs: nowMs,
+            durationPlayedMs: Value(track.duration.inMilliseconds),
           ),
         )
         .then((id) {
@@ -953,7 +954,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final playedMs = (nowMs - startMs).clamp(0, 1 << 30);
     db
         .customUpdate(
-          'UPDATE play_history SET duration_played_ms = ? WHERE id = ?',
+          'UPDATE play_history SET duration_played_ms = MAX(duration_played_ms, ?) WHERE id = ?',
           variables: [Variable<int>(playedMs), Variable<int>(rowId)],
           updates: {db.playHistory},
         )

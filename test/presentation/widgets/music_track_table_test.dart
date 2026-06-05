@@ -28,6 +28,22 @@ void main() {
     expect(tester.getSize(addButton).width, greaterThanOrEqualTo(44));
     expect(tester.getSize(addButton).height, greaterThanOrEqualTo(44));
   });
+
+  testWidgets('MusicTrackTable uses placeholder for unknown duration', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: [_track.copyWith(duration: Duration.zero)],
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    expect(find.text('--:--'), findsOneWidget);
+    expect(find.text('00:00'), findsNothing);
+  });
 }
 
 Widget _buildWidget(Widget child) {
