@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
@@ -18,6 +19,7 @@ void main() {
           detailTtl: Duration(seconds: 30),
           searchTtl: Duration(seconds: 30),
           homeFeedTtl: Duration(seconds: 30),
+          streamUrlTtl: Duration(seconds: 30),
         ),
       );
 
@@ -58,6 +60,7 @@ void main() {
           detailTtl: Duration(seconds: 10),
           searchTtl: Duration(seconds: 10),
           homeFeedTtl: Duration(seconds: 10),
+          streamUrlTtl: Duration(seconds: 10),
         ),
       );
 
@@ -87,6 +90,57 @@ void main() {
         isNot(beforeFavorite.items.single.id),
       );
     });
+
+    test('在短 TTL 内复用 stream URL，减少切歌前的重复回源', () async {
+      var currentTime = DateTime(2026, 4, 23, 16, 20);
+      final delegate = _CountingMusicRepository(session: _session());
+      final repository = CachedMusicRepository(
+        delegate: delegate,
+        now: () => currentTime,
+        policy: const MusicRepositoryCachePolicy(
+          streamUrlTtl: Duration(seconds: 20),
+        ),
+      );
+
+      await repository.restoreSession();
+      final first = await repository.getStreamUrl(
+        'track-1',
+        quality: AudioQuality.high,
+      );
+      final second = await repository.getStreamUrl(
+        'track-1',
+        quality: AudioQuality.high,
+      );
+
+      expect(delegate.getStreamUrlCalls, 1);
+      expect(second, first);
+
+      currentTime = currentTime.add(const Duration(seconds: 21));
+      final third = await repository.getStreamUrl(
+        'track-1',
+        quality: AudioQuality.high,
+      );
+
+      expect(delegate.getStreamUrlCalls, 2);
+      expect(third, isNot(first));
+    });
+
+    test('超过内存缓存上限时淘汰最久未使用条目', () async {
+      final delegate = _CountingMusicRepository(session: _session());
+      final repository = CachedMusicRepository(
+        delegate: delegate,
+        policy: const MusicRepositoryCachePolicy(maxMemoryEntries: 2),
+      );
+
+      await repository.restoreSession();
+      await repository.fetchTracks(limit: 1, startIndex: 0);
+      await repository.fetchTracks(limit: 1, startIndex: 1);
+      await repository.fetchTracks(limit: 1, startIndex: 0);
+      await repository.fetchTracks(limit: 1, startIndex: 2);
+      await repository.fetchTracks(limit: 1, startIndex: 1);
+
+      expect(delegate.fetchTracksCalls, 4);
+    });
   });
 }
 
@@ -95,6 +149,7 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
 
   AuthSession? _session;
   int fetchTracksCalls = 0;
+  int getStreamUrlCalls = 0;
   int setFavoriteCalls = 0;
   bool failFetchTracks = false;
 
@@ -137,6 +192,16 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
   @override
   Future<void> setFavorite(String itemId, bool value) async {
     setFavoriteCalls += 1;
+  }
+
+  @override
+  Future<String> getStreamUrl(
+    String trackId, {
+    AudioQuality quality = AudioQuality.auto,
+  }) async {
+    getStreamUrlCalls += 1;
+    return 'https://example.com/'
+        '$trackId/${quality.storageKey}/$getStreamUrlCalls';
   }
 }
 

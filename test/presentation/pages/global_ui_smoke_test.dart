@@ -124,9 +124,34 @@ void main() {
       verify: () {
         expect(find.byType(AppContentPage), findsOneWidget);
         expect(find.text('下载管理'), findsWidgets);
+        expect(find.text('管理离线缓存、下载任务和本地存储。'), findsNothing);
+        expect(find.text('存储位置'), findsOneWidget);
+        expect(find.text('修改'), findsOneWidget);
         expect(find.text('还没有下载内容'), findsOneWidget);
       },
     );
+  });
+
+  testWidgets('DownloadsPage_directoryEditor_exposesFolderPicker', (
+    tester,
+  ) async {
+    final harness = _DownloadsHarness.create();
+    addTearDown(harness.dispose);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(harness.wrap(const DownloadsPage()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.tap(find.text('修改'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('选择文件夹'), findsOneWidget);
+    expect(find.byTooltip('应用路径'), findsOneWidget);
   });
 
   testWidgets('LibraryPage_mobileLoadingState_hidesEmptyState', (tester) async {
@@ -173,7 +198,7 @@ void main() {
     );
   });
 
-  testWidgets('PlayerPage_desktopSmoke_usesLivePreviewAndDesktopQueue', (
+  testWidgets('PlayerPage_desktopSmoke_usesTwoColumnLayoutAndDesktopQueue', (
     tester,
   ) async {
     addTearDown(tester.view.resetPhysicalSize);
@@ -236,22 +261,11 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('正在播放'), findsOneWidget);
     expect(find.text('夜曲'), findsOneWidget);
-    expect(find.text('红豆'), findsOneWidget);
-
-    playerCubit.updateState(
-      PlayerViewState(
-        queue: [tracks[0], tracks[2]],
-        currentIndex: 0,
-        isPlaying: true,
-        position: const Duration(minutes: 1, seconds: 18),
-        duration: tracks.first.duration,
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
-
+    expect(find.text('接下来'), findsNothing);
     expect(find.text('红豆'), findsNothing);
-    expect(find.text('很长很长的歌曲标题用于验证移动端歌单详情行内容不会横向溢出'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsWidgets);
+    expect(find.byTooltip('更多操作'), findsOneWidget);
+    expect(find.byTooltip('播放队列'), findsWidgets);
 
     await tester.tap(find.byTooltip('播放队列').first);
     await tester.pump();
@@ -259,7 +273,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('播放队列'), findsOneWidget);
-    expect(find.text('清空'), findsOneWidget);
+    expect(find.byTooltip('清空队列'), findsOneWidget);
   });
 
   testWidgets('PlaylistDetailPage_mobileSmoke_hasNoLayoutExceptions', (
@@ -585,8 +599,6 @@ class _QueueHarness {
 class _FakeQueuePlayerCubit extends Cubit<PlayerViewState>
     implements PlayerCubit {
   _FakeQueuePlayerCubit([super.initialState = const PlayerViewState()]);
-
-  void updateState(PlayerViewState state) => emit(state);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

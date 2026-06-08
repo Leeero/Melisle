@@ -57,10 +57,38 @@ void main() {
 
     expect(find.byTooltip('定位到当前歌词'), findsNothing);
 
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -80));
+    await tester.drag(find.byType(ListView), const Offset(0, -80));
     await tester.pump();
 
     expect(find.byTooltip('定位到当前歌词'), findsOneWidget);
+  });
+
+  testWidgets('allows long lyric lines to use natural height', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 180,
+            height: 260,
+            child: LyricView(
+              lines: _wrappedLyrics,
+              currentIndex: 1,
+              maxTextWidth: 120,
+              showCurrentLineButton: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final shortHeight = tester
+        .getRect(find.text(_wrappedLyrics.first.text))
+        .height;
+    final longHeight = tester.getRect(find.text(_wrappedLyrics[1].text)).height;
+
+    expect(longHeight, greaterThan(shortHeight));
   });
 }
 
@@ -77,3 +105,11 @@ final _longLyrics = List<LyricLine>.generate(
     text: '第 $index 句歌词，用于测试滚动恢复',
   ),
 );
+
+const _wrappedLyrics = [
+  LyricLine(start: Duration.zero, text: '短句'),
+  LyricLine(
+    start: Duration(seconds: 4),
+    text: '这是一句很长很长的歌词，需要在较窄的歌词区域里自然换行展示，不能被固定行高裁切',
+  ),
+];
