@@ -24,6 +24,22 @@ class AppDatabase extends _$AppDatabase {
     return into(playHistory).insert(entry);
   }
 
+  Future<int> trimPlayHistory({int keepLatest = 3000}) {
+    if (keepLatest <= 0) return delete(playHistory).go();
+    return customUpdate(
+      '''
+      DELETE FROM play_history
+      WHERE id NOT IN (
+        SELECT id FROM play_history
+        ORDER BY played_at_ms DESC, id DESC
+        LIMIT ?
+      )
+      ''',
+      variables: [Variable<int>(keepLatest)],
+      updates: {playHistory},
+    );
+  }
+
   Stream<List<PlayHistoryData>> watchRecentPlays({int limit = 40}) {
     return (select(playHistory)
           ..orderBy([(t) => OrderingTerm.desc(t.playedAtMs)])

@@ -91,11 +91,16 @@ class _ArtworkNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final decodeSize = _decodeSizeFor(context, size);
     return CachedNetworkImage(
       imageUrl: imageUrl,
       httpHeaders: const {'User-Agent': AppConstants.httpUserAgent},
       width: size,
       height: size,
+      memCacheWidth: decodeSize,
+      memCacheHeight: decodeSize,
+      maxWidthDiskCache: decodeSize,
+      maxHeightDiskCache: decodeSize,
       fit: BoxFit.cover,
       fadeInDuration: const Duration(milliseconds: 260),
       fadeOutDuration: const Duration(milliseconds: 140),
@@ -110,6 +115,10 @@ class _ArtworkNetworkImage extends StatelessWidget {
             httpHeaders: const {'User-Agent': AppConstants.httpUserAgent},
             width: size,
             height: size,
+            memCacheWidth: decodeSize,
+            memCacheHeight: decodeSize,
+            maxWidthDiskCache: decodeSize,
+            maxHeightDiskCache: decodeSize,
             fit: BoxFit.cover,
             fadeInDuration: const Duration(milliseconds: 260),
             fadeOutDuration: const Duration(milliseconds: 140),
@@ -120,6 +129,11 @@ class _ArtworkNetworkImage extends StatelessWidget {
         return placeholder;
       },
     );
+  }
+
+  int _decodeSizeFor(BuildContext context, double logicalSize) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    return (logicalSize * pixelRatio).ceil().clamp(64, 720);
   }
 }
 
