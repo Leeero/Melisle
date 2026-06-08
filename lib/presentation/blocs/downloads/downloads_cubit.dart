@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path/path.dart' as p;
 
 /// 串行下载队列：同一时刻只跑一个任务，失败继续下一个。
 ///
@@ -34,14 +35,27 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   final Map<String, CancelToken> _cancelTokens = {};
   bool _running = false;
 
+  static const _kDownloadDirectoryPath = 'download_directory_path';
+
   /// 初始化：从数据库加载已有下载。
   Future<void> load() async {
     try {
-      final rows = await _database.allDownloads();
+      final customDirectoryPath = _normalizeDirectoryPath(
+        await _database.readSetting(_kDownloadDirectoryPath),
+      );
+      _cacheManager.setCustomDirectoryPath(customDirectoryPath);
+      final effectiveDirectory = await _resolveCurrentDirectory();
+      final removedPartialFiles = await _cacheManager.deletePartialFiles();
+      final cleanup = await _cleanupDownloads();
       emit(
         state.copyWith(
+          downloadDirectoryPath: effectiveDirectory.path,
+          customDownloadDirectoryPath: customDirectoryPath ?? '',
+          cachedBytes: cleanup.cachedBytes,
+          removedStaleRecords: cleanup.removedStaleRecords,
+          removedPartialFiles: removedPartialFiles,
           completedTrackIds: {
-            for (final r in rows)
+            for (final r in cleanup.rows)
               if (r.status == 0) r.trackId,
           },
         ),
@@ -86,7 +100,9 @@ class DownloadsCubit extends Cubit<DownloadsState> {
 
   Future<void> remove(String trackId) async {
     final record = await _database.findDownload(trackId);
+    var removedBytes = 0;
     if (record != null) {
+      removedBytes = await _cacheManager.fileSize(record.filePath);
       await _cacheManager.delete(record.filePath);
       await _database.deleteDownload(trackId);
     }
@@ -94,7 +110,53 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     final completed = Set<String>.from(state.completedTrackIds)
       ..remove(trackId);
     final jobs = Map<String, DownloadJob>.from(state.jobs)..remove(trackId);
-    emit(state.copyWith(completedTrackIds: completed, jobs: jobs));
+    emit(
+      state.copyWith(
+        completedTrackIds: completed,
+        jobs: jobs,
+        cachedBytes: (state.cachedBytes - removedBytes)
+            .clamp(0, 1 << 62)
+            .toInt(),
+      ),
+    );
+  }
+
+  Future<void> setDownloadDirectoryPath(String rawPath) async {
+    final customDirectoryPath = _normalizeDirectoryPath(rawPath);
+    if (customDirectoryPath != null && !p.isAbsolute(customDirectoryPath)) {
+      throw ArgumentError('请输入绝对路径');
+    }
+
+    final previousPath = state.customDownloadDirectoryPath;
+    _cacheManager.setCustomDirectoryPath(customDirectoryPath);
+
+    try {
+      final dir = await _cacheManager.resolveDirectory();
+      await _database.writeSetting(
+        _kDownloadDirectoryPath,
+        customDirectoryPath ?? '',
+      );
+      final removedPartialFiles = await _cacheManager.deletePartialFiles();
+      final cleanup = await _cleanupDownloads();
+      emit(
+        state.copyWith(
+          downloadDirectoryPath: dir.path,
+          customDownloadDirectoryPath: customDirectoryPath ?? '',
+          cachedBytes: cleanup.cachedBytes,
+          removedStaleRecords: cleanup.removedStaleRecords,
+          removedPartialFiles: removedPartialFiles,
+          completedTrackIds: {
+            for (final r in cleanup.rows)
+              if (r.status == 0) r.trackId,
+          },
+        ),
+      );
+    } catch (_) {
+      _cacheManager.setCustomDirectoryPath(
+        previousPath.isEmpty ? null : previousPath,
+      );
+      rethrow;
+    }
   }
 
   /// 查询某曲目的本地文件路径（若存在）。
@@ -106,7 +168,12 @@ class DownloadsCubit extends Cubit<DownloadsState> {
       await _database.deleteDownload(trackId);
       final completed = Set<String>.from(state.completedTrackIds)
         ..remove(trackId);
-      emit(state.copyWith(completedTrackIds: completed));
+      emit(
+        state.copyWith(
+          completedTrackIds: completed,
+          cachedBytes: await _cacheManager.directorySize(),
+        ),
+      );
       return null;
     }
     return record.filePath;
@@ -175,7 +242,13 @@ class DownloadsCubit extends Cubit<DownloadsState> {
       final completed = Set<String>.from(state.completedTrackIds)
         ..add(track.id);
       final jobs = Map<String, DownloadJob>.from(state.jobs)..remove(track.id);
-      emit(state.copyWith(jobs: jobs, completedTrackIds: completed));
+      emit(
+        state.copyWith(
+          jobs: jobs,
+          completedTrackIds: completed,
+          cachedBytes: state.cachedBytes + size,
+        ),
+      );
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) {
         _updateJob(
@@ -222,6 +295,56 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     emit(state.copyWith(jobs: jobs));
   }
 
+  Future<_DownloadCleanupResult> _cleanupDownloads() async {
+    final rows = await _database.allDownloads();
+    final verifiedRows = <Download>[];
+    var removedStaleRecords = 0;
+    var cachedBytes = 0;
+
+    for (final row in rows) {
+      if (row.status != 0) {
+        verifiedRows.add(row);
+        continue;
+      }
+      final size = await _cacheManager.fileSize(row.filePath);
+      if (size <= 0) {
+        await _database.deleteDownload(row.trackId);
+        removedStaleRecords += 1;
+        continue;
+      }
+      cachedBytes += size;
+      var verifiedRow = row;
+      if (row.fileSize != size) {
+        await _database.upsertDownload(
+          DownloadsCompanion.insert(
+            trackId: row.trackId,
+            filePath: row.filePath,
+            fileSize: Value(size),
+            container: Value(row.container),
+            bitrate: Value(row.bitrate),
+            title: row.title,
+            artistName: Value(row.artistName),
+            albumTitle: Value(row.albumTitle),
+            artworkUrl: Value(row.artworkUrl),
+            downloadedAtMs: row.downloadedAtMs,
+            status: Value(row.status),
+          ),
+        );
+        final updated = await _database.findDownload(row.trackId);
+        if (updated != null) {
+          verifiedRow = updated;
+        }
+      }
+      verifiedRows.add(verifiedRow);
+    }
+
+    return _DownloadCleanupResult(
+      rows: verifiedRows,
+      cachedBytes: cachedBytes,
+      removedStaleRecords: removedStaleRecords,
+    );
+  }
+
   String _guessContainer(String url) {
     final uri = Uri.tryParse(url);
     final path = uri?.path ?? '';
@@ -231,6 +354,23 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     return ext.isEmpty ? 'bin' : ext.toLowerCase();
   }
 
+  Future<Directory> _resolveCurrentDirectory() async {
+    try {
+      return await _cacheManager.resolveDirectory();
+    } catch (error, stack) {
+      debugPrint('DownloadsCubit.resolveDirectory 失败：$error\n$stack');
+      _cacheManager.setCustomDirectoryPath(null);
+      await _database.writeSetting(_kDownloadDirectoryPath, '');
+      return _cacheManager.resolveDirectory();
+    }
+  }
+
+  String? _normalizeDirectoryPath(String? path) {
+    final trimmed = path?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return p.normalize(trimmed);
+  }
+
   @override
   Future<void> close() {
     for (final token in _cancelTokens.values) {
@@ -238,4 +378,16 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     }
     return super.close();
   }
+}
+
+class _DownloadCleanupResult {
+  const _DownloadCleanupResult({
+    required this.rows,
+    required this.cachedBytes,
+    required this.removedStaleRecords,
+  });
+
+  final List<Download> rows;
+  final int cachedBytes;
+  final int removedStaleRecords;
 }

@@ -43,6 +43,11 @@ class DownloadsState {
   const DownloadsState({
     this.jobs = const {},
     this.completedTrackIds = const {},
+    this.downloadDirectoryPath = '',
+    this.customDownloadDirectoryPath = '',
+    this.cachedBytes = 0,
+    this.removedStaleRecords = 0,
+    this.removedPartialFiles = 0,
   });
 
   /// 目前在进行中的任务（按 trackId 索引）。
@@ -51,13 +56,42 @@ class DownloadsState {
   /// 已经下载完毕（落在 drift Downloads 表里）的 trackId 集合，供 UI 快速查询。
   final Set<String> completedTrackIds;
 
+  /// 当前有效下载目录。为空表示尚未加载完成。
+  final String downloadDirectoryPath;
+
+  /// 用户自定义下载目录。为空表示使用默认目录。
+  final String customDownloadDirectoryPath;
+
+  /// 已核验下载目录内的实际文件占用。
+  final int cachedBytes;
+
+  /// 最近一次加载时清理掉的失效数据库下载记录数量。
+  final int removedStaleRecords;
+
+  /// 最近一次加载时清理掉的残留临时下载文件数量。
+  final int removedPartialFiles;
+
+  bool get usesDefaultDownloadDirectory => customDownloadDirectoryPath.isEmpty;
+
   DownloadsState copyWith({
     Map<String, DownloadJob>? jobs,
     Set<String>? completedTrackIds,
+    String? downloadDirectoryPath,
+    String? customDownloadDirectoryPath,
+    int? cachedBytes,
+    int? removedStaleRecords,
+    int? removedPartialFiles,
   }) {
     return DownloadsState(
       jobs: jobs ?? this.jobs,
       completedTrackIds: completedTrackIds ?? this.completedTrackIds,
+      downloadDirectoryPath:
+          downloadDirectoryPath ?? this.downloadDirectoryPath,
+      customDownloadDirectoryPath:
+          customDownloadDirectoryPath ?? this.customDownloadDirectoryPath,
+      cachedBytes: cachedBytes ?? this.cachedBytes,
+      removedStaleRecords: removedStaleRecords ?? this.removedStaleRecords,
+      removedPartialFiles: removedPartialFiles ?? this.removedPartialFiles,
     );
   }
 }

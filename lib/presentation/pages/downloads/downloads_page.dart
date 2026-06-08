@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_state.dart';
@@ -21,6 +24,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(context.read<DownloadsCubit>().load());
     _reload();
   }
 
@@ -39,7 +43,9 @@ class _DownloadsPageState extends State<DownloadsPage> {
       header: const _DownloadsHeader(),
       body: BlocListener<DownloadsCubit, DownloadsState>(
         listenWhen: (prev, curr) =>
-            prev.completedTrackIds.length != curr.completedTrackIds.length,
+            prev.completedTrackIds.length != curr.completedTrackIds.length ||
+            prev.removedStaleRecords != curr.removedStaleRecords ||
+            prev.cachedBytes != curr.cachedBytes,
         listener: (context, state) => _reload(),
         child: FutureBuilder<List<Download>>(
           future: _future,
@@ -66,7 +72,11 @@ class _DownloadsPageState extends State<DownloadsPage> {
                     AppPageLayout.contentBottomInset,
                   ),
                   children: [
-                    _DownloadStorageGroup(rows: rows, pendingJobs: pendingJobs),
+                    _DownloadStorageGroup(
+                      rows: rows,
+                      pendingJobs: pendingJobs,
+                      state: state,
+                    ),
                     const SizedBox(height: 24),
                     if (pendingJobs.isNotEmpty)
                       _DownloadSection(
@@ -125,7 +135,7 @@ class _DownloadsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppPageHeader(title: '下载管理', description: '管理离线缓存、下载任务和本地存储。');
+    return const AppPageHeader(title: '下载管理');
   }
 }
 
@@ -147,15 +157,23 @@ class _DownloadsSectionTitle extends StatelessWidget {
 }
 
 class _DownloadStorageGroup extends StatelessWidget {
-  const _DownloadStorageGroup({required this.rows, required this.pendingJobs});
+  const _DownloadStorageGroup({
+    required this.rows,
+    required this.pendingJobs,
+    required this.state,
+  });
 
   final List<Download> rows;
   final List<DownloadJob> pendingJobs;
+  final DownloadsState state;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final totalBytes = rows.fold<int>(0, (sum, row) => sum + row.fileSize);
+    final fallbackBytes = rows.fold<int>(0, (sum, row) => sum + row.fileSize);
+    final totalBytes = state.cachedBytes > 0
+        ? state.cachedBytes
+        : fallbackBytes;
 
     return _DownloadInfoGroup(
       title: '存储',
@@ -171,6 +189,8 @@ class _DownloadStorageGroup extends StatelessWidget {
           description: _storageDescription(rows.length, pendingJobs.length),
           value: _formatBytes(totalBytes),
         ),
+        _DownloadInfoDivider(colorScheme: colorScheme),
+        _DownloadDirectoryRow(state: state),
       ],
     );
   }
@@ -290,6 +310,315 @@ class _DownloadInfoRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DownloadDirectoryRow extends StatefulWidget {
+  const _DownloadDirectoryRow({required this.state});
+
+  final DownloadsState state;
+
+  @override
+  State<_DownloadDirectoryRow> createState() => _DownloadDirectoryRowState();
+}
+
+class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
+  late final TextEditingController _controller;
+  bool _editing = false;
+  bool _saving = false;
+  bool _choosing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _currentEditablePath);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DownloadDirectoryRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing &&
+        oldWidget.state.customDownloadDirectoryPath !=
+            widget.state.customDownloadDirectoryPath) {
+      _controller.text = _currentEditablePath;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String get _currentEditablePath => widget.state.customDownloadDirectoryPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+
+    if (_editing) {
+      return _buildEditor(context, compact: compact);
+    }
+
+    return _buildSummary(context, compact: compact);
+  }
+
+  Widget _buildSummary(BuildContext context, {required bool compact}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final path = widget.state.downloadDirectoryPath.isEmpty
+        ? '正在读取下载目录'
+        : widget.state.downloadDirectoryPath;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 16 : 20,
+        vertical: compact ? 11 : 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '存储位置',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontSize: compact ? 15 : 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.state.usesDefaultDownloadDirectory ? '默认' : '自定义',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  path,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.muted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _editing = true;
+                _controller.text = _currentEditablePath;
+              });
+            },
+            icon: const Icon(Icons.edit_location_alt_rounded, size: 17),
+            label: const Text('修改'),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(72, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditor(BuildContext context, {required bool compact}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        compact ? 16 : 20,
+        compact ? 11 : 12,
+        compact ? 16 : 20,
+        compact ? 13 : 14,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '存储位置',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: colorScheme.onSurface,
+              fontSize: compact ? 15 : 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _saving || _choosing
+                ? null
+                : () => _chooseAndSave(context),
+            icon: _choosing
+                ? const SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.folder_open_rounded, size: 17),
+            label: Text(_choosing ? '正在选择' : '选择文件夹'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(108, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _controller,
+            enabled: !_saving && !_choosing,
+            minLines: 1,
+            maxLines: 2,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _apply(context),
+            decoration: InputDecoration(
+              hintText: '也可以粘贴绝对路径',
+              prefixIcon: const Icon(Icons.folder_open_rounded, size: 18),
+              suffixIcon: Tooltip(
+                message: '应用路径',
+                child: IconButton(
+                  onPressed: _saving || _choosing
+                      ? null
+                      : () => _apply(context),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                ),
+              ),
+              filled: true,
+              fillColor: colorScheme.surfaceContainerHigh.withValues(
+                alpha: 0.62,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadiusTokens.input),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadiusTokens.input),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadiusTokens.input),
+                borderSide: BorderSide(
+                  color: colorScheme.primary.withValues(alpha: 0.62),
+                ),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              TextButton(
+                onPressed: _saving || _choosing
+                    ? null
+                    : () => _resetToDefault(context),
+                child: const Text('使用默认'),
+              ),
+              TextButton(
+                onPressed: _saving || _choosing
+                    ? null
+                    : () {
+                        setState(() {
+                          _editing = false;
+                          _controller.text = _currentEditablePath;
+                        });
+                      },
+                child: const Text('取消'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _apply(BuildContext context) async {
+    await _save(context, _controller.text);
+  }
+
+  Future<void> _resetToDefault(BuildContext context) async {
+    _controller.clear();
+    await _save(context, '');
+  }
+
+  Future<void> _chooseAndSave(BuildContext context) async {
+    if (!_supportsDirectoryPicker) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('当前平台暂不支持选择文件夹')));
+      return;
+    }
+
+    setState(() => _choosing = true);
+    try {
+      final path = await _pickDownloadDirectory();
+      if (!context.mounted) return;
+      setState(() => _choosing = false);
+      if (path == null || path.trim().isEmpty) return;
+      _controller.text = path;
+      await _save(context, path);
+    } catch (_) {
+      if (!context.mounted) return;
+      setState(() => _choosing = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('无法打开文件夹选择器')));
+    }
+  }
+
+  Future<void> _save(BuildContext context, String path) async {
+    setState(() => _saving = true);
+    try {
+      await context.read<DownloadsCubit>().setDownloadDirectoryPath(path);
+      if (!context.mounted) return;
+      final savedPath = context
+          .read<DownloadsCubit>()
+          .state
+          .customDownloadDirectoryPath;
+      setState(() {
+        _saving = false;
+        _editing = false;
+        _controller.text = savedPath;
+      });
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('下载存储位置已更新')));
+    } catch (error) {
+      if (!context.mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(_formatDirectoryError(error))));
+    }
   }
 }
 
@@ -788,6 +1117,50 @@ String _storageDescription(int completedCount, int pendingCount) {
   final completed = '$completedCount 首已下载';
   if (pendingCount <= 0) return completed;
   return '$completed · $pendingCount 个任务进行中';
+}
+
+String _formatDirectoryError(Object error) {
+  if (error is ArgumentError) {
+    return error.message?.toString() ?? '请输入有效的下载存储位置';
+  }
+  return '无法更新下载存储位置，请确认路径可访问';
+}
+
+bool get _supportsDirectoryPicker => Platform.isMacOS || Platform.isWindows;
+
+Future<String?> _pickDownloadDirectory() async {
+  if (Platform.isMacOS) {
+    final result = await Process.run('osascript', [
+      '-e',
+      'POSIX path of (choose folder with prompt "选择下载存储位置")',
+    ]);
+    if (result.exitCode != 0) return null;
+    final path = result.stdout.toString().trim();
+    return path.isEmpty ? null : path;
+  }
+
+  if (Platform.isWindows) {
+    const script = '''
+Add-Type -AssemblyName System.Windows.Forms
+\$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+\$dialog.Description = '选择下载存储位置'
+\$dialog.ShowNewFolderButton = \$true
+if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+  [Console]::Write(\$dialog.SelectedPath)
+}
+''';
+    final result = await Process.run('powershell.exe', [
+      '-NoProfile',
+      '-STA',
+      '-Command',
+      script,
+    ]);
+    if (result.exitCode != 0) return null;
+    final path = result.stdout.toString().trim();
+    return path.isEmpty ? null : path;
+  }
+
+  return null;
 }
 
 String _formatBytes(int bytes) {
