@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
@@ -94,14 +95,7 @@ class _ResolvedBlurredCoverBackgroundState
     for (final imageUrl in candidateUrls) {
       _resolvedImageUrl = imageUrl;
       try {
-        final palette = await PaletteGenerator.fromImageProvider(
-          NetworkImage(
-            imageUrl,
-            headers: const {'User-Agent': AppConstants.httpUserAgent},
-          ),
-          size: const Size(160, 160),
-          maximumColorCount: 12,
-        );
+        final palette = await _PaletteMemoryCache.resolve(imageUrl);
         if (!mounted || _resolvedImageUrl != imageUrl) {
           return;
         }
@@ -206,6 +200,54 @@ class _ResolvedBlurredCoverBackgroundState
         ),
       ],
     );
+  }
+}
+
+class _PaletteMemoryCache {
+  static const _maxEntries = 80;
+  static final LinkedHashMap<String, PaletteGenerator> _cache =
+      LinkedHashMap();
+  static final Map<String, Future<PaletteGenerator>> _inFlight = {};
+
+  static Future<PaletteGenerator> resolve(String imageUrl) {
+    final cached = _cache[imageUrl];
+    if (cached != null) {
+      _cache.remove(imageUrl);
+      _cache[imageUrl] = cached;
+      return Future.value(cached);
+    }
+
+    final inFlight = _inFlight[imageUrl];
+    if (inFlight != null) return inFlight;
+
+    final future = _load(imageUrl);
+    _inFlight[imageUrl] = future;
+    return future;
+  }
+
+  static Future<PaletteGenerator> _load(String imageUrl) async {
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        NetworkImage(
+          imageUrl,
+          headers: const {'User-Agent': AppConstants.httpUserAgent},
+        ),
+        size: const Size(160, 160),
+        maximumColorCount: 12,
+      );
+      _store(imageUrl, palette);
+      return palette;
+    } finally {
+      _inFlight.remove(imageUrl);
+    }
+  }
+
+  static void _store(String imageUrl, PaletteGenerator palette) {
+    _cache.remove(imageUrl);
+    _cache[imageUrl] = palette;
+    while (_cache.length > _maxEntries) {
+      _cache.remove(_cache.keys.first);
+    }
   }
 }
 

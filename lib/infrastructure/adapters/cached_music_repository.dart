@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -26,10 +27,12 @@ class CachedMusicRepository implements MusicRepository {
   final MusicRepositoryCachePolicy _policy;
   final DateTime Function() _now;
 
-  final Map<String, _CacheEntry<Object?>> _memoryCache = {};
+  final LinkedHashMap<String, _CacheEntry<Object?>> _memoryCache =
+      LinkedHashMap();
   final Map<String, Future<Object?>> _inFlightRequests = {};
 
   String _sessionScopeKey = 'anonymous';
+  int _cacheEpoch = 0;
 
   @override
   Future<AuthSession?> restoreSession() async {
@@ -233,7 +236,12 @@ class CachedMusicRepository implements MusicRepository {
     String trackId, {
     AudioQuality quality = AudioQuality.auto,
   }) {
-    return _delegate.getStreamUrl(trackId, quality: quality);
+    return _cached(
+      'streamUrl',
+      ttl: _policy.streamUrlTtl,
+      params: {'trackId': trackId, 'quality': quality.storageKey},
+      loader: () => _delegate.getStreamUrl(trackId, quality: quality),
+    );
   }
 
   @override
@@ -353,6 +361,7 @@ class CachedMusicRepository implements MusicRepository {
     final currentTime = _now();
     final cached = _memoryCache[key];
     if (cached != null && cached.expiresAt.isAfter(currentTime)) {
+      _touchCacheEntry(key, cached);
       return cached.value as T;
     }
 
@@ -361,7 +370,7 @@ class CachedMusicRepository implements MusicRepository {
       return await inFlight as T;
     }
 
-    final future = _loadWithRetry(key, loader, cached, ttl);
+    final future = _loadWithRetry(key, loader, cached, ttl, _cacheEpoch);
     _inFlightRequests[key] = future;
 
     try {
@@ -377,6 +386,7 @@ class CachedMusicRepository implements MusicRepository {
     Future<T> Function() loader,
     _CacheEntry<Object?>? cached,
     Duration ttl,
+    int epoch,
   ) async {
     const maxRetries = 1;
     Object? lastError;
@@ -384,10 +394,9 @@ class CachedMusicRepository implements MusicRepository {
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         final value = await loader();
-        _memoryCache[key] = _CacheEntry(
-          value: value,
-          expiresAt: _now().add(ttl),
-        );
+        if (epoch == _cacheEpoch) {
+          _storeCacheEntry(key, value, ttl);
+        }
         return value;
       } catch (e) {
         lastError = e;
@@ -440,8 +449,34 @@ class CachedMusicRepository implements MusicRepository {
   }
 
   void _clearCache() {
+    _cacheEpoch += 1;
     _memoryCache.clear();
     _inFlightRequests.clear();
+  }
+
+  void _storeCacheEntry(String key, Object? value, Duration ttl) {
+    if (ttl <= Duration.zero || _policy.maxMemoryEntries <= 0) {
+      _memoryCache.remove(key);
+      return;
+    }
+
+    _memoryCache.remove(key);
+    _memoryCache[key] = _CacheEntry(
+      value: value,
+      expiresAt: _now().add(ttl),
+    );
+    _trimMemoryCache();
+  }
+
+  void _touchCacheEntry(String key, _CacheEntry<Object?> entry) {
+    _memoryCache.remove(key);
+    _memoryCache[key] = entry;
+  }
+
+  void _trimMemoryCache() {
+    while (_memoryCache.length > _policy.maxMemoryEntries) {
+      _memoryCache.remove(_memoryCache.keys.first);
+    }
   }
 }
 
@@ -452,6 +487,8 @@ class MusicRepositoryCachePolicy {
     this.searchTtl = const Duration(seconds: 20),
     this.homeFeedTtl = const Duration(minutes: 2),
     this.fullListTtl = const Duration(minutes: 5),
+    this.streamUrlTtl = const Duration(seconds: 90),
+    this.maxMemoryEntries = 240,
   });
 
   final Duration listTtl;
@@ -459,6 +496,8 @@ class MusicRepositoryCachePolicy {
   final Duration searchTtl;
   final Duration homeFeedTtl;
   final Duration fullListTtl;
+  final Duration streamUrlTtl;
+  final int maxMemoryEntries;
 }
 
 class _CacheEntry<T> {
