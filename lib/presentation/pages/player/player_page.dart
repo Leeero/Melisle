@@ -510,7 +510,7 @@ class _PlayerExtraIconButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Desktop layout — immersive workspace: artwork | lyrics | queue preview
+// Desktop layout — immersive workspace: artwork | lyrics
 // ---------------------------------------------------------------------------
 
 class _DesktopLayout extends StatelessWidget {
@@ -531,7 +531,7 @@ class _DesktopLayout extends StatelessWidget {
         Expanded(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
+              constraints: const BoxConstraints(maxWidth: 1180),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   horizontalPadding,
@@ -544,27 +544,20 @@ class _DesktopLayout extends StatelessWidget {
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final compactDesktop = constraints.maxWidth < 1220;
-                          final majorGap = compactDesktop ? 28.0 : 54.0;
-                          final minorGap = compactDesktop ? 20.0 : 34.0;
-                          final queueWidth = compactDesktop ? 250.0 : 286.0;
+                          final compactDesktop = constraints.maxWidth < 1120;
+                          final majorGap = compactDesktop ? 32.0 : 64.0;
 
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                flex: 4,
+                                flex: compactDesktop ? 5 : 4,
                                 child: _DesktopArtworkStage(track: track),
                               ),
                               SizedBox(width: majorGap),
                               Expanded(
-                                flex: 5,
+                                flex: compactDesktop ? 6 : 5,
                                 child: _DesktopLyricStage(track: track),
-                              ),
-                              SizedBox(width: minorGap),
-                              SizedBox(
-                                width: queueWidth,
-                                child: const _DesktopQueuePreview(),
                               ),
                             ],
                           );
@@ -711,191 +704,40 @@ class _DesktopLyricStage extends StatelessWidget {
           );
         }
 
+        final currentColor = Color.lerp(
+          colorScheme.primary,
+          colorScheme.onSurface,
+          theme.brightness == Brightness.dark ? 0.18 : 0.26,
+        )!;
+        final inactiveColor = colorScheme.onSurfaceVariant.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.54 : 0.46,
+        );
+
         return LyricView(
           lines: state.lyrics,
           currentIndex: state.currentLyricIndex,
           onLineTap: (i) => context.read<PlayerCubit>().seekToLyricIndex(i),
           textAlign: TextAlign.left,
           alignment: Alignment.centerLeft,
-          maxTextWidth: 640,
-          currentScale: 1.06,
+          maxTextWidth: 600,
+          currentScale: 1.025,
+          linePadding: const EdgeInsets.symmetric(vertical: 7),
+          currentTextStyle: theme.textTheme.titleLarge?.copyWith(
+            color: currentColor,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            height: 1.56,
+            letterSpacing: 0,
+          ),
+          inactiveTextStyle: theme.textTheme.titleMedium?.copyWith(
+            color: inactiveColor,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            height: 1.92,
+            letterSpacing: 0,
+          ),
         );
       },
-    );
-  }
-}
-
-class _DesktopQueuePreview extends StatelessWidget {
-  const _DesktopQueuePreview();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 18, 0, 18),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-            ),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '接下来',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.muted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              const SizedBox(height: 14),
-              BlocBuilder<PlayerCubit, PlayerViewState>(
-                buildWhen: (prev, next) =>
-                    prev.queue != next.queue ||
-                    prev.currentIndex != next.currentIndex,
-                builder: (context, state) {
-                  final nextItems = <({int index, MusicTrack track})>[
-                    for (
-                      var i = state.currentIndex + 1;
-                      i < state.queue.length;
-                      i++
-                    )
-                      (index: i, track: state.queue[i]),
-                  ].take(6).toList();
-
-                  if (nextItems.isEmpty) {
-                    return Text(
-                      '队列已到末尾',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final item in nextItems)
-                        _DesktopQueuePreviewItem(
-                          track: item.track,
-                          onTap: () =>
-                              context.read<PlayerCubit>().playIndex(item.index),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DesktopQueuePreviewItem extends StatefulWidget {
-  const _DesktopQueuePreviewItem({required this.track, required this.onTap});
-
-  final MusicTrack track;
-  final VoidCallback onTap;
-
-  @override
-  State<_DesktopQueuePreviewItem> createState() =>
-      _DesktopQueuePreviewItemState();
-}
-
-class _DesktopQueuePreviewItemState extends State<_DesktopQueuePreviewItem> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final hoverBackground = colorScheme.surface.withValues(alpha: 0.70);
-    final idleBackground = hoverBackground.withValues(alpha: 0);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: AppMotion.micro,
-          curve: AppMotion.enter,
-          decoration: BoxDecoration(
-            color: _hovered ? hoverBackground : idleBackground,
-            borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
-              hoverColor: Colors.transparent,
-              focusColor: colorScheme.primary.withValues(alpha: 0.08),
-              splashColor: colorScheme.primary.withValues(alpha: 0.06),
-              highlightColor: Colors.transparent,
-              onTap: widget.onTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    CachedArtwork(
-                      imageUrl: widget.track.artworkUrl,
-                      size: 34,
-                      borderRadius: 9,
-                      sourceContext: ArtworkSourceContext.track(widget.track),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            widget.track.artistName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _format(widget.track.duration),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.muted,
-                        fontFeatures: [const ui.FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1095,16 +937,16 @@ class _PlayerTopBar extends StatelessWidget {
                   ? Alignment.centerRight
                   : Alignment.centerLeft,
               child: _PlayerTopBarIconButton(
-                icon: Icons.keyboard_arrow_down_rounded,
-                tooltip: '收起',
+                icon: Icons.arrow_back_rounded,
+                tooltip: '返回',
                 onPressed: () => Navigator.of(context).pop(),
               ),
             )
           : Row(
               children: [
                 _PlayerTopBarIconButton(
-                  icon: Icons.keyboard_arrow_down_rounded,
-                  tooltip: '收起',
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: '返回',
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(
@@ -1236,20 +1078,56 @@ class _PlayerTopBarIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final hoverBackground = colorScheme.outlineVariant.withValues(alpha: 0.38);
+    final pressedBackground = colorScheme.surfaceContainerHighest.withValues(
+      alpha: 0.62,
+    );
+    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return IconButton(
       icon: Icon(icon, size: 22),
       onPressed: onPressed,
       tooltip: tooltip,
-      color: colorScheme.onSurface,
-      style: IconButton.styleFrom(
-        side: BorderSide.none,
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.16),
-        disabledBackgroundColor: colorScheme.surface.withValues(alpha: 0.12),
-        disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
-          alpha: 0.56,
-        ),
+      style: ButtonStyle(
+        fixedSize: WidgetStateProperty.all(const Size.square(44)),
+        minimumSize: WidgetStateProperty.all(const Size.square(44)),
+        padding: WidgetStateProperty.all(EdgeInsets.zero),
+        tapTargetSize: MaterialTapTargetSize.padded,
+        shape: WidgetStateProperty.all(const CircleBorder()),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return idleBackground;
+          if (states.contains(WidgetState.pressed)) return pressedBackground;
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused)) {
+            return hoverBackground;
+          }
+          return idleBackground;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurfaceVariant.withValues(alpha: 0.52);
+          }
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.pressed)) {
+            return colorScheme.onSurface;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+        side: WidgetStateProperty.resolveWith((states) {
+          final visible =
+              states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.pressed);
+          return BorderSide(
+            color: colorScheme.outlineVariant.withValues(
+              alpha: visible ? 0.32 : 0,
+            ),
+          );
+        }),
       ),
     );
   }
@@ -2689,22 +2567,28 @@ class _DesktopQueueSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Color.alphaBlend(
+          colorScheme.surface.withValues(alpha: 0.92),
+          theme.scaffoldBackgroundColor,
+        ),
         border: Border(
           left: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.74),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.54),
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 42,
-            offset: const Offset(-14, 0),
+            color: Colors.black.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.24 : 0.10,
+            ),
+            blurRadius: 30,
+            offset: const Offset(-10, 0),
           ),
         ],
       ),
@@ -2734,28 +2618,32 @@ class _DesktopQueueHeader extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 14, 16),
+      padding: const EdgeInsets.fromLTRB(20, 15, 14, 15),
       child: Row(
         children: [
           Expanded(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(
-                  child: Text(
-                    '播放队列',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
+                Text(
+                  '播放队列',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                    height: 1.2,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 2),
                 Text(
                   '$count 首',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.muted,
+                    fontSize: 11.5,
                     fontFeatures: [const ui.FontFeature.tabularFigures()],
                   ),
                 ),
@@ -2763,29 +2651,88 @@ class _DesktopQueueHeader extends StatelessWidget {
             ),
           ),
           if (confirmingClear)
-            TextButton(onPressed: onCancelClear, child: const Text('取消')),
-          if (count > 0)
             TextButton(
-              onPressed: onClearPressed,
-              child: Text(confirmingClear ? '确认清空' : '清空'),
-            ),
-          IconButton(
-            onPressed: onClosePressed,
-            tooltip: '关闭',
-            style: IconButton.styleFrom(
-              minimumSize: const Size.square(28),
-              fixedSize: const Size.square(28),
-              padding: EdgeInsets.zero,
-              side: BorderSide.none,
-              backgroundColor: Colors.transparent,
-              foregroundColor: colorScheme.onSurfaceVariant,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+              onPressed: onCancelClear,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onSurfaceVariant,
+                minimumSize: const Size(40, 28),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+              child: const Text('取消'),
             ),
-            icon: const Icon(Icons.close_rounded, size: 18),
+          if (count > 0)
+            confirmingClear
+                ? TextButton(
+                    onPressed: onClearPressed,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.error,
+                      minimumSize: const Size(52, 28),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: const Text('确认清空'),
+                  )
+                : _DesktopQueueHeaderButton(
+                    icon: Icons.playlist_remove_rounded,
+                    tooltip: '清空队列',
+                    onPressed: onClearPressed,
+                  ),
+          _DesktopQueueHeaderButton(
+            icon: Icons.close_rounded,
+            tooltip: '关闭',
+            onPressed: onClosePressed,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DesktopQueueHeaderButton extends StatelessWidget {
+  const _DesktopQueueHeaderButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(28),
+          fixedSize: const Size.square(28),
+          padding: EdgeInsets.zero,
+          side: BorderSide.none,
+          backgroundColor: Colors.transparent,
+          foregroundColor: colorScheme.onSurfaceVariant,
+          disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
+            alpha: 0.42,
+          ),
+          hoverColor: theme.hoverWash.withValues(alpha: 0.56),
+          focusColor: theme.hoverWash.withValues(alpha: 0.56),
+          highlightColor: theme.hoverWash.withValues(alpha: 0.72),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          ),
+        ),
+        icon: Icon(icon, size: 17),
       ),
     );
   }
@@ -2820,14 +2767,25 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
       widget.track.artistName,
       if (widget.track.albumTitle.isNotEmpty) widget.track.albumTitle,
     ].where((value) => value.isNotEmpty).join(' · ');
-    final hoverBackground = colorScheme.outlineVariant.withValues(alpha: 0.34);
-    final idleBackground = hoverBackground.withValues(alpha: 0);
+    final currentBackground = Color.alphaBlend(
+      theme.musicTealSoft.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.68 : 0.78,
+      ),
+      colorScheme.surface,
+    );
+    final hoverBackground = theme.hoverWash.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.54 : 0.62,
+    );
+    final idleBackground = currentBackground.withValues(alpha: 0);
 
     final baseColor = widget.isCurrent
-        ? colorScheme.primaryContainer.withValues(alpha: 0.58)
+        ? currentBackground
         : _hovered
         ? hoverBackground
         : idleBackground;
+    final titleColor = widget.isCurrent
+        ? colorScheme.primary
+        : colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -2851,6 +2809,11 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
               decoration: BoxDecoration(
                 color: baseColor,
                 borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+                border: Border.all(
+                  color: widget.isCurrent
+                      ? colorScheme.primary.withValues(alpha: 0.10)
+                      : Colors.transparent,
+                ),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
@@ -2872,10 +2835,11 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface,
+                            color: titleColor,
+                            fontSize: 13,
                             fontWeight: widget.isCurrent
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                           ),
                         ),
                         if (subtitle.isNotEmpty) ...[
@@ -2886,6 +2850,7 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.muted,
+                              fontSize: 11.5,
                             ),
                           ),
                         ],
@@ -2893,43 +2858,43 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  AnimatedSwitcher(
-                    duration: AppMotion.micro,
-                    child: _hovered
-                        ? Row(
-                            key: const ValueKey('queue-actions'),
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                onPressed: () => context
-                                    .read<PlayerCubit>()
-                                    .removeQueueItem(widget.index),
-                                tooltip: '移出队列',
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size.square(28),
-                                  fixedSize: const Size.square(28),
-                                  padding: EdgeInsets.zero,
-                                  side: BorderSide.none,
-                                  foregroundColor: colorScheme.onSurfaceVariant,
+                  SizedBox(
+                    width: 64,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: AnimatedSwitcher(
+                        duration: AppMotion.micro,
+                        child: _hovered
+                            ? Row(
+                                key: const ValueKey('queue-actions'),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _DesktopQueueItemActionButton(
+                                    icon: Icons.close_rounded,
+                                    tooltip: '移出队列',
+                                    onPressed: () => context
+                                        .read<PlayerCubit>()
+                                        .removeQueueItem(widget.index),
+                                  ),
+                                  _DesktopQueueDragHandle(
+                                    index: widget.index,
+                                    colorScheme: colorScheme,
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                key: const ValueKey('queue-duration'),
+                                _format(widget.track.duration),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.muted,
+                                  fontSize: 11,
+                                  fontFeatures: [
+                                    const ui.FontFeature.tabularFigures(),
+                                  ],
                                 ),
-                                icon: const Icon(Icons.close_rounded, size: 16),
                               ),
-                              _DesktopQueueDragHandle(
-                                index: widget.index,
-                                colorScheme: colorScheme,
-                              ),
-                            ],
-                          )
-                        : Text(
-                            key: const ValueKey('queue-duration'),
-                            _format(widget.track.duration),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.muted,
-                              fontFeatures: [
-                                const ui.FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -2937,6 +2902,43 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DesktopQueueItemActionButton extends StatelessWidget {
+  const _DesktopQueueItemActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        minimumSize: const Size.square(28),
+        fixedSize: const Size.square(28),
+        padding: EdgeInsets.zero,
+        side: BorderSide.none,
+        foregroundColor: colorScheme.onSurfaceVariant,
+        hoverColor: theme.hoverWash.withValues(alpha: 0.72),
+        focusColor: theme.hoverWash.withValues(alpha: 0.72),
+        highlightColor: theme.hoverWash.withValues(alpha: 0.88),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+        ),
+      ),
+      icon: Icon(icon, size: 16),
     );
   }
 }
@@ -3435,8 +3437,8 @@ class _EmptyPlayerState extends StatelessWidget {
                 ),
                 child: _PlayerTopChrome(
                   leading: _PlayerTopBarIconButton(
-                    icon: Icons.keyboard_arrow_down_rounded,
-                    tooltip: '收起',
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: '返回',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   center: const _PlayerEmptyTopBarStatus(),
