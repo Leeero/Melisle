@@ -8,6 +8,7 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/play_queue.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/audio/audio_player_handler.dart';
+import 'package:cross_platform_music_player/infrastructure/audio/playback_metrics.dart';
 import 'package:cross_platform_music_player/infrastructure/audio/sleep_timer.dart';
 import 'package:cross_platform_music_player/infrastructure/audio/track_resolver.dart';
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
@@ -72,6 +73,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   /// 播放全部曲目的队列上限，防止内存溢出。
   static const int _maxQueueSize = 500;
+  static const int _lyricsCacheMaxEntries = 40;
+  static const int _adaptiveBufferingThreshold = 3;
+  static const Duration _adaptiveStartupThreshold = Duration(seconds: 5);
 
   /// 当前逻辑队列。
   PlayQueue _queue = const PlayQueue.empty();
@@ -128,6 +132,22 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   String? _reportedStartTrackId;
   int? _currentHistoryRowId;
   int? _currentHistoryStartMs;
+  PlaybackMetricsSummary _playbackMetrics = const PlaybackMetricsSummary();
+  DateTime? _activePlaybackStartedAt;
+  Duration? _activeSourceResolveTime;
+  int _activeBufferingEvents = 0;
+  ProcessingState? _lastProcessingState;
+  String? _prefetchKey;
+  int _prefetchToken = 0;
+  int _lyricsCacheEpoch = 0;
+  int _slowStartupStreak = 0;
+  int _stablePlaybackStreak = 0;
+  final Map<String, List<LyricLine>?> _lyricsCache = {};
+  final Map<String, Future<List<LyricLine>?>> _lyricsInFlight = {};
+  AudioQuality? _adaptiveQuality;
+  AudioQuality? _userSelectedQuality;
+
+  PlaybackMetricsSummary get playbackMetrics => _playbackMetrics;
 
   // ========= 对外 API =========
 
@@ -180,6 +200,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _queue = _queue.append([track]);
       _publishQueueToSystem();
       emit(state.copyWith(queue: _queue.tracks));
+      _scheduleNextPrefetch();
     });
   }
 
@@ -218,6 +239,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _queue = _queue.append(suffix);
     _publishQueueToSystem();
     emit(state.copyWith(queue: _queue.tracks));
+    _scheduleNextPrefetch();
   }
 
   bool _queueHasPrefix(List<MusicTrack> queue, List<MusicTrack> prefix) {
@@ -355,6 +377,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     emit(
       state.copyWith(queue: _queue.tracks, currentIndex: _queue.currentIndex),
     );
+    _scheduleNextPrefetch();
   }
 
   Future<void> removeQueueItem(int index) async {
@@ -390,6 +413,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         errorMessage: null,
       ),
     );
+    _scheduleNextPrefetch();
   }
 
   Future<void> clearQueue() async {
@@ -401,6 +425,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _stopProgressReporting();
     _playSessionId = null;
     _reportedStartTrackId = null;
+    _prefetchToken++;
+    _prefetchKey = null;
+    _resetActiveMetrics();
+    _resetAdaptiveQuality();
     emit(
       state.copyWith(
         queue: const [],
@@ -425,11 +453,13 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     };
     _queue = _queue.withLoopMode(next);
     emit(state.copyWith(loopMode: _toJustAudioLoop(next)));
+    _scheduleNextPrefetch();
   }
 
   Future<void> toggleShuffle() async {
     _queue = _queue.withShuffle(!_queue.shuffleEnabled);
     emit(state.copyWith(shuffleEnabled: _queue.shuffleEnabled));
+    _scheduleNextPrefetch();
   }
 
   Future<void> cyclePlaybackMode() async {
@@ -463,6 +493,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         shuffleEnabled: _queue.shuffleEnabled,
       ),
     );
+    _scheduleNextPrefetch();
   }
 
   LoopMode _toJustAudioLoop(QueueLoopMode mode) {
@@ -481,8 +512,44 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   }
 
   Future<void> setQuality(AudioQuality quality) async {
+    _userSelectedQuality = quality;
+    final hadAdaptiveQuality = _adaptiveQuality != null;
+    _resetAdaptiveQuality();
+    if (quality == state.quality) {
+      if (hadAdaptiveQuality) {
+        _prefetchKey = null;
+        _scheduleNextPrefetch();
+      }
+      return;
+    }
+    emit(state.copyWith(quality: quality));
+    _scheduleNextPrefetch();
+  }
+
+  void setDefaultQuality(AudioQuality quality) {
+    _userSelectedQuality = quality;
+    if (_adaptiveQuality != null) {
+      _scheduleNextPrefetch();
+      return;
+    }
     if (quality == state.quality) return;
     emit(state.copyWith(quality: quality));
+    _scheduleNextPrefetch();
+  }
+
+  void applyUserDefaultQuality(AudioQuality quality) {
+    _userSelectedQuality = quality;
+    final hadAdaptiveQuality = _adaptiveQuality != null;
+    _resetAdaptiveQuality();
+    if (quality == state.quality) {
+      if (hadAdaptiveQuality) {
+        _prefetchKey = null;
+        _scheduleNextPrefetch();
+      }
+      return;
+    }
+    emit(state.copyWith(quality: quality));
+    _scheduleNextPrefetch();
   }
 
   // ========= 核心：加载并播放当前曲目 =========
@@ -503,17 +570,36 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
     final myToken = ++_playToken;
     try {
-      final source = await _resolver.resolve(track, quality: state.quality);
-      if (myToken != _playToken || isClosed) return;
+      final quality = _effectivePlaybackQuality();
+      if (quality != state.quality) {
+        emit(state.copyWith(quality: quality));
+      }
+      _beginPlaybackMetrics();
+      final resolveWatch = Stopwatch()..start();
+      final source = await _resolver.resolve(track, quality: quality);
+      resolveWatch.stop();
+      _activeSourceResolveTime = resolveWatch.elapsed;
+      if (myToken != _playToken || isClosed) {
+        _resetActiveMetrics();
+        return;
+      }
+      final loadWatch = Stopwatch()..start();
       await _controller.loadAndPlay(source);
-      if (myToken != _playToken || isClosed) return;
+      loadWatch.stop();
+      if (myToken != _playToken || isClosed) {
+        _resetActiveMetrics();
+        return;
+      }
+      _finishPlaybackMetrics(track, quality, loadWatch.elapsed);
       // 只有"本次请求仍然有效"时才更新状态，避免旧请求覆盖新状态。
       emit(state.copyWith(isLoading: false, errorMessage: null));
       _loadLyricsForCurrent();
       _reportStoppedIfNeeded();
       _reportStartForCurrent();
+      _scheduleNextPrefetch();
     } catch (error) {
       if (myToken != _playToken || isClosed) return;
+      _resetActiveMetrics();
       emit(state.copyWith(isLoading: false, errorMessage: '播放失败：$error'));
     }
   }
@@ -543,6 +629,148 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           // oldTail 的异常已经被处理过了，这里吞掉，不影响后续链条。
         });
     return completer.future;
+  }
+
+  void _beginPlaybackMetrics() {
+    _activePlaybackStartedAt = DateTime.now();
+    _activeSourceResolveTime = null;
+    _activeBufferingEvents = 0;
+    _lastProcessingState = null;
+  }
+
+  void _finishPlaybackMetrics(
+    MusicTrack track,
+    AudioQuality quality,
+    Duration loadReadyTime,
+  ) {
+    final startedAt = _activePlaybackStartedAt;
+    final sourceResolveTime = _activeSourceResolveTime;
+    if (startedAt == null || sourceResolveTime == null) return;
+
+    final snapshot = PlaybackMetricsSnapshot(
+      trackId: track.id,
+      quality: quality,
+      sourceResolveTime: sourceResolveTime,
+      loadReadyTime: loadReadyTime,
+      startupTime: DateTime.now().difference(startedAt),
+      bufferingEvents: _activeBufferingEvents,
+      startedAt: startedAt,
+    );
+    _playbackMetrics = _playbackMetrics.record(snapshot);
+    _maybeRecoverAdaptiveQuality(snapshot);
+    _maybeAdaptQualityAfterPlaybackStart(snapshot);
+  }
+
+  void _resetActiveMetrics() {
+    _activePlaybackStartedAt = null;
+    _activeSourceResolveTime = null;
+    _activeBufferingEvents = 0;
+    _lastProcessingState = null;
+  }
+
+  AudioQuality _effectivePlaybackQuality() {
+    return _adaptiveQuality ?? _userSelectedQuality ?? state.quality;
+  }
+
+  void _maybeAdaptQualityAfterPlaybackStart(PlaybackMetricsSnapshot snapshot) {
+    if (!_shouldAdaptQuality(snapshot)) return;
+
+    final nextQuality = _lowerQuality(snapshot.quality);
+    if (nextQuality == null || nextQuality == _adaptiveQuality) return;
+
+    _adaptiveQuality = nextQuality;
+    _stablePlaybackStreak = 0;
+    _scheduleNextPrefetch();
+  }
+
+  void _maybeRecoverAdaptiveQuality(PlaybackMetricsSnapshot snapshot) {
+    if (_adaptiveQuality == null) return;
+    if (snapshot.bufferingEvents > 0 ||
+        snapshot.startupTime >= _adaptiveStartupThreshold) {
+      _stablePlaybackStreak = 0;
+      return;
+    }
+
+    _stablePlaybackStreak += 1;
+    if (_stablePlaybackStreak < 2) return;
+
+    _adaptiveQuality = null;
+    _stablePlaybackStreak = 0;
+    _prefetchKey = null;
+    _scheduleNextPrefetch();
+  }
+
+  bool _shouldAdaptQuality(PlaybackMetricsSnapshot snapshot) {
+    if (snapshot.quality == AudioQuality.low) return false;
+    if (snapshot.bufferingEvents >= _adaptiveBufferingThreshold) return true;
+    if (snapshot.startupTime >= _adaptiveStartupThreshold) {
+      _slowStartupStreak += 1;
+      return _slowStartupStreak >= 2;
+    }
+    _slowStartupStreak = 0;
+    return false;
+  }
+
+  AudioQuality? _lowerQuality(AudioQuality quality) {
+    return switch (quality) {
+      AudioQuality.auto || AudioQuality.lossless => AudioQuality.high,
+      AudioQuality.high => AudioQuality.medium,
+      AudioQuality.medium => AudioQuality.low,
+      AudioQuality.low => null,
+    };
+  }
+
+  void _resetAdaptiveQuality() {
+    _adaptiveQuality = null;
+    _slowStartupStreak = 0;
+    _stablePlaybackStreak = 0;
+  }
+
+  void _scheduleNextPrefetch() {
+    final nextIndex = _queue.nextIndex();
+    if (nextIndex == null ||
+        nextIndex < 0 ||
+        nextIndex >= _queue.tracks.length) {
+      _prefetchKey = null;
+      return;
+    }
+
+    final track = _queue.tracks[nextIndex];
+    final quality = _effectivePlaybackQuality();
+    final key = '${track.id}|${quality.storageKey}|$_playbackRevision';
+    if (_prefetchKey == key) return;
+
+    _prefetchKey = key;
+    final token = ++_prefetchToken;
+    unawaited(_prefetchTrack(track, quality, token));
+  }
+
+  Future<void> _prefetchTrack(
+    MusicTrack track,
+    AudioQuality quality,
+    int token,
+  ) async {
+    try {
+      await Future.wait([
+        _resolver.prefetch(track, quality: quality),
+        _prefetchLyrics(track.id),
+      ]);
+    } catch (_) {
+      // Prefetch is best-effort. Real playback still resolves on demand.
+    } finally {
+      if (token == _prefetchToken && !isClosed) {
+        final nextIndex = _queue.nextIndex();
+        final stillTarget =
+            nextIndex != null &&
+            nextIndex >= 0 &&
+            nextIndex < _queue.tracks.length &&
+            _queue.tracks[nextIndex].id == track.id &&
+            _effectivePlaybackQuality() == quality;
+        if (!stillTarget) {
+          _prefetchKey = null;
+        }
+      }
+    }
   }
 
   void _publishQueueToSystem() {
@@ -608,10 +836,19 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   void _onPlayerStateChanged(PlayerState playerState) {
     final nowPlaying = playerState.playing;
     final wasPlaying = state.isPlaying;
+    final processingState = playerState.processingState;
+
+    if (_activePlaybackStartedAt != null &&
+        processingState == ProcessingState.buffering &&
+        _lastProcessingState != ProcessingState.buffering) {
+      _activeBufferingEvents += 1;
+      _updateActiveBufferingMetrics();
+    }
+    _lastProcessingState = processingState;
 
     final isBusy =
-        playerState.processingState == ProcessingState.loading ||
-        playerState.processingState == ProcessingState.buffering;
+        processingState == ProcessingState.loading ||
+        processingState == ProcessingState.buffering;
 
     emit(state.copyWith(isLoading: isBusy, isPlaying: nowPlaying));
 
@@ -619,6 +856,22 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _startProgressReporting();
     } else if (!nowPlaying && wasPlaying) {
       _stopProgressReporting();
+    }
+  }
+
+  void _updateActiveBufferingMetrics() {
+    final lastSnapshot = _playbackMetrics.lastSnapshot;
+    final currentTrack = _queue.currentTrack;
+    if (lastSnapshot == null || currentTrack?.id != lastSnapshot.trackId) {
+      return;
+    }
+
+    _playbackMetrics = _playbackMetrics.replaceLast(
+      lastSnapshot.copyWith(bufferingEvents: _activeBufferingEvents),
+    );
+    final updatedSnapshot = _playbackMetrics.lastSnapshot;
+    if (updatedSnapshot != null) {
+      _maybeAdaptQualityAfterPlaybackStart(updatedSnapshot);
     }
   }
 
@@ -681,6 +934,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   // ========= 歌词 =========
 
   Future<void> reloadLyricsForCurrent() {
+    _lyricsCacheEpoch++;
+    _lyricsCache.clear();
+    _lyricsInFlight.clear();
     return _loadLyricsForCurrent();
   }
 
@@ -692,7 +948,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
     emit(state.copyWith(isLyricsLoading: true));
     try {
-      final lyrics = await _repository.fetchLyrics(trackId);
+      final lyrics = await _fetchLyricsCached(trackId);
       if (myToken != _lyricsToken ||
           _queue.currentTrack?.id != trackId ||
           isClosed) {
@@ -725,6 +981,42 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           lyricSyncState: const LyricSyncState(),
         ),
       );
+    }
+  }
+
+  Future<List<LyricLine>?> _fetchLyricsCached(String trackId) {
+    if (_lyricsCache.containsKey(trackId)) {
+      return Future.value(_lyricsCache[trackId]);
+    }
+
+    final inFlight = _lyricsInFlight[trackId];
+    if (inFlight != null) return inFlight;
+
+    final epoch = _lyricsCacheEpoch;
+    final future = _repository
+        .fetchLyrics(trackId)
+        .then((lyrics) {
+          if (epoch == _lyricsCacheEpoch) {
+            _storeLyricsCache(trackId, lyrics);
+          }
+          return lyrics;
+        })
+        .whenComplete(() {
+          _lyricsInFlight.remove(trackId);
+        });
+    _lyricsInFlight[trackId] = future;
+    return future;
+  }
+
+  Future<void> _prefetchLyrics(String trackId) async {
+    await _fetchLyricsCached(trackId);
+  }
+
+  void _storeLyricsCache(String trackId, List<LyricLine>? lyrics) {
+    _lyricsCache.remove(trackId);
+    _lyricsCache[trackId] = lyrics;
+    while (_lyricsCache.length > _lyricsCacheMaxEntries) {
+      _lyricsCache.remove(_lyricsCache.keys.first);
     }
   }
 
@@ -937,8 +1229,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         )
         .then((id) {
           _currentHistoryRowId = id;
+          return db.trimPlayHistory();
         })
-        .catchError((_) {});
+        .catchError((_) => 0);
   }
 
   void _finalizeLocalHistoryEntry() {

@@ -43,6 +43,20 @@ final class TrackResolver {
     );
   }
 
+  /// Lightly warms the source for a future track without touching just_audio.
+  ///
+  /// This intentionally resolves only the local file / stream URL path. The
+  /// returned [AudioSource] is still created fresh by [resolve] when playback
+  /// actually switches, preserving the single-source playback model.
+  Future<void> prefetch(
+    MusicTrack track, {
+    AudioQuality quality = AudioQuality.auto,
+  }) async {
+    final localPath = await _resolveLocalDownload(track.id);
+    if (localPath != null) return;
+    await _repository.getStreamUrl(track.id, quality: quality);
+  }
+
   Future<String?> _resolveLocalDownload(String trackId) async {
     final db = _database;
     if (db == null) return null;

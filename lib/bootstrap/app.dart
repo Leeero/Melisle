@@ -119,13 +119,13 @@ final class AppBootstrap {
 
     final playerCubit =
         PlayerCubit(
-            repository: repository,
-            controller: audioHandler,
-            database: database,
-          )
-          ..setQuality(settingsCubit.state.defaultQuality)
-          ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
-          ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
+          repository: repository,
+          controller: audioHandler,
+          database: database,
+        )
+        ..setDefaultQuality(settingsCubit.state.defaultQuality)
+        ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
+        ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
 
     // 设置变更时同步推到 PlayerCubit。
     var previousSettings = settingsCubit.state;
@@ -134,8 +134,14 @@ final class AppBootstrap {
           previousSettings.customLyricsSourceEnabled !=
               s.customLyricsSourceEnabled ||
           previousSettings.customLyricsSourceUrl != s.customLyricsSourceUrl;
+      final defaultQualityChanged =
+          previousSettings.defaultQuality != s.defaultQuality;
 
-      playerCubit.setQuality(s.defaultQuality);
+      if (defaultQualityChanged) {
+        playerCubit.applyUserDefaultQuality(s.defaultQuality);
+      } else {
+        playerCubit.setDefaultQuality(s.defaultQuality);
+      }
       playerCubit.setGapBetweenTracks(s.gapBetweenTracks);
       playerCubit.setLyricSyncOffset(s.lyricSyncOffset);
       if (lyricsSourceChanged) {
