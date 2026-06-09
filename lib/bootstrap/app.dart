@@ -109,8 +109,7 @@ final class AppBootstrap {
       builder: () =>
           AudioPlayerHandler(mediaSourceResolver: mediaSourceResolver),
       config: const AudioServiceConfig(
-        androidNotificationChannelId:
-            'com.example.cross_platform_music_player.audio',
+        androidNotificationChannelId: 'com.leeero.melisle.audio',
         androidNotificationChannelName: '音乐播放',
         androidNotificationOngoing: true,
         androidStopForegroundOnPause: true,
@@ -119,13 +118,13 @@ final class AppBootstrap {
 
     final playerCubit =
         PlayerCubit(
-          repository: repository,
-          controller: audioHandler,
-          database: database,
-        )
-        ..setDefaultQuality(settingsCubit.state.defaultQuality)
-        ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
-        ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
+            repository: repository,
+            controller: audioHandler,
+            database: database,
+          )
+          ..setDefaultQuality(settingsCubit.state.defaultQuality)
+          ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
+          ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
 
     // 设置变更时同步推到 PlayerCubit。
     var previousSettings = settingsCubit.state;

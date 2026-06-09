@@ -8,7 +8,7 @@
 PRODUCT_NAME = 乐岛
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.crossPlatformMusicPlayer
+PRODUCT_BUNDLE_IDENTIFIER = com.leeero.melisle
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Melisle contributors. All rights reserved.

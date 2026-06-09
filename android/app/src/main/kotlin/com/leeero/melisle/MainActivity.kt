@@ -1,4 +1,4 @@
-package com.example.cross_platform_music_player
+package com.leeero.melisle
 
 import com.ryanheise.audioservice.AudioServiceActivity
 
