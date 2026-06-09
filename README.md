@@ -2,65 +2,93 @@
 
 > 听见每一份热爱。
 
-`乐岛（Melisle）` 是一个面向 **自托管音乐库** 的 Flutter 跨平台播放器，目标平台包括 **Android、iOS、macOS、Windows**。项目聚焦于统一、克制、沉浸的音乐体验，目前以 **Emby** 为首个正式接入的后端，并为后续 **Subsonic / OpenSubsonic**、**WebDAV / NAS** 适配预留了完整架构扩展点。
+乐岛（Melisle）是一个使用 Flutter 构建的跨平台自托管音乐播放器，面向 Android、iOS、macOS 和 Windows。当前应用以统一的 `MusicRepository` 抽象接入远端音乐服务，并在本地维护设置、播放历史、搜索历史和离线下载记录。
 
-## 项目状态
+## 当前状态
 
-- **当前可用后端**：Emby
-- **预留 / 开发中后端**：Subsonic / OpenSubsonic、WebDAV / NAS
-- **UI 语言**：简体中文
-- **设计方向**：暗色优先、极简、跨端统一
+| 项目 | 状态 |
+| --- | --- |
+| 可运行平台 | Android / iOS / macOS / Windows |
+| 当前可用后端 | Emby API、Navidrome / Subsonic API 兼容服务 |
+| 登录方式 | 同一登录入口输入服务器、用户名、密码或 API Token，应用自动探测后端类型 |
+| 未完成后端 | WebDAV / NAS 目前只有仓库骨架，尚未接入启动流程 |
+| UI 语言 | 简体中文 |
+| 许可证 | PolyForm Noncommercial 1.0.0，源码可见但禁止商用 |
 
-## 当前已实现能力
+## 已实现功能
 
-- Emby 账号登录与会话恢复
-- 首页推荐、最近播放、常听内容
-- 媒体库浏览：歌曲 / 专辑 / 艺术家 / 歌单
-- 专辑、艺术家、歌单详情页
-- 全局搜索
-- 收藏、播放历史、下载记录
-- 歌词获取与展示
-- 播放队列、循环 / 随机、音质切换
-- 基于 `audio_service` 的后台播放能力
-- 桌面端窗口管理、托盘 / 热键扩展基础设施
+- 账号登录、会话安全存储、启动时自动恢复登录态。
+- 首页推荐，包括最新专辑、随机专辑、最近播放和常听内容。
+- 媒体库浏览：歌曲、专辑、艺术家、歌单、收藏。
+- 专辑详情、艺术家详情、歌单详情。
+- 全局搜索，覆盖歌曲、专辑、艺术家和歌单，并记录本地搜索历史。
+- 播放器：播放 / 暂停、上一曲 / 下一曲、进度拖动、音量、播放队列、队列重排、移除和清空。
+- 播放模式：顺序播放、列表循环、单曲循环、随机播放。
+- 在线音质：自动、无损、高品质 320K、标准 192K、省流 128K。
+- 歌词：同步歌词展示、当前行高亮、歌词点击跳转、歌词偏移调节、自定义歌词来源。
+- 封面：服务端封面展示、自定义封面来源、封面调色背景。
+- 收藏歌曲 / 专辑 / 艺术家 / 歌单。
+- 播放历史本地记录，并向后端汇报播放开始、进度和结束；Subsonic API 使用 scrobble。
+- 离线下载：串行下载队列、进度展示、取消、删除、本地文件优先播放、自定义下载目录。
+- 睡眠定时器：倒计时停止或本曲结束后停止。
+- 设置：主题模式、默认音质、曲间间隔、自定义歌词与封面来源、下载管理。
+- 系统播放能力：基于 `audio_service` 支持通知、锁屏和系统媒体控制。
+- 桌面集成：macOS / Windows 窗口初始化、托盘菜单；Windows 支持全局快捷键和关闭后最小化到托盘。
+- 应用内键盘快捷键：空格播放 / 暂停，方向键切歌和调音量，`S` 随机，`R` 循环，`L` 切换播放模式，`Ctrl+J/K` 调整歌词偏移。
 
 ## 技术栈
 
-- **Flutter**
-- **flutter_bloc**：状态管理
-- **go_router**：路由
-- **just_audio + audio_service**：播放内核与系统媒体能力
-- **Dio**：网络请求
-- **Drift**：本地数据库（设置、历史、搜索历史、下载记录等）
-- **flutter_secure_storage**：安全存储登录会话
+- Flutter / Dart
+- `flutter_bloc`：页面和业务状态管理
+- `go_router`：路由与登录态重定向
+- `just_audio` + `audio_service`：播放内核、后台播放和系统媒体能力
+- `dio`：Emby / Subsonic API 请求与离线文件下载
+- `drift` + SQLite：播放历史、搜索历史、应用设置、下载记录
+- `flutter_secure_storage`：登录会话安全存储
+- `window_manager`、`tray_manager`、`hotkey_manager`：桌面窗口、托盘和快捷键
+- `cached_network_image`、`palette_generator`：封面缓存与颜色提取
 
-## 目录结构
+## 架构
+
+项目按 Clean Architecture 风格分层：
 
 ```text
 lib/
 ├── bootstrap/        # 应用启动、依赖组装、路由、桌面集成
-├── domain/           # 领域实体与仓库契约
+├── domain/           # 领域实体、播放队列、歌词同步、仓库契约
 ├── application/      # 用例层
-├── infrastructure/   # Emby / 缓存 / 数据库 / 音频 / 持久化等实现
-└── presentation/     # 页面、Cubit、组件
+├── infrastructure/   # Emby / Subsonic 适配、缓存、数据库、音频、持久化
+├── presentation/     # 页面、Cubit、组件
+└── shared/           # 主题、常量、设计 token
 ```
 
-项目整体采用 **Clean Architecture 风格分层**，核心数据访问统一收敛到 `MusicRepository` 抽象，方便后续增加新的音乐服务后端而不撕裂 UI 和业务层。
+核心约束：
 
-## 开发环境
+- `MusicRepository` 保持后端无关。
+- `presentation → application → domain ← infrastructure`，领域层不依赖 Flutter。
+- 新后端应通过 infrastructure 适配 `MusicRepository`，不要把后端专有逻辑泄漏到 domain 或 presentation。
 
-- Flutter Stable（需匹配 `pubspec.yaml` 中的 Dart SDK 约束）
-- Dart SDK：`^3.11.5`
-- macOS / Windows 桌面开发建议安装对应平台工具链
+## 本地开发
 
-## 本地运行
+环境要求：
+
+- Flutter Stable，Dart SDK 需满足 `pubspec.yaml` 中的 `^3.11.5` 约束。
+- macOS / Windows 桌面开发需要安装对应平台工具链。
+- iOS 构建需要 Xcode；Android 构建需要 Android SDK。
+
+安装依赖：
 
 ```bash
 flutter pub get
+```
+
+运行：
+
+```bash
 flutter run
 ```
 
-按平台运行示例：
+指定平台：
 
 ```bash
 flutter run -d macos
@@ -69,19 +97,32 @@ flutter run -d ios
 flutter run -d android
 ```
 
-本地开发时可以使用开发登录变量避免每次重启后手动输入账号。先复制示例文件：
+## 开发登录
+
+Debug 模式下可以用 dart-define 注入开发登录信息。先复制示例文件：
 
 ```bash
 cp .env/dev_login.example.json .env/dev_login.json
 ```
 
-然后把 `.env/dev_login.json` 中的服务器地址、用户名和密码 / Token 改成自己的本地开发配置，再通过 `--dart-define-from-file` 运行：
+填写 `.env/dev_login.json` 后运行：
 
 ```bash
 flutter run -d macos --dart-define-from-file=.env/dev_login.json
 ```
 
-`.env/dev_login.json` 已加入 Git 忽略规则，不要把真实登录信息提交到远端。
+支持的字段：
+
+```json
+{
+  "MELISLE_DEV_LOGIN_ENABLED": true,
+  "MELISLE_DEV_LOGIN_SERVER_URL": "https://music.example.com",
+  "MELISLE_DEV_LOGIN_USERNAME": "your-username",
+  "MELISLE_DEV_LOGIN_PASSWORD": "your-password-or-token"
+}
+```
+
+`.env/*` 默认被 Git 忽略，`.env/*.example.json` 除外。不要提交真实服务器地址、账号、密码或 Token。
 
 ## 常用命令
 
@@ -89,62 +130,73 @@ flutter run -d macos --dart-define-from-file=.env/dev_login.json
 # 静态分析
 flutter analyze
 
-# 测试
+# 全量测试
 flutter test
 
-# 代码生成（项目已预留 drift / freezed / json_serializable）
+# 单个测试文件
+flutter test test/domain/entities/play_queue_test.dart
+
+# 代码生成：修改 Drift 表或其他生成源后运行
 dart run build_runner build --delete-conflicting-outputs
 
-# 桌面 / 移动平台构建
-flutter build macos
-flutter build windows
+# 平台构建
 flutter build apk
 flutter build ios
+flutter build macos
+flutter build windows
 ```
 
-## 自动构建与发布
+## 发布流程
 
-仓库新增了基于 **`master` 分支 tag** 的 GitHub Actions 发布流程：
+仓库包含 `.github/workflows/master-release.yml`，会在推送任意 tag 时触发发布构建，并校验该 tag 对应提交属于 `master` 历史。
 
-- **触发条件**：给 `master` 上的提交打 tag 并推送；工作流会校验该 tag 对应提交是否属于 `master` 历史
-- **构建产物**：Android `.apk`、iOS 无签名 `.ipa`、macOS `.dmg`、Windows `.exe`
-- **发布位置**：GitHub `Releases`
-- **产物命名规则**：`melisle-平台-tag.后缀`
-- **产物命名示例**：`melisle-android-v1.0.0.apk`、`melisle-ios-v1.0.0.ipa`
+当前工作流：
 
-说明：
+- 使用 Flutter `3.41.7`。
+- 构建 Android `.apk`。
+- 构建 iOS 无签名 `.ipa`，使用 `flutter build ios --release --no-codesign`。
+- 构建 macOS `.dmg`。
+- 构建 Windows `.exe` 安装包。
+- 将产物发布到 GitHub Releases。
 
-- 推荐发布方式：`git checkout master` 后执行 `git tag v1.0.0 && git push origin v1.0.0`。
-- 如果 tag 名里包含 `/` 或其他不适合文件名的字符，工作流会自动替换为 `-` 后再生成产物文件名。
-- iOS 产物会先执行 `flutter build ios --release --no-codesign`，再封装为 **无签名** `.ipa`，适合归档和后续再签名，不可直接作为已签名发行包使用。
-- macOS 产物会封装为 `.dmg`，Windows 产物会封装为 `.exe` 安装包。
-- 如果后续需要发布 **已签名 Android / iOS** 安装包，需要再补充证书、描述文件和 GitHub Secrets。
+产物命名示例：
 
-## 使用说明
+```text
+melisle-android-v1.0.0.apk
+melisle-ios-v1.0.0.ipa
+melisle-macos-v1.0.0.dmg
+melisle-windows-v1.0.0.exe
+```
 
-当前默认登录入口为 **Emby**。你需要准备：
+推荐发布方式：
 
-- 一个可访问的 Emby 服务地址
-- 对应账号和密码
+```bash
+git checkout master
+git tag v1.0.0
+git push origin v1.0.0
+```
 
-应用会将登录会话保存在本地安全存储中，以便下次启动时自动恢复。
+iOS 产物未签名，不能直接作为已签名发行包安装。若需要正式上架或企业分发，需要额外配置证书、描述文件和对应的 GitHub Secrets。
 
 ## 设计文档
 
-界面与视觉规范见：
-
-- `design.md`
+- `design.md`：当前 UI 设计规范。
+- `design/`：设计稿和静态参考页面。
+- `VISUAL_DESIGN_PATTERNS.md`、`UI_REDESIGN_ROADMAP.md`：视觉模式和改版记录。
 
 ## 许可证
 
-本项目采用 **PolyForm Noncommercial 1.0.0** 许可，并附带 `NOTICE` 声明。
+本项目采用 PolyForm Noncommercial 1.0.0，并附带 `NOTICE` 声明。
 
-这意味着：
+允许：
 
-- **允许**：个人学习、研究、非商用使用、非商用修改、非商用再分发
-- **禁止**：任何商业用途（包括但不限于商业销售、商业 SaaS、企业营利性集成、付费部署）
-- **二次改版要求**：基于本项目修改或再分发时，必须保留 `LICENSE` 与 `NOTICE`，并明确注明来源于 `乐岛（Melisle）` 项目
+- 个人学习、研究、非商用使用。
+- 非商用修改和非商用再分发。
 
-> 严格来说，带“禁止商用”限制的许可**不属于 OSI 定义下的开源许可证**，更准确地说，这是一个 **源码可见 / 源码可用（source-available）** 项目。
+禁止：
 
-如果你需要商业使用，请联系项目维护者另行获得授权。
+- 商业销售、商业 SaaS、企业营利性集成、付费部署等商业用途。
+
+基于本项目修改或再分发时，必须保留 `LICENSE` 与 `NOTICE`，并明确注明来源于乐岛（Melisle）项目。
+
+带有“禁止商用”限制的许可不属于 OSI 定义下的开源许可证。更准确地说，本项目是源码可见 / 源码可用（source-available）项目。
