@@ -12,7 +12,7 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 
 /// WebDAV / NAS 适配器骨架。
 ///
-/// 后续实现会用 `package:webdav_client`（或 `dio` 手写 PROPFIND）浏览远程目录，
+/// 后续实现会用 `dio` 手写 PROPFIND 或引入专用 WebDAV 客户端浏览远程目录，
 /// 通过解析目录结构 + 读取 ID3/FLAC 标签来构造 [MusicTrack]/[MusicAlbum]。
 ///
 /// 目前所有方法抛 [UnimplementedError]，用于占位。该类暂不接入 [AppBootstrap]。

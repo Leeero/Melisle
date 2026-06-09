@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 abstract final class AppColorTokens {
   static const seed = Color(0xFF1A9480);
 
-  // Current Open Design source: design/desktop.html and design/mobile-ios.html.
+  // Keep these values aligned with design.md.
   static const darkScaffold = Color(0xFF0C1315);
   static const darkSurface = Color(0xFF141C1E);
   static const darkSurfaceHigh = Color(0xFF1B2325);

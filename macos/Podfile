@@ -42,10 +42,6 @@ post_install do |installer|
     target.build_configurations.each do |config|
       if target.name == 'sqlite3'
         config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
-      elsif target.name == 'Sentry'
-        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
-      elsif target.name == 'sentry_flutter'
-        config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
       end
     end
   end

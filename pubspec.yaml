@@ -1,5 +1,5 @@
 name: cross_platform_music_player
-description: "A modern cross-platform music player for Emby, Navidrome and NAS/WebDAV."
+description: "A modern cross-platform music player for Emby and Navidrome/Subsonic."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -33,7 +33,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
   go_router: ^16.2.0
   just_audio: ^0.10.5
@@ -46,12 +45,9 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   cached_network_image: ^3.4.1
   flutter_secure_storage: ^9.2.4
-  talker_flutter: ^5.0.1
-  sentry_flutter: ^9.7.0
   window_manager: ^0.5.1
   hotkey_manager: ^0.2.3
   tray_manager: ^0.5.1
-  webdav_client: ^1.2.2
   palette_generator: ^0.3.3+7
   uuid: ^4.5.1
   rxdart: ^0.28.0
