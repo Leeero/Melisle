@@ -1,0 +1,58 @@
+name: Bug 反馈
+description: 反馈可复现的问题
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 简要说明发生了什么。
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - Android
+        - iOS
+        - macOS
+        - Windows
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: 音乐服务
+      options:
+        - Emby
+        - Navidrome
+        - Subsonic API 兼容服务
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 看到...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 请先脱敏服务器地址、用户名、Token 和私有媒体信息。
+    validations:
+      required: false

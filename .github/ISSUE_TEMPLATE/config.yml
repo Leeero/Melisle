@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全问题
+    url: https://github.com/Leeero/melisle/security/advisories/new
+    about: 请不要在公开 issue 中披露安全漏洞细节。

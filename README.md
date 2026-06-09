@@ -181,8 +181,6 @@ iOS 产物未签名，不能直接作为已签名发行包安装。若需要正�
 ## 设计文档
 
 - `design.md`：当前 UI 设计规范。
-- `design/`：设计稿和静态参考页面。
-- `VISUAL_DESIGN_PATTERNS.md`、`UI_REDESIGN_ROADMAP.md`：视觉模式和改版记录。
 
 ## 许可证
 

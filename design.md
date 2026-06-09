@@ -1,26 +1,19 @@
 # Design
 
-本文件是乐岛（Melisle）当前视觉还原工作的实现规范入口。视觉最终基准来自 `design/` 目录下的 Open Design 源文件；Flutter 代码实现、评审和验收都应优先对齐这些源文件。
+本文件是乐岛（Melisle）的 UI 设计规范入口。Flutter 代码实现、评审和验收都应优先对齐这里定义的设计原则、token、组件规则和验证方式。
 
 ## Source Of Truth
 
 设计源优先级如下：
 
-1. `design/desktop.html`
-   - 桌面端最终视觉基准。
-   - 覆盖左侧侧边栏、主内容区、底部 MiniPlayer、沉浸播放页、右侧播放队列、搜索、媒体库、详情页、下载管理和设置页。
-2. `design/mobile-ios.html`
-   - 移动端最终视觉基准。
-   - 覆盖 iOS 风格登录、底部 Tab、浮动 MiniPlayer、全屏播放页、底部 Sheet、媒体库、搜索、收藏、详情页和设置页。
-3. `design/index.html`
-   - 设计稿入口和高层设计系统说明。
-4. `design/assets/artwork/`
-   - 仅用于设计稿展示、截图基线和视觉对照。
-   - 生产代码不得把这些示例资源当作真实音乐数据源。
-5. `design/visual-restoration-plan.md`
-   - 当前视觉还原工作的阶段计划、进度清单、验证命令和差异记录。
+1. `lib/shared/theme/`
+   - Flutter 主题、颜色、字体、间距和组件风格的代码实现。
+2. `lib/presentation/widgets/`
+   - 共享 UI 组件与跨页面交互模式。
+3. `design.md`
+   - 产品视觉原则、设计 token、布局规则和验收标准。
 
-`design-system/melisle/` 是历史参考，不再作为当前视觉还原主依据，除非任务明确要求使用它。
+生产代码必须使用后端数据和现有 Cubit/Repository，不使用设计样例或假数据替代真实业务数据。
 
 ## Product Register
 
@@ -40,7 +33,7 @@
 
 ## Color Tokens
 
-`design/desktop.html` 与 `design/mobile-ios.html` 使用 OKLCH token。Flutter 中可使用以下 sRGB 映射值作为当前实现基准：
+Flutter 中使用以下 sRGB 映射值作为当前实现基准：
 
 | Role | Light | Dark | Use |
 |---|---:|---:|---|
@@ -308,7 +301,6 @@ Flutter 实现以平台系统字体为主，中文环境优先保证可读性。
 - 优先更新共享 token 和共享组件，再更新页面。
 - 真实 App 使用后端数据和现有 Cubit/Repository，不使用设计稿假数据替代业务数据。
 - 保留现有功能：登录、会话恢复、搜索、播放、切歌、歌词、收藏、队列、音质、睡眠定时、下载、设置保存、路由跳转。
-- 每阶段参考 `design/visual-restoration-plan.md` 更新进度。
 - 每阶段先跑相关测试，再跑 `flutter analyze`，最后做桌面/移动手动 smoke test。
 
 ## Validation

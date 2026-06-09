@@ -1,0 +1,39 @@
+name: 功能建议
+description: 提出新功能或新音乐源适配建议
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的解决方案
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 功能范围
+      options:
+        - 播放器
+        - 媒体库
+        - 搜索
+        - 下载
+        - 歌词 / 封面
+        - 新音乐源适配
+        - UI / 交互
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: test_server
+    attributes:
+      label: 测试服务说明
+      description: 如果是新音乐源适配，可以说明是否能提供临时测试地址。请不要公开真实账号和 Token。
+    validations:
+      required: false
