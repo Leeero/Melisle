@@ -14,12 +14,24 @@ Thumbs.db
 *.orig
 
 # Local AI / automation workspace data
+.agents/
+.claude/
 .codebuddy/
+.impeccable/
 .claude/worktrees/
 # Optional: ignore AI repo guidance if you do not want to publish it
-# CODEBUDDY.md
+CLAUDE.md
+CODEBUDDY.md
 
-# Design system docs (local reference only, not needed for build)
+# Local analysis / migration notes
+CODEBUDDY_ANALYSIS_INDEX.md
+QUEUE_SHEET_INDEX.md
+QUEUE_SHEET_QUICK_REFERENCE.md
+UI_REDESIGN_ROADMAP.md
+VISUAL_DESIGN_PATTERNS.md
+
+# Design docs / local reference only, not needed for build
+design/
 design-system/
 
 # Local development secrets

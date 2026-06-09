@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-label="周杰伦 portrait">
-  <defs><radialGradient id="r" cx="45%" cy="28%" r="72%"><stop offset="0" stop-color="#f0b6a4"/><stop offset=".56" stop-color="#334762"/><stop offset="1" stop-color="#171e2b"/></radialGradient><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .075"/></feComponentTransfer></filter></defs>
-  <rect width="420" height="420" rx="210" fill="url(#r)"/>
-  <rect width="420" height="420" rx="210" filter="url(#grain)" opacity=".6"/>
-  <circle cx="210" cy="154" r="74" fill="white" opacity=".34"/>
-  <path d="M88 370c20-92 78-140 122-140s102 48 122 140" fill="white" opacity=".30"/>
-  <path d="M126 130c34-52 112-64 162-8" fill="none" stroke="white" stroke-width="10" stroke-linecap="round" opacity=".42"/>
-  <text x="210" y="370" fill="white" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif" font-size="28" font-weight="650">周杰伦</text>
-</svg>
