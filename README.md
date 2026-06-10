@@ -74,7 +74,7 @@ lib/
 
 - Flutter Stable，Dart SDK 需满足 `pubspec.yaml` 中的 `^3.11.5` 约束。
 - macOS / Windows 桌面开发需要安装对应平台工具链。
-- iOS 构建需要 Xcode；Android 构建需要 Android SDK。
+- iOS 构建需要 macOS、Xcode 和 CocoaPods；Android 构建需要 Android SDK。
 
 安装依赖：
 
@@ -96,6 +96,81 @@ flutter run -d windows
 flutter run -d ios
 flutter run -d android
 ```
+
+## iOS 设备自行打包安装
+
+当前项目没有通过 App Store 或 TestFlight 分发，GitHub Releases 中的 iOS 产物也是无签名构建，普通 iPhone / iPad 不能直接安装 `.ipa`。iOS 用户只能在自己的 Mac 上使用自己的 Apple ID 通过 Xcode / Flutter 自行签名、打包并安装到自己的设备。
+
+
+前置条件：
+
+- 一台 Mac，并已安装最新版 Xcode。
+- 已安装 Flutter Stable，并通过 `flutter doctor` 检查 iOS 工具链。
+- 已安装 CocoaPods。若未安装，可参考 Flutter / CocoaPods 官方文档完成安装。
+- 一台 iPhone 或 iPad，使用数据线连接到 Mac，或已在 Xcode 中开启无线调试。
+- 一个可登录 Xcode 的 Apple ID。免费 Apple ID 通常只能用于给自己的设备调试安装。
+
+首次准备：
+
+```bash
+git clone https://github.com/Leeero/melisle.git
+cd melisle
+flutter pub get
+flutter doctor
+```
+
+如果 `flutter doctor` 提示需要接受 Xcode 协议或安装 iOS 相关组件，按提示处理后重新运行：
+
+```bash
+flutter doctor
+```
+
+配置 iOS 签名：
+
+1. 用 Xcode 打开 iOS 工程：
+
+   ```bash
+   open ios/Runner.xcworkspace
+   ```
+
+2. 在 Xcode 中进入 `Settings` / `Accounts`，添加自己的 Apple ID。
+3. 在左侧选择 `Runner` 工程，再选择 `Runner` target。
+4. 打开 `Signing & Capabilities`。
+5. 勾选 `Automatically manage signing`。
+6. 在 `Team` 中选择自己的个人 Team。
+7. 将 `Bundle Identifier` 改成一个全局唯一值，例如 `com.yourname.melisle`。不要继续使用仓库默认的 `com.leeero.melisle`，否则可能与其他人的签名冲突。
+
+安装到真机：
+
+1. 将 iPhone / iPad 连接到 Mac，并在设备上选择信任这台电脑。
+2. iOS 16 及以上通常需要在设备的 `设置` -> `隐私与安全性` 中打开 `开发者模式`，然后按提示重启。
+3. 查看设备 ID：
+
+   ```bash
+   flutter devices
+   ```
+
+4. 使用 Flutter 构建并安装到设备：
+
+   ```bash
+   flutter run -d <device-id> --release
+   ```
+
+   如果只是调试，也可以使用：
+
+   ```bash
+   flutter run -d <device-id>
+   ```
+
+5. 首次打开时，如果系统提示不信任开发者证书，在设备上进入 `设置` -> `通用` -> `VPN 与设备管理`，信任对应 Apple ID 的开发者 App。
+
+也可以在 Xcode 中直接安装：
+
+1. 打开 `ios/Runner.xcworkspace`。
+2. 在顶部设备列表选择已连接的 iPhone / iPad。
+3. 确认 `Runner` target 的签名配置无报错。
+4. 点击 Run 按钮，等待 Xcode 构建并安装。
+
 
 ## 开发登录
 
@@ -177,6 +252,7 @@ git push origin v1.0.0
 ```
 
 iOS 产物未签名，不能直接作为已签名发行包安装。若需要正式上架或企业分发，需要额外配置证书、描述文件和对应的 GitHub Secrets。
+没有 Apple Developer Program 账号时，请参考上文“iOS 设备自行打包安装”，由每位 iOS 用户在自己的 Mac 上自行签名安装。
 
 ## 设计文档
 
