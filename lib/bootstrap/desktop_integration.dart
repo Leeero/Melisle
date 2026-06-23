@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -14,9 +15,9 @@ import 'package:window_manager/window_manager.dart';
 /// 仅在 macOS / Windows 上启用；Linux 暂未适配，Android / iOS 跳过。
 /// 生命周期：[attach] 时绑定；[dispose] 时解绑。
 ///
-/// Windows 特殊行为：点击关闭按钮默认最小化到托盘而非退出应用，
-/// 通过托盘菜单"退出"才真正退出。
-class DesktopIntegration with TrayListener, WindowListener {
+/// 关闭按钮行为（macOS + Windows）：点击关闭按钮 → 隐藏窗口，
+/// 播放继续后台运行。通过托盘菜单"退出"或 Cmd+Q / Alt+F4 才真正退出。
+class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserver {
   DesktopIntegration({required this.playerCubit});
 
   final PlayerCubit playerCubit;
@@ -33,11 +34,9 @@ class DesktopIntegration with TrayListener, WindowListener {
     if (!_isSupported || _attached) return;
     _attached = true;
 
-    // Windows: 拦截关闭事件，改为隐藏到托盘。
-    if (Platform.isWindows) {
-      windowManager.addListener(this);
-      await windowManager.setPreventClose(true);
-    }
+    // macOS / Windows: 拦截关闭事件，改为隐藏窗口而非退出。
+    windowManager.addListener(this);
+    await windowManager.setPreventClose(true);
 
     try {
       await _registerHotkeys();
@@ -52,18 +51,18 @@ class DesktopIntegration with TrayListener, WindowListener {
       debugPrint('DesktopIntegration: 托盘初始化失败：$error\n$stack');
     }
 
+    WidgetsBinding.instance.addObserver(this);
     _stateSub = playerCubit.stream.listen(_onPlayerState);
     _onPlayerState(playerCubit.state);
   }
 
   Future<void> dispose() async {
     if (!_isSupported) return;
+    WidgetsBinding.instance.removeObserver(this);
     await _stateSub?.cancel();
     _stateSub = null;
 
-    if (Platform.isWindows) {
-      windowManager.removeListener(this);
-    }
+    windowManager.removeListener(this);
 
     try {
       trayManager.removeListener(this);
@@ -213,11 +212,9 @@ class DesktopIntegration with TrayListener, WindowListener {
 
   @override
   void onTrayIconMouseDown() {
-    // 点击托盘图标：macOS 为右键出菜单，Windows 通常左键打开。
-    if (Platform.isWindows) {
-      windowManager.show();
-      windowManager.focus();
-    }
+    // 点击菜单栏托盘图标 → 显示主窗口。
+    windowManager.show();
+    windowManager.focus();
   }
 
   @override
@@ -247,21 +244,26 @@ class DesktopIntegration with TrayListener, WindowListener {
     }
   }
 
-  // --- Window close interception (Windows: minimize to tray) ---
+  // --- App lifecycle: show window on resume ---
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      windowManager.show();
+    }
+  }
+
+  // --- Window close interception: hide to background ---
 
   @override
   void onWindowClose() async {
-    // Windows: 点击关闭按钮 → 隐藏到托盘而非退出。
-    if (Platform.isWindows) {
-      await windowManager.hide();
-    }
+    // 点击关闭按钮 → 隐藏窗口而非退出，播放继续后台运行。
+    await windowManager.hide();
   }
 
   /// 真正退出应用。解除关闭拦截后执行 destroy。
   Future<void> _forceQuit() async {
-    if (Platform.isWindows) {
-      await windowManager.setPreventClose(false);
-    }
+    await windowManager.setPreventClose(false);
     await windowManager.destroy();
   }
 }
