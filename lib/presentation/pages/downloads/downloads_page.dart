@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/infrastructure/database/app_database
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -910,11 +911,9 @@ class _DownloadTableRowState extends State<_DownloadTableRow> {
                     widget.record,
                     widget.onDelete,
                   ),
-                  style: IconButton.styleFrom(
-                    side: BorderSide.none,
-                    foregroundColor: _hovered
-                        ? colorScheme.error
-                        : colorScheme.onSurfaceVariant,
+                  style: AppActionButtonStyle.icon(
+                    context,
+                    tone: AppActionButtonTone.danger,
                   ),
                 ),
               ),

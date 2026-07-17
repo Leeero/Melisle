@@ -32,6 +32,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
+    final subtitle = _playlistSubtitle(playlist);
     final textTheme = theme.textTheme;
     final compact = widget.compact;
     final contentPadding = compact
@@ -120,14 +121,15 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                   );
                                 },
                               ),
-                              Positioned(
-                                right: compact ? 6 : 8,
-                                bottom: compact ? 6 : 8,
-                                child: _PlaylistCountBadge(
-                                  count: playlist.trackCount,
-                                  compact: compact,
+                              if (playlist.trackCount > 0)
+                                Positioned(
+                                  right: compact ? 6 : 8,
+                                  bottom: compact ? 6 : 8,
+                                  child: _PlaylistCountBadge(
+                                    count: playlist.trackCount,
+                                    compact: compact,
+                                  ),
                                 ),
-                              ),
                               Positioned.fill(
                                 child: AnimatedOpacity(
                                   duration: AppMotion.micro,
@@ -171,7 +173,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
               Padding(
                 padding: contentPadding,
                 child: Text(
-                  '${playlist.trackCount} 首歌曲',
+                  subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: subtitleStyle,
@@ -207,6 +209,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
+    final subtitle = _playlistSubtitle(playlist);
 
     return Semantics(
       label: '打开歌单《${playlist.name}》',
@@ -252,7 +255,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${playlist.trackCount} 首歌曲',
+                            subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
@@ -275,6 +278,10 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
       ),
     );
   }
+}
+
+String _playlistSubtitle(MusicPlaylist playlist) {
+  return playlist.trackCount > 0 ? '${playlist.trackCount} 首歌曲' : '歌单';
 }
 
 class _PlaylistCountBadge extends StatelessWidget {

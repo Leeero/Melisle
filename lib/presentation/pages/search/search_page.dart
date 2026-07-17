@@ -914,17 +914,11 @@ class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
                         icon: Icon(
                           Icons.playlist_add_rounded,
                           size: 20,
-                          color: theme.muted,
                         ),
-                        style: IconButton.styleFrom(
-                          foregroundColor: theme.muted,
-                          backgroundColor: Colors.transparent,
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppRadiusTokens.mobileSm,
-                            ),
-                          ),
+                        style: AppActionButtonStyle.icon(
+                          context,
+                          iconSize: 20,
+                          radius: AppRadiusTokens.mobileSm,
                         ),
                       ),
                     ),

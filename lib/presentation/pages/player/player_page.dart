@@ -18,6 +18,7 @@ import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/lyric_view.dart';
 import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
@@ -486,8 +487,6 @@ class _PlayerExtraIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Tooltip(
       message: tooltip,
       child: SizedBox.square(
@@ -495,13 +494,9 @@ class _PlayerExtraIconButton extends StatelessWidget {
         child: IconButton(
           onPressed: onPressed,
           icon: Icon(icon, size: 20),
-          style: IconButton.styleFrom(
-            side: BorderSide.none,
-            foregroundColor: active
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
-            backgroundColor: Colors.transparent,
-            tapTargetSize: MaterialTapTargetSize.padded,
+          style: AppActionButtonStyle.icon(
+            context,
+            selected: active,
           ),
         ),
       ),
@@ -1080,35 +1075,39 @@ class _PlayerTopBarIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final hoverBackground = colorScheme.outlineVariant.withValues(alpha: 0.38);
-    final pressedBackground = colorScheme.surfaceContainerHighest.withValues(
-      alpha: 0.62,
-    );
-    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return IconButton(
       icon: Icon(icon, size: 22),
       onPressed: onPressed,
       tooltip: tooltip,
-      style: ButtonStyle(
-        fixedSize: WidgetStateProperty.all(const Size.square(44)),
-        minimumSize: WidgetStateProperty.all(const Size.square(44)),
-        padding: WidgetStateProperty.all(EdgeInsets.zero),
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(44),
+        minimumSize: const Size.square(44),
+        maximumSize: const Size.square(44),
+        padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.padded,
-        shape: WidgetStateProperty.all(const CircleBorder()),
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        foregroundColor: colorScheme.onSurfaceVariant,
+        disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
+          alpha: 0.36,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+        ),
+      ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return idleBackground;
-          if (states.contains(WidgetState.pressed)) return pressedBackground;
+          if (states.contains(WidgetState.disabled)) return Colors.transparent;
+          if (states.contains(WidgetState.pressed)) {
+            return colorScheme.surface.withValues(alpha: 0.34);
+          }
           if (states.contains(WidgetState.hovered) ||
               states.contains(WidgetState.focused)) {
-            return hoverBackground;
+            return colorScheme.surface.withValues(alpha: 0.22);
           }
-          return idleBackground;
+          return Colors.transparent;
         }),
         foregroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return colorScheme.onSurfaceVariant.withValues(alpha: 0.52);
+            return colorScheme.onSurfaceVariant.withValues(alpha: 0.36);
           }
           if (states.contains(WidgetState.hovered) ||
               states.contains(WidgetState.focused) ||
@@ -1117,6 +1116,7 @@ class _PlayerTopBarIconButton extends StatelessWidget {
           }
           return colorScheme.onSurfaceVariant;
         }),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         side: WidgetStateProperty.resolveWith((states) {
           final visible =
               states.contains(WidgetState.hovered) ||
@@ -1124,7 +1124,7 @@ class _PlayerTopBarIconButton extends StatelessWidget {
               states.contains(WidgetState.pressed);
           return BorderSide(
             color: colorScheme.outlineVariant.withValues(
-              alpha: visible ? 0.32 : 0,
+              alpha: visible ? 0.22 : 0,
             ),
           );
         }),
@@ -1194,17 +1194,12 @@ class _PlaybackControls extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: controlGap),
-                  _ControlButton(
-                    icon: s.isLoading
-                        ? Icons.downloading_rounded
-                        : (s.isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded),
-                    isPrimary: true,
+                  LoadingPlayPauseButton(
+                    isLoading: s.isLoading,
+                    isPlaying: s.isPlaying,
+                    onPressed: context.read<PlayerCubit>().togglePlayback,
                     size: 56,
                     iconSize: 28,
-                    onTap: context.read<PlayerCubit>().togglePlayback,
-                    tooltip: s.isPlaying ? '暂停' : '播放',
                   ),
                   const SizedBox(width: controlGap),
                   Expanded(
@@ -2086,19 +2081,14 @@ class _DesktopPopoverCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return IconButton(
       onPressed: onPressed,
       tooltip: '关闭',
-      style: IconButton.styleFrom(
-        side: BorderSide.none,
-        backgroundColor: colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.32,
-        ),
-        foregroundColor: colorScheme.onSurfaceVariant,
-        fixedSize: const Size.square(36),
+      style: AppActionButtonStyle.icon(
+        context,
+        size: 36,
         iconSize: 19,
+        radius: AppRadiusTokens.desktopMd,
       ),
       icon: const Icon(Icons.close_rounded),
     );
@@ -2708,29 +2698,15 @@ class _DesktopQueueHeaderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Tooltip(
       message: tooltip,
       child: IconButton(
         onPressed: onPressed,
-        style: IconButton.styleFrom(
-          minimumSize: const Size.square(28),
-          fixedSize: const Size.square(28),
-          padding: EdgeInsets.zero,
-          side: BorderSide.none,
-          backgroundColor: Colors.transparent,
-          foregroundColor: colorScheme.onSurfaceVariant,
-          disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
-            alpha: 0.42,
-          ),
-          hoverColor: theme.hoverWash.withValues(alpha: 0.56),
-          focusColor: theme.hoverWash.withValues(alpha: 0.56),
-          highlightColor: theme.hoverWash.withValues(alpha: 0.72),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
-          ),
+        style: AppActionButtonStyle.icon(
+          context,
+          size: 28,
+          iconSize: 17,
+          radius: AppRadiusTokens.desktopSm,
         ),
         icon: Icon(icon, size: 17),
       ),
@@ -2919,24 +2895,14 @@ class _DesktopQueueItemActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return IconButton(
       onPressed: onPressed,
       tooltip: tooltip,
-      style: IconButton.styleFrom(
-        minimumSize: const Size.square(28),
-        fixedSize: const Size.square(28),
-        padding: EdgeInsets.zero,
-        side: BorderSide.none,
-        foregroundColor: colorScheme.onSurfaceVariant,
-        hoverColor: theme.hoverWash.withValues(alpha: 0.72),
-        focusColor: theme.hoverWash.withValues(alpha: 0.72),
-        highlightColor: theme.hoverWash.withValues(alpha: 0.88),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
-        ),
+      style: AppActionButtonStyle.icon(
+        context,
+        size: 28,
+        iconSize: 16,
+        radius: AppRadiusTokens.desktopSm,
       ),
       icon: Icon(icon, size: 16),
     );

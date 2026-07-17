@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -327,22 +328,15 @@ class _CurrentLyricButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Tooltip(
       message: '定位到当前歌词',
-      child: IconButton.filledTonal(
+      child: IconButton(
         onPressed: onPressed,
         icon: const Icon(Icons.my_location_rounded, size: 18),
-        style: IconButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          backgroundColor: colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.82,
-          ),
-          foregroundColor: colorScheme.primary,
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.22),
-          ),
+        style: AppActionButtonStyle.icon(
+          context,
+          tone: AppActionButtonTone.primary,
+          iconSize: 18,
         ),
       ),
     );

@@ -5,6 +5,8 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -219,16 +221,13 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                         prev.isPlaying != next.isPlaying ||
                         prev.isLoading != next.isLoading,
                     builder: (context, state) {
-                      return _MiniControlButton(
-                        icon: state.isLoading
-                            ? Icons.downloading_rounded
-                            : (state.isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded),
+                      return LoadingPlayPauseButton(
+                        isLoading: state.isLoading,
+                        isPlaying: state.isPlaying,
                         onPressed: context.read<PlayerCubit>().togglePlayback,
-                        isPrimary: true,
-                        compact: true,
-                        tooltip: state.isPlaying ? '暂停' : '播放',
+                        size: 36,
+                        iconSize: 16,
+                        loadingStrokeWidth: 2.4,
                       );
                     },
                   ),
@@ -374,14 +373,16 @@ class _MiniTransportControls extends StatelessWidget {
         ),
         SizedBox(width: gap),
         BlocBuilder<PlayerCubit, PlayerViewState>(
-          buildWhen: (prev, next) => prev.isPlaying != next.isPlaying,
-          builder: (context, state) => _MiniControlButton(
-            icon: state.isPlaying
-                ? Icons.pause_rounded
-                : Icons.play_arrow_rounded,
+          buildWhen: (prev, next) =>
+              prev.isPlaying != next.isPlaying ||
+              prev.isLoading != next.isLoading,
+          builder: (context, state) => LoadingPlayPauseButton(
+            isLoading: state.isLoading,
+            isPlaying: state.isPlaying,
             onPressed: context.read<PlayerCubit>().togglePlayback,
-            isPrimary: true,
-            tooltip: state.isPlaying ? '暂停' : '播放',
+            size: 36,
+            iconSize: 18,
+            loadingStrokeWidth: 2.4,
           ),
         ),
         SizedBox(width: gap),
@@ -567,9 +568,6 @@ class _MiniPlaybackModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return BlocBuilder<PlayerCubit, PlayerViewState>(
       buildWhen: (prev, next) =>
           prev.loopMode != next.loopMode ||
@@ -577,19 +575,13 @@ class _MiniPlaybackModeButton extends StatelessWidget {
       builder: (context, state) {
         final mode = state.playbackMode;
         final selected = mode != PlaybackModeOption.sequence;
-        final foregroundColor = selected
-            ? colorScheme.primary
-            : colorScheme.onSurfaceVariant;
-        return IconButton.filled(
+        return IconButton(
           onPressed: context.read<PlayerCubit>().cyclePlaybackMode,
           tooltip: '播放模式：${_playbackModeLabel(mode)}，点击切换',
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: foregroundColor,
-            side: BorderSide.none,
-            minimumSize: const Size.square(32),
-            maximumSize: const Size.square(32),
-            padding: EdgeInsets.zero,
+          style: AppActionButtonStyle.icon(
+            context,
+            selected: selected,
+            size: 32,
             iconSize: 18,
           ),
           icon: Icon(_playbackModeIcon(mode)),
@@ -619,85 +611,19 @@ class _MiniControlButton extends StatefulWidget {
 }
 
 class _MiniControlButtonState extends State<_MiniControlButton> {
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    if (widget.compact) {
-      final visualSize = widget.isPrimary ? 36.0 : 40.0;
-      final foreground = widget.isPrimary
-          ? theme.scaffoldBackgroundColor
-          : colorScheme.onSurface;
-      final background = widget.isPrimary
-          ? Color.lerp(colorScheme.onSurface, theme.musicRose, 0.12)!
-          : (_pressed ? colorScheme.outlineVariant : Colors.transparent);
-
-      return Tooltip(
-        message: widget.tooltip ?? '',
-        child: Semantics(
-          button: true,
-          label: widget.tooltip,
-          child: SizedBox.square(
-            dimension: 44,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: widget.onPressed,
-                onHighlightChanged: (value) => setState(() => _pressed = value),
-                borderRadius: BorderRadius.circular(22),
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                child: Center(
-                  child: AnimatedScale(
-                    duration: AppMotion.micro,
-                    curve: AppMotion.standard,
-                    scale: _pressed && widget.isPrimary ? 0.96 : 1,
-                    child: AnimatedOpacity(
-                      duration: AppMotion.micro,
-                      curve: AppMotion.standard,
-                      opacity: _pressed && widget.isPrimary ? 0.92 : 1,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: background,
-                          shape: BoxShape.circle,
-                        ),
-                        child: SizedBox.square(
-                          dimension: visualSize,
-                          child: Icon(
-                            widget.icon,
-                            size: widget.isPrimary ? 16 : 20,
-                            color: foreground,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    const size = 36.0;
-    return IconButton.filled(
+    final size = widget.compact ? 40.0 : 36.0;
+    return IconButton(
       onPressed: widget.onPressed,
       tooltip: widget.tooltip,
-      style: IconButton.styleFrom(
-        backgroundColor: widget.isPrimary
-            ? colorScheme.onSurface
-            : Colors.transparent,
-        foregroundColor: widget.isPrimary
-            ? theme.scaffoldBackgroundColor
-            : colorScheme.onSurfaceVariant,
-        side: BorderSide.none,
-        minimumSize: Size.square(size),
-        maximumSize: Size.square(size),
-        padding: EdgeInsets.zero,
-        iconSize: 18,
+      style: AppActionButtonStyle.icon(
+        context,
+        tone: widget.isPrimary
+            ? AppActionButtonTone.primary
+            : AppActionButtonTone.neutral,
+        size: size,
+        iconSize: widget.compact ? 20 : 18,
       ),
       icon: Icon(widget.icon),
     );

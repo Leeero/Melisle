@@ -38,8 +38,6 @@ abstract final class AppActionButtonStyle {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isPrimary = tone == AppActionButtonTone.primary;
-    final isDanger = tone == AppActionButtonTone.danger;
     final foreground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.onPrimary,
       AppActionButtonTone.secondary => colorScheme.secondary,
@@ -54,6 +52,24 @@ abstract final class AppActionButtonStyle {
         ),
       AppActionButtonTone.neutral => Colors.transparent,
       AppActionButtonTone.danger => Colors.transparent,
+    };
+    final hoverBackground = switch (tone) {
+      AppActionButtonTone.primary => theme.accentHover,
+      AppActionButtonTone.secondary => colorScheme.secondaryContainer
+          .withValues(alpha: theme.brightness == Brightness.dark ? 0.52 : 0.82),
+      AppActionButtonTone.neutral => theme.hoverWash,
+      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.28 : 0.36,
+      ),
+    };
+    final pressedBackground = switch (tone) {
+      AppActionButtonTone.primary => theme.accentHover,
+      AppActionButtonTone.secondary => colorScheme.secondaryContainer
+          .withValues(alpha: theme.brightness == Brightness.dark ? 0.60 : 0.90),
+      AppActionButtonTone.neutral => _pressedWash(theme),
+      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.42 : 0.50,
+      ),
     };
     final borderColor = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primary.withValues(alpha: 0),
@@ -89,38 +105,128 @@ abstract final class AppActionButtonStyle {
         if (states.contains(WidgetState.disabled)) {
           return colorScheme.onSurface.withValues(alpha: 0.06);
         }
-        if (isPrimary) {
-          if (states.contains(WidgetState.pressed)) {
-            return theme.accentHover;
-          }
-          return colorScheme.primary;
-        }
-        if (isDanger && states.contains(WidgetState.pressed)) {
-          return colorScheme.errorContainer.withValues(alpha: 0.42);
-        }
-        if (states.contains(WidgetState.pressed) ||
-            states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return tone == AppActionButtonTone.neutral
-              ? theme.hoverWash
-              : background;
-        }
-        return background;
-      }),
-      overlayColor: WidgetStateProperty.resolveWith((states) {
-        if (isPrimary) return Colors.transparent;
         if (states.contains(WidgetState.pressed)) {
-          return foreground.withValues(alpha: 0.12);
+          return pressedBackground;
         }
         if (states.contains(WidgetState.hovered) ||
             states.contains(WidgetState.focused)) {
-          if (tone == AppActionButtonTone.neutral) {
-            return theme.hoverWash;
-          }
-          return foreground.withValues(alpha: 0.08);
+          return hoverBackground;
         }
-        return Colors.transparent;
+        return background;
       }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+    );
+  }
+
+  static ButtonStyle icon(
+    BuildContext context, {
+    AppActionButtonTone tone = AppActionButtonTone.neutral,
+    bool selected = false,
+    double size = 44,
+    double iconSize = 20,
+    double? radius,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = switch (tone) {
+      AppActionButtonTone.primary => colorScheme.primary,
+      AppActionButtonTone.secondary => colorScheme.secondary,
+      AppActionButtonTone.neutral => colorScheme.onSurfaceVariant,
+      AppActionButtonTone.danger => colorScheme.error,
+    };
+    final activeForeground = tone == AppActionButtonTone.neutral
+        ? colorScheme.primary
+        : foreground;
+    final selectedBackground = switch (tone) {
+      AppActionButtonTone.primary => colorScheme.primaryContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.44 : 0.62,
+      ),
+      AppActionButtonTone.secondary => colorScheme.secondaryContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.44 : 0.62,
+      ),
+      AppActionButtonTone.neutral => theme.selectedWash.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.62 : 0.72,
+      ),
+      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.36 : 0.48,
+      ),
+    };
+    final pressedBackground = switch (tone) {
+      AppActionButtonTone.primary => colorScheme.primaryContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.52 : 0.70,
+      ),
+      AppActionButtonTone.secondary => colorScheme.secondaryContainer
+          .withValues(alpha: theme.brightness == Brightness.dark ? 0.52 : 0.70),
+      AppActionButtonTone.neutral => _pressedWash(theme),
+      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.42 : 0.56,
+      ),
+    };
+    final hoverBackground = switch (tone) {
+      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.26 : 0.34,
+      ),
+      _ => selected ? selectedBackground : theme.hoverWash,
+    };
+    final interactiveForeground = tone == AppActionButtonTone.neutral
+        ? (selected ? activeForeground : colorScheme.onSurface)
+        : foreground;
+
+    return IconButton.styleFrom(
+      fixedSize: Size.square(size),
+      minimumSize: Size.square(size),
+      maximumSize: Size.square(size),
+      padding: EdgeInsets.zero,
+      tapTargetSize: MaterialTapTargetSize.padded,
+      iconSize: iconSize,
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(
+          radius ?? AppRadiusTokens.iconButton,
+        ),
+      ),
+    ).copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) return Colors.transparent;
+        if (states.contains(WidgetState.pressed)) return pressedBackground;
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return hoverBackground;
+        }
+        return selected ? selectedBackground : Colors.transparent;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurfaceVariant.withValues(alpha: 0.40);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed)) {
+          return interactiveForeground;
+        }
+        return selected ? activeForeground : foreground;
+      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+      side: WidgetStateProperty.resolveWith((states) {
+        final visible =
+            states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed);
+        return BorderSide(
+          color: colorScheme.outlineVariant.withValues(
+            alpha: visible ? 0.30 : 0,
+          ),
+        );
+      }),
+    );
+  }
+
+  static Color _pressedWash(ThemeData theme) {
+    return Color.alphaBlend(
+      theme.musicTealSoft.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.72 : 0.78,
+      ),
+      theme.colorScheme.surfaceContainerHighest,
     );
   }
 }

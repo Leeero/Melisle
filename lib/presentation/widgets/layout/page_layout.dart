@@ -1,7 +1,7 @@
 import 'dart:ui';
 
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 final class AppPageLayout {
@@ -283,12 +283,7 @@ class AppBackButton extends StatelessWidget {
       icon: const Icon(Icons.arrow_back_rounded, size: 22),
       tooltip: '返回',
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        fixedSize: const Size.square(44),
-        minimumSize: const Size.square(44),
-        padding: EdgeInsets.zero,
-        tapTargetSize: MaterialTapTargetSize.padded,
-      ),
+      style: AppActionButtonStyle.icon(context, iconSize: 22),
     );
   }
 }
@@ -502,7 +497,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                       errorBorder: InputBorder.none,
                       focusedErrorBorder: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
-                      prefixIcon: const Icon(CupertinoIcons.search, size: 18),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
                       prefixIconConstraints: BoxConstraints(
                         minWidth: compact ? 40 : 44,
                         minHeight: fieldHeight,
@@ -515,7 +510,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                           }
                           return IconButton(
                             icon: Icon(
-                              CupertinoIcons.xmark_circle_fill,
+                              Icons.cancel_rounded,
                               size: compact ? 18 : 20,
                             ),
                             tooltip: widget.clearTooltip,
@@ -525,15 +520,10 @@ class _AppSearchFieldState extends State<AppSearchField> {
                               width: 46,
                               height: 46,
                             ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: colorScheme.onSurfaceVariant,
-                              fixedSize: const Size.square(46),
-                              minimumSize: const Size.square(46),
-                              padding: EdgeInsets.zero,
-                              tapTargetSize: MaterialTapTargetSize.padded,
-                              side: BorderSide.none,
-                              shape: const CircleBorder(),
+                            style: AppActionButtonStyle.icon(
+                              context,
+                              size: 46,
+                              iconSize: compact ? 18 : 20,
                             ),
                             onPressed: _clear,
                           );

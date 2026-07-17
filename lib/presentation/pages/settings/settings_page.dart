@@ -4,10 +4,12 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -465,10 +467,15 @@ class _PlaybackCard extends StatelessWidget {
     return BlocBuilder<AppSettingsCubit, AppSettingsState>(
       buildWhen: (a, b) =>
           a.defaultQuality != b.defaultQuality ||
-          a.gapBetweenTracks != b.gapBetweenTracks,
+          a.gapBetweenTracks != b.gapBetweenTracks ||
+          a.menuBarLyricsEnabled != b.menuBarLyricsEnabled,
       builder: (context, state) {
         final cubit = context.read<AppSettingsCubit>();
         final colorScheme = Theme.of(context).colorScheme;
+        final supportsMenuBarLyrics =
+            !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.macOS ||
+                defaultTargetPlatform == TargetPlatform.windows);
         return _SettingsGroupSurface(
           child: Column(
             children: [
@@ -495,6 +502,22 @@ class _PlaybackCard extends StatelessWidget {
                 ),
                 onTap: () => _pickGap(context, state, cubit),
               ),
+              if (supportsMenuBarLyrics) ...[
+                _SettingsDivider(colorScheme: colorScheme),
+                _HoverableListTile(
+                  title: const Text('菜单栏歌词'),
+                  subtitle: const Text('播放时在系统菜单栏或托盘提示中显示当前歌词。'),
+                  trailing: _SourceToggle(
+                    value: state.menuBarLyricsEnabled,
+                    semanticLabel:
+                        '${state.menuBarLyricsEnabled ? '关闭' : '开启'} 菜单栏歌词',
+                    onChanged: cubit.setMenuBarLyricsEnabled,
+                  ),
+                  onTap: () => cubit.setMenuBarLyricsEnabled(
+                    !state.menuBarLyricsEnabled,
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -1333,8 +1356,6 @@ class _SourceInlineTestButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final hoverBackground = theme.hoverWash.withValues(alpha: 0.72);
-    final idleBackground = hoverBackground.withValues(alpha: 0);
 
     return Tooltip(
       message: isTesting ? testingLabel : '测试地址',
@@ -1353,30 +1374,13 @@ class _SourceInlineTestButton extends StatelessWidget {
                   ),
                 )
               : const Icon(Icons.network_check_rounded, size: 18),
-          style:
-              IconButton.styleFrom(
-                foregroundColor: colorScheme.primary,
-                disabledForegroundColor: theme.muted.withValues(alpha: 0.48),
-                backgroundColor: Colors.transparent,
-                disabledBackgroundColor: Colors.transparent,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
-                ),
-              ).copyWith(
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.disabled)) {
-                    return idleBackground;
-                  }
-                  if (states.contains(WidgetState.pressed) ||
-                      states.contains(WidgetState.hovered) ||
-                      states.contains(WidgetState.focused)) {
-                    return hoverBackground;
-                  }
-                  return idleBackground;
-                }),
-                overlayColor: WidgetStateProperty.all(Colors.transparent),
-              ),
+          style: AppActionButtonStyle.icon(
+            context,
+            tone: AppActionButtonTone.primary,
+            size: 46,
+            iconSize: 18,
+            radius: AppRadiusTokens.mobileSm,
+          ),
         ),
       ),
     );
