@@ -94,3 +94,5 @@ x86/
 # Logs
 *.log
 sentry-debug.log
+
+.codex/
