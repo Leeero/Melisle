@@ -1,5 +1,4 @@
 import 'dart:collection';
-import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
@@ -167,36 +166,21 @@ class CachedMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async {
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      return _cached(
-        'playlists',
-        ttl: _policy.listTtl,
-        params: {
-          'limit': limit,
-          'startIndex': startIndex,
-          'searchQuery': searchQuery,
-        },
-        loader: () => _delegate.fetchPlaylists(
-          limit: limit,
-          startIndex: startIndex,
-          searchQuery: searchQuery,
-        ),
-      );
-    }
-
-    const fullListLimit = 10000;
-    final fullList = await _cached(
-      'playlists_full',
-      ttl: _policy.fullListTtl,
-      params: const <String, Object?>{},
-      loader: () =>
-          _delegate.fetchPlaylists(limit: fullListLimit, startIndex: 0),
+  }) {
+    return _cached(
+      'playlists',
+      ttl: _policy.listTtl,
+      params: {
+        'limit': limit,
+        'startIndex': startIndex,
+        'searchQuery': searchQuery,
+      },
+      loader: () => _delegate.fetchPlaylists(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      ),
     );
-
-    if (startIndex >= fullList.length) return [];
-    final end = min(startIndex + limit, fullList.length);
-    return fullList.sublist(startIndex, end);
   }
 
   @override
@@ -400,7 +384,7 @@ class CachedMusicRepository implements MusicRepository {
         return value;
       } catch (e) {
         lastError = e;
-        if (attempt < maxRetries && _isTimeout(e)) {
+        if (attempt < maxRetries && _isRetryableTimeout(e)) {
           await Future<void>.delayed(const Duration(milliseconds: 300));
         } else {
           break;
@@ -418,6 +402,13 @@ class CachedMusicRepository implements MusicRepository {
     return type == DioExceptionType.connectionTimeout ||
         type == DioExceptionType.sendTimeout ||
         type == DioExceptionType.receiveTimeout;
+  }
+
+  bool _isRetryableTimeout(Object error) {
+    if (error is! DioException) return false;
+    final type = error.type;
+    return type == DioExceptionType.connectionTimeout ||
+        type == DioExceptionType.sendTimeout;
   }
 
   void _syncSessionScope(AuthSession? session) {
@@ -461,10 +452,7 @@ class CachedMusicRepository implements MusicRepository {
     }
 
     _memoryCache.remove(key);
-    _memoryCache[key] = _CacheEntry(
-      value: value,
-      expiresAt: _now().add(ttl),
-    );
+    _memoryCache[key] = _CacheEntry(value: value, expiresAt: _now().add(ttl));
     _trimMemoryCache();
   }
 

@@ -1,9 +1,11 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/adapters/cached_music_repository.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -67,6 +69,27 @@ void main() {
       await repository.restoreSession();
       final first = await repository.fetchTracks(limit: 20);
       delegate.failFetchTracks = true;
+      currentTime = currentTime.add(const Duration(seconds: 11));
+      final fallback = await repository.fetchTracks(limit: 20);
+
+      expect(delegate.fetchTracksCalls, 2);
+      expect(fallback.items.single.id, first.items.single.id);
+    });
+
+    test('receiveTimeout 不自动重试，避免慢服务被重复请求放大压力', () async {
+      var currentTime = DateTime(2026, 4, 23, 15, 30);
+      final delegate = _CountingMusicRepository(session: _session());
+      final repository = CachedMusicRepository(
+        delegate: delegate,
+        now: () => currentTime,
+        policy: const MusicRepositoryCachePolicy(
+          listTtl: Duration(seconds: 10),
+        ),
+      );
+
+      await repository.restoreSession();
+      final first = await repository.fetchTracks(limit: 20);
+      delegate.failFetchTracksWithReceiveTimeout = true;
       currentTime = currentTime.add(const Duration(seconds: 11));
       final fallback = await repository.fetchTracks(limit: 20);
 
@@ -141,6 +164,27 @@ void main() {
 
       expect(delegate.fetchTracksCalls, 4);
     });
+
+    test('歌单列表按分页参数缓存，不再回源拉取完整列表', () async {
+      final delegate = _CountingMusicRepository(session: _session());
+      final repository = CachedMusicRepository(delegate: delegate);
+
+      await repository.restoreSession();
+      final first = await repository.fetchPlaylists(limit: 20, startIndex: 0);
+      final second = await repository.fetchPlaylists(limit: 20, startIndex: 0);
+      final nextPage = await repository.fetchPlaylists(
+        limit: 20,
+        startIndex: 20,
+      );
+
+      expect(delegate.fetchPlaylistsCalls, 2);
+      expect(delegate.playlistRequests, [
+        (limit: 20, startIndex: 0, searchQuery: null),
+        (limit: 20, startIndex: 20, searchQuery: null),
+      ]);
+      expect(second.single.id, first.single.id);
+      expect(nextPage.single.id, isNot(first.single.id));
+    });
   });
 }
 
@@ -149,9 +193,13 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
 
   AuthSession? _session;
   int fetchTracksCalls = 0;
+  int fetchPlaylistsCalls = 0;
   int getStreamUrlCalls = 0;
   int setFavoriteCalls = 0;
+  final playlistRequests =
+      <({int limit, int startIndex, String? searchQuery})>[];
   bool failFetchTracks = false;
+  bool failFetchTracksWithReceiveTimeout = false;
 
   @override
   Future<AuthSession?> restoreSession() async => _session;
@@ -183,10 +231,37 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
     String? searchQuery,
   }) async {
     fetchTracksCalls += 1;
+    if (failFetchTracksWithReceiveTimeout) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/tracks'),
+        type: DioExceptionType.receiveTimeout,
+      );
+    }
     if (failFetchTracks) {
       throw Exception('fetch failed');
     }
     return PaginatedResult(items: [_track('track-$fetchTracksCalls')]);
+  }
+
+  @override
+  Future<List<MusicPlaylist>> fetchPlaylists({
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    fetchPlaylistsCalls += 1;
+    playlistRequests.add((
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+    ));
+    return [
+      MusicPlaylist(
+        id: 'playlist-$fetchPlaylistsCalls',
+        name: 'playlist $fetchPlaylistsCalls',
+        artworkUrl: '',
+      ),
+    ];
   }
 
   @override

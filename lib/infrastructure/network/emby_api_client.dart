@@ -145,7 +145,7 @@ class EmbyApiClient {
         searchQuery: searchQuery,
         sortBy: 'SortName',
       ),
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'library.tracks'),
     );
 
     final data = response.data;
@@ -176,7 +176,7 @@ class EmbyApiClient {
         searchQuery: searchQuery,
         sortBy: 'SortName',
       ),
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'library.albums'),
     );
 
     final items = _readItems(response.data);
@@ -209,7 +209,7 @@ class EmbyApiClient {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Users/${session.userId}/Items',
       queryParameters: params,
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'library.artists'),
     );
 
     final items = _readItems(response.data);
@@ -228,7 +228,7 @@ class EmbyApiClient {
         'IncludeItemTypes': 'MusicArtist',
         'ImageTypeLimit': 0,
       },
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'library.genres'),
     );
 
     final items = _readItems(response.data);
@@ -251,15 +251,12 @@ class EmbyApiClient {
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Users/${session.userId}/Items',
-      queryParameters: _buildQueryParameters(
-        includeItemTypes: 'Playlist',
-        fields: _playlistFields,
+      queryParameters: _buildPlaylistQueryParameters(
         limit: limit,
         startIndex: startIndex,
         searchQuery: searchQuery,
-        sortBy: 'SortName',
       ),
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'playlists.list'),
     );
 
     final items = _readItems(response.data);
@@ -284,7 +281,7 @@ class EmbyApiClient {
         'Fields': _trackDetailFields,
         'ImageTypeLimit': 1,
       },
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'album.tracks'),
     );
 
     final items = _readItems(response.data);
@@ -310,7 +307,7 @@ class EmbyApiClient {
         'Limit': ?limit,
         if (startIndex > 0) 'StartIndex': startIndex,
       },
-      options: _authorizedOptions(session),
+      options: _authorizedOptions(session, requestLabel: 'playlist.tracks'),
     );
 
     final items = _readItems(response.data);
@@ -783,6 +780,32 @@ class EmbyApiClient {
       'ImageTypeLimit': 1,
       'Limit': limit,
       'StartIndex': startIndex,
+    };
+
+    final normalizedSearchQuery = searchQuery?.trim();
+    if (normalizedSearchQuery != null && normalizedSearchQuery.isNotEmpty) {
+      queryParameters['SearchTerm'] = normalizedSearchQuery;
+    }
+
+    return queryParameters;
+  }
+
+  Map<String, dynamic> _buildPlaylistQueryParameters({
+    required int limit,
+    required int startIndex,
+    required String? searchQuery,
+  }) {
+    final queryParameters = <String, dynamic>{
+      'IncludeItemTypes': 'Playlist',
+      'Recursive': true,
+      'SortBy': 'SortName',
+      'Fields': _playlistFields,
+      'Limit': limit,
+      'StartIndex': startIndex,
+      'EnableUserData': false,
+      'EnableImages': false,
+      'ImageTypeLimit': 0,
+      'EnableTotalRecordCount': false,
     };
 
     final normalizedSearchQuery = searchQuery?.trim();

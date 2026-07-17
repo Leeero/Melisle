@@ -72,6 +72,11 @@ class DioDebugLoggingInterceptor extends Interceptor {
       '(${elapsed}ms) ${err.type.name}: $reason',
     );
 
+    final query = _sanitizeMap(options.queryParameters);
+    if (query.isNotEmpty) {
+      debugPrint('   query: $query');
+    }
+
     final responseData = _sanitizeData(err.response?.data);
     if (responseData != null) {
       debugPrint('   error-body: $responseData');
