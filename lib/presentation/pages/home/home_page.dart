@@ -815,6 +815,17 @@ class _RecommendationTracksDesktopView extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                AppActionButton(
+                  icon: Icons.shuffle_rounded,
+                  label: '随机播放',
+                  onPressed: () => unawaited(
+                    PlayerNavigation.shuffleTracksAndOpenPlayer(
+                      context,
+                      tracks: tracks,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1741,15 +1752,6 @@ class _HomeViewAllButton extends StatelessWidget {
           ),
           visualDensity: VisualDensity.compact,
           foregroundColor: WidgetStatePropertyAll(theme.colorScheme.primary),
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return theme.colorScheme.primary.withValues(alpha: 0.08);
-            }
-            if (states.contains(WidgetState.focused)) {
-              return theme.colorScheme.primary.withValues(alpha: 0.06);
-            }
-            return Colors.transparent;
-          }),
           textStyle: WidgetStateProperty.resolveWith((states) {
             final hovered = !compact && states.contains(WidgetState.hovered);
             return textStyle?.copyWith(

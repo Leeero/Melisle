@@ -161,16 +161,13 @@ final class PlayQueue {
     return _copyWith(shuffleEnabled: enabled, shuffleOrder: newOrder);
   }
 
-  /// 追加若干曲目到末尾（不改变 currentIndex）。若 shuffle 开启，追加部分会接到
+  /// 追加若干曲目到末尾（不改变 currentIndex）。若 shuffle 开启，追加部分会随机接到
   /// shuffleOrder 末尾，保持已播过的顺序不变。
-  PlayQueue append(List<MusicTrack> more) {
+  PlayQueue append(List<MusicTrack> more, {int? seed}) {
     if (more.isEmpty) return this;
     final newTracks = <MusicTrack>[...tracks, ...more];
     final newOrder = shuffleEnabled
-        ? <int>[
-            ...shuffleOrder,
-            for (var i = tracks.length; i < newTracks.length; i++) i,
-          ]
+        ? _appendShuffleOrder(more.length, seed)
         : const <int>[];
     return PlayQueue._(
       tracks: List.unmodifiable(newTracks),
@@ -179,6 +176,14 @@ final class PlayQueue {
       shuffleEnabled: shuffleEnabled,
       shuffleOrder: newOrder,
     );
+  }
+
+  List<int> _appendShuffleOrder(int count, int? seed) {
+    final appended = [
+      for (var i = tracks.length; i < tracks.length + count; i++) i,
+    ];
+    appended.shuffle(Random(seed ?? DateTime.now().microsecondsSinceEpoch));
+    return [...shuffleOrder, ...appended];
   }
 
   PlayQueue insertAt(int index, MusicTrack track, {bool makeCurrent = false}) {

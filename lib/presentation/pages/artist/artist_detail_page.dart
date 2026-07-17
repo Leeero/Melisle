@@ -100,6 +100,14 @@ class _ArtistDetailView extends StatelessWidget {
                                   allLoaded: true,
                                   fetchAll: () async => state.topTracks,
                                 ),
+                          onShuffleTopTracks: state.topTracks.isEmpty
+                              ? null
+                              : () => PlayerNavigation.shuffleAllAndOpenPlayer(
+                                  context,
+                                  loadedTracks: state.topTracks,
+                                  allLoaded: true,
+                                  fetchAll: () async => state.topTracks,
+                                ),
                         ),
                       ),
                     ),
@@ -123,6 +131,13 @@ class _ArtistDetailView extends StatelessWidget {
                                 variant: PlayAllButtonVariant.compact,
                                 onPressed: () =>
                                     PlayerNavigation.playAllAndOpenPlayer(
+                                      context,
+                                      loadedTracks: state.topTracks,
+                                      allLoaded: true,
+                                      fetchAll: () async => state.topTracks,
+                                    ),
+                                onShufflePressed: () =>
+                                    PlayerNavigation.shuffleAllAndOpenPlayer(
                                       context,
                                       loadedTracks: state.topTracks,
                                       allLoaded: true,
@@ -259,12 +274,14 @@ class _ArtistHero extends StatelessWidget {
     required this.albumCount,
     required this.topTrackCount,
     required this.onPlayTopTracks,
+    required this.onShuffleTopTracks,
   });
 
   final MusicArtist? artist;
   final int albumCount;
   final int topTrackCount;
   final VoidCallback? onPlayTopTracks;
+  final VoidCallback? onShuffleTopTracks;
 
   @override
   Widget build(BuildContext context) {
@@ -339,6 +356,7 @@ class _ArtistHero extends StatelessWidget {
                   ? PlayAllButtonVariant.primary
                   : PlayAllButtonVariant.compact,
               onPressed: onPlayTopTracks,
+              onShufflePressed: onShuffleTopTracks,
             ),
           ],
         );

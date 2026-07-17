@@ -13,6 +13,7 @@ import 'package:cross_platform_music_player/presentation/blocs/library/library_c
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
@@ -195,6 +196,8 @@ class _LibraryViewState extends State<_LibraryView> {
                 countLabel: _libraryTrackCountLabel(state),
                 action: PlayAllButton(
                   onPressed: () => _playAllLibraryTracks(context, state),
+                  onShufflePressed: () =>
+                      _playAllLibraryTracks(context, state, shuffled: true),
                 ),
               ),
             ),
@@ -210,6 +213,8 @@ class _LibraryViewState extends State<_LibraryView> {
                       startIndex: index,
                     ),
                 onPlayAll: () => _playAllLibraryTracks(context, state),
+                onShuffleAll: () =>
+                    _playAllLibraryTracks(context, state, shuffled: true),
                 trailingBuilder: (context, track, hovered) =>
                     hovered || track.isFavorite
                     ? _LibraryTrackFavoriteButton(track: track)
@@ -229,6 +234,8 @@ class _LibraryViewState extends State<_LibraryView> {
             child: _MobileLibraryTrackSectionHeader(
               countLabel: _libraryTrackSummaryCountLabel(state),
               onPlayAll: () => _playAllLibraryTracks(context, state),
+              onShuffleAll: () =>
+                  _playAllLibraryTracks(context, state, shuffled: true),
             ),
           ),
           SliverList(
@@ -252,7 +259,26 @@ class _LibraryViewState extends State<_LibraryView> {
     );
   }
 
-  Future<void> _playAllLibraryTracks(BuildContext context, LibraryState state) {
+  Future<void> _playAllLibraryTracks(
+    BuildContext context,
+    LibraryState state, {
+    bool shuffled = false,
+  }) {
+    if (shuffled) {
+      return PlayerNavigation.shuffleAllAndOpenPlayer(
+        context,
+        loadedTracks: state.tracks,
+        allLoaded: !state.hasMore,
+        fetchAll: () async {
+          final result = await context.read<MusicRepository>().fetchTracks(
+            limit: 500,
+            startIndex: 0,
+          );
+          return result.items;
+        },
+      );
+    }
+
     return PlayerNavigation.playAllAndOpenPlayer(
       context,
       loadedTracks: state.tracks,
@@ -594,10 +620,15 @@ class _LibrarySectionHeader extends StatelessWidget {
 }
 
 class _MobileTrackActionBar extends StatelessWidget {
-  const _MobileTrackActionBar({this.trackCount, required this.onPlayAll});
+  const _MobileTrackActionBar({
+    this.trackCount,
+    required this.onPlayAll,
+    required this.onShuffleAll,
+  });
 
   final int? trackCount;
   final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
 
   @override
   Widget build(BuildContext context) {
@@ -610,6 +641,7 @@ class _MobileTrackActionBar extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: _MobileLibraryPlayAllButton(
           onPressed: onPlayAll,
+          onShufflePressed: onShuffleAll,
           countLabel: countLabel,
         ),
       ),
@@ -621,10 +653,12 @@ class _MobileLibraryTrackSectionHeader extends StatelessWidget {
   const _MobileLibraryTrackSectionHeader({
     required this.countLabel,
     required this.onPlayAll,
+    required this.onShuffleAll,
   });
 
   final String countLabel;
   final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
 
   @override
   Widget build(BuildContext context) {
@@ -666,7 +700,10 @@ class _MobileLibraryTrackSectionHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _MobileLibraryPlayAllInlineButton(onPressed: onPlayAll),
+          _MobileLibraryPlayAllInlineButton(
+            onPressed: onPlayAll,
+            onShufflePressed: onShuffleAll,
+          ),
         ],
       ),
     );
@@ -674,9 +711,13 @@ class _MobileLibraryTrackSectionHeader extends StatelessWidget {
 }
 
 class _MobileLibraryPlayAllInlineButton extends StatefulWidget {
-  const _MobileLibraryPlayAllInlineButton({required this.onPressed});
+  const _MobileLibraryPlayAllInlineButton({
+    required this.onPressed,
+    required this.onShufflePressed,
+  });
 
   final VoidCallback onPressed;
+  final VoidCallback onShufflePressed;
 
   @override
   State<_MobileLibraryPlayAllInlineButton> createState() =>
@@ -692,7 +733,7 @@ class _MobileLibraryPlayAllInlineButtonState
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Semantics(
+    final playButton = Semantics(
       label: '播放全部歌曲',
       button: true,
       child: Tooltip(
@@ -763,13 +804,37 @@ class _MobileLibraryPlayAllInlineButtonState
         ),
       ),
     );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        playButton,
+        const SizedBox(width: 6),
+        Tooltip(
+          message: '随机播放',
+          child: IconButton(
+            onPressed: widget.onShufflePressed,
+            icon: Icon(
+              Icons.shuffle_rounded,
+              size: 18,
+              color: colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
 class _MobileLibraryPlayAllButton extends StatefulWidget {
-  const _MobileLibraryPlayAllButton({required this.onPressed, this.countLabel});
+  const _MobileLibraryPlayAllButton({
+    required this.onPressed,
+    required this.onShufflePressed,
+    this.countLabel,
+  });
 
   final VoidCallback onPressed;
+  final VoidCallback onShufflePressed;
   final String? countLabel;
 
   @override
@@ -787,7 +852,7 @@ class _MobileLibraryPlayAllButtonState
     final colorScheme = theme.colorScheme;
     final countLabel = widget.countLabel;
 
-    return Semantics(
+    final playButton = Semantics(
       label: '全部播放',
       button: true,
       child: Tooltip(
@@ -886,6 +951,25 @@ class _MobileLibraryPlayAllButtonState
         ),
       ),
     );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        playButton,
+        const SizedBox(width: 8),
+        Tooltip(
+          message: '随机播放',
+          child: IconButton(
+            onPressed: widget.onShufflePressed,
+            style: AppActionButtonStyle.icon(
+              context,
+              tone: AppActionButtonTone.secondary,
+            ),
+            icon: const Icon(Icons.shuffle_rounded),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -946,12 +1030,10 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         tooltip: track.isFavorite ? '取消收藏' : '收藏',
         visualDensity: VisualDensity.standard,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          padding: EdgeInsets.zero,
-          tapTargetSize: MaterialTapTargetSize.padded,
-          side: BorderSide.none,
-          shape: const CircleBorder(),
+        style: AppActionButtonStyle.icon(
+          context,
+          selected: track.isFavorite,
+          iconSize: 18,
         ),
       ),
     );
@@ -1097,13 +1179,8 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
                         tooltip: '更多操作',
                         padding: EdgeInsets.zero,
                         visualDensity: VisualDensity.compact,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: colorScheme.onSurfaceVariant,
-                          padding: EdgeInsets.zero,
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                          side: BorderSide.none,
-                          shape: const CircleBorder(),
+                        style: AppActionButtonStyle.icon(
+                          context,
                         ),
                       ),
                     ),
@@ -1280,6 +1357,23 @@ class _LibraryFavoritesSliver extends StatelessWidget {
                 child: _MobileTrackActionBar(
                   trackCount: filteredTracks.length,
                   onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
+                    context,
+                    loadedTracks: filteredTracks,
+                    allLoaded: !state.hasMore,
+                    fetchAll: () async {
+                      final cubit = context.read<FavoritesListCubit>();
+                      final tracks = <MusicTrack>[...state.tracks];
+                      while (cubit.state.hasMore) {
+                        await cubit.loadMore();
+                        final nextState = cubit.state;
+                        tracks
+                          ..clear()
+                          ..addAll(nextState.tracks);
+                      }
+                      return tracks;
+                    },
+                  ),
+                  onShuffleAll: () => PlayerNavigation.shuffleAllAndOpenPlayer(
                     context,
                     loadedTracks: filteredTracks,
                     allLoaded: !state.hasMore,

@@ -104,6 +104,8 @@ class _PlaylistDetailView extends StatelessWidget {
                 state.status == PlaylistDetailStatus.loading ||
                 state.isLoadingAll,
             onPlayAll: () => _playPlaylistFromIndex(context, 0),
+            onShuffleAll: () =>
+                _playPlaylistFromIndex(context, 0, shuffled: true),
           ),
         ),
       ),
@@ -166,6 +168,8 @@ class _PlaylistDetailView extends StatelessWidget {
             isBusy: isBusy,
             hasLoadedTracks: state.tracks.isNotEmpty,
             onPlayAll: () => _playPlaylistFromIndex(context, 0),
+            onShuffleAll: () =>
+                _playPlaylistFromIndex(context, 0, shuffled: true),
           ),
         ),
       ),
@@ -197,10 +201,22 @@ class _PlaylistDetailView extends StatelessWidget {
 
 Future<void> _playPlaylistFromIndex(
   BuildContext context,
-  int startIndex,
-) async {
+  int startIndex, {
+  bool shuffled = false,
+}) async {
   final cubit = context.read<PlaylistDetailCubit>();
   final state = cubit.state;
+
+  if (shuffled) {
+    await PlayerNavigation.shuffleAllAndOpenPlayer(
+      context,
+      loadedTracks: state.tracks,
+      allLoaded: !state.hasMore,
+      fetchAll: cubit.fetchPlaybackQueueTracks,
+    );
+    return;
+  }
+
   await PlayerNavigation.playAllAndOpenPlayer(
     context,
     loadedTracks: state.tracks,
@@ -217,6 +233,7 @@ class _MobilePlaylistHero extends StatelessWidget {
     required this.isBusy,
     required this.hasLoadedTracks,
     required this.onPlayAll,
+    required this.onShuffleAll,
   });
 
   final MusicPlaylist? playlist;
@@ -224,6 +241,7 @@ class _MobilePlaylistHero extends StatelessWidget {
   final bool isBusy;
   final bool hasLoadedTracks;
   final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
 
   @override
   Widget build(BuildContext context) {
@@ -271,12 +289,29 @@ class _MobilePlaylistHero extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _MobilePlaylistActionButton(
-              icon: Icons.play_arrow_rounded,
-              label: '播放',
-              primary: true,
-              isLoading: isBusy,
-              onPressed: hasLoadedTracks && !isBusy ? onPlayAll : null,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MobilePlaylistActionButton(
+                  icon: Icons.play_arrow_rounded,
+                  label: '播放',
+                  primary: true,
+                  isLoading: isBusy,
+                  onPressed: hasLoadedTracks && !isBusy ? onPlayAll : null,
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: '随机播放',
+                  child: IconButton(
+                    onPressed: hasLoadedTracks && !isBusy ? onShuffleAll : null,
+                    style: AppActionButtonStyle.icon(
+                      context,
+                      tone: AppActionButtonTone.secondary,
+                    ),
+                    icon: const Icon(Icons.shuffle_rounded),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -680,12 +715,6 @@ class _MobilePlaylistTrackIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final foregroundColor = selected
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
-
     return SizedBox.square(
       dimension: 44,
       child: IconButton(
@@ -694,39 +723,11 @@ class _MobilePlaylistTrackIconButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
         tooltip: tooltip,
-        style:
-            IconButton.styleFrom(
-              foregroundColor: foregroundColor,
-              disabledForegroundColor: colorScheme.onSurface.withValues(
-                alpha: 0.28,
-              ),
-              backgroundColor: selected
-                  ? colorScheme.primaryContainer.withValues(
-                      alpha: theme.brightness == Brightness.dark ? 0.36 : 0.54,
-                    )
-                  : Colors.transparent,
-              shape: const CircleBorder(),
-            ).copyWith(
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.disabled)) {
-                  return Colors.transparent;
-                }
-                if (states.contains(WidgetState.pressed) ||
-                    states.contains(WidgetState.hovered) ||
-                    states.contains(WidgetState.focused)) {
-                  return selected
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.62)
-                      : theme.hoverWash;
-                }
-                return selected
-                    ? colorScheme.primaryContainer.withValues(
-                        alpha: theme.brightness == Brightness.dark
-                            ? 0.36
-                            : 0.54,
-                      )
-                    : Colors.transparent;
-              }),
-            ),
+        style: AppActionButtonStyle.icon(
+          context,
+          selected: selected,
+          iconSize: 18,
+        ),
       ),
     );
   }
@@ -751,12 +752,14 @@ class _PlaylistHero extends StatelessWidget {
     required this.playlist,
     required this.tracksCount,
     required this.onPlayAll,
+    required this.onShuffleAll,
     required this.isLoading,
   });
 
   final MusicPlaylist? playlist;
   final int tracksCount;
   final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
   final bool isLoading;
 
   @override
@@ -829,6 +832,9 @@ class _PlaylistHero extends StatelessWidget {
                       onPressed: tracksCount == 0 || isLoading
                           ? null
                           : onPlayAll,
+                      onShufflePressed: tracksCount == 0 || isLoading
+                          ? null
+                          : onShuffleAll,
                       isLoading: isLoading,
                     ),
                   ],

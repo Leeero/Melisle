@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
@@ -189,6 +190,8 @@ class _FavoritesHeader extends StatelessWidget {
         : PlayAllButton(
             variant: PlayAllButtonVariant.compact,
             onPressed: () => _playAllFavorites(context, state),
+            onShufflePressed: () =>
+                _playAllFavorites(context, state, shuffled: true),
           );
 
     return AppPageHeader(
@@ -213,6 +216,9 @@ class _FavoritesPlayAllToolbar extends StatelessWidget {
       onPressed: state.tracks.isEmpty
           ? null
           : () => _playAllFavorites(context, state),
+      onShufflePressed: state.tracks.isEmpty
+          ? null
+          : () => _playAllFavorites(context, state, shuffled: true),
     );
 
     return Align(
@@ -249,7 +255,23 @@ class _FavoriteTrackRow extends StatelessWidget {
   }
 }
 
-Future<void> _playAllFavorites(BuildContext context, FavoritesListState state) {
+Future<void> _playAllFavorites(
+  BuildContext context,
+  FavoritesListState state, {
+  bool shuffled = false,
+}) {
+  if (shuffled) {
+    return PlayerNavigation.shuffleAllAndOpenPlayer(
+      context,
+      loadedTracks: state.tracks,
+      allLoaded: !state.hasMore,
+      fetchAll: () => context.read<MusicRepository>().fetchFavoriteTracks(
+        limit: 500,
+        startIndex: 0,
+      ),
+    );
+  }
+
   return PlayerNavigation.playAllAndOpenPlayer(
     context,
     loadedTracks: state.tracks,
@@ -394,12 +416,10 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
           onPressed: widget.onPressed,
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.padded,
-            side: BorderSide.none,
-            shape: const CircleBorder(),
+          style: AppActionButtonStyle.icon(
+            context,
+            selected: widget.isFavorite,
+            iconSize: iconSize,
           ),
           icon: widget.isPending
               ? SizedBox(

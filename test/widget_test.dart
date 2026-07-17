@@ -97,6 +97,7 @@ void main() {
             child: PlayAllButton(
               variant: PlayAllButtonVariant.iconOnly,
               onPressed: () {},
+              onShufflePressed: () {},
             ),
           ),
         ),
@@ -107,6 +108,11 @@ void main() {
     expect(button, findsOneWidget);
     expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
     expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+
+    final shuffleButton = find.byTooltip('随机播放');
+    expect(shuffleButton, findsOneWidget);
+    expect(tester.getSize(shuffleButton).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(shuffleButton).height, greaterThanOrEqualTo(44));
   });
 
   testWidgets('mobile shell renders design bottom tab bar and navigates', (
@@ -711,6 +717,11 @@ class _FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveLyricSyncOffset(Duration offset) async {
     _snap = _snap.copyWith(lyricSyncOffset: offset);
+  }
+
+  @override
+  Future<void> saveMenuBarLyricsEnabled(bool enabled) async {
+    _snap = _snap.copyWith(menuBarLyricsEnabled: enabled);
   }
 
   @override

@@ -150,6 +150,12 @@ class _HistoryHeader extends StatelessWidget {
               allLoaded: true,
               fetchAll: () async => tracks,
             ),
+            onShufflePressed: () => PlayerNavigation.shuffleAllAndOpenPlayer(
+              context,
+              loadedTracks: tracks,
+              allLoaded: true,
+              fetchAll: () async => tracks,
+            ),
           );
 
     if (compact) {

@@ -18,6 +18,7 @@ class MusicTrackTable extends StatelessWidget {
     this.currentTrackId,
     this.trackCountLabel,
     this.onPlayAll,
+    this.onShuffleAll,
     this.onAddAllToQueue,
     this.onAddTrackToQueue,
     this.trailingBuilder,
@@ -29,6 +30,7 @@ class MusicTrackTable extends StatelessWidget {
   final String? currentTrackId;
   final String? trackCountLabel;
   final VoidCallback? onPlayAll;
+  final VoidCallback? onShuffleAll;
   final VoidCallback? onAddAllToQueue;
   final MusicTrackTableAction? onAddTrackToQueue;
   final MusicTrackTableTrailingBuilder? trailingBuilder;
@@ -46,6 +48,7 @@ class MusicTrackTable extends StatelessWidget {
           _MusicTrackTableActionBar(
             countLabel: trackCountLabel ?? '${tracks.length} 首',
             onPlayAll: onPlayAll,
+            onShuffleAll: onShuffleAll,
             onAddAllToQueue: onAddAllToQueue,
           ),
           const SizedBox(height: 12),
@@ -84,11 +87,13 @@ class _MusicTrackTableActionBar extends StatelessWidget {
   const _MusicTrackTableActionBar({
     required this.countLabel,
     this.onPlayAll,
+    this.onShuffleAll,
     this.onAddAllToQueue,
   });
 
   final String countLabel;
   final VoidCallback? onPlayAll;
+  final VoidCallback? onShuffleAll;
   final VoidCallback? onAddAllToQueue;
 
   @override
@@ -103,6 +108,14 @@ class _MusicTrackTableActionBar extends StatelessWidget {
           tone: AppActionButtonTone.primary,
           onPressed: onPlayAll,
         ),
+        if (onShuffleAll != null) ...[
+          const SizedBox(width: 6),
+          AppActionButton(
+            icon: Icons.shuffle_rounded,
+            label: '随机播放',
+            onPressed: onShuffleAll,
+          ),
+        ],
         if (onAddAllToQueue != null) ...[
           const SizedBox(width: 6),
           AppActionButton(
@@ -415,8 +428,6 @@ class _MusicTrackTableIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SizedBox.square(
       dimension: 44,
       child: IconButton(
@@ -426,15 +437,10 @@ class _MusicTrackTableIconButton extends StatelessWidget {
         constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.standard,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: colorScheme.onSurfaceVariant,
-          padding: EdgeInsets.zero,
-          tapTargetSize: MaterialTapTargetSize.padded,
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
-          ),
+        style: AppActionButtonStyle.icon(
+          context,
+          iconSize: 18,
+          radius: AppRadiusTokens.desktopSm,
         ),
       ),
     );

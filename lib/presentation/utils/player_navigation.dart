@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
@@ -10,6 +11,7 @@ final class PlayerNavigation {
   PlayerNavigation._();
 
   static bool _playerRoutePushInFlight = false;
+  static final Random _shuffleRandom = Random();
 
   static Future<void> playTracksAndOpenPlayer(
     BuildContext context, {
@@ -74,6 +76,78 @@ final class PlayerNavigation {
         // 拉取失败不影响已经在播放的内容
       }
     }());
+  }
+
+  static Future<void> shuffleTracksAndOpenPlayer(
+    BuildContext context, {
+    required List<MusicTrack> tracks,
+    int Function(int trackCount)? pickStartIndex,
+  }) async {
+    if (tracks.isEmpty) return;
+
+    final startIndex = _pickShuffleStartIndex(
+      tracks.length,
+      pickStartIndex: pickStartIndex,
+    );
+    final playbackFuture = context.read<PlayerCubit>().playTracks(
+      tracks,
+      startIndex: startIndex,
+      shuffled: true,
+    );
+
+    openPlayerPage(context);
+
+    await playbackFuture;
+  }
+
+  static Future<void> shuffleAllAndOpenPlayer(
+    BuildContext context, {
+    required List<MusicTrack> loadedTracks,
+    required bool allLoaded,
+    required Future<List<MusicTrack>> Function() fetchAll,
+    int Function(int trackCount)? pickStartIndex,
+  }) async {
+    if (loadedTracks.isEmpty) return;
+
+    final cubit = context.read<PlayerCubit>();
+    final startIndex = _pickShuffleStartIndex(
+      loadedTracks.length,
+      pickStartIndex: pickStartIndex,
+    );
+    final expectedRevision = cubit.playbackRevision + 1;
+    final playbackFuture = cubit.playTracks(
+      loadedTracks,
+      startIndex: startIndex,
+      shuffled: true,
+    );
+
+    openPlayerPage(context);
+    await playbackFuture;
+
+    if (allLoaded) return;
+
+    unawaited(() async {
+      try {
+        final allTracks = await fetchAll();
+        await cubit.appendTracksIfRevisionMatches(
+          expectedRevision: expectedRevision,
+          initialTracks: loadedTracks,
+          allTracks: allTracks,
+        );
+      } catch (_) {
+        // 拉取失败不影响已经在播放的内容
+      }
+    }());
+  }
+
+  static int _pickShuffleStartIndex(
+    int trackCount, {
+    int Function(int trackCount)? pickStartIndex,
+  }) {
+    if (trackCount <= 1) return 0;
+    final picked =
+        pickStartIndex?.call(trackCount) ?? _shuffleRandom.nextInt(trackCount);
+    return picked.clamp(0, trackCount - 1).toInt();
   }
 
   static void openPlayerPage(BuildContext context) {

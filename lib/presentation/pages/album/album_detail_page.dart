@@ -260,6 +260,12 @@ class _AlbumHeroSummary extends StatelessWidget {
                       tracks: context.read<AlbumCubit>().state.tracks,
                       startIndex: 0,
                     ),
+              onShufflePressed: tracksCount == 0
+                  ? null
+                  : () => PlayerNavigation.shuffleTracksAndOpenPlayer(
+                      context,
+                      tracks: context.read<AlbumCubit>().state.tracks,
+                    ),
             ),
             if (isWide)
               AppActionButton(

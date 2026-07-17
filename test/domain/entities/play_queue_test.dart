@@ -58,6 +58,22 @@ void main() {
       expect(current.autoAdvanceIndex(), current.currentIndex);
       expect(current.shuffleOrder, orderedEquals(order));
     });
+
+    test(
+      'append in shuffle keeps current order and shuffles appended tracks',
+      () {
+        final queue = buildShuffleQueue();
+        final order = queue.shuffleOrder;
+        final more = [_track('t5'), _track('t6'), _track('t7'), _track('t8')];
+
+        final appended = queue.append(more, seed: 11);
+        final appendedOrder = appended.shuffleOrder.skip(order.length).toList();
+
+        expect(appended.shuffleOrder.take(order.length), orderedEquals(order));
+        expect(appendedOrder, unorderedEquals([5, 6, 7, 8]));
+        expect(appendedOrder, isNot(orderedEquals([5, 6, 7, 8])));
+      },
+    );
   });
 }
 

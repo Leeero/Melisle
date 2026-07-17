@@ -152,7 +152,11 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   // ========= 对外 API =========
 
   /// 用一组新的曲目替换当前队列并开始播放。
-  Future<void> playTracks(List<MusicTrack> tracks, {int startIndex = 0}) {
+  Future<void> playTracks(
+    List<MusicTrack> tracks, {
+    int startIndex = 0,
+    bool shuffled = false,
+  }) {
     return _enqueueSerial(() async {
       if (tracks.isEmpty) return;
 
@@ -162,12 +166,19 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       final safeStart = startIndex.clamp(0, effectiveTracks.length - 1);
 
       _playbackRevision++;
-      _queue = _queue.replaceAll(effectiveTracks, startIndex: safeStart);
+      _queue = shuffled
+          ? _queue
+                .withLoopMode(QueueLoopMode.off)
+                .withShuffle(true)
+                .replaceAll(effectiveTracks, startIndex: safeStart)
+          : _queue.replaceAll(effectiveTracks, startIndex: safeStart);
       _publishQueueToSystem();
       emit(
         state.copyWith(
           queue: _queue.tracks,
           currentIndex: _queue.currentIndex,
+          loopMode: _toJustAudioLoop(_queue.loopMode),
+          shuffleEnabled: _queue.shuffleEnabled,
           isLoading: true,
           errorMessage: null,
           lyricSyncState: const LyricSyncState(),
