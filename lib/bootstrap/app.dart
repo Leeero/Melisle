@@ -126,7 +126,13 @@ final class AppBootstrap {
           ..setGapBetweenTracks(settingsCubit.state.gapBetweenTracks)
           ..setLyricSyncOffset(settingsCubit.state.lyricSyncOffset);
 
-    // 设置变更时同步推到 PlayerCubit。
+    // 桌面端媒体键、托盘与菜单栏歌词（非桌面平台内部会 no-op）。
+    final desktopIntegration = DesktopIntegration(
+      playerCubit: playerCubit,
+      menuBarLyricsEnabled: settingsCubit.state.menuBarLyricsEnabled,
+    );
+
+    // 设置变更时同步推到 PlayerCubit / DesktopIntegration。
     var previousSettings = settingsCubit.state;
     settingsCubit.stream.listen((s) {
       final lyricsSourceChanged =
@@ -143,6 +149,7 @@ final class AppBootstrap {
       }
       playerCubit.setGapBetweenTracks(s.gapBetweenTracks);
       playerCubit.setLyricSyncOffset(s.lyricSyncOffset);
+      desktopIntegration.setMenuBarLyricsEnabled(s.menuBarLyricsEnabled);
       if (lyricsSourceChanged) {
         unawaited(playerCubit.reloadLyricsForCurrent());
       }
@@ -158,8 +165,6 @@ final class AppBootstrap {
     );
     await downloadsCubit.load();
 
-    // 桌面端媒体键与托盘（非桌面平台内部会 no-op）。
-    final desktopIntegration = DesktopIntegration(playerCubit: playerCubit);
     unawaited(desktopIntegration.attach());
 
     runApp(

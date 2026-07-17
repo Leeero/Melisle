@@ -25,6 +25,7 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
         defaultQuality: snap.defaultQuality,
         gapBetweenTracks: snap.gapBetweenTracks,
         lyricSyncOffset: snap.lyricSyncOffset,
+        menuBarLyricsEnabled: snap.menuBarLyricsEnabled,
         customArtworkSourceEnabled: snap.customArtworkSourceEnabled,
         customArtworkSourceUrl: snap.customArtworkSourceUrl,
         customLyricsSourceEnabled: snap.customLyricsSourceEnabled,
@@ -52,6 +53,11 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
   Future<void> setLyricSyncOffset(Duration offset) async {
     emit(state.copyWith(lyricSyncOffset: offset));
     await _repository.saveLyricSyncOffset(offset);
+  }
+
+  Future<void> setMenuBarLyricsEnabled(bool enabled) async {
+    emit(state.copyWith(menuBarLyricsEnabled: enabled));
+    await _repository.saveMenuBarLyricsEnabled(enabled);
   }
 
   Future<void> setCustomArtworkSourceEnabled(bool enabled) async {

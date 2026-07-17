@@ -3,31 +3,64 @@ import 'dart:io';
 
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
-/// 桌面端集成：全局媒体快捷键 + 系统托盘菜单 + 窗口行为。
+/// 桌面端集成：全局媒体快捷键 + 系统托盘菜单 + 窗口行为 + macOS 菜单栏歌词。
 ///
 /// 仅在 macOS / Windows 上启用；Linux 暂未适配，Android / iOS 跳过。
 /// 生命周期：[attach] 时绑定；[dispose] 时解绑。
 ///
 /// 关闭按钮行为（macOS + Windows）：点击关闭按钮 → 隐藏窗口，
 /// 播放继续后台运行。通过托盘菜单"退出"或 Cmd+Q / Alt+F4 才真正退出。
-class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserver {
-  DesktopIntegration({required this.playerCubit});
+class DesktopIntegration
+    with TrayListener, WindowListener, WidgetsBindingObserver {
+  DesktopIntegration({
+    required this.playerCubit,
+    bool menuBarLyricsEnabled = true,
+  }) : _menuBarLyricsEnabled = menuBarLyricsEnabled;
 
   final PlayerCubit playerCubit;
 
   StreamSubscription<PlayerViewState>? _stateSub;
   bool _attached = false;
+  bool _trayReady = false;
+  bool _menuBarReady = false;
+  bool _menuBarLyricsEnabled;
+  String? _lastTrackId;
   String? _lastTitle;
+  String? _lastArtistName;
   bool? _lastPlaying;
+  String? _lastDesktopStatusText;
+
+  /// macOS 菜单栏 MethodChannel。
+  static const _menuBarChannel = MethodChannel('com.melisle/menu_bar');
 
   static bool get _isSupported => Platform.isMacOS || Platform.isWindows;
+
+  void setMenuBarLyricsEnabled(bool enabled) {
+    if (_menuBarLyricsEnabled == enabled) return;
+    _menuBarLyricsEnabled = enabled;
+    _lastDesktopStatusText = null;
+
+    if (!enabled) {
+      if (Platform.isMacOS) {
+        _ignoreDesktopUpdate(_disposeMenuBar());
+      } else if (Platform.isWindows) {
+        final text = _trackStatusText(playerCubit.state) ?? '乐岛';
+        _ignoreDesktopUpdate(trayManager.setToolTip(text));
+        _ignoreDesktopUpdate(_rebuildMenu());
+      }
+      return;
+    }
+
+    _updateDesktopStatusFromState(playerCubit.state);
+    _ignoreDesktopUpdate(_rebuildMenu());
+  }
 
   /// 接入桌面集成。首帧渲染后调用，保证窗口句柄已就绪。
   Future<void> attach() async {
@@ -51,6 +84,14 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
       debugPrint('DesktopIntegration: 托盘初始化失败：$error\n$stack');
     }
 
+    if (Platform.isMacOS && _menuBarLyricsEnabled) {
+      try {
+        await _initMenuBar();
+      } catch (error, stack) {
+        debugPrint('DesktopIntegration: 菜单栏初始化失败：$error\n$stack');
+      }
+    }
+
     WidgetsBinding.instance.addObserver(this);
     _stateSub = playerCubit.stream.listen(_onPlayerState);
     _onPlayerState(playerCubit.state);
@@ -67,6 +108,7 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
     try {
       trayManager.removeListener(this);
       await trayManager.destroy();
+      _trayReady = false;
     } catch (_) {
       // ignore
     }
@@ -77,7 +119,56 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
       // ignore
     }
 
+    if (Platform.isMacOS) {
+      try {
+        await _disposeMenuBar();
+      } catch (_) {
+        // ignore
+      }
+    }
+
     _attached = false;
+  }
+
+  // --- Menu Bar (macOS) ---
+
+  Future<void> _initMenuBar() async {
+    if (_menuBarReady) return;
+    await _menuBarChannel.invokeMethod('init');
+    _menuBarReady = true;
+
+    // 监听菜单栏点击事件。
+    _menuBarChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onMenuBarClicked') {
+        windowManager.show();
+        windowManager.focus();
+      }
+    });
+  }
+
+  Future<void> _updateMenuBarTrackInfo(String title, String? artist) async {
+    if (!_menuBarReady) await _initMenuBar();
+    await _menuBarChannel.invokeMethod('updateTrackInfo', {
+      'title': title,
+      'artist': artist,
+    });
+  }
+
+  Future<void> _updateMenuBarLyric(String text) async {
+    if (!_menuBarReady) await _initMenuBar();
+    await _menuBarChannel.invokeMethod('updateLyric', {'text': text});
+  }
+
+  Future<void> _clearMenuBar() async {
+    if (!_menuBarReady) return;
+    await _menuBarChannel.invokeMethod('clear');
+  }
+
+  Future<void> _disposeMenuBar() async {
+    if (!_menuBarReady) return;
+    await _menuBarChannel.invokeMethod('dispose');
+    _menuBarReady = false;
+    _lastDesktopStatusText = null;
   }
 
   // --- Hotkeys ---
@@ -142,6 +233,28 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
       // --- Windows 专用媒体键 ---
       HotKey(key: PhysicalKeyboardKey.mediaTrackNext): playerCubit.next,
       HotKey(key: PhysicalKeyboardKey.mediaTrackPrevious): playerCubit.previous,
+
+      // --- 导航快捷键 (Ctrl + 按键) ---
+      HotKey(
+        key: PhysicalKeyboardKey.keyL,
+        modifiers: [HotKeyModifier.control],
+      ): _navigateToPlayer,
+
+      HotKey(
+        key: PhysicalKeyboardKey.comma,
+        modifiers: [HotKeyModifier.control],
+      ): _navigateToSettings,
+
+      HotKey(
+        key: PhysicalKeyboardKey.keyF,
+        modifiers: [HotKeyModifier.control],
+      ): _navigateToSearch,
+
+      // --- 窗口控制 ---
+      HotKey(
+        key: PhysicalKeyboardKey.keyM,
+        modifiers: [HotKeyModifier.control],
+      ): _minimizeWindow,
     };
 
     for (final entry in bindings.entries) {
@@ -156,6 +269,29 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
         debugPrint('DesktopIntegration: 跳过快捷键 ${entry.key.key}：$error');
       }
     }
+  }
+
+  // --- Navigation helpers ---
+
+  Future<void> _navigateToPlayer() async {
+    // 通过全局 navigatorKey 获取 context，或者直接使用 GoRouter
+    // 这里暂时使用 windowManager.show() 作为兜底
+    windowManager.show();
+    windowManager.focus();
+  }
+
+  Future<void> _navigateToSettings() async {
+    windowManager.show();
+    windowManager.focus();
+  }
+
+  Future<void> _navigateToSearch() async {
+    windowManager.show();
+    windowManager.focus();
+  }
+
+  Future<void> _minimizeWindow() async {
+    await windowManager.minimize();
   }
 
   // --- Tray ---
@@ -174,16 +310,20 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
       debugPrint('DesktopIntegration: 托盘图标加载失败，跳过托盘 —— $error');
       return;
     }
+    _trayReady = true;
     await trayManager.setToolTip('跨平台音乐播放器');
     await _rebuildMenu();
   }
 
   Future<void> _rebuildMenu() async {
+    if (!_trayReady) return;
+
     final state = playerCubit.state;
-    final track = state.currentTrack;
-    final titleLabel = track == null
-        ? '当前没有播放'
-        : '${track.title} — ${track.artistName}';
+    final titleLabel =
+        (_menuBarLyricsEnabled
+            ? _desktopStatusText(state)
+            : _trackStatusText(state)) ??
+        '当前没有播放';
 
     final menu = Menu(
       items: [
@@ -201,13 +341,96 @@ class DesktopIntegration with TrayListener, WindowListener, WidgetsBindingObserv
   }
 
   void _onPlayerState(PlayerViewState state) {
-    final titleChanged = state.currentTrack?.title != _lastTitle;
+    final track = state.currentTrack;
+    final trackChanged =
+        track?.id != _lastTrackId ||
+        track?.title != _lastTitle ||
+        track?.artistName != _lastArtistName;
     final playingChanged = state.isPlaying != _lastPlaying;
-    if (!titleChanged && !playingChanged) return;
 
-    _lastTitle = state.currentTrack?.title;
-    _lastPlaying = state.isPlaying;
-    _rebuildMenu();
+    if (trackChanged || playingChanged) {
+      _lastTrackId = track?.id;
+      _lastTitle = track?.title;
+      _lastArtistName = track?.artistName;
+      _lastPlaying = state.isPlaying;
+      _ignoreDesktopUpdate(_rebuildMenu());
+    }
+
+    if (_menuBarLyricsEnabled && (Platform.isMacOS || Platform.isWindows)) {
+      _updateDesktopStatusFromState(state);
+    }
+  }
+
+  /// Updates the desktop now-playing surface from the player state.
+  void _updateDesktopStatusFromState(PlayerViewState state) {
+    final text = _desktopStatusText(state);
+    if (text == _lastDesktopStatusText) return;
+    _lastDesktopStatusText = text;
+
+    if (text == null) {
+      if (Platform.isMacOS) {
+        _ignoreDesktopUpdate(_clearMenuBar());
+      } else if (Platform.isWindows) {
+        _ignoreDesktopUpdate(trayManager.setToolTip('乐岛'));
+        _ignoreDesktopUpdate(_rebuildMenu());
+      }
+      return;
+    }
+
+    if (Platform.isMacOS) {
+      final lyricText = _currentLyricText(state);
+      if (lyricText != null) {
+        _ignoreDesktopUpdate(_updateMenuBarLyric(lyricText));
+      } else {
+        final track = state.currentTrack;
+        if (track != null) {
+          _ignoreDesktopUpdate(
+            _updateMenuBarTrackInfo(track.title, track.artistName),
+          );
+        }
+      }
+    } else if (Platform.isWindows) {
+      _ignoreDesktopUpdate(trayManager.setToolTip(text));
+      _ignoreDesktopUpdate(_rebuildMenu());
+    }
+  }
+
+  String? _desktopStatusText(PlayerViewState state) {
+    final track = state.currentTrack;
+    if (track == null) return null;
+
+    final lyricText = _currentLyricText(state);
+    if (lyricText != null) return lyricText;
+
+    return _trackStatusText(state);
+  }
+
+  String? _trackStatusText(PlayerViewState state) {
+    final track = state.currentTrack;
+    if (track == null) return null;
+
+    final artist = track.artistName.trim();
+    return artist.isEmpty ? track.title : '${track.title} — $artist';
+  }
+
+  String? _currentLyricText(PlayerViewState state) {
+    final currentLyricIndex = state.currentLyricIndex;
+    final lyrics = state.lyrics;
+    if (currentLyricIndex != null &&
+        currentLyricIndex >= 0 &&
+        currentLyricIndex < lyrics.length) {
+      final text = lyrics[currentLyricIndex].text.trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  void _ignoreDesktopUpdate(Future<void> future) {
+    unawaited(
+      future.catchError((Object error, StackTrace stack) {
+        debugPrint('DesktopIntegration: 桌面状态更新失败：$error\n$stack');
+      }),
+    );
   }
 
   @override

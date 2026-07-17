@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
+import 'package:go_router/go_router.dart';
+import 'package:window_manager/window_manager.dart';
+import 'dart:io';
 
 /// 在 App 窗口活跃期间捕获键盘快捷键.
 ///
@@ -39,6 +42,7 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
     final logical = event.logicalKey;
     final keyboard = HardwareKeyboard.instance;
     final isControlPressed = keyboard.isControlPressed;
+    final isMetaPressed = keyboard.isMetaPressed;
     final hasModifier =
         isControlPressed || keyboard.isMetaPressed || keyboard.isAltPressed;
 
@@ -52,6 +56,45 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
       if (logical == LogicalKeyboardKey.keyK) {
         final offset = player.state.lyricSyncOffset;
         player.setLyricSyncOffset(offset + const Duration(milliseconds: 100));
+        return;
+      }
+    }
+
+    // Cmd/Ctrl + L — 跳转到播放页面
+    if ((isMetaPressed || isControlPressed) && logical == LogicalKeyboardKey.keyL) {
+      _navigateToPlayer();
+      return;
+    }
+
+    // Cmd/Ctrl + , — 打开设置
+    if ((isMetaPressed || isControlPressed) && logical == LogicalKeyboardKey.comma) {
+      _navigateToSettings();
+      return;
+    }
+
+    // Cmd/Ctrl + F — 打开搜索
+    if ((isMetaPressed || isControlPressed) && logical == LogicalKeyboardKey.keyF) {
+      _navigateToSearch();
+      return;
+    }
+
+    // Cmd/Ctrl + M — 最小化窗口
+    if ((isMetaPressed || isControlPressed) && logical == LogicalKeyboardKey.keyM) {
+      _minimizeWindow();
+      return;
+    }
+
+    // Cmd/Ctrl + Q — 退出应用
+    if ((isMetaPressed || isControlPressed) && logical == LogicalKeyboardKey.keyQ) {
+      _quitApp();
+      return;
+    }
+
+    // 数字键 1-5 — 切换底部导航栏的 Tab
+    if (!hasModifier) {
+      final numKey = _getNumberKey(logical);
+      if (numKey != null && numKey >= 1 && numKey <= 5) {
+        _switchTab(numKey - 1);
         return;
       }
     }
@@ -95,6 +138,74 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
         player.setPlaybackMode(modes[idx]);
         return;
       }
+    }
+  }
+
+  int? _getNumberKey(LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.digit1) return 1;
+    if (key == LogicalKeyboardKey.digit2) return 2;
+    if (key == LogicalKeyboardKey.digit3) return 3;
+    if (key == LogicalKeyboardKey.digit4) return 4;
+    if (key == LogicalKeyboardKey.digit5) return 5;
+    return null;
+  }
+
+  void _navigateToPlayer() {
+    final context = _focusNode.context;
+    if (context != null) {
+      context.push('/player');
+    }
+  }
+
+  void _navigateToSettings() {
+    final context = _focusNode.context;
+    if (context != null) {
+      context.go('/settings');
+    }
+  }
+
+  void _navigateToSearch() {
+    final context = _focusNode.context;
+    if (context != null) {
+      context.go('/search');
+    }
+  }
+
+  void _switchTab(int index) {
+    final context = _focusNode.context;
+    if (context == null) return;
+
+    // 通过 GoRouter 切换 Tab
+    final router = GoRouter.of(context);
+    switch (index) {
+      case 0:
+        router.go('/home');
+        break;
+      case 1:
+        router.go('/search');
+        break;
+      case 2:
+        router.go('/library');
+        break;
+      case 3:
+        router.go('/favorites');
+        break;
+      case 4:
+        router.go('/settings');
+        break;
+    }
+  }
+
+  void _minimizeWindow() async {
+    if (Platform.isMacOS || Platform.isWindows) {
+      await windowManager.minimize();
+    }
+  }
+
+  void _quitApp() async {
+    if (Platform.isMacOS || Platform.isWindows) {
+      await windowManager.setPreventClose(false);
+      await windowManager.destroy();
     }
   }
 

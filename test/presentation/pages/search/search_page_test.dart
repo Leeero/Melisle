@@ -473,6 +473,11 @@ class _FakeSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> saveMenuBarLyricsEnabled(bool enabled) async {
+    _snapshot = _snapshot.copyWith(menuBarLyricsEnabled: enabled);
+  }
+
+  @override
   Future<void> saveCustomArtworkSourceEnabled(bool enabled) async {
     _snapshot = _snapshot.copyWith(customArtworkSourceEnabled: enabled);
   }

@@ -23,6 +23,7 @@ class AppSettingsState {
     required this.defaultQuality,
     required this.gapBetweenTracks,
     required this.lyricSyncOffset,
+    required this.menuBarLyricsEnabled,
     required this.customArtworkSourceEnabled,
     required this.customArtworkSourceUrl,
     required this.customLyricsSourceEnabled,
@@ -37,6 +38,7 @@ class AppSettingsState {
       defaultQuality = AudioQuality.auto,
       gapBetweenTracks = Duration.zero,
       lyricSyncOffset = Duration.zero,
+      menuBarLyricsEnabled = true,
       customArtworkSourceEnabled = false,
       customArtworkSourceUrl = '',
       customLyricsSourceEnabled = false,
@@ -49,6 +51,7 @@ class AppSettingsState {
   final AudioQuality defaultQuality;
   final Duration gapBetweenTracks;
   final Duration lyricSyncOffset;
+  final bool menuBarLyricsEnabled;
   final bool customArtworkSourceEnabled;
   final String customArtworkSourceUrl;
   final bool customLyricsSourceEnabled;
@@ -63,6 +66,7 @@ class AppSettingsState {
       defaultQuality: defaultQuality,
       gapBetweenTracks: gapBetweenTracks,
       lyricSyncOffset: lyricSyncOffset,
+      menuBarLyricsEnabled: menuBarLyricsEnabled,
       customArtworkSourceEnabled: customArtworkSourceEnabled,
       customArtworkSourceUrl: customArtworkSourceUrl,
       customLyricsSourceEnabled: customLyricsSourceEnabled,
@@ -75,6 +79,7 @@ class AppSettingsState {
     AudioQuality? defaultQuality,
     Duration? gapBetweenTracks,
     Duration? lyricSyncOffset,
+    bool? menuBarLyricsEnabled,
     bool? customArtworkSourceEnabled,
     String? customArtworkSourceUrl,
     bool? customLyricsSourceEnabled,
@@ -88,6 +93,7 @@ class AppSettingsState {
       defaultQuality: defaultQuality ?? this.defaultQuality,
       gapBetweenTracks: gapBetweenTracks ?? this.gapBetweenTracks,
       lyricSyncOffset: lyricSyncOffset ?? this.lyricSyncOffset,
+      menuBarLyricsEnabled: menuBarLyricsEnabled ?? this.menuBarLyricsEnabled,
       customArtworkSourceEnabled:
           customArtworkSourceEnabled ?? this.customArtworkSourceEnabled,
       customArtworkSourceUrl:

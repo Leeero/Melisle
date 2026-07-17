@@ -18,6 +18,8 @@ abstract class SettingsRepository {
 
   Future<void> saveLyricSyncOffset(Duration offset);
 
+  Future<void> saveMenuBarLyricsEnabled(bool enabled);
+
   Future<void> saveCustomArtworkSourceEnabled(bool enabled);
 
   Future<void> saveCustomArtworkSourceUrl(String url);
@@ -34,6 +36,7 @@ class AppSettingsSnapshot {
     this.defaultQuality = AudioQuality.auto,
     this.gapBetweenTracks = Duration.zero,
     this.lyricSyncOffset = Duration.zero,
+    this.menuBarLyricsEnabled = true,
     this.customArtworkSourceEnabled = false,
     this.customArtworkSourceUrl = '',
     this.customLyricsSourceEnabled = false,
@@ -44,6 +47,7 @@ class AppSettingsSnapshot {
   final AudioQuality defaultQuality;
   final Duration gapBetweenTracks;
   final Duration lyricSyncOffset;
+  final bool menuBarLyricsEnabled;
   final bool customArtworkSourceEnabled;
   final String customArtworkSourceUrl;
   final bool customLyricsSourceEnabled;
@@ -54,6 +58,7 @@ class AppSettingsSnapshot {
     AudioQuality? defaultQuality,
     Duration? gapBetweenTracks,
     Duration? lyricSyncOffset,
+    bool? menuBarLyricsEnabled,
     bool? customArtworkSourceEnabled,
     String? customArtworkSourceUrl,
     bool? customLyricsSourceEnabled,
@@ -64,6 +69,7 @@ class AppSettingsSnapshot {
       defaultQuality: defaultQuality ?? this.defaultQuality,
       gapBetweenTracks: gapBetweenTracks ?? this.gapBetweenTracks,
       lyricSyncOffset: lyricSyncOffset ?? this.lyricSyncOffset,
+      menuBarLyricsEnabled: menuBarLyricsEnabled ?? this.menuBarLyricsEnabled,
       customArtworkSourceEnabled:
           customArtworkSourceEnabled ?? this.customArtworkSourceEnabled,
       customArtworkSourceUrl:

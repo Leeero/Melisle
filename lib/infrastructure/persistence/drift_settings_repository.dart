@@ -14,6 +14,7 @@ class DriftSettingsRepository implements SettingsRepository {
   static const _kDefaultQuality = 'default_quality';
   static const _kGapBetweenTracks = 'gap_between_tracks_ms';
   static const _kLyricSyncOffset = 'lyric_sync_offset_ms';
+  static const _kMenuBarLyricsEnabled = 'menu_bar_lyrics_enabled';
   static const _kCustomArtworkSourceEnabled = 'custom_artwork_source_enabled';
   static const _kCustomArtworkSourceUrl = 'custom_artwork_source_url';
   static const _kCustomLyricsSourceEnabled = 'custom_lyrics_source_enabled';
@@ -30,6 +31,10 @@ class DriftSettingsRepository implements SettingsRepository {
       ),
       lyricSyncOffset: Duration(
         milliseconds: int.tryParse(map[_kLyricSyncOffset] ?? '') ?? 0,
+      ),
+      menuBarLyricsEnabled: _parseBool(
+        map[_kMenuBarLyricsEnabled],
+        defaultValue: true,
       ),
       customArtworkSourceEnabled: _parseBool(
         map[_kCustomArtworkSourceEnabled],
@@ -59,6 +64,10 @@ class DriftSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveLyricSyncOffset(Duration offset) =>
       _db.writeSetting(_kLyricSyncOffset, offset.inMilliseconds.toString());
+
+  @override
+  Future<void> saveMenuBarLyricsEnabled(bool enabled) =>
+      _db.writeSetting(_kMenuBarLyricsEnabled, enabled ? '1' : '0');
 
   @override
   Future<void> saveCustomArtworkSourceEnabled(bool enabled) =>
