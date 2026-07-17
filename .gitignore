@@ -19,6 +19,7 @@ Thumbs.db
 .codebuddy/
 .impeccable/
 .claude/worktrees/
+.codex/**/__pycache__/
 # Optional: ignore AI repo guidance if you do not want to publish it
 CLAUDE.md
 CODEBUDDY.md
