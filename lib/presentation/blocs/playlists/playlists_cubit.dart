@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_state.dart';
@@ -7,14 +9,15 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
   PlaylistsCubit(this._fetchPlaylists) : super(const PlaylistsState.initial());
 
   static const _pageSize = 100;
+  static const _searchDebounce = Duration(milliseconds: 300);
 
   final FetchPlaylists _fetchPlaylists;
+  Timer? _searchTimer;
+  int _loadToken = 0;
 
   Future<void> load() async {
+    _searchTimer?.cancel();
     await _loadPage(reset: true);
-    while (state.status == PlaylistsStatus.success && state.hasMore) {
-      await _loadPage(reset: false);
-    }
   }
 
   Future<void> loadMore() async {
@@ -28,16 +31,28 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
   }
 
   void search(String query) {
+    if (query == state.searchQuery) return;
+
+    _searchTimer?.cancel();
+    _loadToken += 1;
     emit(
       state.copyWith(
+        status: PlaylistsStatus.loading,
         searchQuery: query,
-        playlists: _filterPlaylists(state.allPlaylists, query),
+        hasMore: false,
+        isLoadingMore: false,
         errorMessage: null,
       ),
     );
+    _searchTimer = Timer(_searchDebounce, () {
+      _loadPage(reset: true, searchQuery: query);
+    });
   }
 
-  Future<void> _loadPage({required bool reset}) async {
+  Future<void> _loadPage({required bool reset, String? searchQuery}) async {
+    final query = searchQuery ?? state.searchQuery;
+    final token = ++_loadToken;
+
     if (reset) {
       emit(
         state.copyWith(
@@ -55,7 +70,10 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
       final playlists = await _fetchPlaylists(
         limit: _pageSize,
         startIndex: reset ? 0 : state.allPlaylists.length,
+        searchQuery: query.trim().isEmpty ? null : query.trim(),
       );
+      if (token != _loadToken || isClosed) return;
+
       final allPlaylists = reset
           ? playlists
           : _appendUniquePlaylists(state.allPlaylists, playlists);
@@ -64,13 +82,15 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
         state.copyWith(
           status: PlaylistsStatus.success,
           allPlaylists: allPlaylists,
-          playlists: _filterPlaylists(allPlaylists, state.searchQuery),
+          playlists: allPlaylists,
           hasMore: playlists.length == _pageSize && (reset || hasNewItems),
           isLoadingMore: false,
           errorMessage: null,
         ),
       );
     } catch (error) {
+      if (token != _loadToken || isClosed) return;
+
       emit(
         state.copyWith(
           status: PlaylistsStatus.failure,
@@ -95,17 +115,9 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
     return merged;
   }
 
-  List<MusicPlaylist> _filterPlaylists(
-    List<MusicPlaylist> playlists,
-    String query,
-  ) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return playlists;
-
-    return playlists
-        .where(
-          (playlist) => playlist.name.toLowerCase().contains(normalizedQuery),
-        )
-        .toList(growable: false);
+  @override
+  Future<void> close() {
+    _searchTimer?.cancel();
+    return super.close();
   }
 }

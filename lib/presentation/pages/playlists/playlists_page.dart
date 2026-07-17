@@ -96,6 +96,16 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
     }
 
     if (state.allPlaylists.isEmpty) {
+      if (state.isFiltering) {
+        return AppBodyStateView.message(
+          message: '没有找到匹配的歌单。',
+          action: TextButton.icon(
+            onPressed: () => context.read<PlaylistsCubit>().search(''),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: const Text('清除搜索'),
+          ),
+        );
+      }
       return const AppBodyStateView.message(message: '当前还没有歌单。');
     }
 
