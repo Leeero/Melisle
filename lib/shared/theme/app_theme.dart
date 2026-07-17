@@ -342,94 +342,21 @@ abstract final class AppTheme {
         focusedErrorBorder: _inputBorder(colorScheme.error, width: 1.25),
       ),
 
-      // ─── FilledButton (Capsule) ───
+      // ─── Buttons ───
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          textStyle: textTheme.labelLarge,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusButton),
-          ),
-        ),
+        style: _filledButtonStyle(colorScheme, textTheme, isDark),
       ),
-
-      // ─── OutlinedButton (Capsule) ───
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          foregroundColor: colorScheme.onSurface,
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.68 : 1,
-            ),
-          ),
-          textStyle: textTheme.labelLarge,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusButton),
-          ),
-        ),
+        style: _outlinedButtonStyle(colorScheme, textTheme, isDark),
       ),
-
-      // ─── TextButton ───
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: colorScheme.onSurface,
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          textStyle: textTheme.labelLarge,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusIconButton),
-          ),
-        ),
+        style: _textButtonStyle(colorScheme, textTheme, isDark),
       ),
-
-      // ─── IconButton ───
       iconButtonTheme: IconButtonThemeData(
-        style:
-            IconButton.styleFrom(
-              foregroundColor: colorScheme.onSurfaceVariant,
-              backgroundColor: Colors.transparent,
-              minimumSize: const Size(44, 44),
-              padding: const EdgeInsets.all(10),
-              iconSize: 22,
-              side: BorderSide.none,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(radiusIconButton),
-              ),
-            ).copyWith(
-              overlayColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.pressed)) {
-                  return colorScheme.primary.withValues(alpha: 0.10);
-                }
-                if (states.contains(WidgetState.hovered) ||
-                    states.contains(WidgetState.focused)) {
-                  return colorScheme.onSurface.withValues(
-                    alpha: isDark ? 0.08 : 0.06,
-                  );
-                }
-                return Colors.transparent;
-              }),
-            ),
+        style: _iconButtonStyle(colorScheme, isDark),
       ),
-
-      // ─── Filled tonal button ───
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          elevation: 0,
-          backgroundColor: colorScheme.surfaceContainerHigh,
-          foregroundColor: colorScheme.onSurface,
-          textStyle: textTheme.labelLarge,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusButton),
-          ),
-        ),
+        style: _tonalButtonStyle(colorScheme, textTheme, isDark),
       ),
 
       // ─── Checkbox / Switch / Radio ───
@@ -675,6 +602,269 @@ abstract final class AppTheme {
       borderRadius: BorderRadius.circular(radiusInput),
       borderSide: BorderSide(color: color, width: width),
     );
+  }
+
+  static ButtonStyle _filledButtonStyle(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    return FilledButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      elevation: 0,
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusButton),
+      ),
+    ).copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return _buttonAccentHover(isDark);
+        }
+        return colorScheme.primary;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.34);
+        }
+        return colorScheme.onPrimary;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return colorScheme.onPrimary.withValues(alpha: 0.08);
+        }
+        return Colors.transparent;
+      }),
+      side: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.focused)) {
+          return BorderSide(
+            color: colorScheme.primary.withValues(alpha: isDark ? 0.72 : 0.42),
+          );
+        }
+        return BorderSide.none;
+      }),
+    );
+  }
+
+  static ButtonStyle _outlinedButtonStyle(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    return OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      foregroundColor: colorScheme.onSurface,
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusButton),
+      ),
+    ).copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return Colors.transparent;
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return _buttonPressedWash(colorScheme, isDark);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return _buttonHoverWash(colorScheme, isDark);
+        }
+        return Colors.transparent;
+      }),
+      side: WidgetStateProperty.resolveWith((states) {
+        final alpha = states.contains(WidgetState.disabled)
+            ? 0.32
+            : states.contains(WidgetState.hovered) ||
+                  states.contains(WidgetState.focused) ||
+                  states.contains(WidgetState.pressed)
+            ? (isDark ? 0.86 : 1.0)
+            : (isDark ? 0.56 : 0.78);
+        return BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: alpha),
+        );
+      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+    );
+  }
+
+  static ButtonStyle _textButtonStyle(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    return TextButton.styleFrom(
+      foregroundColor: colorScheme.onSurfaceVariant,
+      minimumSize: const Size(44, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      tapTargetSize: MaterialTapTargetSize.padded,
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusButton),
+      ),
+    ).copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return _buttonPressedWash(colorScheme, isDark);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return _buttonHoverWash(colorScheme, isDark);
+        }
+        return Colors.transparent;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.34);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed)) {
+          return colorScheme.onSurface;
+        }
+        return colorScheme.onSurfaceVariant;
+      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+    );
+  }
+
+  static ButtonStyle _iconButtonStyle(ColorScheme colorScheme, bool isDark) {
+    return IconButton.styleFrom(
+      foregroundColor: colorScheme.onSurfaceVariant,
+      backgroundColor: Colors.transparent,
+      minimumSize: const Size.square(44),
+      fixedSize: const Size.square(44),
+      padding: EdgeInsets.zero,
+      iconSize: 22,
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusIconButton),
+      ),
+    ).copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return Colors.transparent;
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return _buttonPressedWash(colorScheme, isDark);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return _buttonHoverWash(colorScheme, isDark);
+        }
+        return Colors.transparent;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurfaceVariant.withValues(alpha: 0.40);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed)) {
+          return colorScheme.onSurface;
+        }
+        return colorScheme.onSurfaceVariant;
+      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+      side: WidgetStateProperty.resolveWith((states) {
+        final visible =
+            states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed);
+        return BorderSide(
+          color: colorScheme.outlineVariant.withValues(
+            alpha: visible ? 0.30 : 0,
+          ),
+        );
+      }),
+    );
+  }
+
+  static ButtonStyle _tonalButtonStyle(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    return ElevatedButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusButton),
+      ),
+    ).copyWith(
+      elevation: WidgetStateProperty.all(0),
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.06);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return Color.alphaBlend(
+            colorScheme.primary.withValues(alpha: isDark ? 0.18 : 0.12),
+            colorScheme.surfaceContainerHighest,
+          );
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return _buttonHoverWash(colorScheme, isDark);
+        }
+        return colorScheme.surfaceContainerHigh.withValues(
+          alpha: isDark ? 0.74 : 0.86,
+        );
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.34);
+        }
+        return colorScheme.onSurface;
+      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+      side: WidgetStateProperty.resolveWith((states) {
+        final visible =
+            states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.pressed);
+        return BorderSide(
+          color: colorScheme.outlineVariant.withValues(
+            alpha: visible ? (isDark ? 0.52 : 0.72) : 0,
+          ),
+        );
+      }),
+    );
+  }
+
+  static Color _buttonHoverWash(ColorScheme colorScheme, bool isDark) {
+    final tint = isDark
+        ? AppColorTokens.darkMusicTealSoft
+        : AppColorTokens.lightMusicTealSoft;
+    return Color.alphaBlend(
+      tint.withValues(alpha: isDark ? 0.50 : 0.58),
+      colorScheme.surface,
+    );
+  }
+
+  static Color _buttonPressedWash(ColorScheme colorScheme, bool isDark) {
+    final tint = isDark
+        ? AppColorTokens.darkMusicTealSoft
+        : AppColorTokens.lightMusicTealSoft;
+    return Color.alphaBlend(
+      tint.withValues(alpha: isDark ? 0.70 : 0.76),
+      colorScheme.surfaceContainerHighest,
+    );
+  }
+
+  static Color _buttonAccentHover(bool isDark) {
+    return isDark
+        ? AppColorTokens.darkPrimaryHover
+        : AppColorTokens.lightPrimaryHover;
   }
 }
 
