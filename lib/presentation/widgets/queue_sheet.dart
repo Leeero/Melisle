@@ -277,6 +277,7 @@ class _QueueActionButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(18),
+          mouseCursor: SystemMouseCursors.click,
           hoverColor: Colors.transparent,
           focusColor: Colors.transparent,
           highlightColor: Colors.transparent,
@@ -308,17 +309,17 @@ class _QueueActionChrome extends StatelessWidget {
         : colorScheme.outlineVariant.withValues(alpha: 0.54);
 
     return SizedBox.square(
-      dimension: 44,
+      dimension: 36,
       child: Center(
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: background,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: border),
           ),
           child: SizedBox.square(
-            dimension: 36,
-            child: Icon(icon, size: 18, color: foreground),
+            dimension: 28,
+            child: Icon(icon, size: 16, color: foreground),
           ),
         ),
       ),

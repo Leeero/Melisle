@@ -326,6 +326,7 @@ class _SleepTimerPresetButtonState extends State<_SleepTimerPresetButton> {
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
             onTap: widget.onTap,
+            mouseCursor: SystemMouseCursors.click,
             onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
             hoverColor: Colors.transparent,
             focusColor: Colors.transparent,
@@ -424,6 +425,7 @@ class _SleepTimerOptionRowState extends State<_SleepTimerOptionRow> {
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
             onTap: widget.onTap,
+            mouseCursor: SystemMouseCursors.click,
             onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
             hoverColor: Colors.transparent,
             focusColor: Colors.transparent,

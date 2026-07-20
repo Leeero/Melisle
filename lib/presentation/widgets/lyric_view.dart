@@ -101,11 +101,17 @@ class _LyricViewState extends State<LyricView> {
           _scrollController.position.maxScrollExtent,
         )
         .toDouble();
-    _scrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
-    );
+
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    if (disableAnimations) {
+      _scrollController.jumpTo(target);
+    } else {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   void _lockAutoScrollForUser() {
@@ -282,7 +288,7 @@ class _LyricLineTile extends StatelessWidget {
       duration: const Duration(milliseconds: 420),
       curve: AppMotion.enter,
       scale: isCurrent ? currentScale : 1.0,
-      alignment: Alignment.center,
+      alignment: alignment,
       child: AnimatedDefaultTextStyle(
         duration: const Duration(milliseconds: 420),
         curve: AppMotion.enter,

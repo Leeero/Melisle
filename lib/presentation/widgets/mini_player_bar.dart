@@ -166,6 +166,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () => PlayerNavigation.openPlayerPage(context),
+          mouseCursor: SystemMouseCursors.click,
           onHighlightChanged: (value) => setState(() => _pressed = value),
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
@@ -179,6 +180,24 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
               offset: _pressed ? const Offset(0, 0.012) : Offset.zero,
               child: Row(
                 children: [
+                  BlocBuilder<PlayerCubit, PlayerViewState>(
+                    buildWhen: (prev, next) =>
+                        prev.isPlaying != next.isPlaying,
+                    builder: (context, state) {
+                      return AnimatedContainer(
+                        duration: AppMotion.micro,
+                        width: 4,
+                        height: state.isPlaying ? 24 : 12,
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: state.isPlaying
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      );
+                    },
+                  ),
                   CachedArtwork(
                     imageUrl: widget.artworkUrl,
                     size: 42,
@@ -265,8 +284,8 @@ class _WideMiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 280,
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 180, maxWidth: 280),
           child: _MiniTrackButton(
             trackTitle: trackTitle,
             artistName: artistName,
@@ -274,14 +293,16 @@ class _WideMiniPlayer extends StatelessWidget {
             sourceContext: sourceContext,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         const _MiniControlCluster(child: _MiniTransportControls()),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         const Expanded(child: _MiniTimelineBlock(showElapsedLabels: true)),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         const _MiniPlaybackModeButton(),
-        const SizedBox(width: 8),
-        const _MiniVolumeControl(),
+        const SizedBox(width: 4),
+        _MiniVolumeControl(
+          width: MediaQuery.sizeOf(context).width >= 1000 ? 132 : 80,
+        ),
         const SizedBox(width: 4),
         const _MiniExpandButton(),
       ],
@@ -311,6 +332,23 @@ class _MiniTrackButton extends StatelessWidget {
     final titleStyle = Theme.of(context).textTheme.titleMedium;
     final content = Row(
       children: [
+        BlocBuilder<PlayerCubit, PlayerViewState>(
+          buildWhen: (prev, next) => prev.isPlaying != next.isPlaying,
+          builder: (context, state) {
+            return AnimatedContainer(
+              duration: AppMotion.micro,
+              width: 3,
+              height: state.isPlaying ? 20 : 10,
+              margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(
+                color: state.isPlaying
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+            );
+          },
+        ),
         CachedArtwork(
           imageUrl: artworkUrl,
           size: 48,
@@ -348,6 +386,7 @@ class _MiniTrackButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadiusTokens.card),
         onTap: () => PlayerNavigation.openPlayerPage(context),
+        mouseCursor: SystemMouseCursors.click,
         child: Padding(
           padding: const EdgeInsets.only(right: 8),
           child: content,
@@ -451,14 +490,16 @@ class _MiniControlCluster extends StatelessWidget {
 }
 
 class _MiniVolumeControl extends StatelessWidget {
-  const _MiniVolumeControl();
+  const _MiniVolumeControl({this.width = 132});
+
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
-      width: 132,
+      width: width,
       child: Row(
         children: [
           Icon(

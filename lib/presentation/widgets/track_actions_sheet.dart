@@ -2,6 +2,7 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -61,12 +62,7 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                 Navigator.of(sheetCtx).pop();
                 await context.read<PlayerCubit>().addToQueue(track);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('已加入队列：${track.title}'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  AppSnackBar.show(context, '已加入队列：${track.title}');
                 }
               },
             ),
@@ -88,6 +84,12 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                       track.id,
                       currentValue: isFav,
                     );
+                    if (context.mounted) {
+                      AppSnackBar.show(
+                        context,
+                        isFav ? '已取消收藏' : '已收藏',
+                      );
+                    }
                   },
                 );
               },

@@ -30,6 +30,7 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
   late final AnimationController _loadingController;
   bool _hovered = false;
   bool _pressed = false;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
@@ -38,8 +39,14 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
       vsync: this,
       duration: const Duration(milliseconds: 920),
     );
-    if (widget.isLoading) {
-      _loadingController.repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _updateAnimation();
     }
   }
 
@@ -47,8 +54,12 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
   void didUpdateWidget(LoadingPlayPauseButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isLoading == oldWidget.isLoading) return;
+    _updateAnimation();
+  }
 
-    if (widget.isLoading) {
+  void _updateAnimation() {
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    if (widget.isLoading && !disableAnimations) {
       _loadingController.repeat();
     } else {
       _loadingController.stop();
