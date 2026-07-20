@@ -74,6 +74,7 @@ class _AppContentPageState extends State<AppContentPage>
   late final AnimationController _fadeController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
+  bool _hasAnimated = false;
 
   @override
   void initState() {
@@ -90,7 +91,20 @@ class _AppContentPageState extends State<AppContentPage>
       begin: const Offset(0, 0.02),
       end: Offset.zero,
     ).animate(_fadeAnimation);
-    _fadeController.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hasAnimated) return;
+    _hasAnimated = true;
+
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    if (disableAnimations) {
+      _fadeController.value = 1.0;
+    } else {
+      _fadeController.forward();
+    }
   }
 
   @override
@@ -516,22 +530,22 @@ class _AppSearchFieldState extends State<AppSearchField> {
                             tooltip: widget.clearTooltip,
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.standard,
-                            constraints: const BoxConstraints.tightFor(
-                              width: 46,
-                              height: 46,
+                            constraints: BoxConstraints.tightFor(
+                              width: compact ? 40 : 46,
+                              height: compact ? 40 : 46,
                             ),
                             style: AppActionButtonStyle.icon(
                               context,
-                              size: 46,
+                              size: compact ? 40 : 46,
                               iconSize: compact ? 18 : 20,
                             ),
                             onPressed: _clear,
                           );
                         },
                       ),
-                      suffixIconConstraints: const BoxConstraints(
-                        minWidth: 46,
-                        minHeight: 46,
+                      suffixIconConstraints: BoxConstraints(
+                        minWidth: compact ? 40 : 46,
+                        minHeight: compact ? 40 : 46,
                       ),
                     ),
                     onChanged: widget.onChanged,
@@ -941,6 +955,34 @@ class AppDetailHeroFrame extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 阅读宽度约束组件。
+///
+/// 用于长文本内容区域，将行宽控制在 65-75 字符以内，
+/// 提升桌面端大屏下的阅读体验。
+///
+/// 设计指南参考：桌面端正文行宽应控制在 65-75 字符以内，
+/// 超出应截断或用网格约束。
+class ReadingWidthConstraint extends StatelessWidget {
+  const ReadingWidthConstraint({
+    super.key,
+    required this.child,
+    this.maxWidth = 680,
+  });
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
       ),
     );
   }

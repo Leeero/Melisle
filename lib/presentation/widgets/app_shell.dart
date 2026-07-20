@@ -16,20 +16,25 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = navigationShell.currentIndex;
+    final layout = AppBreakpoints.of(context);
 
-    if (AppBreakpoints.usesWideContent(context)) {
-      return _DesktopShellScaffold(
+    return switch (layout) {
+      AppLayoutSize.expanded => _ExpandedShellScaffold(
         navigationShell: navigationShell,
         selectedIndex: selectedIndex,
         onSelected: _go,
-      );
-    }
-
-    return _CompactShellScaffold(
-      navigationShell: navigationShell,
-      selectedIndex: selectedIndex,
-      onSelected: _go,
-    );
+      ),
+      AppLayoutSize.medium => _MediumShellScaffold(
+        navigationShell: navigationShell,
+        selectedIndex: selectedIndex,
+        onSelected: _go,
+      ),
+      AppLayoutSize.compact => _CompactShellScaffold(
+        navigationShell: navigationShell,
+        selectedIndex: selectedIndex,
+        onSelected: _go,
+      ),
+    };
   }
 
   void _go(int index) {
@@ -40,8 +45,43 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _DesktopShellScaffold extends StatelessWidget {
-  const _DesktopShellScaffold({
+class _ExpandedShellScaffold extends StatelessWidget {
+  const _ExpandedShellScaffold({
+    required this.navigationShell,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final StatefulNavigationShell navigationShell;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Row(
+        children: [
+          _ShellSidebar(selectedIndex: selectedIndex, onSelected: onSelected),
+          Expanded(
+            child: _ShellContentSurface(
+              body: navigationShell,
+              footer: const MiniPlayerBar(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Medium 布局（768-1199px）：侧边栏 + 内容区，迷你播放栏在内容底部。
+///
+/// 与 Expanded 布局结构相同，间距 token 回退到 medium 水平间距。
+class _MediumShellScaffold extends StatelessWidget {
+  const _MediumShellScaffold({
     required this.navigationShell,
     required this.selectedIndex,
     required this.onSelected,
@@ -150,7 +190,7 @@ class _ShellContentSurface extends StatelessWidget {
           colors: [
             Color.alphaBlend(
               Theme.of(context).musicTealSoft.withValues(alpha: 0.18),
-              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).ambientGradientStart,
             ),
             Theme.of(context).scaffoldBackgroundColor,
           ],
