@@ -160,6 +160,7 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                   ? AppRadiusTokens.button
                   : AppRadiusTokens.iconButton,
             ),
+            mouseCursor: SystemMouseCursors.click,
             hoverColor: Colors.transparent,
             focusColor: Colors.transparent,
             splashColor: Colors.transparent,

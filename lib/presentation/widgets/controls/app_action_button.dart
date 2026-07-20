@@ -208,14 +208,16 @@ abstract final class AppActionButtonStyle {
       }),
       overlayColor: WidgetStateProperty.all(Colors.transparent),
       side: WidgetStateProperty.resolveWith((states) {
-        final visible =
-            states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused) ||
-            states.contains(WidgetState.pressed);
+        final focused = states.contains(WidgetState.focused);
+        final hovered = states.contains(WidgetState.hovered);
+        final pressed = states.contains(WidgetState.pressed);
+        final visible = hovered || focused || pressed;
+        if (!visible) return BorderSide.none;
         return BorderSide(
-          color: colorScheme.outlineVariant.withValues(
-            alpha: visible ? 0.30 : 0,
-          ),
+          color: focused
+              ? colorScheme.primary.withValues(alpha: 0.72)
+              : colorScheme.outlineVariant.withValues(alpha: 0.30),
+          width: focused ? 1.5 : 1.0,
         );
       }),
     );
