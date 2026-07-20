@@ -3,8 +3,8 @@ import 'package:flutter/widgets.dart';
 enum AppLayoutSize { compact, medium, expanded }
 
 abstract final class AppBreakpoints {
-  static const double mediumMinWidth = 1080;
-  static const double expandedMinWidth = 1280;
+  static const double mediumMinWidth = 768;
+  static const double expandedMinWidth = 1200;
 
   static AppLayoutSize of(BuildContext context) {
     return fromWidth(MediaQuery.sizeOf(context).width);
@@ -46,10 +46,10 @@ abstract final class AppBreakpoints {
     if (width >= expandedMinWidth) {
       return 5;
     }
-    if (width >= 1040) {
+    if (width >= 960) {
       return 4;
     }
-    if (width >= 760) {
+    if (width >= 640) {
       return 3;
     }
     return 2;

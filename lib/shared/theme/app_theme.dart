@@ -198,18 +198,18 @@ abstract final class AppTheme {
           ),
           bodyLarge: baseTextTheme.bodyLarge?.copyWith(
             fontFamily: _productFont,
-            height: 1.4,
+            height: 1.5,
             letterSpacing: 0,
           ),
           bodyMedium: baseTextTheme.bodyMedium?.copyWith(
             fontFamily: _productFont,
-            height: 1.4,
+            height: 1.5,
             letterSpacing: 0,
           ),
           bodySmall: baseTextTheme.bodySmall?.copyWith(
             fontFamily: _productFont,
             color: colorScheme.onSurfaceVariant,
-            height: 1.35,
+            height: 1.4,
             letterSpacing: 0,
           ),
           labelLarge: baseTextTheme.labelLarge?.copyWith(
@@ -773,14 +773,16 @@ abstract final class AppTheme {
       }),
       overlayColor: WidgetStateProperty.all(Colors.transparent),
       side: WidgetStateProperty.resolveWith((states) {
-        final visible =
-            states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused) ||
-            states.contains(WidgetState.pressed);
+        final focused = states.contains(WidgetState.focused);
+        final hovered = states.contains(WidgetState.hovered);
+        final pressed = states.contains(WidgetState.pressed);
+        final visible = hovered || focused || pressed;
+        if (!visible) return BorderSide.none;
         return BorderSide(
-          color: colorScheme.outlineVariant.withValues(
-            alpha: visible ? 0.30 : 0,
-          ),
+          color: focused
+              ? colorScheme.primary.withValues(alpha: 0.72)
+              : colorScheme.outlineVariant.withValues(alpha: 0.30),
+          width: focused ? 1.5 : 1.0,
         );
       }),
     );
@@ -932,4 +934,9 @@ extension MelisleThemeX on ThemeData {
     ),
     colorScheme.surface,
   );
+
+  /// 内容区背景渐变的左上角色调。
+  Color get ambientGradientStart => brightness == Brightness.dark
+      ? AppColorTokens.darkAmbientGradientStart
+      : AppColorTokens.lightAmbientGradientStart;
 }

@@ -64,6 +64,10 @@ abstract final class AppColorTokens {
   static const darkSuccess = Color(0xFF46B49E);
   static const darkWarn = Color(0xFFCEA26F);
   static const darkDanger = Color(0xFFD6917B);
+
+  /// 内容区背景渐变 — 左上角色调。
+  static const darkAmbientGradientStart = Color(0xFF0C1315);
+  static const lightAmbientGradientStart = Color(0xFFF7FCFC);
 }
 
 abstract final class AppRadiusTokens {
@@ -96,7 +100,7 @@ abstract final class AppSpacingTokens {
   static const double headerPadding = 22;
 
   static const double pageHorizontalCompact = 24;
-  static const double pageHorizontalMedium = 36;
+  static const double pageHorizontalMedium = 28;
   static const double pageHorizontalExpanded = 36;
 
   static const double shellOuterPadding = 0;
