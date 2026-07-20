@@ -14,6 +14,7 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
@@ -847,6 +848,7 @@ class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
             child: InkWell(
               borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
               onTap: widget.onTap,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               hoverColor: Colors.transparent,
@@ -1403,15 +1405,7 @@ Future<void> _addTracksToQueue(
   final message = tracks.length == 1
       ? '已加入队列：${tracks.first.title}'
       : '已加入队列：${tracks.length} 首歌曲';
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  AppSnackBar.show(context, message);
 }
 
 int _artistGridCount(double width) {

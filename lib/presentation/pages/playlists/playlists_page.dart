@@ -244,7 +244,10 @@ class _PlaylistsHeader extends StatelessWidget {
       hideTitleOnCompactWithCenter: false,
       titleMaxWidth: 260,
       maxWidth: _playlistDesktopMaxWidth,
-      trailing: SizedBox(width: 420, child: searchField),
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: searchField,
+      ),
     );
   }
 }

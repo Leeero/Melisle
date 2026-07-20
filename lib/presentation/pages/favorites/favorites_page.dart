@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
@@ -317,6 +318,11 @@ class _FavoriteTrackActionButton extends StatelessWidget {
               if (!stillFavorite) {
                 listCubit.removeTrack(track.id);
               }
+              if (!context.mounted) return;
+              AppSnackBar.show(
+                context,
+                stillFavorite ? '已收藏' : '取消收藏',
+              );
             },
     );
   }
@@ -376,12 +382,24 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 600),
     );
     _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.25, end: 0.95),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.95, end: 1.0),
+        weight: 40,
+      ),
+    ]).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutBack,
+      ),
+    );
     if (widget.isPending) _controller.repeat();
   }
 

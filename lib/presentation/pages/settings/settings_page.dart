@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/presentation/blocs/settings/app_sett
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -156,9 +157,7 @@ Future<void> _showClearCacheConfirmation(BuildContext context) async {
     // 缓存清理操作：in-memory 缓存由 CachedMusicRepository 管理，
     // 登出时自动清除。此处重置会话即可触发缓存刷新。
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('缓存已清理')));
+      AppSnackBar.show(context, '缓存已清理');
     }
   }
 }
@@ -1138,6 +1137,7 @@ class _SourceToggleState extends State<_SourceToggle> {
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadiusTokens.button),
             onTap: () => widget.onChanged(!active),
+            mouseCursor: SystemMouseCursors.click,
             onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
             hoverColor: Colors.transparent,
             focusColor: colorScheme.primary.withValues(alpha: 0.08),
@@ -1424,6 +1424,7 @@ class _HoverableListTileState extends State<_HoverableListTile> {
         : idleBackground;
 
     return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onEnter: (_) {
         if (enabled) setState(() => _hovered = true);
       },

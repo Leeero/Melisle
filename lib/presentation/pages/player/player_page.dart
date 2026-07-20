@@ -354,6 +354,7 @@ class _MobileLyricView extends StatelessWidget {
         );
 
         return LyricView(
+          key: ValueKey('lyrics-${state.lyrics.length}'),
           lines: state.lyrics,
           currentIndex: state.currentLyricIndex,
           textAlign: TextAlign.center,
@@ -709,6 +710,7 @@ class _DesktopLyricStage extends StatelessWidget {
         );
 
         return LyricView(
+          key: ValueKey('lyrics-${state.lyrics.length}'),
           lines: state.lyrics,
           currentIndex: state.currentLyricIndex,
           onLineTap: (i) => context.read<PlayerCubit>().seekToLyricIndex(i),
@@ -1295,6 +1297,7 @@ class _PlaybackModeButtonState extends State<_PlaybackModeButton> {
             child: InkWell(
               borderRadius: BorderRadius.circular(AppRadiusTokens.button),
               onTap: widget.onTap,
+              mouseCursor: SystemMouseCursors.click,
               child: AnimatedContainer(
                 duration: AppMotion.micro,
                 width: 42,
@@ -2776,6 +2779,7 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
             focusColor: colorScheme.primary.withValues(alpha: 0.08),
             splashColor: colorScheme.primary.withValues(alpha: 0.06),
             highlightColor: Colors.transparent,
+            mouseCursor: SystemMouseCursors.click,
             onTap: () async {
               await context.read<PlayerCubit>().playIndex(widget.index);
             },

@@ -14,6 +14,8 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
@@ -76,7 +78,10 @@ class _HomeViewState extends State<_HomeView> {
   Widget _buildBody(BuildContext context, HomeState state) {
     final hasHomeData = _hasHomeData(state);
     if (state.status == HomeStatus.loading && !hasHomeData) {
-      return const AppBodyStateView.loading();
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: AppSkeleton.grid(count: 6),
+      );
     }
 
     if (state.status == HomeStatus.failure && !hasHomeData) {
@@ -974,13 +979,15 @@ class _RecommendationTracksOverview extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 34),
-                  SizedBox(
-                    width: 260,
-                    height: 154,
-                    child: _RecommendationStack(
-                      artwork: artwork,
-                      caption: description,
+                  const SizedBox(width: 16),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 260),
+                    child: AspectRatio(
+                      aspectRatio: 260 / 154,
+                      child: _RecommendationStack(
+                        artwork: artwork,
+                        caption: description,
+                      ),
                     ),
                   ),
                 ],
@@ -1006,15 +1013,7 @@ Future<void> _addRecommendationTracksToQueue(
   final message = tracks.length == 1
       ? '已加入队列：${tracks.first.title}'
       : '已加入队列：${tracks.length} 首歌曲';
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  AppSnackBar.show(context, message);
 }
 
 class _RecommendationTracksSheet extends StatelessWidget {
@@ -1640,6 +1639,7 @@ class _TrackGridCardState extends State<_TrackGridCard> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(AppRadiusTokens.card),
                     onTap: () => widget.onTap(),
+                    mouseCursor: SystemMouseCursors.click,
                     onHighlightChanged: (pressed) =>
                         setState(() => _pressed = pressed),
                     child: Stack(
@@ -1816,6 +1816,7 @@ class _RecentPlayCardState extends State<_RecentPlayCard> {
                   child: InkWell(
                     onTap: () => widget.onTap(),
                     borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                    mouseCursor: SystemMouseCursors.click,
                     child: AnimatedContainer(
                       duration: AppMotion.short,
                       width: widget.cardWidth,

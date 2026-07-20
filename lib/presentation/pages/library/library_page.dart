@@ -15,6 +15,8 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
@@ -106,9 +108,9 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
-      return AppBodyStateView.loading(
-        title: _libraryLoadingTitle(state.currentFilter),
-        description: '请稍候，加载完成后会自动显示。',
+      return Padding(
+        padding: AppPageLayout.pagePadding(context),
+        child: AppSkeleton.grid(count: 6),
       );
     }
 
@@ -750,6 +752,7 @@ class _MobileLibraryPlayAllInlineButtonState
                 child: InkWell(
                   borderRadius: BorderRadius.circular(AppRadiusTokens.button),
                   onTap: widget.onPressed,
+                  mouseCursor: SystemMouseCursors.click,
                   onHighlightChanged: (pressed) =>
                       setState(() => _pressed = pressed),
                   splashColor: colorScheme.primary.withValues(alpha: 0.08),
@@ -866,6 +869,7 @@ class _MobileLibraryPlayAllButtonState
             child: InkWell(
               borderRadius: BorderRadius.circular(AppRadiusTokens.button),
               onTap: widget.onPressed,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               splashColor: colorScheme.onPrimary.withValues(alpha: 0.08),
@@ -987,29 +991,14 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
       child: IconButton(
         onPressed: () async {
           final cubit = context.read<LibraryCubit>();
-          final messenger = ScaffoldMessenger.of(context);
           final isFavorite = track.isFavorite;
           try {
             await cubit.toggleTrackFavorite(track.id);
             if (!context.mounted) return;
-            messenger.clearSnackBars();
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(isFavorite ? '已取消收藏' : '已收藏歌曲'),
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            AppSnackBar.show(context, isFavorite ? '已取消收藏' : '已收藏歌曲');
           } catch (_) {
             if (!context.mounted) return;
-            messenger.clearSnackBars();
-            messenger.showSnackBar(
-              SnackBar(
-                content: const Text('操作失败，请重试'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: colorScheme.error,
-              ),
-            );
+            AppSnackBar.show(context, '操作失败，请重试');
           }
         },
         icon: AnimatedSwitcher(
@@ -1103,6 +1092,7 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
             child: InkWell(
               borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
               onTap: widget.onTap,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               hoverColor: Colors.transparent,
@@ -1262,6 +1252,7 @@ class _GenreChip extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
+        mouseCursor: SystemMouseCursors.click,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(

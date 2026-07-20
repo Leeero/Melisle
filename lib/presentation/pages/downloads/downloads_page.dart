@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/presentation/blocs/downloads/downloa
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -573,9 +574,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
 
   Future<void> _chooseAndSave(BuildContext context) async {
     if (!_supportsDirectoryPicker) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('当前平台暂不支持选择文件夹')));
+      AppSnackBar.show(context, '当前平台暂不支持选择文件夹');
       return;
     }
 
@@ -590,9 +589,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
     } catch (_) {
       if (!context.mounted) return;
       setState(() => _choosing = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('无法打开文件夹选择器')));
+      AppSnackBar.show(context, '无法打开文件夹选择器');
     }
   }
 
@@ -610,15 +607,11 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
         _editing = false;
         _controller.text = savedPath;
       });
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('下载存储位置已更新')));
+      AppSnackBar.show(context, '下载存储位置已更新');
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(_formatDirectoryError(error))));
+      AppSnackBar.show(context, _formatDirectoryError(error));
     }
   }
 }
@@ -1107,9 +1100,7 @@ Future<void> _confirmDeleteDownload(
   if (!confirmed || !context.mounted) return;
   await onDelete();
   if (!context.mounted) return;
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text('已删除下载：${record.title}')));
+  AppSnackBar.show(context, '已删除下载：${record.title}');
 }
 
 String _storageDescription(int completedCount, int pendingCount) {

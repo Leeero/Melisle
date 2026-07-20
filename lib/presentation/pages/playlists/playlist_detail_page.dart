@@ -9,6 +9,7 @@ import 'package:cross_platform_music_player/presentation/blocs/playlists/playlis
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
@@ -564,6 +565,7 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
               borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
               onTap: widget.onTap,
               onLongPress: widget.onLongPress,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               hoverColor: Colors.transparent,
@@ -736,15 +738,7 @@ class _MobilePlaylistTrackIconButton extends StatelessWidget {
 Future<void> _addTrackToQueue(BuildContext context, MusicTrack track) async {
   await context.read<PlayerCubit>().addToQueue(track);
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text('已加入队列：${track.title}'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  AppSnackBar.show(context, '已加入队列：${track.title}');
 }
 
 class _PlaylistHero extends StatelessWidget {

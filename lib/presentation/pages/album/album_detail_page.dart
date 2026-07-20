@@ -397,6 +397,7 @@ class _AlbumArtistLine extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
               onTap: () => context.push('/artist/$artistId'),
+              mouseCursor: SystemMouseCursors.click,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
