@@ -1742,12 +1742,10 @@ Future<void> _showDesktopSleepTimerDialog(BuildContext context) {
 }
 
 Future<void> _showDesktopQueueDialog(BuildContext context) {
+  final playerCubit = context.read<PlayerCubit>();
   return _showDesktopSidePanel(
     context,
-    BlocProvider.value(
-      value: context.read<PlayerCubit>(),
-      child: const _DesktopQueueDialog(),
-    ),
+    _DesktopQueueDialog(playerCubit: playerCubit),
   );
 }
 
@@ -2408,7 +2406,9 @@ class _DesktopQualityDialog extends StatelessWidget {
 }
 
 class _DesktopQueueDialog extends StatefulWidget {
-  const _DesktopQueueDialog();
+  const _DesktopQueueDialog({required this.playerCubit});
+
+  final PlayerCubit playerCubit;
 
   @override
   State<_DesktopQueueDialog> createState() => _DesktopQueueDialogState();
@@ -2421,90 +2421,95 @@ class _DesktopQueueDialogState extends State<_DesktopQueueDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final playerCubit = widget.playerCubit;
 
-    return Material(
-      color: Colors.transparent,
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            right: 0,
-            bottom: 0,
-            child: _DesktopQueueSurface(
-              width: 360,
-              child: Column(
-                children: [
-                  BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) =>
-                        prev.queue.length != next.queue.length ||
-                        prev.currentIndex != next.currentIndex ||
-                        prev.isPlaying != next.isPlaying,
-                    builder: (context, state) {
-                      return _DesktopQueueHeader(
-                        count: state.queue.length,
-                        confirmingClear: _confirmingClear,
-                        onClearPressed: state.queue.isEmpty
-                            ? null
-                            : () {
-                                if (_confirmingClear) {
-                                  context.read<PlayerCubit>().clearQueue();
-                                  if (context.mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                  return;
-                                }
-
-                                setState(() => _confirmingClear = true);
-                              },
-                        onCancelClear: _confirmingClear
-                            ? () => setState(() => _confirmingClear = false)
-                            : null,
-                        onClosePressed: () => Navigator.of(context).pop(),
-                      );
-                    },
-                  ),
-                  Divider(
-                    height: 1,
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.24),
-                  ),
-                  Expanded(
-                    child: BlocBuilder<PlayerCubit, PlayerViewState>(
+    return BlocProvider.value(
+      value: playerCubit,
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              right: 0,
+              bottom: 0,
+              child: _DesktopQueueSurface(
+                width: 360,
+                child: Column(
+                  children: [
+                    BlocBuilder<PlayerCubit, PlayerViewState>(
                       buildWhen: (prev, next) =>
-                          prev.queue != next.queue ||
+                          prev.queue.length != next.queue.length ||
                           prev.currentIndex != next.currentIndex ||
                           prev.isPlaying != next.isPlaying,
                       builder: (context, state) {
-                        if (state.queue.isEmpty) {
-                          return const _DesktopQueueEmptyState();
-                        }
+                        return _DesktopQueueHeader(
+                          count: state.queue.length,
+                          confirmingClear: _confirmingClear,
+                          onClearPressed: state.queue.isEmpty
+                              ? null
+                              : () {
+                                  if (_confirmingClear) {
+                                    playerCubit.clearQueue();
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                    return;
+                                  }
 
-                        return ReorderableListView.builder(
-                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
-                          buildDefaultDragHandles: false,
-                          itemExtent: 60,
-                          proxyDecorator: _desktopQueueProxyDecorator,
-                          itemCount: state.queue.length,
-                          onReorder: context.read<PlayerCubit>().moveQueueItem,
-                          itemBuilder: (context, index) {
-                            final track = state.queue[index];
-                            final isCurrent = index == state.currentIndex;
-                            return _DesktopQueueItem(
-                              key: ValueKey('desktop-queue-${track.id}-$index'),
-                              index: index,
-                              track: track,
-                              isCurrent: isCurrent,
-                              isPlaying: state.isPlaying,
-                            );
-                          },
+                                  setState(() => _confirmingClear = true);
+                                },
+                          onCancelClear: _confirmingClear
+                              ? () => setState(() => _confirmingClear = false)
+                              : null,
+                          onClosePressed: () => Navigator.of(context).pop(),
                         );
                       },
                     ),
-                  ),
-                ],
+                    Divider(
+                      height: 1,
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.24),
+                    ),
+                    Expanded(
+                      child: BlocBuilder<PlayerCubit, PlayerViewState>(
+                        buildWhen: (prev, next) =>
+                            prev.queue != next.queue ||
+                            prev.currentIndex != next.currentIndex ||
+                            prev.isPlaying != next.isPlaying,
+                        builder: (context, state) {
+                          if (state.queue.isEmpty) {
+                            return const _DesktopQueueEmptyState();
+                          }
+
+                          return ReorderableListView.builder(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+                            buildDefaultDragHandles: false,
+                            itemExtent: 60,
+                            proxyDecorator: _desktopQueueProxyDecorator,
+                            itemCount: state.queue.length,
+                            onReorder: playerCubit.moveQueueItem,
+                            itemBuilder: (context, index) {
+                              final track = state.queue[index];
+                              final isCurrent = index == state.currentIndex;
+                              return _DesktopQueueItem(
+                                key: ValueKey('desktop-queue-${track.id}-$index'),
+                                index: index,
+                                track: track,
+                                isCurrent: isCurrent,
+                                isPlaying: state.isPlaying,
+                                playerCubit: playerCubit,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2724,12 +2729,14 @@ class _DesktopQueueItem extends StatefulWidget {
     required this.track,
     required this.isCurrent,
     required this.isPlaying,
+    required this.playerCubit,
   });
 
   final int index;
   final MusicTrack track;
   final bool isCurrent;
   final bool isPlaying;
+  final PlayerCubit playerCubit;
 
   @override
   State<_DesktopQueueItem> createState() => _DesktopQueueItemState();
@@ -2781,7 +2788,7 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
             highlightColor: Colors.transparent,
             mouseCursor: SystemMouseCursors.click,
             onTap: () async {
-              await context.read<PlayerCubit>().playIndex(widget.index);
+              await widget.playerCubit.playIndex(widget.index);
             },
             child: AnimatedContainer(
               duration: AppMotion.micro,
@@ -2838,43 +2845,40 @@ class _DesktopQueueItemState extends State<_DesktopQueueItem> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SizedBox(
-                    width: 64,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: AnimatedSwitcher(
-                        duration: AppMotion.micro,
-                        child: _hovered
-                            ? Row(
-                                key: const ValueKey('queue-actions'),
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _DesktopQueueItemActionButton(
-                                    icon: Icons.close_rounded,
-                                    tooltip: '移出队列',
-                                    onPressed: () => context
-                                        .read<PlayerCubit>()
-                                        .removeQueueItem(widget.index),
-                                  ),
-                                  _DesktopQueueDragHandle(
-                                    index: widget.index,
-                                    colorScheme: colorScheme,
-                                  ),
-                                ],
-                              )
-                            : Text(
-                                key: const ValueKey('queue-duration'),
-                                _format(widget.track.duration),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.muted,
-                                  fontSize: 11,
-                                  fontFeatures: [
-                                    const ui.FontFeature.tabularFigures(),
-                                  ],
-                                ),
+                  AnimatedSwitcher(
+                    duration: AppMotion.micro,
+                    child: _hovered
+                        ? Row(
+                            key: const ValueKey('queue-actions'),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _DesktopQueueItemActionButton(
+                                icon: Icons.close_rounded,
+                                tooltip: '移出队列',
+                                onPressed: () => widget.playerCubit
+                                    .removeQueueItem(widget.index),
                               ),
-                      ),
-                    ),
+                              _DesktopQueueDragHandle(
+                                index: widget.index,
+                                colorScheme: colorScheme,
+                              ),
+                            ],
+                          )
+                        : SizedBox(
+                            key: const ValueKey('queue-duration'),
+                            width: 48,
+                            child: Text(
+                              _format(widget.track.duration),
+                              textAlign: TextAlign.right,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.muted,
+                                fontSize: 11,
+                                fontFeatures: [
+                                  const ui.FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -2904,11 +2908,11 @@ class _DesktopQueueItemActionButton extends StatelessWidget {
       tooltip: tooltip,
       style: AppActionButtonStyle.icon(
         context,
-        size: 28,
-        iconSize: 16,
+        size: 26,
+        iconSize: 15,
         radius: AppRadiusTokens.desktopSm,
       ),
-      icon: Icon(icon, size: 16),
+      icon: Icon(icon, size: 15),
     );
   }
 }
@@ -2932,11 +2936,11 @@ class _DesktopQueueDragHandle extends StatelessWidget {
         child: ReorderableDragStartListener(
           index: index,
           child: SizedBox.square(
-            dimension: 28,
+            dimension: 26,
             child: Center(
               child: Icon(
                 Icons.drag_handle_rounded,
-                size: 17,
+                size: 15,
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
