@@ -58,6 +58,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
       label: '打开歌单《${playlist.name}》',
       button: true,
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedScale(
@@ -81,6 +82,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(widget.artworkRadius),
                       onTap: widget.onTap,
+                      mouseCursor: SystemMouseCursors.click,
                       onHighlightChanged: (pressed) =>
                           setState(() => _pressed = pressed),
                       child: AnimatedContainer(
@@ -89,6 +91,16 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(
                             widget.artworkRadius,
+                          ),
+                          border: Border.all(
+                            color: _hovered
+                                ? colorScheme.outlineVariant.withValues(
+                                    alpha: theme.brightness == Brightness.dark
+                                        ? 0.42
+                                        : 0.56,
+                                  )
+                                : Colors.transparent,
+                            width: 1.0,
                           ),
                           boxShadow: _hovered
                               ? [
@@ -215,6 +227,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
       label: '打开歌单《${playlist.name}》',
       button: true,
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedContainer(
@@ -229,6 +242,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: widget.onTap,
+              mouseCursor: SystemMouseCursors.click,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,

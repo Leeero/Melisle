@@ -127,6 +127,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                 widget.onTap();
               },
               onLongPress: widget.onLongPress,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               child: Padding(
@@ -232,6 +233,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                 widget.onTap();
               },
               onLongPress: widget.onLongPress,
+              mouseCursor: SystemMouseCursors.click,
               onHighlightChanged: (pressed) =>
                   setState(() => _pressed = pressed),
               hoverColor: Colors.transparent,

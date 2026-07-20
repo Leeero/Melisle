@@ -239,6 +239,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
               hoverColor: Colors.transparent,
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
+              mouseCursor: SystemMouseCursors.click,
               onFocusChange: (value) => setState(() => _focused = value),
               onTap: widget.onTap,
               child: LayoutBuilder(

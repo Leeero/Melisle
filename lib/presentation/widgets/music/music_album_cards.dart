@@ -57,6 +57,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
       label: '打开专辑《${album.title}》',
       button: true,
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedScale(
@@ -80,6 +81,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(widget.artworkRadius),
                       onTap: widget.onTap,
+                      mouseCursor: SystemMouseCursors.click,
                       onHighlightChanged: (pressed) =>
                           setState(() => _pressed = pressed),
                       child: AnimatedContainer(
@@ -88,6 +90,16 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(
                             widget.artworkRadius,
+                          ),
+                          border: Border.all(
+                            color: _hovered
+                                ? colorScheme.outlineVariant.withValues(
+                                    alpha: theme.brightness == Brightness.dark
+                                        ? 0.42
+                                        : 0.56,
+                                  )
+                                : Colors.transparent,
+                            width: 1.0,
                           ),
                           boxShadow: _hovered
                               ? [
