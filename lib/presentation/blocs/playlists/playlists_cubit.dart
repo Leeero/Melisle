@@ -8,7 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class PlaylistsCubit extends Cubit<PlaylistsState> {
   PlaylistsCubit(this._fetchPlaylists) : super(const PlaylistsState.initial());
 
-  static const _pageSize = 100;
+  static const _pageSize = FetchPlaylists.defaultPageSize;
   static const _searchDebounce = Duration(milliseconds: 300);
 
   final FetchPlaylists _fetchPlaylists;

@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
@@ -25,6 +26,7 @@ void main() {
         loginWithEmby: LoginWithEmby(repository),
         restoreSession: RestoreSession(repository),
         logout: Logout(repository),
+        fetchPlaylists: FetchPlaylists(repository),
         devLoginCredentials: const AuthDevLoginCredentials(
           serverUrl: 'https://music.example.test',
           username: 'dev-user',
@@ -50,6 +52,8 @@ void main() {
       expect(repository.lastLoginServerUrl, 'https://music.example.test');
       expect(repository.lastLoginUsername, 'dev-user');
       expect(repository.lastLoginPassword, 'dev-token');
+      expect(repository.fetchPlaylistsCalls, 1);
+      expect(repository.lastPlaylistLimit, FetchPlaylists.defaultPageSize);
 
       await cubit.close();
     });
@@ -62,6 +66,8 @@ class _AuthRepositoryFake implements MusicRepository {
   String? lastLoginServerUrl;
   String? lastLoginUsername;
   String? lastLoginPassword;
+  int fetchPlaylistsCalls = 0;
+  int? lastPlaylistLimit;
 
   @override
   Future<AuthSession?> restoreSession() async => session;
@@ -120,7 +126,11 @@ class _AuthRepositoryFake implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async => [];
+  }) async {
+    fetchPlaylistsCalls += 1;
+    lastPlaylistLimit = limit;
+    return [];
+  }
 
   @override
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async => [];

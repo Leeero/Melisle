@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
@@ -101,6 +102,7 @@ final class AppBootstrap {
       loginWithEmby: LoginWithEmby(repository),
       restoreSession: RestoreSession(repository),
       logout: Logout(repository),
+      fetchPlaylists: FetchPlaylists(repository),
       devLoginCredentials: DevLoginEnvironment.credentials(),
     );
 

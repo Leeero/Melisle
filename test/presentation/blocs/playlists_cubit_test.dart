@@ -23,10 +23,10 @@ void main() {
     await cubit.load();
 
     expect(repository.requests, [
-      const _PlaylistRequest(limit: 100, startIndex: 0),
+      const _PlaylistRequest(limit: 30, startIndex: 0),
     ]);
     expect(cubit.state.status, PlaylistsStatus.success);
-    expect(cubit.state.allPlaylists.length, 100);
+    expect(cubit.state.allPlaylists.length, 30);
     expect(cubit.state.hasMore, isTrue);
   });
 
@@ -48,10 +48,10 @@ void main() {
     await cubit.loadMore();
 
     expect(repository.requests, [
-      const _PlaylistRequest(limit: 100, startIndex: 0),
-      const _PlaylistRequest(limit: 100, startIndex: 100),
+      const _PlaylistRequest(limit: 30, startIndex: 0),
+      const _PlaylistRequest(limit: 30, startIndex: 30),
     ]);
-    expect(cubit.state.allPlaylists.length, 200);
+    expect(cubit.state.allPlaylists.length, 60);
     expect(cubit.state.hasMore, isTrue);
   });
 
@@ -69,8 +69,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 350));
 
     expect(repository.requests, [
-      const _PlaylistRequest(limit: 100, startIndex: 0),
-      const _PlaylistRequest(limit: 100, startIndex: 0, searchQuery: '通勤'),
+      const _PlaylistRequest(limit: 30, startIndex: 0),
+      const _PlaylistRequest(limit: 30, startIndex: 0, searchQuery: '通勤'),
     ]);
     expect(cubit.state.status, PlaylistsStatus.success);
     expect(cubit.state.searchQuery, '通勤');

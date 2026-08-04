@@ -4,6 +4,8 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 class FetchPlaylists {
   const FetchPlaylists(this._repository);
 
+  static const defaultPageSize = 30;
+
   final MusicRepository _repository;
 
   Future<List<MusicPlaylist>> call({
