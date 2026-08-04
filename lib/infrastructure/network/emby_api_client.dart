@@ -299,9 +299,10 @@ class EmbyApiClient {
     int startIndex = 0,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '${session.normalizedServerUrl}/Playlists/$playlistId/Items',
+      '${session.normalizedServerUrl}/Users/${session.userId}/Items',
       queryParameters: {
-        'UserId': session.userId,
+        'ParentId': playlistId,
+        'IncludeItemTypes': 'Audio',
         'Fields': _trackListFields,
         'ImageTypeLimit': 1,
         'Limit': ?limit,

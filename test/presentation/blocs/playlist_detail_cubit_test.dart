@@ -14,6 +14,11 @@ void main() {
       final cubit = PlaylistDetailCubit(FetchPlaylistTracks(repo));
 
       await cubit.load('playlist_1');
+
+      expect(repo.calls, hasLength(1));
+      expect(repo.calls.single.limit, 20);
+      expect(repo.calls.single.startIndex, 0);
+
       final tracks = await cubit.ensureAllTracksLoaded();
 
       expect(tracks.length, 20);

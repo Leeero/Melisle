@@ -18,6 +18,8 @@ class SubsonicApiClient {
   final Dio _dio;
   final _playlistEntryCache =
       <String, _CacheEntry<List<Map<String, dynamic>>>>{};
+  final _playlistEntryRequests =
+      <String, Future<List<Map<String, dynamic>>>>{};
 
   static const _apiVersion = '1.16.1';
   static const _clientName = AppConstants.apiClientName;
@@ -300,13 +302,32 @@ class SubsonicApiClient {
       return cached.value;
     }
 
+    final inFlight = _playlistEntryRequests[key];
+    if (inFlight != null) return inFlight;
+
+    final request = _loadPlaylistEntryMaps(session, playlistId, key);
+    _playlistEntryRequests[key] = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_playlistEntryRequests[key], request)) {
+        _playlistEntryRequests.remove(key);
+      }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPlaylistEntryMaps(
+    AuthSession session,
+    String playlistId,
+    String cacheKey,
+  ) async {
     final payload = await _request(
       session,
       'getPlaylist',
       queryParameters: {'id': playlistId},
     );
     final entries = _readMaps(_asMap(payload['playlist'])?['entry']);
-    _playlistEntryCache[key] = _CacheEntry(
+    _playlistEntryCache[cacheKey] = _CacheEntry(
       value: entries,
       expiresAt: DateTime.now().add(_playlistEntryCacheTtl),
     );
