@@ -303,7 +303,7 @@ class _AlbumHeroArtwork extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColorTokens.darkScaffold.withValues(alpha: 0.22),
+            color: colorScheme.scrim.withValues(alpha: 0.22),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),

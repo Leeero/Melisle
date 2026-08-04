@@ -50,7 +50,6 @@ abstract final class AppTheme {
   static const _lightOutlineVariant = AppColorTokens.lightOutlineVariant;
 
   // — Shared accents
-  static const accent = AppColorTokens.accent;
   static const darkLyricHighlight = AppColorTokens.darkLyricHighlight;
   static const lightLyricHighlight = AppColorTokens.lightLyricHighlight;
 
@@ -105,7 +104,13 @@ abstract final class AppTheme {
             onSecondaryContainer: _darkOnSurface,
             error: AppColorTokens.darkDanger,
             onError: _darkScaffold,
+            errorContainer: const Color(0xFF4A171B),
+            onErrorContainer: const Color(0xFFFFDAD9),
             surface: _darkSurface,
+            surfaceDim: _darkScaffold,
+            surfaceBright: _darkSurfaceHighest,
+            surfaceContainerLowest: _darkScaffold,
+            surfaceContainerLow: _darkSurfaceSidebar,
             surfaceContainer: _darkSurfaceHigh,
             surfaceContainerHigh: _darkSurfaceHigh,
             surfaceContainerHighest: _darkSurfaceHighest,
@@ -115,6 +120,10 @@ abstract final class AppTheme {
             outlineVariant: _darkOutlineVariant,
             shadow: Colors.black,
             scrim: Colors.black,
+            inverseSurface: _darkOnSurface,
+            onInverseSurface: _darkScaffold,
+            inversePrimary: _lightPrimary,
+            surfaceTint: Colors.transparent,
           )
         : baseScheme.copyWith(
             primary: _lightPrimary,
@@ -127,14 +136,24 @@ abstract final class AppTheme {
             onSecondaryContainer: _lightOnSurface,
             error: AppColorTokens.lightDanger,
             onError: const Color(0xFFFFFAF8),
+            errorContainer: const Color(0xFFFFDAD9),
+            onErrorContainer: const Color(0xFF410006),
             surface: _lightSurface,
+            surfaceDim: const Color(0xFFE1E9E8),
+            surfaceBright: _lightSurface,
+            surfaceContainerLowest: _lightSurface,
+            surfaceContainerLow: const Color(0xFFFBFEFE),
             surfaceContainer: _lightSurfaceHigh,
-            surfaceContainerHigh: _lightSurfaceHigh,
+            surfaceContainerHigh: const Color(0xFFF4FAF9),
             surfaceContainerHighest: _lightSurfaceHighest,
             onSurface: _lightOnSurface,
             onSurfaceVariant: _lightOnSurfaceVariant,
             outline: _lightOutline,
             outlineVariant: _lightOutlineVariant,
+            inverseSurface: const Color(0xFF253033),
+            onInverseSurface: const Color(0xFFF1F6F6),
+            inversePrimary: _darkPrimary,
+            surfaceTint: Colors.transparent,
           );
 
     // --- TextTheme ---
@@ -873,8 +892,8 @@ abstract final class AppTheme {
 /// Extension on [ThemeData] to expose Melisle-specific accent colours
 /// that don't map directly to Material 3 [ColorScheme].
 extension MelisleThemeX on ThemeData {
-  /// Playback-green for CTA buttons and active progress segments.
-  Color get accentGreen => AppTheme.accent;
+  /// Brand accent for CTA buttons and active progress segments.
+  Color get accentGreen => colorScheme.primary;
 
   /// Lyric highlight tuned for Melisle's deep-blue / purple palette.
   Color get lyricHighlight => brightness == Brightness.dark
@@ -888,6 +907,14 @@ extension MelisleThemeX on ThemeData {
   Color get muted => brightness == Brightness.dark
       ? AppTheme._darkMuted
       : AppTheme._lightMuted;
+
+  Color get success => brightness == Brightness.dark
+      ? AppColorTokens.darkSuccess
+      : AppColorTokens.lightSuccess;
+
+  Color get warning => brightness == Brightness.dark
+      ? AppColorTokens.darkWarn
+      : AppColorTokens.lightWarn;
 
   Color get accentHover => brightness == Brightness.dark
       ? AppColorTokens.darkPrimaryHover

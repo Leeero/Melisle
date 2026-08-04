@@ -47,7 +47,10 @@ class _LoginPageState extends State<LoginPage> {
             ..hideCurrentSnackBar()
             ..showSnackBar(
               SnackBar(
-                content: Text(message),
+                content: Text(
+                  message,
+                  style: TextStyle(color: colorScheme.onErrorContainer),
+                ),
                 behavior: SnackBarBehavior.floating,
                 backgroundColor: colorScheme.errorContainer,
               ),
@@ -99,7 +102,9 @@ class _LoginGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(color: _LoginPalette.bg),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -118,7 +123,9 @@ class _LoginGate extends StatelessWidget {
                 top: size.height * 0.18 - 280,
                 child: _RadialWash(
                   size: 560,
-                  color: _LoginPalette.accent.withValues(alpha: 0.10),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.10),
                 ),
               ),
               SafeArea(
@@ -177,7 +184,7 @@ class _MobileConnectView extends StatelessWidget {
           Text(
             '音乐源',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: _LoginPalette.fgSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
               letterSpacing: 0,
             ),
@@ -219,19 +226,19 @@ class _MobileConnectHero extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  _LoginPalette.musicWarm,
-                  _LoginPalette.musicRose,
-                  _LoginPalette.accent,
+                  Theme.of(context).musicWarm,
+                  Theme.of(context).musicRose,
+                  Theme.of(context).colorScheme.primary,
                 ],
                 stops: [0, 0.55, 1],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _LoginPalette.musicRose.withValues(alpha: 0.22),
+                  color: Theme.of(context).musicRose.withValues(alpha: 0.22),
                   blurRadius: 38,
                   offset: const Offset(0, 16),
                 ),
@@ -248,7 +255,9 @@ class _MobileConnectHero extends StatelessWidget {
                     height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _LoginPalette.surface.withValues(alpha: 0.34),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.34),
                     ),
                   ),
                 ),
@@ -256,7 +265,7 @@ class _MobileConnectHero extends StatelessWidget {
                   child: Text(
                     '乐',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: _LoginPalette.surface,
+                      color: Theme.of(context).colorScheme.surface,
                       fontSize: 27,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0,
@@ -272,7 +281,7 @@ class _MobileConnectHero extends StatelessWidget {
               fontSize: 31,
               height: 1.08,
               fontWeight: FontWeight.w700,
-              color: _LoginPalette.fg,
+              color: Theme.of(context).colorScheme.onSurface,
               letterSpacing: 0,
             ),
           ),
@@ -283,7 +292,7 @@ class _MobileConnectHero extends StatelessWidget {
               '选择音乐源，进入自己的私人曲库。',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 height: 1.45,
-                color: _LoginPalette.fgSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -319,7 +328,9 @@ class _ConnectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: _LoginPalette.fg.withValues(alpha: 0.10),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.10),
             blurRadius: 70,
             offset: const Offset(0, 24),
           ),
@@ -330,18 +341,20 @@ class _ConnectCard extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             border: Border.all(
-              color: _LoginPalette.borderLight.withValues(alpha: 0.72),
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.72),
             ),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
                 Color.lerp(
-                  _LoginPalette.surface,
-                  _LoginPalette.musicTeal,
+                  Theme.of(context).colorScheme.surface,
+                  Theme.of(context).musicTeal,
                   0.06,
                 )!,
-                _LoginPalette.surface,
+                Theme.of(context).colorScheme.surface,
               ],
             ),
           ),
@@ -352,7 +365,7 @@ class _ConnectCard extends StatelessWidget {
                 top: -56,
                 child: _RadialWash(
                   size: 240,
-                  color: _LoginPalette.musicWarm.withValues(alpha: 0.20),
+                  color: Theme.of(context).musicWarm.withValues(alpha: 0.20),
                 ),
               ),
               Positioned(
@@ -368,22 +381,22 @@ class _ConnectCard extends StatelessWidget {
                         end: Alignment.bottomRight,
                         colors: [
                           Color.lerp(
-                            _LoginPalette.surface,
-                            _LoginPalette.musicWarm,
+                            Theme.of(context).colorScheme.surface,
+                            Theme.of(context).musicWarm,
                             0.70,
                           )!,
                           Color.lerp(
-                            _LoginPalette.fg,
-                            _LoginPalette.musicRose,
+                            Theme.of(context).colorScheme.onSurface,
+                            Theme.of(context).musicRose,
                             0.89,
                           )!,
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _LoginPalette.musicWarm.withValues(
-                            alpha: 0.22,
-                          ),
+                          color: Theme.of(
+                            context,
+                          ).musicWarm.withValues(alpha: 0.22),
                           blurRadius: 48,
                           offset: const Offset(0, 20),
                         ),
@@ -409,7 +422,7 @@ class _ConnectCard extends StatelessWidget {
                               fontSize: 30,
                               height: 1.1,
                               fontWeight: FontWeight.w700,
-                              color: _LoginPalette.fg,
+                              color: Theme.of(context).colorScheme.onSurface,
                               letterSpacing: 0,
                             ),
                       ),
@@ -421,7 +434,9 @@ class _ConnectCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 height: 1.55,
-                                color: _LoginPalette.fgSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                         ),
                       ),
@@ -456,14 +471,18 @@ class _ConnectMark extends StatelessWidget {
       height: 46,
       margin: const EdgeInsets.only(bottom: 22),
       decoration: BoxDecoration(
-        color: Color.lerp(_LoginPalette.fg, _LoginPalette.musicWarm, 0.12),
+        color: Color.lerp(
+          Theme.of(context).colorScheme.onSurface,
+          Theme.of(context).musicWarm,
+          0.12,
+        ),
         borderRadius: BorderRadius.circular(15),
       ),
       alignment: Alignment.center,
       child: Text(
         '乐',
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: _LoginPalette.surface,
+          color: Theme.of(context).colorScheme.surface,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
         ),
@@ -562,7 +581,7 @@ class _ConnectFieldLabel extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: _LoginPalette.fgSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             letterSpacing: 0,
           ),
         ),
@@ -586,9 +605,11 @@ class _ServiceOptions extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: _LoginPalette.surfaceRaised.withValues(alpha: 0.82),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _LoginPalette.borderLight),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(6),
@@ -685,21 +706,25 @@ class _MobileServicePill extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? Color.lerp(
-                      _LoginPalette.surface,
-                      _LoginPalette.musicWarm,
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(context).musicWarm,
                       0.16,
                     )
-                  : _LoginPalette.surface.withValues(alpha: 0.82),
+                  : Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.82),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 width: 0.5,
                 color: selected
                     ? Color.lerp(
-                        _LoginPalette.border,
-                        _LoginPalette.accent,
+                        Theme.of(context).colorScheme.outline,
+                        Theme.of(context).colorScheme.primary,
                         0.42,
                       )!
-                    : _LoginPalette.borderLight.withValues(alpha: 0.78),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.78),
               ),
             ),
             child: Material(
@@ -707,10 +732,12 @@ class _MobileServicePill extends StatelessWidget {
               child: InkWell(
                 onTap: onPressed,
                 borderRadius: BorderRadius.circular(18),
-                splashColor: _LoginPalette.accent.withValues(alpha: 0.08),
-                highlightColor: _LoginPalette.borderLight.withValues(
-                  alpha: 0.42,
-                ),
+                splashColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.08),
+                highlightColor: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.42),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -730,7 +757,7 @@ class _MobileServicePill extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _LoginPalette.fg,
+                          color: Theme.of(context).colorScheme.onSurface,
                           letterSpacing: 0,
                         ),
                       ),
@@ -772,13 +799,15 @@ class _ServiceOption extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 86),
           decoration: BoxDecoration(
             color: selected
-                ? _LoginPalette.surface
-                : _LoginPalette.surface.withValues(alpha: 0),
+                ? Theme.of(context).colorScheme.surface
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(18),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: _LoginPalette.fg.withValues(alpha: 0.08),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.08),
                       blurRadius: 28,
                       offset: const Offset(0, 10),
                     ),
@@ -790,25 +819,43 @@ class _ServiceOption extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
               hoverColor: selected
-                  ? _LoginPalette.surface.withValues(alpha: 0)
-                  : _LoginPalette.surface.withValues(alpha: 0.78),
-              focusColor: _LoginPalette.accent.withValues(alpha: 0.08),
-              splashColor: _LoginPalette.accent.withValues(alpha: 0.08),
-              highlightColor: _LoginPalette.surface.withValues(alpha: 0),
+                  ? Theme.of(context).colorScheme.surface.withValues(alpha: 0)
+                  : Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.78),
+              focusColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.08),
+              splashColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.08),
+              highlightColor: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0),
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (selected) {
-                  return _LoginPalette.surface.withValues(alpha: 0);
+                  return Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0);
                 }
                 if (states.contains(WidgetState.pressed)) {
-                  return _LoginPalette.accent.withValues(alpha: 0.08);
+                  return Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.08);
                 }
                 if (states.contains(WidgetState.hovered)) {
-                  return _LoginPalette.surface.withValues(alpha: 0.78);
+                  return Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.78);
                 }
                 if (states.contains(WidgetState.focused)) {
-                  return _LoginPalette.accent.withValues(alpha: 0.08);
+                  return Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.08);
                 }
-                return _LoginPalette.surface.withValues(alpha: 0);
+                return Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0);
               }),
               onTap: onPressed,
               child: Stack(
@@ -829,7 +876,7 @@ class _ServiceOption extends StatelessWidget {
                               ?.copyWith(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: _LoginPalette.fg,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                         ),
                         const SizedBox(height: 2),
@@ -840,7 +887,7 @@ class _ServiceOption extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 height: 1.3,
-                                color: _LoginPalette.muted,
+                                color: Theme.of(context).muted,
                                 letterSpacing: 0,
                               ),
                         ),
@@ -857,10 +904,10 @@ class _ServiceOption extends StatelessWidget {
                           borderRadius: BorderRadius.circular(
                             AppRadiusTokens.button,
                           ),
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             colors: [
-                              _LoginPalette.musicWarm,
-                              _LoginPalette.musicTeal,
+                              Theme.of(context).musicWarm,
+                              Theme.of(context).musicTeal,
                             ],
                           ),
                         ),
@@ -894,45 +941,51 @@ class _ServiceDisc extends StatelessWidget {
                 startAngle: math.pi / 9,
                 colors: [
                   Color.lerp(
-                    _LoginPalette.musicWarm,
-                    _LoginPalette.surface,
+                    Theme.of(context).musicWarm,
+                    Theme.of(context).colorScheme.surface,
                     0.35,
                   )!,
                   Color.lerp(
-                    _LoginPalette.musicRose,
-                    _LoginPalette.surface,
+                    Theme.of(context).musicRose,
+                    Theme.of(context).colorScheme.surface,
                     0.45,
                   )!,
                   Color.lerp(
-                    _LoginPalette.accent,
-                    _LoginPalette.surface,
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.surface,
                     0.48,
                   )!,
                   Color.lerp(
-                    _LoginPalette.musicWarm,
-                    _LoginPalette.surface,
+                    Theme.of(context).musicWarm,
+                    Theme.of(context).colorScheme.surface,
                     0.35,
                   )!,
                 ],
               )
             : RadialGradient(
                 colors: [
-                  _LoginPalette.surface,
-                  _LoginPalette.surface,
+                  Theme.of(context).colorScheme.surface,
+                  Theme.of(context).colorScheme.surface,
                   Color.lerp(
-                    _LoginPalette.musicTeal,
-                    _LoginPalette.surface,
+                    Theme.of(context).musicTeal,
+                    Theme.of(context).colorScheme.surface,
                     0.58,
                   )!,
-                  Color.lerp(_LoginPalette.musicRose, _LoginPalette.fg, 0.40)!,
+                  Color.lerp(
+                    Theme.of(context).musicRose,
+                    Theme.of(context).colorScheme.onSurface,
+                    0.40,
+                  )!,
                 ],
                 stops: const [0.0, 0.17, 0.44, 1.0],
               ),
         boxShadow: [
           BoxShadow(
             color: mobile
-                ? _LoginPalette.surface.withValues(alpha: 0.42)
-                : _LoginPalette.fg.withValues(alpha: 0.08),
+                ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.42)
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 0,
             spreadRadius: 1,
           ),
@@ -944,12 +997,16 @@ class _ServiceDisc extends StatelessWidget {
         height: mobile ? 6 : 7,
         decoration: BoxDecoration(
           color: mobile
-              ? _LoginPalette.fg.withValues(alpha: 0.18)
-              : _LoginPalette.surface,
+              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18)
+              : Theme.of(context).colorScheme.surface,
           shape: BoxShape.circle,
           border: mobile
               ? null
-              : Border.all(color: _LoginPalette.fg.withValues(alpha: 0.10)),
+              : Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.10),
+                ),
         ),
       ),
     );
@@ -973,11 +1030,13 @@ class _MobileLoginFields extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: _LoginPalette.surface.withValues(alpha: 0.96),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           width: 0.5,
-          color: _LoginPalette.borderLight.withValues(alpha: 0.70),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.70),
         ),
       ),
       child: ClipRRect(
@@ -1039,7 +1098,7 @@ class _MobileFieldDivider extends StatelessWidget {
       height: 0.5,
       thickness: 0.5,
       indent: 16,
-      color: _LoginPalette.borderLight,
+      color: Theme.of(context).colorScheme.outlineVariant,
     );
   }
 }
@@ -1080,7 +1139,7 @@ class _MobileLoginTextField extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 15,
-                color: _LoginPalette.fg,
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: 0,
               ),
             ),
@@ -1097,14 +1156,14 @@ class _MobileLoginTextField extends StatelessWidget {
               onFieldSubmitted: onFieldSubmitted,
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _LoginPalette.fg,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 height: 1.2,
               ),
-              cursorColor: _LoginPalette.accent,
+              cursorColor: Theme.of(context).colorScheme.primary,
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: TextStyle(color: _LoginPalette.muted),
+                hintStyle: TextStyle(color: Theme.of(context).muted),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -1153,11 +1212,14 @@ class _ConnectTextField extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: _LoginPalette.accent, width: 1),
+      borderSide: BorderSide(
+        color: Theme.of(context).colorScheme.primary,
+        width: 1,
+      ),
     );
     final enabledBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: _LoginPalette.border),
+      borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
     );
 
     return _ConnectFieldLabel(
@@ -1170,17 +1232,18 @@ class _ConnectTextField extends StatelessWidget {
         obscureText: obscureText,
         validator: validator,
         onFieldSubmitted: onFieldSubmitted,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: _LoginPalette.fg, height: 1.2),
-        cursorColor: _LoginPalette.accent,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          height: 1.2,
+        ),
+        cursorColor: Theme.of(context).colorScheme.primary,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(
-            color: _LoginPalette.muted.withValues(alpha: 0.56),
+            color: Theme.of(context).muted.withValues(alpha: 0.56),
           ),
           filled: true,
-          fillColor: _LoginPalette.surfaceRaised,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
@@ -1221,14 +1284,14 @@ class _ConnectActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 42),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                backgroundColor: _LoginPalette.accent,
-                foregroundColor: _LoginPalette.surface,
-                disabledBackgroundColor: _LoginPalette.accent.withValues(
-                  alpha: 0.58,
-                ),
-                disabledForegroundColor: _LoginPalette.surface.withValues(
-                  alpha: 0.82,
-                ),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                disabledBackgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.58),
+                disabledForegroundColor: Theme.of(
+                  context,
+                ).colorScheme.onPrimary.withValues(alpha: 0.82),
                 shape: const StadiumBorder(),
                 textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w600,
@@ -1242,7 +1305,7 @@ class _ConnectActions extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: _LoginPalette.surface,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : const Icon(Icons.check_rounded, size: 18),
@@ -1276,14 +1339,14 @@ class _MobileConnectActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
                 padding: const EdgeInsets.symmetric(horizontal: 18),
-                backgroundColor: _LoginPalette.fg,
-                foregroundColor: _LoginPalette.bg,
-                disabledBackgroundColor: _LoginPalette.fg.withValues(
-                  alpha: 0.72,
-                ),
-                disabledForegroundColor: _LoginPalette.bg.withValues(
-                  alpha: 0.82,
-                ),
+                backgroundColor: Theme.of(context).colorScheme.onSurface,
+                foregroundColor: Theme.of(context).scaffoldBackgroundColor,
+                disabledBackgroundColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.72),
+                disabledForegroundColor: Theme.of(
+                  context,
+                ).scaffoldBackgroundColor.withValues(alpha: 0.82),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -1322,19 +1385,19 @@ class _ConnectStatus extends StatelessWidget {
     final status = switch (state.status) {
       AuthStatus.loading => (
         text: '正在验证服务器与账号…',
-        color: _LoginPalette.muted,
-        background: _LoginPalette.surfaceRaised,
-        border: _LoginPalette.borderLight,
+        color: Theme.of(context).muted,
+        background: Theme.of(context).colorScheme.surfaceContainerHigh,
+        border: Theme.of(context).colorScheme.outlineVariant,
       ),
       AuthStatus.authenticated => (
         text: '连接成功，正在进入乐岛',
-        color: _LoginPalette.success,
+        color: Theme.of(context).success,
         background: Color.lerp(
-          _LoginPalette.surface,
-          _LoginPalette.success,
+          Theme.of(context).colorScheme.surface,
+          Theme.of(context).success,
           0.10,
         )!,
-        border: _LoginPalette.success.withValues(alpha: 0.20),
+        border: Theme.of(context).success.withValues(alpha: 0.20),
       ),
       AuthStatus.failure => (
         text: '连接失败，请检查信息',
@@ -1344,15 +1407,15 @@ class _ConnectStatus extends StatelessWidget {
       ),
       AuthStatus.unknown => (
         text: '正在恢复会话…',
-        color: _LoginPalette.muted,
-        background: _LoginPalette.surfaceRaised,
-        border: _LoginPalette.borderLight,
+        color: Theme.of(context).muted,
+        background: Theme.of(context).colorScheme.surfaceContainerHigh,
+        border: Theme.of(context).colorScheme.outlineVariant,
       ),
       AuthStatus.unauthenticated => (
         text: '等待登录',
-        color: _LoginPalette.muted,
-        background: _LoginPalette.surfaceRaised,
-        border: _LoginPalette.borderLight,
+        color: Theme.of(context).muted,
+        background: Theme.of(context).colorScheme.surfaceContainerHigh,
+        border: Theme.of(context).colorScheme.outlineVariant,
       ),
     };
 
@@ -1445,20 +1508,4 @@ class _RadialWash extends StatelessWidget {
       ),
     );
   }
-}
-
-abstract final class _LoginPalette {
-  static const bg = Color(0xFFF7FCFC);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceRaised = Color(0xFFFAFEFE);
-  static const fg = Color(0xFF070F11);
-  static const fgSecondary = Color(0xFF444F52);
-  static const muted = Color(0xFF6E7A7B);
-  static const border = Color(0xFFD8DEDD);
-  static const borderLight = Color(0xFFE8ECEC);
-  static const accent = Color(0xFF1A9480);
-  static const musicWarm = Color(0xFFD6A771);
-  static const musicRose = Color(0xFFDC937C);
-  static const musicTeal = Color(0xFF45A592);
-  static const success = Color(0xFF308639);
 }

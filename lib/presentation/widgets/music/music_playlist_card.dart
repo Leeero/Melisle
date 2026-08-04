@@ -149,14 +149,14 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                   opacity: _hovered ? 1 : 0,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: AppColorTokens.darkScaffold
+                                      color: Theme.of(context).colorScheme.scrim
                                           .withValues(alpha: 0.12),
                                     ),
                                     child: Center(
                                       child: Icon(
                                         Icons.play_circle_fill_rounded,
                                         size: compact ? 34 : 42,
-                                        color: AppColorTokens.lightScaffold
+                                        color: AppColorTokens.onArtworkScrim
                                             .withValues(alpha: 0.88),
                                       ),
                                     ),
@@ -308,7 +308,7 @@ class _PlaylistCountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColorTokens.darkScaffold.withValues(alpha: 0.62),
+        color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -322,13 +322,13 @@ class _PlaylistCountBadge extends StatelessWidget {
             Icon(
               Icons.queue_music_rounded,
               size: compact ? 11 : 13,
-              color: const Color(0xFFF6F8FC),
+              color: AppColorTokens.onArtworkScrim,
             ),
             SizedBox(width: compact ? 3 : 4),
             Text(
               '$count',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: const Color(0xFFF6F8FC),
+                color: AppColorTokens.onArtworkScrim,
                 fontWeight: FontWeight.w700,
                 fontSize: compact ? 10 : null,
                 height: 1,

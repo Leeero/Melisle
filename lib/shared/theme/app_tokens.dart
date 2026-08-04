@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColorTokens {
-  static const seed = Color(0xFF1A9480);
+  static const seed = Color(0xFF117E6E);
 
   // Keep these values aligned with design.md.
   static const darkScaffold = Color(0xFF0C1315);
@@ -15,30 +15,30 @@ abstract final class AppColorTokens {
   static const lightSurfaceHigh = Color(0xFFFAFEFE);
   static const lightSurfaceHighest = Color(0xFFF1F9F8);
   static const lightSurfaceSidebar = Color(0xFFF1F9F8);
+  static const onArtworkScrim = Color(0xFFF6F8FC);
 
   static const darkPrimary = Color(0xFF46B49E);
-  static const darkPrimaryHover = Color(0xFF41C7AE);
+  static const darkPrimaryHover = Color(0xFF5CC5AF);
   static const darkPrimaryContainer = Color(0xFF062D26);
   static const darkSecondary = Color(0xFF5FB7A5);
   static const darkSecondaryContainer = Color(0xFF122C26);
   static const darkOnSurface = Color(0xFFE3E9E9);
   static const darkOnSurfaceVariant = Color(0xFF96A1A1);
-  static const darkMuted = Color(0xFF697475);
+  static const darkMuted = Color(0xFF7D898A);
   static const darkOutline = Color(0xFF2B3233);
   static const darkOutlineVariant = Color(0xFF222829);
 
-  static const lightPrimary = Color(0xFF1A9480);
-  static const lightPrimaryHover = Color(0xFF00856F);
+  static const lightPrimary = Color(0xFF117E6E);
+  static const lightPrimaryHover = Color(0xFF0B695F);
   static const lightPrimaryContainer = Color(0xFFD4F1E9);
   static const lightSecondary = Color(0xFF45A592);
   static const lightSecondaryContainer = Color(0xFFD9F4ED);
   static const lightOnSurface = Color(0xFF070F11);
   static const lightOnSurfaceVariant = Color(0xFF444F52);
-  static const lightMuted = Color(0xFF6E7A7B);
+  static const lightMuted = Color(0xFF647173);
   static const lightOutline = Color(0xFFD8DEDD);
   static const lightOutlineVariant = Color(0xFFE8ECEC);
 
-  static const accent = lightPrimary;
   static const darkLyricHighlight = Color(0xFFD6917B);
   static const lightLyricHighlight = Color(0xFF20373B);
 
@@ -58,12 +58,12 @@ abstract final class AppColorTokens {
   static const darkMusicTealSoft = Color(0xFF122C26);
   static const darkMusicInk = Color(0xFFBECECF);
 
-  static const lightSuccess = Color(0xFF308639);
-  static const lightWarn = Color(0xFFCA8A10);
-  static const lightDanger = Color(0xFFC53637);
-  static const darkSuccess = Color(0xFF46B49E);
-  static const darkWarn = Color(0xFFCEA26F);
-  static const darkDanger = Color(0xFFD6917B);
+  static const lightSuccess = Color(0xFF2E7D4F);
+  static const lightWarn = Color(0xFF9A6700);
+  static const lightDanger = Color(0xFFB9383A);
+  static const darkSuccess = Color(0xFF65C98A);
+  static const darkWarn = Color(0xFFE2B85B);
+  static const darkDanger = Color(0xFFF08B8D);
 
   /// 内容区背景渐变 — 左上角色调。
   static const darkAmbientGradientStart = Color(0xFF0C1315);

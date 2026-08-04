@@ -43,11 +43,11 @@ Flutter 中使用以下 sRGB 映射值作为当前实现基准：
 | Sidebar Surface | `#F1F9F8` | `#101719` | 桌面侧边栏 |
 | Foreground | `#070F11` | `#E3E9E9` | 主文本 |
 | Foreground Secondary | `#444F52` | `#96A1A1` | 次级文本 |
-| Muted | `#6E7A7B` | `#697475` | 辅助文本、时间、弱图标 |
+| Muted | `#647173` | `#7D898A` | 辅助文本、时间、弱图标 |
 | Border | `#D8DEDD` | `#2B3233` | 明确分割线 |
 | Border Light | `#E8ECEC` | `#222829` | 轻边框、列表分割线 |
-| Accent | `#1A9480` | `#46B49E` | 主操作、选中、当前状态 |
-| Accent Hover | `#00856F` | `#41C7AE` | Hover / pressed 强调 |
+| Accent | `#117E6E` | `#46B49E` | 主操作、选中、当前状态 |
+| Accent Hover | `#0B695F` | `#5CC5AF` | Hover / pressed 强调 |
 | Accent Soft | `#D4F1E9` | `#062D26` | 选中背景、轻强调底色 |
 | Music Warm | `#D6A771` | `#CEA26F` | 音乐氛围暖色 |
 | Music Warm Soft | `#FDEDDC` | `#312313` | 暖色柔和背景 |
@@ -56,19 +56,23 @@ Flutter 中使用以下 sRGB 映射值作为当前实现基准：
 | Music Teal | `#45A592` | `#5FB7A5` | 辅助音乐氛围 |
 | Music Teal Soft | `#D9F4ED` | `#122C26` | Hover wash、背景光 |
 | Music Ink | `#20373B` | `#BECECF` | 播放页歌词高亮 |
-| Success | `#308639` | `#46B49E` | 成功状态 |
-| Warning | `#CA8A10` | `#CEA26F` | 警告状态 |
-| Danger | `#C53637` | `#D6917B` | 破坏性操作、错误 |
+| Success | `#2E7D4F` | `#65C98A` | 成功状态 |
+| Warning | `#9A6700` | `#E2B85B` | 警告状态 |
+| Danger | `#B9383A` | `#F08B8D` | 破坏性操作、错误 |
 
 ### Color Rules
 
 - Accent 只用于主操作、当前选择、播放相关焦点和链接，不用于纯装饰。
+- 状态色与音乐氛围色职责分离，不使用 Music Warm、Music Rose 或品牌 Accent 表达成功、警告和错误。
 - Hover wash 优先使用 `Music Teal Soft` 混合背景。
 - Selected wash 优先使用 `Music Warm Soft` 或 `Music Rose Soft` 混合背景。
 - 深色模式主要通过边框、表面层级和少量阴影建立深度。
 - 浅色模式可使用轻阴影，但普通内容不应强浮动。
 - 不使用纯黑或纯白作为暗色背景；设计稿中的白色 surface 是浅色主内容面。
 - 封面取色只用于播放页和详情页氛围，必须叠加柔化或暗化以保护可读性。
+- 封面遮罩上的固定浅色前景使用 `onArtworkScrim`，不随页面明暗模式翻转。
+- 页面和组件不得维护独立静态调色板；固定颜色统一来自 `AppColorTokens`，界面通过 `ThemeData`、`ColorScheme` 或 `MelisleThemeX` 消费。
+- 普通文字与背景对比度不低于 4.5:1，大字号文字和非文本控件不低于 3:1。
 
 ## Typography
 
