@@ -205,6 +205,8 @@ class AppPageHeader extends StatelessWidget {
   final double titleMaxWidth;
   final double maxWidth;
 
+  static const _stackedTrailingBreakpoint = 720.0;
+
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
@@ -255,32 +257,68 @@ class AppPageHeader extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (leadingWidget != null) ...[
-            leadingWidget,
-            const SizedBox(width: 12),
-          ],
-          ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 0, maxWidth: titleMaxWidth),
-            child: AppPageTitleRow(
-              title: title,
-              description: description,
-              padding: EdgeInsets.zero,
-            ),
-          ),
-          if (center != null) ...[
-            const SizedBox(width: 24),
-            if (centerWidth == null)
-              Expanded(child: center!)
-            else
-              SizedBox(width: centerWidth, child: center!),
-            if (centerWidth != null) const Spacer(),
-          ] else
-            const Spacer(),
-          if (trailing != null) ...[const SizedBox(width: 16), trailing!],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackTrailing =
+              center == null &&
+              trailing != null &&
+              constraints.maxWidth < _stackedTrailingBreakpoint;
+          if (stackTrailing) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (leadingWidget != null) ...[
+                      leadingWidget,
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: AppPageTitleRow(
+                        title: title,
+                        description: description,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Align(alignment: Alignment.centerRight, child: trailing!),
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (leadingWidget != null) ...[
+                leadingWidget,
+                const SizedBox(width: 12),
+              ],
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: 0,
+                  maxWidth: titleMaxWidth,
+                ),
+                child: AppPageTitleRow(
+                  title: title,
+                  description: description,
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              if (center != null) ...[
+                const SizedBox(width: 24),
+                if (centerWidth == null)
+                  Expanded(child: center!)
+                else
+                  SizedBox(width: centerWidth, child: center!),
+                if (centerWidth != null) const Spacer(),
+              ] else
+                const Spacer(),
+              if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
@@ -412,7 +413,11 @@ Future<void> _pumpForSizes(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  for (final size in const [Size(390, 844), Size(1280, 900)]) {
+  for (final size in const [
+    Size(390, 844),
+    Size(960, 680),
+    Size(1280, 900),
+  ]) {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
 
@@ -469,6 +474,7 @@ class _SettingsHarness {
       loginWithEmby: LoginWithEmby(repository),
       restoreSession: RestoreSession(repository),
       logout: Logout(repository),
+      fetchPlaylists: FetchPlaylists(repository),
     );
     final settingsCubit = AppSettingsCubit(
       settingsRepository,

@@ -174,35 +174,28 @@ class _SkeletonBaseState extends State<_SkeletonBase>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // 初始化一个临时的 controller，稍后在 didChangeDependencies 中更新
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _animation = Tween<double>(begin: 0.5, end: 0.5).animate(_controller);
+    _animation = Tween<double>(begin: 0.3, end: 0.7).animate(_controller);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_hasInitialized) return;
-    _hasInitialized = true;
-
     final disableAnimations = MediaQuery.of(context).disableAnimations;
-    if (!disableAnimations) {
-      _controller.dispose();
-      _controller = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1200),
-      )..repeat(reverse: true);
-      _animation = Tween<double>(begin: 0.3, end: 0.7).animate(_controller);
+    if (disableAnimations) {
+      _controller
+        ..stop()
+        ..value = 0.5;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
     }
-    // 如果 disableAnimations 为 true，保持初始状态（静态灰色块）
   }
 
   @override
