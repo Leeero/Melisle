@@ -31,6 +31,51 @@ class AppActionButton extends StatelessWidget {
 }
 
 abstract final class AppActionButtonStyle {
+  static ButtonStyle link(
+    BuildContext context, {
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 4),
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return TextButton.styleFrom(
+      minimumSize: const Size(44, 44),
+      padding: padding,
+      tapTargetSize: MaterialTapTargetSize.padded,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+      ),
+    ).copyWith(
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurface.withValues(alpha: 0.34);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return Color.lerp(colorScheme.primary, colorScheme.onSurface, 0.24);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return theme.accentHover;
+        }
+        return colorScheme.primary;
+      }),
+      textStyle: WidgetStatePropertyAll(
+        theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.none,
+        ),
+      ),
+      side: WidgetStateProperty.resolveWith((states) {
+        if (!states.contains(WidgetState.focused)) return BorderSide.none;
+        return BorderSide(
+          color: colorScheme.primary.withValues(alpha: 0.58),
+        );
+      }),
+    );
+  }
+
   static ButtonStyle text(
     BuildContext context, {
     AppActionButtonTone tone = AppActionButtonTone.neutral,

@@ -6,7 +6,6 @@ import 'package:cross_platform_music_player/presentation/blocs/album/album_state
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
@@ -267,12 +266,6 @@ class _AlbumHeroSummary extends StatelessWidget {
                       tracks: context.read<AlbumCubit>().state.tracks,
                     ),
             ),
-            if (isWide)
-              AppActionButton(
-                onPressed: () => context.go('/library'),
-                icon: Icons.library_music_rounded,
-                label: '返回媒体库',
-              ),
           ],
         ),
       ],
@@ -398,6 +391,8 @@ class _AlbumArtistLine extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               onTap: () => context.push('/artist/$artistId'),
               mouseCursor: SystemMouseCursors.click,
+              hoverColor: Colors.transparent,
+              highlightColor: Colors.transparent,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -407,10 +402,8 @@ class _AlbumArtistLine extends StatelessWidget {
                   artistName,
                   style: textStyle?.copyWith(
                     color: colorScheme.primary,
-                    decoration: TextDecoration.underline,
-                    decorationColor: colorScheme.primary.withValues(
-                      alpha: 0.48,
-                    ),
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),

@@ -556,16 +556,6 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 }
 
-String _libraryLoadingTitle(LibraryFilter filter) {
-  return switch (filter) {
-    LibraryFilter.tracks => '正在加载歌曲',
-    LibraryFilter.albums => '正在加载专辑',
-    LibraryFilter.artists => '正在加载艺术家',
-    LibraryFilter.playlists => '正在加载歌单',
-    LibraryFilter.favorites => '正在加载收藏',
-  };
-}
-
 String _librarySummaryLabel(LibraryState state) {
   final trackCount = state.totalTrackCount ?? state.tracks.length;
   final parts = <String>[
@@ -1169,9 +1159,7 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
                         tooltip: '更多操作',
                         padding: EdgeInsets.zero,
                         visualDensity: VisualDensity.compact,
-                        style: AppActionButtonStyle.icon(
-                          context,
-                        ),
+                        style: AppActionButtonStyle.icon(context),
                       ),
                     ),
                   ],
@@ -1193,6 +1181,7 @@ class _LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWide = AppBreakpoints.usesWideContent(context);
+    final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
     final tabs = AppScopeTabs<LibraryFilter>(
       semanticLabel: '媒体库分类',
       variant: isWide
@@ -1219,13 +1208,15 @@ class _LibraryHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppPageHeader(
-          title: '媒体库',
-          description: _librarySummaryLabel(state),
-          automaticImplyLeading: false,
-          hideTitleOnCompactWithCenter: false,
-        ),
-        const SizedBox(height: 14),
+        if (!hasDesktopToolbar) ...[
+          AppPageHeader(
+            title: '媒体库',
+            description: _librarySummaryLabel(state),
+            automaticImplyLeading: false,
+            hideTitleOnCompactWithCenter: false,
+          ),
+          const SizedBox(height: 14),
+        ],
         if (isWide) SizedBox(width: 420, child: tabs) else tabs,
       ],
     );

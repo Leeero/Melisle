@@ -144,19 +144,22 @@ class _HomeViewState extends State<_HomeView> {
 
     return CustomScrollView(
       slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            10,
-            horizontalPadding,
-            compact ? 0 : 2,
+        if (!AppBreakpoints.usesDesktopToolbar(context))
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              10,
+              horizontalPadding,
+              compact ? 0 : 2,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: compact
+                  ? const _MobileHomeTitle()
+                  : const _DesktopHomeHeader(),
+            ),
           ),
-          sliver: SliverToBoxAdapter(
-            child: compact
-                ? const _MobileHomeTitle()
-                : const _DesktopHomeHeader(),
-          ),
-        ),
+        if (AppBreakpoints.usesDesktopToolbar(context))
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
         if (state.errorMessage != null)
           _inlineErrorSection(
@@ -470,7 +473,11 @@ class _HomeViewState extends State<_HomeView> {
     required double horizontalPadding,
   }) {
     final compact = AppBreakpoints.isCompact(context);
-    final maxDisplay = compact ? 8 : 5;
+    final maxDisplay = compact
+        ? 8
+        : AppBreakpoints.usesLargeGrid(context)
+        ? 7
+        : 6;
     final displayTracks = tracks.take(maxDisplay).toList();
     final cardWidth = compact ? 130.0 : 150.0;
     final coverSize = cardWidth;
@@ -525,7 +532,7 @@ class _HomeViewState extends State<_HomeView> {
               builder: (context, constraints) {
                 final columnCount = _homeDesktopGridCount(
                   constraints.crossAxisExtent,
-                  maxColumns: 5,
+                  maxColumns: AppBreakpoints.usesLargeGrid(context) ? 7 : 6,
                 );
                 return SliverGrid(
                   delegate: SliverChildBuilderDelegate((context, index) {
@@ -1200,11 +1207,11 @@ class _RecommendationHero extends StatelessWidget {
               ),
             ),
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: compact ? 0 : 220),
+              constraints: BoxConstraints(minHeight: compact ? 0 : 188),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 18 : 28,
-                  vertical: compact ? 18 : 26,
+                  horizontal: compact ? 18 : 24,
+                  vertical: compact ? 18 : 20,
                 ),
                 child: compact
                     ? _CompactRecommendationCard(
@@ -1228,10 +1235,10 @@ class _RecommendationHero extends StatelessWidget {
                               onSecondaryPressed: onSecondaryPressed,
                             ),
                           ),
-                          const SizedBox(width: 28),
+                          const SizedBox(width: 22),
                           SizedBox(
-                            width: 280,
-                            height: 166,
+                            width: 244,
+                            height: 146,
                             child: _RecommendationStack(
                               artwork: artwork,
                               caption: caption,
@@ -1342,14 +1349,7 @@ class _CompactRecommendationCard extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: onSecondaryPressed,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      textStyle: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
+                    style: AppActionButtonStyle.link(context),
                     child: Text(secondaryLabel),
                   ),
                 ],
@@ -1404,7 +1404,7 @@ class _RecommendationCopy extends StatelessWidget {
             maxLines: compact ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: compact ? 25 : 32,
+              fontSize: compact ? 25 : 28,
               height: compact ? 1.14 : 1.08,
               fontWeight: FontWeight.w700,
             ),
@@ -1415,7 +1415,7 @@ class _RecommendationCopy extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Text(
             description,
-            maxLines: compact ? 2 : 3,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -1423,7 +1423,7 @@ class _RecommendationCopy extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: compact ? 18 : 14),
         if (compact)
           Wrap(
             spacing: 10,
@@ -1443,6 +1443,7 @@ class _RecommendationCopy extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onSecondaryPressed,
+                style: AppActionButtonStyle.link(context),
                 child: Text(secondaryLabel),
               ),
             ],
@@ -1459,6 +1460,7 @@ class _RecommendationCopy extends StatelessWidget {
               const SizedBox(width: 10),
               TextButton(
                 onPressed: onSecondaryPressed,
+                style: AppActionButtonStyle.link(context),
                 child: Text(secondaryLabel),
               ),
             ],
@@ -1486,14 +1488,14 @@ class _RecommendationStack extends StatelessWidget {
             bottom: 18,
             child: Transform.rotate(
               angle: -0.14,
-              child: _StackedCover(seed: seeds[0], size: 124, opacity: 0.72),
+              child: _StackedCover(seed: seeds[0], size: 108, opacity: 0.72),
             ),
           ),
         if (seeds.length >= 2)
           Positioned(
             left: 64,
             top: 0,
-            child: _StackedCover(seed: seeds[1], size: 152),
+            child: _StackedCover(seed: seeds[1], size: 132),
           ),
         if (seeds.length >= 3)
           Positioned(
@@ -1501,7 +1503,7 @@ class _RecommendationStack extends StatelessWidget {
             bottom: 14,
             child: Transform.rotate(
               angle: 0.14,
-              child: _StackedCover(seed: seeds[2], size: 124, opacity: 0.72),
+              child: _StackedCover(seed: seeds[2], size: 108, opacity: 0.72),
             ),
           ),
         Positioned(right: 0, bottom: 0, child: _HeroCaption(label: caption)),
@@ -1734,33 +1736,27 @@ class _HomeViewAllButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final compact = AppBreakpoints.isCompact(context);
-    final textStyle = theme.textTheme.labelMedium?.copyWith(
-      fontSize: compact ? 14 : 13,
-      fontWeight: FontWeight.w500,
-      letterSpacing: 0,
-    );
 
     return Semantics(
       label: '查看全部',
       button: true,
       child: TextButton(
         onPressed: onPressed,
-        style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 2),
-          ),
-          visualDensity: VisualDensity.compact,
-          foregroundColor: WidgetStatePropertyAll(theme.colorScheme.primary),
-          textStyle: WidgetStateProperty.resolveWith((states) {
-            final hovered = !compact && states.contains(WidgetState.hovered);
-            return textStyle?.copyWith(
-              decoration: hovered
-                  ? TextDecoration.underline
-                  : TextDecoration.none,
-            );
-          }),
-        ),
+        style:
+            AppActionButtonStyle.link(
+              context,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+            ).copyWith(
+              visualDensity: VisualDensity.compact,
+              textStyle: WidgetStatePropertyAll(
+                theme.textTheme.labelMedium?.copyWith(
+                  fontSize: compact ? 14 : 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
         child: const Text('查看全部'),
       ),
     );

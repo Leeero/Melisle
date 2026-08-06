@@ -90,13 +90,7 @@ class _PlaylistDetailView extends StatelessWidget {
   ) {
     return [
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 10, bottom: 8),
-        sliver: SliverToBoxAdapter(
-          child: AppDetailBackNav(onPressed: () => _goBackToPlaylists(context)),
-        ),
-      ),
-      SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 2, bottom: 24),
+        padding: AppPageLayout.sectionPadding(context, top: 10, bottom: 24),
         sliver: SliverToBoxAdapter(
           child: _PlaylistHero(
             playlist: playlist,

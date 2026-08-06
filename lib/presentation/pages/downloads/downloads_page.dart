@@ -42,7 +42,9 @@ class _DownloadsPageState extends State<DownloadsPage> {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
     return AppContentPage(
-      header: const _DownloadsHeader(),
+      header: AppBreakpoints.usesDesktopToolbar(context)
+          ? null
+          : const _DownloadsHeader(),
       body: BlocListener<DownloadsCubit, DownloadsState>(
         listenWhen: (prev, curr) =>
             prev.completedTrackIds.length != curr.completedTrackIds.length ||
@@ -69,7 +71,9 @@ class _DownloadsPageState extends State<DownloadsPage> {
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    AppPageLayout.compactTopInset,
+                    AppBreakpoints.usesDesktopToolbar(context)
+                        ? 24
+                        : AppPageLayout.compactTopInset,
                     horizontalPadding,
                     AppPageLayout.contentBottomInset,
                   ),

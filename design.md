@@ -99,8 +99,10 @@ Flutter 实现以平台系统字体为主，中文环境优先保证可读性。
 
 | Width | Layout |
 |---:|---|
-| `<1080px` | 移动端模式：内容区 + 浮动 MiniPlayer + 底部 Tab |
-| `>=1080px` | 桌面端模式：左侧 Sidebar + 主内容区 + 底部 MiniPlayer |
+| `<768px` | 移动端模式：内容区 + 浮动 MiniPlayer + 底部 Tab |
+| `768-1079px` | 中等模式：紧凑侧边栏 + 内容区 + 浮动 MiniPlayer |
+| `1080-1439px` | 桌面端模式：左侧 Sidebar + 主内容区 + 底部 MiniPlayer |
+| `>=1440px` | 大桌面模式：提高内容网格密度 |
 
 ### Desktop Layout Tokens
 
@@ -157,7 +159,9 @@ Flutter 实现以平台系统字体为主，中文环境优先保证可读性。
 桌面端：
 
 - 左侧 Sidebar 宽 220px。
+- 1080px 以上 Sidebar 可折叠为 72px 图标栏；折叠态必须保留 tooltip。
 - Sidebar 分组：主入口、资料库、管理。
+- 主内容顶部使用 54px 页面工具栏，提供返回、页面位置和全局搜索入口。
 - 主内容区独立滚动，padding 约 `28px 36px`。
 - 底部 MiniPlayer 高 72px，位于主内容列底部。
 - 播放队列为右侧滑出面板。

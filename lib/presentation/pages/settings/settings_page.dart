@@ -24,9 +24,14 @@ class SettingsPage extends StatelessWidget {
       buildWhen: (a, b) => a.isLoading != b.isLoading,
       builder: (context, state) {
         if (state.isLoading) {
-          return const AppContentPage(
-            header: AppPageHeader(title: '设置', automaticImplyLeading: false),
-            body: AppBodyStateView.loading(),
+          return AppContentPage(
+            header: AppBreakpoints.usesDesktopToolbar(context)
+                ? null
+                : const AppPageHeader(
+                    title: '设置',
+                    automaticImplyLeading: false,
+                  ),
+            body: const AppBodyStateView.loading(),
           );
         }
 
@@ -34,14 +39,14 @@ class SettingsPage extends StatelessWidget {
         final colorScheme = Theme.of(context).colorScheme;
 
         return AppContentPage(
-          header: const AppPageHeader(
-            title: '设置',
-            automaticImplyLeading: false,
-          ),
+          header: AppBreakpoints.usesDesktopToolbar(context)
+              ? null
+              : const AppPageHeader(title: '设置', automaticImplyLeading: false),
           body: ListView(
             padding: EdgeInsets.only(
               left: horizontalPadding,
               right: horizontalPadding,
+              top: AppBreakpoints.usesDesktopToolbar(context) ? 24 : 0,
               bottom: AppPageLayout.contentBottomInset,
             ),
             children: [
@@ -102,15 +107,17 @@ class CustomMediaSourcesPage extends StatelessWidget {
             title: '歌词与封面',
             description: compact ? null : '配置自定义媒体来源地址。',
             titleMaxWidth: compact ? 220 : 300,
-            leading: AppBackButton(
-              onPressed: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).maybePop();
-                  return;
-                }
-                context.go('/settings');
-              },
-            ),
+            leading: compact
+                ? AppBackButton(
+                    onPressed: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).maybePop();
+                        return;
+                      }
+                      context.go('/settings');
+                    },
+                  )
+                : null,
           ),
           body: ListView(
             padding: EdgeInsets.only(

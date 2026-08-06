@@ -38,10 +38,12 @@ class _HistoryView extends StatelessWidget {
     return BlocBuilder<HistoryCubit, HistoryState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _HistoryHeader(
-            count: state.tracks.length,
-            tracks: state.tracks,
-          ),
+          header: AppBreakpoints.usesDesktopToolbar(context)
+              ? _HistoryDesktopActions(tracks: state.tracks)
+              : _HistoryHeader(
+                  count: state.tracks.length,
+                  tracks: state.tracks,
+                ),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -78,7 +80,7 @@ class _HistoryView extends StatelessWidget {
       return ListView(
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
-          0,
+          AppBreakpoints.usesDesktopToolbar(context) ? 8 : 0,
           horizontalPadding,
           24,
         ),
@@ -126,6 +128,38 @@ class _HistoryView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _HistoryDesktopActions extends StatelessWidget {
+  const _HistoryDesktopActions({required this.tracks});
+
+  final List<MusicTrack> tracks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        MetaPill(label: '${tracks.length} 条', size: MetaPillSize.compact),
+        const Spacer(),
+        if (tracks.isNotEmpty)
+          PlayAllButton(
+            variant: PlayAllButtonVariant.compact,
+            onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
+              context,
+              loadedTracks: tracks,
+              allLoaded: true,
+              fetchAll: () async => tracks,
+            ),
+            onShufflePressed: () => PlayerNavigation.shuffleAllAndOpenPlayer(
+              context,
+              loadedTracks: tracks,
+              allLoaded: true,
+              fetchAll: () async => tracks,
+            ),
+          ),
+      ],
     );
   }
 }

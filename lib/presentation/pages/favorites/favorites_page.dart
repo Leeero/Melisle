@@ -75,7 +75,9 @@ class _FavoritesViewState extends State<_FavoritesView> {
     return BlocBuilder<FavoritesListCubit, FavoritesListState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _FavoritesHeader(state: state),
+          header: AppBreakpoints.usesDesktopToolbar(context)
+              ? _FavoritesDesktopActions(state: state)
+              : _FavoritesHeader(state: state),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -118,7 +120,7 @@ class _FavoritesViewState extends State<_FavoritesView> {
         controller: _scrollController,
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
-          0,
+          AppBreakpoints.usesDesktopToolbar(context) ? 8 : 0,
           horizontalPadding,
           24,
         ),
@@ -173,6 +175,30 @@ class _FavoritesViewState extends State<_FavoritesView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _FavoritesDesktopActions extends StatelessWidget {
+  const _FavoritesDesktopActions({required this.state});
+
+  final FavoritesListState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = state.tracks.length;
+    return Row(
+      children: [
+        MetaPill(label: '$count 首', size: MetaPillSize.compact),
+        const Spacer(),
+        if (count > 0)
+          PlayAllButton(
+            variant: PlayAllButtonVariant.compact,
+            onPressed: () => _playAllFavorites(context, state),
+            onShufflePressed: () =>
+                _playAllFavorites(context, state, shuffled: true),
+          ),
+      ],
     );
   }
 }
@@ -319,10 +345,7 @@ class _FavoriteTrackActionButton extends StatelessWidget {
                 listCubit.removeTrack(track.id);
               }
               if (!context.mounted) return;
-              AppSnackBar.show(
-                context,
-                stillFavorite ? '已收藏' : '取消收藏',
-              );
+              AppSnackBar.show(context, stillFavorite ? '已收藏' : '取消收藏');
             },
     );
   }
@@ -386,20 +409,9 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
     );
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.25, end: 0.95),
-        weight: 20,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 0.95, end: 1.0),
-        weight: 40,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutBack,
-      ),
-    );
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 0.95), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 40),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     if (widget.isPending) _controller.repeat();
   }
 

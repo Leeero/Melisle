@@ -21,7 +21,8 @@ final class AppPageLayout {
     return switch (AppBreakpoints.of(context)) {
       AppLayoutSize.compact => AppSpacingTokens.pageHorizontalCompact,
       AppLayoutSize.medium => AppSpacingTokens.pageHorizontalMedium,
-      AppLayoutSize.expanded => AppSpacingTokens.pageHorizontalExpanded,
+      AppLayoutSize.desktop ||
+      AppLayoutSize.largeDesktop => AppSpacingTokens.pageHorizontalExpanded,
     };
   }
 
@@ -56,12 +57,12 @@ final class AppPageLayout {
 class AppContentPage extends StatefulWidget {
   const AppContentPage({
     super.key,
-    required this.header,
+    this.header,
     required this.body,
     this.topSafeArea = true,
   });
 
-  final Widget header;
+  final Widget? header;
   final Widget body;
   final bool topSafeArea;
 
@@ -135,7 +136,7 @@ class _AppContentViewport extends StatelessWidget {
     required this.slideAnimation,
   });
 
-  final Widget header;
+  final Widget? header;
   final Widget body;
   final Animation<double> fadeAnimation;
   final Animation<Offset> slideAnimation;
@@ -148,7 +149,7 @@ class _AppContentViewport extends StatelessWidget {
         position: slideAnimation,
         child: Column(
           children: [
-            _AppContentHeader(child: header),
+            if (header != null) _AppContentHeader(child: header!),
             Expanded(child: _AppContentBody(child: body)),
           ],
         ),
@@ -348,7 +349,6 @@ class AppDetailBackNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -356,15 +356,17 @@ class AppDetailBackNav extends StatelessWidget {
         onPressed: onPressed,
         icon: const Icon(Icons.chevron_left_rounded, size: 22),
         label: const Text('返回'),
-        style: TextButton.styleFrom(
-          foregroundColor: colorScheme.primary,
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-          tapTargetSize: MaterialTapTargetSize.padded,
-          textStyle: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        style:
+            AppActionButtonStyle.link(
+              context,
+              padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+            ).copyWith(
+              textStyle: WidgetStatePropertyAll(
+                theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
       ),
     );
   }
@@ -603,15 +605,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                   ? TextButton(
                       key: const ValueKey('search-cancel'),
                       onPressed: _cancel,
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.primary,
-                        minimumSize: const Size(44, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                        textStyle: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      style: AppActionButtonStyle.link(context),
                       child: Text(widget.cancelLabel),
                     )
                   : const SizedBox.shrink(key: ValueKey('search-cancel-empty')),
