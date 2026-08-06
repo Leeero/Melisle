@@ -110,7 +110,11 @@ class _LibraryViewState extends State<_LibraryView> {
     if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
       return Padding(
         padding: AppPageLayout.pagePadding(context),
-        child: AppSkeleton.grid(count: 6),
+        child: Semantics(
+          label: '正在加载歌曲',
+          liveRegion: true,
+          child: AppSkeleton.grid(count: 6),
+        ),
       );
     }
 

@@ -61,8 +61,12 @@ void main() {
 
     expect(find.byTooltip('加入队列'), findsOneWidget);
     expect(find.byTooltip('更多操作'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('track-row-play-track-1')),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.bySemanticsLabel('播放《夜曲》'));
+    await tester.tap(find.text('夜曲'));
     await tester.pump();
     expect(playCount, 1);
   });

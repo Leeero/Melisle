@@ -495,10 +495,7 @@ class _PlayerExtraIconButton extends StatelessWidget {
         child: IconButton(
           onPressed: onPressed,
           icon: Icon(icon, size: 20),
-          style: AppActionButtonStyle.icon(
-            context,
-            selected: active,
-          ),
+          style: AppActionButtonStyle.icon(context, selected: active),
         ),
       ),
     );
@@ -1082,43 +1079,46 @@ class _PlayerTopBarIconButton extends StatelessWidget {
       icon: Icon(icon, size: 22),
       onPressed: onPressed,
       tooltip: tooltip,
-      style: IconButton.styleFrom(
-        fixedSize: const Size.square(44),
-        minimumSize: const Size.square(44),
-        maximumSize: const Size.square(44),
-        padding: EdgeInsets.zero,
-        tapTargetSize: MaterialTapTargetSize.padded,
-        foregroundColor: colorScheme.onSurfaceVariant,
-        disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
-          alpha: 0.36,
-        ),
-        shape: const CircleBorder(),
-      ).copyWith(
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return Colors.transparent;
-          if (states.contains(WidgetState.pressed)) {
-            return colorScheme.onSurface.withValues(alpha: 0.12);
-          }
-          if (states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused)) {
-            return colorScheme.onSurface.withValues(alpha: 0.07);
-          }
-          return Colors.transparent;
-        }),
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) {
-            return colorScheme.onSurfaceVariant.withValues(alpha: 0.36);
-          }
-          if (states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused) ||
-              states.contains(WidgetState.pressed)) {
-            return colorScheme.onSurface;
-          }
-          return colorScheme.onSurfaceVariant;
-        }),
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
-        side: const WidgetStatePropertyAll(BorderSide.none),
-      ),
+      style:
+          IconButton.styleFrom(
+            fixedSize: const Size.square(44),
+            minimumSize: const Size.square(44),
+            maximumSize: const Size.square(44),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.padded,
+            foregroundColor: colorScheme.onSurfaceVariant,
+            disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
+              alpha: 0.36,
+            ),
+            shape: const CircleBorder(),
+          ).copyWith(
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return Colors.transparent;
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return colorScheme.onSurface.withValues(alpha: 0.12);
+              }
+              if (states.contains(WidgetState.hovered) ||
+                  states.contains(WidgetState.focused)) {
+                return colorScheme.onSurface.withValues(alpha: 0.07);
+              }
+              return Colors.transparent;
+            }),
+            foregroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return colorScheme.onSurfaceVariant.withValues(alpha: 0.36);
+              }
+              if (states.contains(WidgetState.hovered) ||
+                  states.contains(WidgetState.focused) ||
+                  states.contains(WidgetState.pressed)) {
+                return colorScheme.onSurface;
+              }
+              return colorScheme.onSurfaceVariant;
+            }),
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
+            side: const WidgetStatePropertyAll(BorderSide.none),
+          ),
     );
   }
 }
@@ -2480,7 +2480,9 @@ class _DesktopQueueDialogState extends State<_DesktopQueueDialog> {
                               final track = state.queue[index];
                               final isCurrent = index == state.currentIndex;
                               return _DesktopQueueItem(
-                                key: ValueKey('desktop-queue-${track.id}-$index'),
+                                key: ValueKey(
+                                  'desktop-queue-${track.id}-$index',
+                                ),
                                 index: index,
                                 track: track,
                                 isCurrent: isCurrent,
@@ -3099,7 +3101,6 @@ class _ControlButton extends StatefulWidget {
   const _ControlButton({
     required this.icon,
     required this.onTap,
-    this.isPrimary = false,
     this.tooltip,
     this.size,
     this.iconSize,
@@ -3108,7 +3109,6 @@ class _ControlButton extends StatefulWidget {
 
   final IconData icon;
   final VoidCallback onTap;
-  final bool isPrimary;
   final String? tooltip;
   final double? size;
   final double? iconSize;
@@ -3127,8 +3127,8 @@ class _ControlButtonState extends State<_ControlButton> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
-    final btnSize = widget.size ?? (widget.isPrimary ? 60 : 42);
-    final icnSize = widget.iconSize ?? (widget.isPrimary ? 30 : 22);
+    final btnSize = widget.size ?? 42;
+    final icnSize = widget.iconSize ?? 22;
     final neutralHoverBackground = colorScheme.outlineVariant.withValues(
       alpha: 0.48,
     );
@@ -3136,17 +3136,10 @@ class _ControlButtonState extends State<_ControlButton> {
         .withValues(alpha: 0.66);
     final neutralIdleBackground = neutralHoverBackground.withValues(alpha: 0);
 
-    final backgroundColor = widget.isPrimary
-        ? Color.alphaBlend(
-            theme.musicRose.withValues(alpha: 0.12),
-            colorScheme.onSurface,
-          )
-        : (_pressed
-              ? neutralPressedBackground
-              : (_hovered ? neutralHoverBackground : neutralIdleBackground));
-    final foregroundColor = widget.isPrimary
-        ? colorScheme.surface
-        : widget.active
+    final backgroundColor = _pressed
+        ? neutralPressedBackground
+        : (_hovered ? neutralHoverBackground : neutralIdleBackground);
+    final foregroundColor = widget.active
         ? colorScheme.primary
         : (_hovered || _pressed
               ? colorScheme.onSurface
@@ -3206,15 +3199,9 @@ class _ControlButtonState extends State<_ControlButton> {
       decoration: BoxDecoration(
         color: backgroundColor,
         shape: BoxShape.circle,
-        border: widget.isPrimary ? null : Border.all(color: neutralBorderColor),
+        border: Border.all(color: neutralBorderColor),
         boxShadow: [
-          if (widget.isPrimary)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: _hovered ? 0.18 : 0.10),
-              blurRadius: _hovered ? 18 : 12,
-              offset: const Offset(0, 5),
-            ),
-          if (!widget.isPrimary && _hovered)
+          if (_hovered)
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,

@@ -236,6 +236,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
             borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
+              key: ValueKey('track-row-play-${track.id}'),
               focusColor: colorScheme.primary.withValues(alpha: 0.08),
               hoverColor: Colors.transparent,
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
@@ -243,7 +244,6 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
               mouseCursor: SystemMouseCursors.click,
               onFocusChange: (value) => setState(() => _focused = value),
               onTap: widget.onTap,
-              onDoubleTap: widget.onTap,
               onSecondaryTap: () => showTrackActionsSheet(context, track),
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -319,7 +319,8 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           opacity: highlighted || widget.isCurrent ? 1 : 0,
                           child: SizedBox(
                             width: 84,
-                            child: trailing ??
+                            child:
+                                trailing ??
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -332,10 +333,8 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                                     _MusicTrackTableIconButton(
                                       icon: Icons.more_horiz_rounded,
                                       tooltip: '更多操作',
-                                      onPressed: () => showTrackActionsSheet(
-                                        context,
-                                        track,
-                                      ),
+                                      onPressed: () =>
+                                          showTrackActionsSheet(context, track),
                                     ),
                                   ],
                                 ),

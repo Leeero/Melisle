@@ -396,14 +396,6 @@ class CachedMusicRepository implements MusicRepository {
     throw lastError!;
   }
 
-  bool _isTimeout(Object error) {
-    if (error is! DioException) return false;
-    final type = error.type;
-    return type == DioExceptionType.connectionTimeout ||
-        type == DioExceptionType.sendTimeout ||
-        type == DioExceptionType.receiveTimeout;
-  }
-
   bool _isRetryableTimeout(Object error) {
     if (error is! DioException) return false;
     final type = error.type;

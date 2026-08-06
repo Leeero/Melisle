@@ -182,8 +182,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
               child: Row(
                 children: [
                   BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) =>
-                        prev.isPlaying != next.isPlaying,
+                    buildWhen: (prev, next) => prev.isPlaying != next.isPlaying,
                     builder: (context, state) {
                       return AnimatedContainer(
                         duration: AppMotion.micro,
@@ -570,9 +569,9 @@ class _MiniQualityButton extends StatelessWidget {
             state.quality.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -691,14 +690,12 @@ class _MiniControlButton extends StatefulWidget {
   const _MiniControlButton({
     required this.icon,
     required this.onPressed,
-    this.isPrimary = false,
     this.tooltip,
     this.compact = false,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
-  final bool isPrimary;
   final String? tooltip;
   final bool compact;
 
@@ -709,15 +706,13 @@ class _MiniControlButton extends StatefulWidget {
 class _MiniControlButtonState extends State<_MiniControlButton> {
   @override
   Widget build(BuildContext context) {
-    final size = widget.compact ? 40.0 : 36.0;
+    final size = widget.compact ? 44.0 : 36.0;
     return IconButton(
       onPressed: widget.onPressed,
       tooltip: widget.tooltip,
       style: AppActionButtonStyle.icon(
         context,
-        tone: widget.isPrimary
-            ? AppActionButtonTone.primary
-            : AppActionButtonTone.neutral,
+        tone: AppActionButtonTone.neutral,
         size: size,
         iconSize: widget.compact ? 20 : 18,
       ),
