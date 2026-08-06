@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,7 @@ class MiniPlayerBar extends StatelessWidget {
         }
 
         final width = MediaQuery.sizeOf(context).width;
-        final isWide = AppBreakpoints.usesWideContentWidth(width);
+        final isWide = AppBreakpoints.usesDesktopShellWidth(width);
         final artworkSourceContext = ArtworkSourceContext.track(track);
 
         return _MiniPlayerFrame(
@@ -300,8 +301,16 @@ class _WideMiniPlayer extends StatelessWidget {
         const SizedBox(width: 12),
         const _MiniPlaybackModeButton(),
         const SizedBox(width: 4),
+        const _MiniQualityButton(),
+        const SizedBox(width: 4),
         _MiniVolumeControl(
-          width: MediaQuery.sizeOf(context).width >= 1000 ? 132 : 80,
+          width: MediaQuery.sizeOf(context).width >= 1440 ? 132 : 88,
+        ),
+        const SizedBox(width: 4),
+        _MiniControlButton(
+          icon: Icons.queue_music_rounded,
+          onPressed: () => _showMiniQueueSheet(context),
+          tooltip: '当前播放列表',
         ),
         const SizedBox(width: 4),
         const _MiniExpandButton(),
@@ -502,12 +511,28 @@ class _MiniVolumeControl extends StatelessWidget {
       width: width,
       child: Row(
         children: [
-          Icon(
-            Icons.volume_up_rounded,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
+          BlocBuilder<PlayerCubit, PlayerViewState>(
+            buildWhen: (prev, next) => prev.volume != next.volume,
+            builder: (context, state) => IconButton(
+              onPressed: () => context.read<PlayerCubit>().setVolume(
+                state.volume > 0 ? 0 : 1,
+              ),
+              tooltip: state.volume > 0 ? '静音' : '恢复音量',
+              style: AppActionButtonStyle.icon(
+                context,
+                selected: state.volume == 0,
+                size: 32,
+                iconSize: 18,
+              ),
+              icon: Icon(
+                state.volume == 0
+                    ? Icons.volume_off_rounded
+                    : Icons.volume_up_rounded,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 2),
           Expanded(
             child: BlocBuilder<PlayerCubit, PlayerViewState>(
               buildWhen: (prev, next) => prev.volume != next.volume,
@@ -520,6 +545,36 @@ class _MiniVolumeControl extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MiniQualityButton extends StatelessWidget {
+  const _MiniQualityButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<PlayerCubit, PlayerViewState>(
+      buildWhen: (prev, next) => prev.quality != next.quality,
+      builder: (context, state) => Tooltip(
+        message: '播放音质：${state.quality.label}',
+        child: TextButton(
+          onPressed: () => QualityPickerSheet.show(context),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(48, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            state.quality.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       ),
     );
   }

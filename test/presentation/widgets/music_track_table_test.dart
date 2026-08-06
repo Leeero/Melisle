@@ -44,6 +44,28 @@ void main() {
     expect(find.text('--:--'), findsOneWidget);
     expect(find.text('00:00'), findsNothing);
   });
+
+  testWidgets('MusicTrackTable exposes stable desktop row actions', (
+    tester,
+  ) async {
+    var playCount = 0;
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          onTrackTap: (_, _) => playCount++,
+          onAddTrackToQueue: (_) {},
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('加入队列'), findsOneWidget);
+    expect(find.byTooltip('更多操作'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('播放《夜曲》'));
+    await tester.pump();
+    expect(playCount, 1);
+  });
 }
 
 Widget _buildWidget(Widget child) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 
 typedef MusicTrackTableTap = void Function(int index, MusicTrack track);
@@ -173,7 +174,7 @@ class _MusicTrackTableHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const SizedBox(width: 44),
+              const SizedBox(width: 84),
             ],
           ),
         );
@@ -242,6 +243,8 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
               mouseCursor: SystemMouseCursors.click,
               onFocusChange: (value) => setState(() => _focused = value),
               onTap: widget.onTap,
+              onDoubleTap: widget.onTap,
+              onSecondaryTap: () => showTrackActionsSheet(context, track),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final showAlbum = constraints.maxWidth >= 620;
@@ -315,16 +318,27 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           curve: AppMotion.enter,
                           opacity: highlighted || widget.isCurrent ? 1 : 0,
                           child: SizedBox(
-                            width: 44,
-                            child:
-                                trailing ??
-                                (widget.onAddToQueue == null
-                                    ? const SizedBox.shrink()
-                                    : _MusicTrackTableIconButton(
+                            width: 84,
+                            child: trailing ??
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (widget.onAddToQueue != null)
+                                      _MusicTrackTableIconButton(
                                         icon: Icons.playlist_add_rounded,
                                         tooltip: '加入队列',
                                         onPressed: widget.onAddToQueue!,
-                                      )),
+                                      ),
+                                    _MusicTrackTableIconButton(
+                                      icon: Icons.more_horiz_rounded,
+                                      tooltip: '更多操作',
+                                      onPressed: () => showTrackActionsSheet(
+                                        context,
+                                        track,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                           ),
                         ),
                       ],

@@ -934,16 +934,16 @@ class _PlayerTopBar extends StatelessWidget {
                   ? Alignment.centerRight
                   : Alignment.centerLeft,
               child: _PlayerTopBarIconButton(
-                icon: Icons.arrow_back_rounded,
-                tooltip: '返回',
+                icon: Icons.keyboard_arrow_down_rounded,
+                tooltip: '收起播放页',
                 onPressed: () => Navigator.of(context).pop(),
               ),
             )
           : Row(
               children: [
                 _PlayerTopBarIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  tooltip: '返回',
+                  icon: Icons.keyboard_arrow_down_rounded,
+                  tooltip: '收起播放页',
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(
@@ -1092,18 +1092,16 @@ class _PlayerTopBarIconButton extends StatelessWidget {
         disabledForegroundColor: colorScheme.onSurfaceVariant.withValues(
           alpha: 0.36,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
-        ),
+        shape: const CircleBorder(),
       ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) return Colors.transparent;
           if (states.contains(WidgetState.pressed)) {
-            return colorScheme.surface.withValues(alpha: 0.34);
+            return colorScheme.onSurface.withValues(alpha: 0.12);
           }
           if (states.contains(WidgetState.hovered) ||
               states.contains(WidgetState.focused)) {
-            return colorScheme.surface.withValues(alpha: 0.22);
+            return colorScheme.onSurface.withValues(alpha: 0.07);
           }
           return Colors.transparent;
         }),
@@ -1119,17 +1117,7 @@ class _PlayerTopBarIconButton extends StatelessWidget {
           return colorScheme.onSurfaceVariant;
         }),
         overlayColor: WidgetStateProperty.all(Colors.transparent),
-        side: WidgetStateProperty.resolveWith((states) {
-          final visible =
-              states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused) ||
-              states.contains(WidgetState.pressed);
-          return BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: visible ? 0.22 : 0,
-            ),
-          );
-        }),
+        side: const WidgetStatePropertyAll(BorderSide.none),
       ),
     );
   }
@@ -1140,7 +1128,7 @@ double _playerTopBarEdgePadding(BuildContext context) {
   final basePadding = AppPageLayout.horizontalPadding(
     context,
   ).clamp(12.0, 24.0).toDouble();
-  return basePadding + (needsTrafficLightPadding ? 42 : 0);
+  return basePadding + (needsTrafficLightPadding ? 54 : 0);
 }
 
 class _PlaybackControls extends StatelessWidget {
@@ -3411,8 +3399,8 @@ class _EmptyPlayerState extends StatelessWidget {
                 ),
                 child: _PlayerTopChrome(
                   leading: _PlayerTopBarIconButton(
-                    icon: Icons.arrow_back_rounded,
-                    tooltip: '返回',
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    tooltip: '收起播放页',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   center: const _PlayerEmptyTopBarStatus(),

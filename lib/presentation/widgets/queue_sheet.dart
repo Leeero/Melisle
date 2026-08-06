@@ -12,6 +12,27 @@ class QueueSheet extends StatelessWidget {
   const QueueSheet({super.key});
 
   static Future<void> show(BuildContext context) {
+    if (AppBreakpoints.usesDesktopShell(context)) {
+      return showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '关闭播放队列',
+        barrierColor: Colors.black.withValues(alpha: 0.18),
+        transitionDuration: const Duration(milliseconds: 240),
+        pageBuilder: (_, _, _) => BlocProvider.value(
+          value: context.read<PlayerCubit>(),
+          child: const _DesktopQueuePanel(),
+        ),
+        transitionBuilder: (_, animation, _, child) => SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: AppMotion.enter)),
+          child: child,
+        ),
+      );
+    }
+
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -115,6 +136,105 @@ class QueueSheet extends StatelessWidget {
         );
       },
       child: child,
+    );
+  }
+}
+
+class _DesktopQueuePanel extends StatefulWidget {
+  const _DesktopQueuePanel();
+
+  @override
+  State<_DesktopQueuePanel> createState() => _DesktopQueuePanelState();
+}
+
+class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentIndex = context.read<PlayerCubit>().state.currentIndex;
+    _scrollController = ScrollController(
+      initialScrollOffset: (currentIndex * 66.0 - 132)
+          .clamp(0, double.infinity)
+          .toDouble(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Material(
+        color: colorScheme.surface,
+        elevation: 12,
+        child: SafeArea(
+          left: false,
+          child: SizedBox(
+            width: 360,
+            height: double.infinity,
+            child: BlocBuilder<PlayerCubit, PlayerViewState>(
+              builder: (context, state) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '播放队列',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        _QueueCountLabel(count: state.queue.length),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          tooltip: '关闭播放队列',
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: colorScheme.outlineVariant),
+                  Expanded(
+                    child: state.queue.isEmpty
+                        ? const _EmptyQueueView()
+                        : ReorderableListView.builder(
+                            scrollController: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                            buildDefaultDragHandles: false,
+                            proxyDecorator: QueueSheet._proxyDecorator,
+                            itemCount: state.queue.length,
+                            onReorder: context
+                                .read<PlayerCubit>()
+                                .moveQueueItem,
+                            itemBuilder: (context, index) {
+                              final track = state.queue[index];
+                              return _QueueItem(
+                                key: ValueKey('desktop-queue-${track.id}-$index'),
+                                index: index,
+                                track: track,
+                                isCurrent: index == state.currentIndex,
+                                isPlaying: state.isPlaying,
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
