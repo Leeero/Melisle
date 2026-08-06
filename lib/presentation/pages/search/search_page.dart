@@ -34,6 +34,7 @@ const _searchTypeScopes = [
   _SearchScope.tracks,
   _SearchScope.albums,
   _SearchScope.artists,
+  _SearchScope.playlists,
 ];
 
 const _hotSearchQueries = [
@@ -204,18 +205,20 @@ class _SearchViewState extends State<_SearchView> {
         builder: (context, state) {
           return AppContentPage(
             header: _SearchHeader(
+              state: state,
+              selectedScope: _selectedScope,
               controller: _controller,
               focusNode: _focusNode,
               onClear: _clearQuery,
               onChanged: _onQueryChanged,
               onSubmitted: _submitQuery,
+              onScopeChanged: (scope) => setState(() {
+                _selectedScope = scope;
+              }),
             ),
             body: _SearchResultsView(
               state: state,
               selectedScope: _selectedScope,
-              onScopeChanged: (scope) => setState(() {
-                _selectedScope = scope;
-              }),
               onRecentSelected: _submitQuery,
             ),
           );
@@ -227,52 +230,92 @@ class _SearchViewState extends State<_SearchView> {
 
 class _SearchHeader extends StatelessWidget {
   const _SearchHeader({
+    required this.state,
+    required this.selectedScope,
     required this.controller,
     required this.focusNode,
     required this.onClear,
     required this.onChanged,
     required this.onSubmitted,
+    required this.onScopeChanged,
   });
 
+  final SearchState state;
+  final _SearchScope selectedScope;
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onClear;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
+  final ValueChanged<_SearchScope> onScopeChanged;
 
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
+    final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
+    final showScopes =
+        state.query.trim().isNotEmpty && state.results.isNotEmpty;
+    final resultCount = state.results.totalCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppPageHeader(
-          title: '搜索',
-          description: null,
-          hideTitleOnCompactWithCenter: false,
-        ),
-        SizedBox(height: compact ? 12 : 18),
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: compact ? double.infinity : 720,
+        if (!hasDesktopToolbar) ...[
+          AppPageHeader(
+            title: '搜索',
+            description: null,
+            hideTitleOnCompactWithCenter: false,
           ),
-          child: AppSearchField(
-            controller: controller,
-            focusNode: focusNode,
-            autofocus: true,
-            dense: true,
-            hintText: compact ? '歌曲、专辑、艺术家' : '搜索歌曲、专辑、艺术家、歌单',
-            semanticLabel: '搜索音乐库',
-            showCancelAction: compact,
-            onClear: onClear,
-            onChanged: onChanged,
-            onSubmitted: onSubmitted,
-            onCancel: () {
-              focusNode.unfocus();
-            },
-          ),
+          SizedBox(height: compact ? 12 : 18),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: AppSearchField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  autofocus: true,
+                  dense: true,
+                  hintText: compact ? '歌曲、专辑、艺术家' : '搜索歌曲、专辑、艺术家、歌单',
+                  semanticLabel: '搜索音乐库',
+                  showCancelAction: compact,
+                  onClear: onClear,
+                  onChanged: onChanged,
+                  onSubmitted: onSubmitted,
+                  onCancel: () {
+                    focusNode.unfocus();
+                  },
+                ),
+              ),
+            ),
+            if (!compact && showScopes) ...[
+              const SizedBox(width: 18),
+              MetaPill(label: '$resultCount 个结果', size: MetaPillSize.compact),
+            ],
+          ],
         ),
+        if (showScopes) ...[
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: AppScopeTabs<_SearchScope>(
+              semanticLabel: '搜索结果分类',
+              variant: compact
+                  ? AppScopeTabsVariant.pill
+                  : AppScopeTabsVariant.underline,
+              items: _searchScopeItems(
+                state.results,
+                withIcons: false,
+                withCounts: false,
+              ),
+              selectedValue: selectedScope,
+              onChanged: onScopeChanged,
+              fillWidth: compact,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -282,13 +325,11 @@ class _SearchResultsView extends StatelessWidget {
   const _SearchResultsView({
     required this.state,
     required this.selectedScope,
-    required this.onScopeChanged,
     required this.onRecentSelected,
   });
 
   final SearchState state;
   final _SearchScope selectedScope;
-  final ValueChanged<_SearchScope> onScopeChanged;
   final ValueChanged<String> onRecentSelected;
 
   @override
@@ -305,7 +346,6 @@ class _SearchResultsView extends StatelessWidget {
         return _SearchResultsContent(
           results: state.results,
           selectedScope: selectedScope,
-          onScopeChanged: onScopeChanged,
           isLoading: true,
         );
       }
@@ -327,7 +367,6 @@ class _SearchResultsView extends StatelessWidget {
     return _SearchResultsContent(
       results: state.results,
       selectedScope: selectedScope,
-      onScopeChanged: onScopeChanged,
     );
   }
 }
@@ -336,13 +375,11 @@ class _SearchResultsContent extends StatelessWidget {
   const _SearchResultsContent({
     required this.results,
     required this.selectedScope,
-    required this.onScopeChanged,
     this.isLoading = false,
   });
 
   final SearchResults results;
   final _SearchScope selectedScope;
-  final ValueChanged<_SearchScope> onScopeChanged;
   final bool isLoading;
 
   @override
@@ -356,14 +393,11 @@ class _SearchResultsContent extends StatelessWidget {
           return _CompactSearchResults(
             results: results,
             selectedScope: selectedScope,
-            onScopeChanged: onScopeChanged,
             isLoading: isLoading,
             horizontalPadding: horizontalPadding,
           );
         }
-        final effectiveScope = selectedScope == _SearchScope.playlists
-            ? _SearchScope.all
-            : selectedScope;
+        final effectiveScope = selectedScope;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
@@ -379,21 +413,6 @@ class _SearchResultsContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: AppScopeTabs<_SearchScope>(
-                      semanticLabel: '搜索结果分类',
-                      variant: AppScopeTabsVariant.underline,
-                      items: _searchScopeItems(
-                        results,
-                        withIcons: false,
-                        withCounts: false,
-                      ),
-                      selectedValue: effectiveScope,
-                      onChanged: onScopeChanged,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   if (isLoading) const _SearchLoadingBanner(),
                   if (effectiveScope.apply(results).isEmpty)
                     _ScopedNoResults(selectedScope: effectiveScope)
@@ -634,49 +653,23 @@ class _CompactSearchResults extends StatelessWidget {
   const _CompactSearchResults({
     required this.results,
     required this.selectedScope,
-    required this.onScopeChanged,
     required this.horizontalPadding,
     this.isLoading = false,
   });
 
   final SearchResults results;
   final _SearchScope selectedScope;
-  final ValueChanged<_SearchScope> onScopeChanged;
   final double horizontalPadding;
   final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveScope = selectedScope == _SearchScope.playlists
-        ? _SearchScope.all
-        : selectedScope;
+    final effectiveScope = selectedScope;
     final scopedResults = effectiveScope.apply(results);
     final showAll = effectiveScope == _SearchScope.all;
 
     return CustomScrollView(
       slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            0,
-            horizontalPadding,
-            14,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: AppScopeTabs<_SearchScope>(
-              semanticLabel: '搜索结果分类',
-              variant: AppScopeTabsVariant.pill,
-              items: _searchScopeItems(
-                results,
-                withIcons: false,
-                withCounts: false,
-              ),
-              selectedValue: effectiveScope,
-              onChanged: onScopeChanged,
-              fillWidth: true,
-            ),
-          ),
-        ),
         SliverPadding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
@@ -913,10 +906,7 @@ class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
                           width: 44,
                           height: 44,
                         ),
-                        icon: Icon(
-                          Icons.playlist_add_rounded,
-                          size: 20,
-                        ),
+                        icon: Icon(Icons.playlist_add_rounded, size: 20),
                         style: AppActionButtonStyle.icon(
                           context,
                           iconSize: 20,

@@ -30,7 +30,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('热门搜索'), findsOneWidget);
+    expect(find.text('发现你想听的音乐'), findsOneWidget);
+    expect(find.text('热门发现'), findsOneWidget);
     expect(find.text('周杰伦'), findsOneWidget);
     expect(find.text('搜索分类'), findsNothing);
     expect(find.text('输入关键词探索音乐库'), findsNothing);
@@ -69,7 +70,7 @@ void main() {
     expect(_scopeTab('歌曲'), findsOneWidget);
     expect(_scopeTab('专辑'), findsOneWidget);
     expect(_scopeTab('艺术家'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsNothing);
+    expect(_scopeTab('歌单'), findsOneWidget);
     expect(_scopeTab('全部'), findsOneWidget);
     expect(find.text('1 首'), findsWidgets);
     expect(find.text('夜曲'), findsOneWidget);
@@ -111,7 +112,8 @@ void main() {
     );
 
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('歌曲、专辑、艺术家'), findsOneWidget);
+    final searchField = tester.widget<TextField>(find.byType(TextField));
+    expect(searchField.decoration?.hintText, '搜索歌曲、专辑、艺术家、歌单');
 
     await tester.enterText(find.byType(TextField), '夜曲');
     await tester.pump();
@@ -245,12 +247,17 @@ void main() {
 
     expect(_scopeTab('歌曲'), findsOneWidget);
     expect(_scopeTab('全部'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsNothing);
+    expect(_scopeTab('歌单'), findsOneWidget);
     expect(find.text('1 首'), findsOneWidget);
     expect(_scopeTab('专辑'), findsOneWidget);
     expect(find.byTooltip('加入队列'), findsOneWidget);
     expect(find.byType(SliverGrid), findsOneWidget);
     expect(find.byType(MusicArtistGridCard), findsOneWidget);
+
+    await tester.tap(_scopeTab('歌单'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('私人雷达'), findsOneWidget);
     final tabsRect = tester.getRect(
       find.byWidgetPredicate((widget) => widget is AppScopeTabs),
     );
@@ -292,6 +299,7 @@ void main() {
 
     expect(find.byType(SliverGrid), findsOneWidget);
     expect(find.byType(MusicArtistGridCard), findsWidgets);
+
     expect(tester.takeException(), isNull);
   });
 
@@ -311,7 +319,7 @@ void main() {
 
     expect(_scopeTab('歌曲'), findsOneWidget);
     expect(_scopeTab('全部'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsNothing);
+    expect(_scopeTab('歌单'), findsOneWidget);
     expect(find.text('1 首'), findsWidgets);
     expect(find.text('播放全部'), findsNothing);
     expect(find.text('加入队列'), findsNothing);
