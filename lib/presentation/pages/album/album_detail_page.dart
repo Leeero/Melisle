@@ -4,6 +4,7 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 import 'package:cross_platform_music_player/presentation/blocs/album/album_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/album/album_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -152,8 +153,9 @@ class _AlbumHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = album?.title.trim();
-    final displayTitle = title == null || title.isEmpty ? '专辑详情' : title;
+    final displayTitle = album == null
+        ? '专辑详情'
+        : MediaDisplayText.albumTitle(album!.title);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -367,9 +369,9 @@ class _AlbumArtistLine extends StatelessWidget {
       );
     }
 
-    final year = album!.year?.toString() ?? '未知年份';
+    final year = MediaDisplayText.year(album!.year);
     final artistId = album!.artistId;
-    final artistName = album!.artistName.isEmpty ? '未知艺术家' : album!.artistName;
+    final artistName = MediaDisplayText.artistName(album!.artistName);
 
     if (artistId == null || artistId.isEmpty) {
       return Text(
