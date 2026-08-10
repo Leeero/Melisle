@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
@@ -174,7 +175,7 @@ class _MusicTrackTableHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const SizedBox(width: 84),
+              const SizedBox(width: 88),
             ],
           ),
         );
@@ -214,11 +215,12 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
     final colorScheme = theme.colorScheme;
     final highlighted = _hovered || _focused;
     final track = widget.track;
+    final displayTitle = MediaDisplayText.trackTitle(track.title);
     final indexLabel = (widget.index + 1).toString().padLeft(2, '0');
     final trailing = widget.trailingBuilder?.call(context, track, _hovered);
 
     return Semantics(
-      label: '播放《${track.title}》',
+      label: '播放《$displayTitle》',
       button: true,
       selected: widget.isCurrent,
       child: MouseRegion(
@@ -295,7 +297,9 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           const SizedBox(width: 12),
                           Expanded(
                             flex: 3,
-                            child: _MusicTrackTableText(track.albumTitle),
+                            child: _MusicTrackTableText(
+                              MediaDisplayText.albumTitle(track.albumTitle),
+                            ),
                           ),
                         ],
                         const SizedBox(width: 12),
@@ -318,7 +322,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           curve: AppMotion.enter,
                           opacity: highlighted || widget.isCurrent ? 1 : 0,
                           child: SizedBox(
-                            width: 84,
+                            width: 88,
                             child:
                                 trailing ??
                                 Row(
@@ -368,6 +372,8 @@ class _MusicTrackTitleCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final displayTitle = MediaDisplayText.trackTitle(track.title);
+    final displayArtist = MediaDisplayText.artistName(track.artistName);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +382,7 @@ class _MusicTrackTitleCell extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                track.title,
+                displayTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -396,7 +402,7 @@ class _MusicTrackTitleCell extends StatelessWidget {
         if (showSubtitle) ...[
           const SizedBox(height: 2),
           Text(
-            track.artistName,
+            displayArtist,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(

@@ -1,6 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,9 @@ import 'package:go_router/go_router.dart';
 ///   - 添加到当前队列
 ///   - 收藏 / 取消收藏
 Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
+  final title = MediaDisplayText.trackTitle(track.title);
+  final artist = MediaDisplayText.artistName(track.artistName);
+  final album = MediaDisplayText.albumTitle(track.albumTitle);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -20,11 +24,8 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
     backgroundColor: Colors.transparent,
     builder: (sheetCtx) {
       return AppSheetScaffold(
-        title: track.title.isEmpty ? '未知歌曲' : track.title,
-        description: [
-          track.artistName,
-          track.albumTitle,
-        ].where((value) => value.isNotEmpty).join(' · '),
+        title: title,
+        description: '$artist · $album',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -62,7 +63,7 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                 Navigator.of(sheetCtx).pop();
                 await context.read<PlayerCubit>().addToQueue(track);
                 if (context.mounted) {
-                  AppSnackBar.show(context, '已加入队列：${track.title}');
+                  AppSnackBar.show(context, '已加入队列：$title');
                 }
               },
             ),
@@ -85,10 +86,7 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
                       currentValue: isFav,
                     );
                     if (context.mounted) {
-                      AppSnackBar.show(
-                        context,
-                        isFav ? '已取消收藏' : '已收藏',
-                      );
+                      AppSnackBar.show(context, isFav ? '已取消收藏' : '已收藏');
                     }
                   },
                 );

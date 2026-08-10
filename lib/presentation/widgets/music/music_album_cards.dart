@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,8 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final album = widget.album;
+    final displayTitle = MediaDisplayText.albumTitle(album.title);
+    final displayArtist = MediaDisplayText.artistName(album.artistName);
     final textTheme = theme.textTheme;
     final compact = widget.compact;
     final contentPadding = compact
@@ -54,7 +57,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
         : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     return Semantics(
-      label: '打开专辑《${album.title}》',
+      label: '打开专辑《$displayTitle》',
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -129,7 +132,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                                     imageUrl: album.artworkUrl,
                                     size: artworkSize,
                                     borderRadius: 0,
-                                    semanticLabel: '《${album.title}》专辑封面',
+                                    semanticLabel: '《$displayTitle》专辑封面',
                                   );
                                 },
                               ),
@@ -164,7 +167,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
               Padding(
                 padding: contentPadding,
                 child: Text(
-                  album.title,
+                  displayTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: titleStyle,
@@ -175,7 +178,7 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                 padding: contentPadding,
                 child: Text(
                   [
-                    album.artistName,
+                    displayArtist,
                     if (album.year != null) '${album.year}',
                     '${album.trackCount} 首',
                   ].join(' · '),

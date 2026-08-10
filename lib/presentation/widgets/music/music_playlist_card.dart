@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
+    final displayName = MediaDisplayText.playlistName(playlist.name);
     final subtitle = _playlistSubtitle(playlist);
     final textTheme = theme.textTheme;
     final compact = widget.compact;
@@ -55,7 +57,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
         : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     return Semantics(
-      label: '打开歌单《${playlist.name}》',
+      label: '打开播放列表《$displayName》',
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -129,7 +131,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                     imageUrl: playlist.artworkUrl,
                                     size: constraints.maxWidth,
                                     borderRadius: 0,
-                                    semanticLabel: '《${playlist.name}》歌单封面',
+                                    semanticLabel: '《$displayName》播放列表封面',
                                   );
                                 },
                               ),
@@ -175,7 +177,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
               Padding(
                 padding: contentPadding,
                 child: Text(
-                  playlist.name,
+                  displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: titleStyle,
@@ -221,10 +223,11 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final playlist = widget.playlist;
+    final displayName = MediaDisplayText.playlistName(playlist.name);
     final subtitle = _playlistSubtitle(playlist);
 
     return Semantics(
-      label: '打开歌单《${playlist.name}》',
+      label: '打开播放列表《$displayName》',
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -254,7 +257,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                       imageUrl: playlist.artworkUrl,
                       size: 52,
                       borderRadius: 12,
-                      semanticLabel: '《${playlist.name}》歌单封面',
+                      semanticLabel: '《$displayName》播放列表封面',
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -262,7 +265,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            playlist.name,
+                            displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall,
@@ -295,7 +298,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
 }
 
 String _playlistSubtitle(MusicPlaylist playlist) {
-  return playlist.trackCount > 0 ? '${playlist.trackCount} 首歌曲' : '歌单';
+  return playlist.trackCount > 0 ? '${playlist.trackCount} 首歌曲' : '播放列表';
 }
 
 class _PlaylistCountBadge extends StatelessWidget {

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -30,10 +31,11 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final artist = widget.artist;
+    final displayName = MediaDisplayText.artistName(artist.name);
     final compact = widget.compact;
 
     return Semantics(
-      label: '打开艺术家《${artist.name}》',
+      label: '打开艺术家《$displayName》',
       button: true,
       onTap: widget.onTap,
       child: MouseRegion(
@@ -132,13 +134,13 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                           imageUrl: artist.artworkUrl,
                           size: artworkSize,
                           borderRadius: artworkSize / 2,
-                          semanticLabel: '${artist.name} 头像',
+                          semanticLabel: '$displayName 头像',
                         ),
                       ),
                     ),
                     SizedBox(height: titleGap),
                     Text(
-                      artist.name,
+                      displayName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
