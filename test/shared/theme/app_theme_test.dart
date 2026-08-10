@@ -52,6 +52,19 @@ void main() {
       }
     });
   });
+
+  group('Stitch V3 layout tokens', () {
+    test('keeps the canonical mobile spacing and MiniPlayer height', () {
+      expect(AppSpacingTokens.pageHorizontalCompact, 20);
+      expect(AppSpacingTokens.mobilePageX, 20);
+      expect(AppSpacingTokens.mobileMiniPlayerHeight, 60);
+    });
+
+    test('keeps the V3-46 desktop shell dimensions', () {
+      expect(AppSpacingTokens.desktopSidebarWidth, 220);
+      expect(AppSpacingTokens.desktopMiniPlayerHeight, 72);
+    });
+  });
 }
 
 double _contrast(Color first, Color second) {

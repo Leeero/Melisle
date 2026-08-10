@@ -70,6 +70,7 @@ class _ExpandedShellScaffoldState extends State<_ExpandedShellScaffold> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: const ValueKey('shell-desktop'),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Row(
         children: [
@@ -114,6 +115,7 @@ class _MediumShellScaffold extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: const ValueKey('shell-medium'),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Row(
         children: [
@@ -153,6 +155,7 @@ class _CompactShellScaffold extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: const ValueKey('shell-compact'),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: navigationShell,
       bottomNavigationBar: _ShellBottomDock(
@@ -256,6 +259,7 @@ class _ShellSidebar extends StatelessWidget {
         ),
       ),
       child: SizedBox(
+        key: ValueKey(compact ? 'shell-sidebar-compact' : 'shell-sidebar-wide'),
         width: compact ? 72 : AppSpacingTokens.desktopSidebarWidth,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
@@ -335,9 +339,7 @@ class _ShellSidebar extends StatelessWidget {
                     path.startsWith('/artist/'),
                 onTap: () => onSelected(2),
               ),
-              const SizedBox(height: 10),
-              const _ShellSectionDivider(),
-              if (!compact) const _ShellSectionLabel('资料库'),
+              const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.favorite_border_rounded,
                 label: '收藏',
@@ -347,19 +349,8 @@ class _ShellSidebar extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               _ShellNavButton(
-                icon: Icons.history_rounded,
-                label: '最近播放',
-                compact: compact,
-                selected: path == '/history',
-                onTap: () {
-                  onSelected(0);
-                  context.go('/history');
-                },
-              ),
-              const SizedBox(height: 2),
-              _ShellNavButton(
                 icon: Icons.queue_music_rounded,
-                label: '歌单',
+                label: '播放列表',
                 compact: compact,
                 selected: path.startsWith('/playlists'),
                 onTap: () {
@@ -367,13 +358,10 @@ class _ShellSidebar extends StatelessWidget {
                   context.go('/playlists');
                 },
               ),
-              const Spacer(),
-              const SizedBox(height: 10),
-              const _ShellSectionDivider(),
-              if (!compact) const _ShellSectionLabel('管理'),
+              const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.download_rounded,
-                label: '下载管理',
+                label: '下载',
                 compact: compact,
                 selected: path == '/downloads',
                 onTap: () {
@@ -381,6 +369,18 @@ class _ShellSidebar extends StatelessWidget {
                   context.go('/downloads');
                 },
               ),
+              const SizedBox(height: 2),
+              _ShellNavButton(
+                icon: Icons.history_rounded,
+                label: '历史',
+                compact: compact,
+                selected: path == '/history',
+                onTap: () {
+                  onSelected(0);
+                  context.go('/history');
+                },
+              ),
+              const Spacer(),
               const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.settings_rounded,
@@ -438,41 +438,6 @@ class _SidebarToggleButton extends StatelessWidget {
         compact
             ? Icons.keyboard_double_arrow_right_rounded
             : Icons.keyboard_double_arrow_left_rounded,
-      ),
-    );
-  }
-}
-
-class _ShellSectionLabel extends StatelessWidget {
-  const _ShellSectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).muted,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _ShellSectionDivider extends StatelessWidget {
-  const _ShellSectionDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: ColoredBox(
-        color: Theme.of(context).colorScheme.outlineVariant,
-        child: const SizedBox(height: 1),
       ),
     );
   }

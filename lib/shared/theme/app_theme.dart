@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 
-/// Design-system tokens for the Melisle (乐岛) visual redesign v2.
+/// Design-system tokens for the Melisle (乐岛) Stitch Unified V3 design.
 ///
 /// Colour palette, typography, border-radii, spacing and component themes live
 /// here so the product UI keeps one coherent visual language.

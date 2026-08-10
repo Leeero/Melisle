@@ -1,17 +1,19 @@
-import 'dart:ui' as ui;
-
+import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
-import 'package:cross_platform_music_player/presentation/widgets/quality_picker_sheet.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+enum MiniPlayerPlaybackStatus { idle, loading, playing, paused, failed }
 
 class MiniPlayerBar extends StatelessWidget {
   const MiniPlayerBar({super.key});
@@ -24,26 +26,25 @@ class MiniPlayerBar extends StatelessWidget {
       buildWhen: (prev, next) => prev.currentTrack?.id != next.currentTrack?.id,
       builder: (context, state) {
         final track = state.currentTrack;
-        if (track == null) {
-          return const SizedBox.shrink();
-        }
-
+        if (track == null) return const SizedBox.shrink();
         final width = MediaQuery.sizeOf(context).width;
         final isWide = AppBreakpoints.usesDesktopShellWidth(width);
         final artworkSourceContext = ArtworkSourceContext.track(track);
+        final trackTitle = MediaDisplayText.trackTitle(track.title);
+        final artistName = MediaDisplayText.artistName(track.artistName);
 
         return _MiniPlayerFrame(
           isWide: isWide,
           child: isWide
               ? _WideMiniPlayer(
-                  trackTitle: track.title,
-                  artistName: track.artistName,
+                  trackTitle: trackTitle,
+                  artistName: artistName,
                   artworkUrl: track.artworkUrl,
                   sourceContext: artworkSourceContext,
                 )
               : _CompactMiniPlayer(
-                  trackTitle: track.title,
-                  artistName: track.artistName,
+                  trackTitle: trackTitle,
+                  artistName: artistName,
                   artworkUrl: track.artworkUrl,
                   sourceContext: artworkSourceContext,
                 ),
@@ -61,8 +62,35 @@ class _MiniPlayerFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return BlocSelector<PlayerCubit, PlayerViewState, MiniPlayerPlaybackStatus>(
+      selector: _playbackStatus,
+      builder: (context, status) => Semantics(
+        container: true,
+        label: _playbackStatusLabel(status),
+        liveRegion:
+            status == MiniPlayerPlaybackStatus.loading ||
+            status == MiniPlayerPlaybackStatus.failed,
+        child: _MiniPlayerSurface(isWide: isWide, status: status, child: child),
+      ),
+    );
+  }
+}
+
+class _MiniPlayerSurface extends StatelessWidget {
+  const _MiniPlayerSurface({
+    required this.isWide,
+    required this.status,
+    required this.child,
+  });
+
+  final bool isWide;
+  final MiniPlayerPlaybackStatus status;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = theme.colorScheme;
 
     if (isWide) {
       return SizedBox(
@@ -88,43 +116,37 @@ class _MiniPlayerFrame extends StatelessWidget {
       );
     }
 
+    final failed = status == MiniPlayerPlaybackStatus.failed;
+    final paused = status == MiniPlayerPlaybackStatus.paused;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: SizedBox(
         height: 60,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.surface.withValues(alpha: 0.94),
-                    Color.alphaBlend(
-                      theme.musicWarmSoft.withValues(alpha: 0.30),
-                      colorScheme.surface,
-                    ),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Color.alphaBlend(
-                    theme.musicTeal.withValues(alpha: 0.18),
-                    colorScheme.outlineVariant,
-                  ),
-                  width: 0.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.shadow.withValues(alpha: 0.10),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+          borderRadius: BorderRadius.circular(14),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: failed
+                  ? colorScheme.errorContainer.withValues(alpha: 0.30)
+                  : colorScheme.surface.withValues(alpha: paused ? 0.80 : 0.90),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: failed
+                    ? colorScheme.error.withValues(alpha: 0.30)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.30),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Opacity(
+              opacity: paused ? 0.80 : 1,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 0, 10, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: child,
               ),
             ),
@@ -133,6 +155,24 @@ class _MiniPlayerFrame extends StatelessWidget {
       ),
     );
   }
+}
+
+MiniPlayerPlaybackStatus _playbackStatus(PlayerViewState state) {
+  if (state.currentTrack == null) return MiniPlayerPlaybackStatus.idle;
+  if (state.errorMessage != null) return MiniPlayerPlaybackStatus.failed;
+  if (state.isLoading) return MiniPlayerPlaybackStatus.loading;
+  if (state.isPlaying) return MiniPlayerPlaybackStatus.playing;
+  return MiniPlayerPlaybackStatus.paused;
+}
+
+String _playbackStatusLabel(MiniPlayerPlaybackStatus status) {
+  return switch (status) {
+    MiniPlayerPlaybackStatus.idle => '迷你播放器：未在播放',
+    MiniPlayerPlaybackStatus.loading => '迷你播放器：正在缓冲',
+    MiniPlayerPlaybackStatus.playing => '迷你播放器：正在播放',
+    MiniPlayerPlaybackStatus.paused => '迷你播放器：已暂停',
+    MiniPlayerPlaybackStatus.failed => '迷你播放器：播放失败',
+  };
 }
 
 class _CompactMiniPlayer extends StatefulWidget {
@@ -159,108 +199,217 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Semantics(
-      label: '当前播放：${widget.trackTitle}，${widget.artistName}。点击展开播放页。',
-      button: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => PlayerNavigation.openPlayerPage(context),
-          mouseCursor: SystemMouseCursors.click,
-          onHighlightChanged: (value) => setState(() => _pressed = value),
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          child: AnimatedScale(
-            duration: AppMotion.micro,
-            curve: AppMotion.standard,
-            scale: _pressed ? 0.992 : 1,
-            child: AnimatedSlide(
-              duration: AppMotion.micro,
-              curve: AppMotion.standard,
-              offset: _pressed ? const Offset(0, 0.012) : Offset.zero,
-              child: Row(
-                children: [
-                  BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) => prev.isPlaying != next.isPlaying,
-                    builder: (context, state) {
-                      return AnimatedContainer(
-                        duration: AppMotion.micro,
-                        width: 4,
-                        height: state.isPlaying ? 24 : 12,
-                        margin: const EdgeInsets.only(right: 6),
-                        decoration: BoxDecoration(
-                          color: state.isPlaying
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
+    return BlocBuilder<PlayerCubit, PlayerViewState>(
+      buildWhen: (previous, current) =>
+          previous.isPlaying != current.isPlaying ||
+          previous.isLoading != current.isLoading ||
+          previous.errorMessage != current.errorMessage ||
+          previous.position != current.position ||
+          previous.duration != current.duration,
+      builder: (context, state) {
+        final failed = state.errorMessage != null;
+        final subtitle = failed
+            ? state.errorMessage!
+            : state.isLoading
+            ? '正在缓冲…'
+            : widget.artistName;
+        return Semantics(
+          label: '当前播放：${widget.trackTitle}，$subtitle。点击展开播放页。',
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragEnd: (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity < -250) context.read<PlayerCubit>().next();
+              if (velocity > 250) context.read<PlayerCubit>().previous();
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => PlayerNavigation.openPlayerPage(context),
+                mouseCursor: SystemMouseCursors.click,
+                onHighlightChanged: (value) => setState(() => _pressed = value),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: AnimatedScale(
+                  duration: AppMotion.micro,
+                  curve: AppMotion.standard,
+                  scale: _pressed ? 0.992 : 1,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: _CompactProgressBar(
+                          failed: failed,
+                          loading: state.isLoading,
+                          position: state.position,
+                          duration: state.duration,
                         ),
-                      );
-                    },
-                  ),
-                  CachedArtwork(
-                    imageUrl: widget.artworkUrl,
-                    size: 42,
-                    borderRadius: 12,
-                    sourceContext: widget.sourceContext,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.trackTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            height: 1.15,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      Row(
+                        children: [
+                          _CompactArtwork(
+                            imageUrl: widget.artworkUrl,
+                            sourceContext: widget.sourceContext,
+                            failed: failed,
+                            loading: state.isLoading,
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.artistName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.muted,
-                            fontSize: 12,
-                            height: 1.15,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.trackTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    height: 20 / 14,
+                                    fontWeight: FontWeight.w400,
+                                    decoration: failed
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: failed
+                                        ? theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.50)
+                                        : null,
+                                  ),
+                                ),
+                                Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: failed
+                                        ? theme.colorScheme.error
+                                        : state.isLoading
+                                        ? theme.colorScheme.secondary
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontSize: 13,
+                                    height: 18 / 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 8),
+                          if (failed)
+                            const _MiniRetryButton(compact: true)
+                          else
+                            LoadingPlayPauseButton(
+                              isLoading: state.isLoading,
+                              isPlaying: state.isPlaying,
+                              onPressed: context
+                                  .read<PlayerCubit>()
+                                  .togglePlayback,
+                              size: 44,
+                              iconSize: 24,
+                              loadingStrokeWidth: 2.4,
+                            ),
+                          _MiniControlButton(
+                            icon: Icons.skip_next_rounded,
+                            onPressed: state.isLoading
+                                ? null
+                                : context.read<PlayerCubit>().next,
+                            compact: true,
+                            tooltip: '下一曲',
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  BlocBuilder<PlayerCubit, PlayerViewState>(
-                    buildWhen: (prev, next) =>
-                        prev.isPlaying != next.isPlaying ||
-                        prev.isLoading != next.isLoading,
-                    builder: (context, state) {
-                      return LoadingPlayPauseButton(
-                        isLoading: state.isLoading,
-                        isPlaying: state.isPlaying,
-                        onPressed: context.read<PlayerCubit>().togglePlayback,
-                        size: 36,
-                        iconSize: 16,
-                        loadingStrokeWidth: 2.4,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _MiniControlButton(
-                    icon: Icons.queue_music_rounded,
-                    onPressed: () => _showMiniQueueSheet(context),
-                    compact: true,
-                    tooltip: '当前播放列表',
-                  ),
-                ],
+                ),
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _CompactArtwork extends StatelessWidget {
+  const _CompactArtwork({
+    required this.imageUrl,
+    required this.sourceContext,
+    required this.failed,
+    required this.loading,
+  });
+
+  final String imageUrl;
+  final ArtworkSourceContext sourceContext;
+  final bool failed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Opacity(
+          opacity: failed
+              ? 0.50
+              : loading
+              ? 0.70
+              : 1,
+          child: ColorFiltered(
+            colorFilter: failed
+                ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+            child: CachedArtwork(
+              imageUrl: imageUrl,
+              size: 40,
+              borderRadius: 8,
+              sourceContext: sourceContext,
+            ),
+          ),
+        ),
+        if (failed)
+          Icon(
+            Icons.error_rounded,
+            size: 20,
+            color: Theme.of(context).colorScheme.error,
+          ),
+      ],
+    );
+  }
+}
+
+class _CompactProgressBar extends StatelessWidget {
+  const _CompactProgressBar({
+    required this.failed,
+    required this.loading,
+    required this.position,
+    required this.duration,
+  });
+
+  final bool failed;
+  final bool loading;
+  final Duration position;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final total = duration.inMilliseconds;
+    final progress = total <= 0
+        ? 0.0
+        : (position.inMilliseconds / total).clamp(0.0, 1.0);
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+      child: SizedBox(
+        height: 2,
+        child: LinearProgressIndicator(
+          value: loading ? null : progress,
+          color: failed ? colors.error : colors.primary,
+          backgroundColor: failed
+              ? colors.error.withValues(alpha: 0.20)
+              : colors.surfaceContainerHighest,
         ),
       ),
     );
@@ -284,36 +433,95 @@ class _WideMiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 180, maxWidth: 280),
-          child: _MiniTrackButton(
-            trackTitle: trackTitle,
-            artistName: artistName,
-            artworkUrl: artworkUrl,
-            sourceContext: sourceContext,
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: _MiniTrackButton(
+                  trackTitle: trackTitle,
+                  artistName: artistName,
+                  artworkUrl: artworkUrl,
+                  sourceContext: sourceContext,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const _MiniFavoriteButton(),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        const _MiniControlCluster(child: _MiniTransportControls()),
-        const SizedBox(width: 12),
-        const Expanded(child: _MiniTimelineBlock(showElapsedLabels: true)),
-        const SizedBox(width: 12),
-        const _MiniPlaybackModeButton(),
-        const SizedBox(width: 4),
-        const _MiniQualityButton(),
-        const SizedBox(width: 4),
-        _MiniVolumeControl(
-          width: MediaQuery.sizeOf(context).width >= 1440 ? 132 : 88,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: BlocBuilder<PlayerCubit, PlayerViewState>(
+              buildWhen: (previous, current) =>
+                  previous.errorMessage != current.errorMessage,
+              builder: (context, state) => state.errorMessage == null
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _MiniTransportControls(),
+                        SizedBox(height: 2),
+                        _MiniTimelineBlock(showElapsedLabels: true),
+                      ],
+                    )
+                  : _MiniErrorMessage(message: state.errorMessage!),
+            ),
+          ),
         ),
-        const SizedBox(width: 4),
-        _MiniControlButton(
-          icon: Icons.queue_music_rounded,
-          onPressed: () => _showMiniQueueSheet(context),
-          tooltip: '当前播放列表',
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _MiniControlButton(
+                icon: Icons.lyrics_outlined,
+                onPressed: () => PlayerNavigation.openPlayerPage(context),
+                tooltip: '查看歌词',
+              ),
+              const SizedBox(width: 4),
+              _MiniControlButton(
+                icon: Icons.queue_music_rounded,
+                onPressed: () => _showMiniQueueSheet(context),
+                tooltip: '当前播放列表',
+              ),
+              const SizedBox(width: 8),
+              const _MiniVolumeControl(width: 96),
+            ],
+          ),
         ),
-        const SizedBox(width: 4),
-        const _MiniExpandButton(),
       ],
+    );
+  }
+}
+
+class _MiniFavoriteButton extends StatelessWidget {
+  const _MiniFavoriteButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final track = context.select<PlayerCubit, MusicTrack?>(
+      (cubit) => cubit.state.currentTrack,
+    );
+    if (track == null) return const SizedBox.shrink();
+    return BlocBuilder<FavoritesCubit, FavoritesState>(
+      builder: (context, state) {
+        final isFavorite = state.entries[track.id] ?? track.isFavorite;
+        return IconButton(
+          onPressed: () => context.read<FavoritesCubit>().toggle(
+            track.id,
+            currentValue: isFavorite,
+          ),
+          tooltip: isFavorite ? '取消收藏' : '收藏',
+          style: AppActionButtonStyle.icon(
+            context,
+            selected: isFavorite,
+            size: 36,
+            iconSize: 20,
+          ),
+          icon: Icon(
+            isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          ),
+        );
+      },
     );
   }
 }
@@ -409,10 +617,12 @@ class _MiniTransportControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gap = AppSpacingTokens.miniPlayerControlGap;
+    const gap = 12.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const _MiniShuffleButton(),
+        const SizedBox(width: gap),
         _MiniControlButton(
           icon: Icons.skip_previous_rounded,
           onPressed: context.read<PlayerCubit>().previous,
@@ -422,15 +632,18 @@ class _MiniTransportControls extends StatelessWidget {
         BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (prev, next) =>
               prev.isPlaying != next.isPlaying ||
-              prev.isLoading != next.isLoading,
-          builder: (context, state) => LoadingPlayPauseButton(
-            isLoading: state.isLoading,
-            isPlaying: state.isPlaying,
-            onPressed: context.read<PlayerCubit>().togglePlayback,
-            size: 36,
-            iconSize: 18,
-            loadingStrokeWidth: 2.4,
-          ),
+              prev.isLoading != next.isLoading ||
+              prev.errorMessage != next.errorMessage,
+          builder: (context, state) => state.errorMessage != null
+              ? const _MiniRetryButton()
+              : LoadingPlayPauseButton(
+                  isLoading: state.isLoading,
+                  isPlaying: state.isPlaying,
+                  onPressed: context.read<PlayerCubit>().togglePlayback,
+                  size: 40,
+                  iconSize: 24,
+                  loadingStrokeWidth: 2.4,
+                ),
         ),
         SizedBox(width: gap),
         _MiniControlButton(
@@ -438,7 +651,114 @@ class _MiniTransportControls extends StatelessWidget {
           onPressed: context.read<PlayerCubit>().next,
           tooltip: '下一曲',
         ),
+        const SizedBox(width: gap),
+        const _MiniRepeatButton(),
       ],
+    );
+  }
+}
+
+class _MiniShuffleButton extends StatelessWidget {
+  const _MiniShuffleButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<PlayerCubit, PlayerViewState, bool>(
+      selector: (state) => state.shuffleEnabled,
+      builder: (context, enabled) => IconButton(
+        onPressed: context.read<PlayerCubit>().toggleShuffle,
+        tooltip: enabled ? '关闭随机播放' : '随机播放',
+        style: AppActionButtonStyle.icon(
+          context,
+          selected: enabled,
+          size: 36,
+          iconSize: 20,
+        ),
+        icon: const Icon(Icons.shuffle_rounded),
+      ),
+    );
+  }
+}
+
+class _MiniRepeatButton extends StatelessWidget {
+  const _MiniRepeatButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<PlayerCubit, PlayerViewState, PlaybackModeOption>(
+      selector: (state) => state.playbackMode,
+      builder: (context, mode) => IconButton(
+        onPressed: context.read<PlayerCubit>().toggleLoopMode,
+        tooltip: _playbackModeLabel(mode),
+        style: AppActionButtonStyle.icon(
+          context,
+          selected:
+              mode == PlaybackModeOption.loopAll ||
+              mode == PlaybackModeOption.loopOne,
+          size: 36,
+          iconSize: 20,
+        ),
+        icon: Icon(
+          mode == PlaybackModeOption.loopOne
+              ? Icons.repeat_one_rounded
+              : Icons.repeat_rounded,
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniRetryButton extends StatelessWidget {
+  const _MiniRetryButton({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: compact ? 36 : 44,
+      child: IconButton(
+        tooltip: '重试播放',
+        onPressed: context.read<PlayerCubit>().togglePlayback,
+        style: AppActionButtonStyle.icon(
+          context,
+          tone: AppActionButtonTone.danger,
+          size: compact ? 36 : 44,
+          iconSize: compact ? 18 : 20,
+        ),
+        icon: const Icon(Icons.refresh_rounded),
+      ),
+    );
+  }
+}
+
+class _MiniErrorMessage extends StatelessWidget {
+  const _MiniErrorMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: message,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 18, color: colorScheme.error),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              '播放失败，请重试',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -450,49 +770,25 @@ class _MiniTimelineBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const _MiniTimeline(),
-        if (showElapsedLabels) ...[
-          const SizedBox(height: 6),
-          BlocBuilder<PlayerCubit, PlayerViewState>(
-            buildWhen: (prev, next) =>
-                prev.position != next.position ||
-                prev.duration != next.duration,
-            builder: (context, state) => Row(
-              children: [
-                Text(
-                  _format(state.position),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Spacer(),
-                Text(
-                  _format(state.duration),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
+    if (!showElapsedLabels) return const _MiniTimeline();
+    return BlocBuilder<PlayerCubit, PlayerViewState>(
+      buildWhen: (prev, next) =>
+          prev.position != next.position || prev.duration != next.duration,
+      builder: (context, state) => Row(
+        children: [
+          Text(
+            _format(state.position),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(child: _MiniTimeline()),
+          const SizedBox(width: 12),
+          Text(
+            _format(state.duration),
+            style: Theme.of(context).textTheme.labelSmall,
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _MiniControlCluster extends StatelessWidget {
-  const _MiniControlCluster({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
       ),
-      child: child,
     );
   }
 }
@@ -549,49 +845,6 @@ class _MiniVolumeControl extends StatelessWidget {
   }
 }
 
-class _MiniQualityButton extends StatelessWidget {
-  const _MiniQualityButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<PlayerCubit, PlayerViewState>(
-      buildWhen: (prev, next) => prev.quality != next.quality,
-      builder: (context, state) => Tooltip(
-        message: '播放音质：${state.quality.label}',
-        child: TextButton(
-          onPressed: () => QualityPickerSheet.show(context),
-          style: TextButton.styleFrom(
-            minimumSize: const Size(48, 32),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: Text(
-            state.quality.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniExpandButton extends StatelessWidget {
-  const _MiniExpandButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return _MiniControlButton(
-      icon: Icons.open_in_full_rounded,
-      onPressed: () => PlayerNavigation.openPlayerPage(context),
-      tooltip: '展开播放器',
-    );
-  }
-}
-
 class _MiniTimeline extends StatefulWidget {
   const _MiniTimeline();
 
@@ -620,66 +873,39 @@ class _MiniTimelineState extends State<_MiniTimeline> {
             (_dragging ? _dragValue.clamp(0, effectiveMax) : streamValue)
                 .toDouble();
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-            ),
-            child: Slider(
-              value: sliderValue,
-              max: effectiveMax,
-              semanticFormatterCallback: (value) =>
-                  '播放进度 ${_format(Duration(milliseconds: value.round()))}',
-              onChangeStart: (value) {
-                setState(() {
-                  _dragging = true;
-                  _dragValue = value;
-                });
-              },
-              onChanged: (value) {
-                setState(() => _dragValue = value);
-              },
-              onChangeEnd: (value) {
-                context.read<PlayerCubit>().seek(
-                  Duration(milliseconds: value.round()),
-                );
-                // seek 会 emit 新的 position，BlocBuilder 重建时 _dragging
-                // 已为 false，sliderValue 会用 seek 后的 streamValue。
-                setState(() => _dragging = false);
-              },
+        return SizedBox(
+          height: 18,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 9),
+              ),
+              child: Slider(
+                value: sliderValue,
+                max: effectiveMax,
+                semanticFormatterCallback: (value) =>
+                    '播放进度 ${_format(Duration(milliseconds: value.round()))}',
+                onChangeStart: (value) {
+                  setState(() {
+                    _dragging = true;
+                    _dragValue = value;
+                  });
+                },
+                onChanged: (value) {
+                  setState(() => _dragValue = value);
+                },
+                onChangeEnd: (value) {
+                  context.read<PlayerCubit>().seek(
+                    Duration(milliseconds: value.round()),
+                  );
+                  setState(() => _dragging = false);
+                },
+              ),
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _MiniPlaybackModeButton extends StatelessWidget {
-  const _MiniPlaybackModeButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<PlayerCubit, PlayerViewState>(
-      buildWhen: (prev, next) =>
-          prev.loopMode != next.loopMode ||
-          prev.shuffleEnabled != next.shuffleEnabled,
-      builder: (context, state) {
-        final mode = state.playbackMode;
-        final selected = mode != PlaybackModeOption.sequence;
-        return IconButton(
-          onPressed: context.read<PlayerCubit>().cyclePlaybackMode,
-          tooltip: '播放模式：${_playbackModeLabel(mode)}，点击切换',
-          style: AppActionButtonStyle.icon(
-            context,
-            selected: selected,
-            size: 32,
-            iconSize: 18,
-          ),
-          icon: Icon(_playbackModeIcon(mode)),
         );
       },
     );
@@ -695,7 +921,7 @@ class _MiniControlButton extends StatefulWidget {
   });
 
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final String? tooltip;
   final bool compact;
 
@@ -719,15 +945,6 @@ class _MiniControlButtonState extends State<_MiniControlButton> {
       icon: Icon(widget.icon),
     );
   }
-}
-
-IconData _playbackModeIcon(PlaybackModeOption mode) {
-  return switch (mode) {
-    PlaybackModeOption.sequence => Icons.swap_horiz_rounded,
-    PlaybackModeOption.loopAll => Icons.repeat_on_rounded,
-    PlaybackModeOption.loopOne => Icons.repeat_one_on_rounded,
-    PlaybackModeOption.shuffle => Icons.shuffle_rounded,
-  };
 }
 
 String _playbackModeLabel(PlaybackModeOption mode) {

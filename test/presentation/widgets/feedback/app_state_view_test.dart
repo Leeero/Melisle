@@ -81,4 +81,35 @@ void main() {
     await tester.tap(action);
     expect(retried, isTrue);
   });
+
+  testWidgets('分页失败状态提供统一语义和重试入口', (tester) async {
+    var retried = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: AppPaginationFooter(
+            status: AppPaginationStatus.failed,
+            errorMessage: '加载更多失败，请稍后重试。',
+            onRetry: () => retried = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '加载更多失败，请稍后重试。',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('无法连接到服务器'), findsOneWidget);
+
+    final retry = find.widgetWithText(OutlinedButton, '重试');
+    expect(tester.getSize(retry).height, greaterThanOrEqualTo(44));
+    await tester.tap(retry);
+    expect(retried, isTrue);
+  });
 }

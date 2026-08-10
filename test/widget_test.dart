@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
@@ -29,6 +31,7 @@ import 'package:cross_platform_music_player/presentation/pages/favorites/favorit
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/local_keyboard_shortcuts.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
@@ -37,12 +40,57 @@ import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('renders login page when session is missing', (tester) async {
-    final repository = _FakeMusicRepository();
+  testWidgets('global shortcuts do not intercept text field input', (
+    tester,
+  ) async {
+    final playerCubit = _MiniPlayerCubit(const PlayerViewState());
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: TextField()),
+        ),
+      ],
+    );
+    addTearDown(playerCubit.close);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => LocalKeyboardShortcuts(
+          playerCubit: playerCubit,
+          router: router,
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'lisi@2024');
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('lisi@2024'), findsOneWidget);
+  });
+
+  testWidgets('login keeps the V3 card stable across loading and failure', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final loginCompleter = Completer<AuthSession>();
+    final repository = _FakeMusicRepository(loginCompleter: loginCompleter);
     final settingsRepository = _FakeSettingsRepository();
     final mediaSourceResolver = CustomMediaSourceResolver();
     final database = AppDatabase.forTesting(NativeDatabase.memory());
@@ -82,11 +130,69 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('连接你的音乐岛屿'), findsOneWidget);
-    expect(find.text('音乐源'), findsOneWidget);
-    expect(find.text('Navidrome'), findsOneWidget);
-    expect(find.text('登录并进入乐岛'), findsOneWidget);
-    expect(find.text('等待登录'), findsOneWidget);
+    expect(find.text('Melisle 乐岛'), findsOneWidget);
+    expect(find.text('连接您的个人音乐服务器'), findsOneWidget);
+    expect(find.text('音乐源'), findsNothing);
+    expect(
+      find.text('自动识别 Emby、Navidrome 或 Subsonic/OpenSubsonic'),
+      findsOneWidget,
+    );
+    expect(find.text('连接服务器'), findsOneWidget);
+    expect(find.text('等待登录'), findsNothing);
+    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-card'))).width,
+      480,
+    );
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('v3-login-card'))).dx,
+      640,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
+      const Size(48, 48),
+    );
+
+    await tester.tap(find.text('连接服务器'));
+    await tester.pump();
+    expect(find.text('请输入服务器地址'), findsOneWidget);
+    expect(find.text('请输入用户名'), findsOneWidget);
+    expect(find.text('请输入密码或 API Token'), findsOneWidget);
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'https://music.example.com');
+    await tester.enterText(fields.at(1), 'test-user');
+    await tester.enterText(fields.at(2), 'test-password');
+    await tester.tap(find.text('连接服务器'));
+    await tester.pump();
+
+    expect(find.text('正在连接…'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('v3-login-submit')))
+          .onPressed,
+      isNull,
+    );
+    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
+      const Size(48, 48),
+    );
+
+    loginCompleter.completeError(Exception('network unavailable'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('连接失败，请检查服务器地址、登录凭据或网络连接。'), findsOneWidget);
+    expect(find.text('重新连接'), findsOneWidget);
+    expect(find.text('连接您的个人音乐服务器'), findsOneWidget);
+    expect(
+      find.text('自动识别 Emby、Navidrome 或 Subsonic/OpenSubsonic'),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
+      const Size(48, 48),
+    );
   });
 
   testWidgets('play all icon button exposes tooltip and touch target', (
@@ -167,18 +273,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('shell-compact')), findsOneWidget);
     for (final label in const ['首页', '搜索', '媒体库', '收藏', '设置']) {
       expect(find.text(label), findsWidgets);
     }
+
+    tester.view.physicalSize = const Size(960, 680);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1280, 900);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-desktop')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
+    expect(find.byTooltip('收起侧边栏'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('收起侧边栏'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
+    expect(find.byTooltip('展开侧边栏'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('搜索').last);
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('歌曲、专辑、艺术家'), findsOneWidget);
+    expect(find.text('搜索歌曲、专辑、艺人、播放列表'), findsOneWidget);
   });
 
-  testWidgets('mobile mini player keeps queue button and touch targets', (
+  testWidgets('mobile mini player follows V3 transport and touch targets', (
     tester,
   ) async {
     addTearDown(tester.view.resetPhysicalSize);
@@ -235,12 +361,158 @@ void main() {
     expect(find.text('夜曲'), findsOneWidget);
     expect(find.text('周杰伦'), findsOneWidget);
     expect(find.byTooltip('播放'), findsOneWidget);
-    expect(find.byTooltip('当前播放列表'), findsOneWidget);
+    expect(find.byTooltip('下一曲'), findsOneWidget);
     expect(tester.getSize(find.byTooltip('播放')).width, 44);
     expect(tester.getSize(find.byTooltip('播放')).height, 44);
-    expect(tester.getSize(find.byTooltip('当前播放列表')).width, 44);
-    expect(tester.getSize(find.byTooltip('当前播放列表')).height, 44);
+    expect(tester.getSize(find.byTooltip('下一曲')).width, 44);
+    expect(tester.getSize(find.byTooltip('下一曲')).height, 44);
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '迷你播放器：已暂停',
+      ),
+      findsOneWidget,
+    );
+
+    playerCubit.update(
+      playerCubit.state.copyWith(isLoading: true, isPlaying: false),
+    );
+    await tester.pump();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '迷你播放器：正在缓冲',
+      ),
+      findsOneWidget,
+    );
+
+    playerCubit.update(
+      playerCubit.state.copyWith(isLoading: false, isPlaying: true),
+    );
+    await tester.pump();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '迷你播放器：正在播放',
+      ),
+      findsOneWidget,
+    );
+
+    playerCubit.update(
+      playerCubit.state.copyWith(
+        isLoading: false,
+        isPlaying: false,
+        errorMessage: '播放失败',
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '迷你播放器：播放失败',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('重试播放'), findsOneWidget);
   });
+
+  testWidgets('desktop mini player follows V3 three-zone controls', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+
+    final repository = _FakeMusicRepository();
+    final track = MusicTrack(
+      id: 'desktop-track',
+      title: '夜曲',
+      artistName: '周杰伦',
+      albumTitle: '十一月的萧邦',
+      artworkUrl: '',
+      duration: const Duration(minutes: 3, seconds: 46),
+    );
+    final playerCubit = _MiniPlayerCubit(
+      PlayerViewState(queue: [track], currentIndex: 0),
+    );
+    final favoritesCubit = FavoritesCubit(repository);
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(favoritesCubit.close);
+    addTearDown(settingsCubit.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(bottomNavigationBar: MiniPlayerBar()),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(find.byType(MiniPlayerBar)).height, 72);
+    for (final tooltip in const [
+      '收藏',
+      '随机播放',
+      '上一曲',
+      '播放',
+      '下一曲',
+      '顺序播放',
+      '查看歌词',
+      '当前播放列表',
+      '静音',
+    ]) {
+      expect(find.byTooltip(tooltip), findsOneWidget);
+    }
+    expect(find.byTooltip('展开播放器'), findsNothing);
+  });
+
+  testWidgets(
+    'mini player follows V3 boundary rule and hides without a track',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final playerCubit = _MiniPlayerCubit(const PlayerViewState());
+      addTearDown(playerCubit.close);
+
+      for (final size in const [Size(390, 844), Size(1280, 900)]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          BlocProvider<PlayerCubit>.value(
+            value: playerCubit,
+            child: const MaterialApp(
+              home: Scaffold(bottomNavigationBar: MiniPlayerBar()),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(MiniPlayerBar), findsOneWidget);
+        expect(tester.getSize(find.byType(MiniPlayerBar)).height, 0);
+        expect(find.text('未在播放'), findsNothing);
+      }
+    },
+  );
 
   testWidgets('mobile queue sheet uses restored header and row actions', (
     tester,
@@ -358,6 +630,61 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('一个非常非常长的移动端测试歌单标题'), findsOneWidget);
+  });
+
+  testWidgets('desktop playlist grid card keeps V3 text stack within cell', (
+    tester,
+  ) async {
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(settingsCubit.close);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: BlocProvider<AppSettingsCubit>.value(
+          value: settingsCubit,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 172,
+                  height: 239,
+                  child: MusicPlaylistGridCard(
+                    playlist: const MusicPlaylist(
+                      id: 'desktop-playlist-overflow',
+                      name: '《2026 必听热曲大合集》',
+                      artworkUrl: '',
+                      trackCount: 199,
+                    ),
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == '打开播放列表《《2026 必听热曲大合集》》',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('199 首歌曲'), findsOneWidget);
   });
 
   testWidgets('dense app action button keeps a 44px touch target', (
@@ -568,14 +895,17 @@ const _authenticatedSession = AuthSession(
 class _MiniPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
   _MiniPlayerCubit(super.initialState);
 
+  void update(PlayerViewState state) => emit(state);
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeMusicRepository implements MusicRepository {
-  _FakeMusicRepository({this.session});
+  _FakeMusicRepository({this.session, this.loginCompleter});
 
   final AuthSession? session;
+  final Completer<AuthSession>? loginCompleter;
 
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
@@ -636,7 +966,8 @@ class _FakeMusicRepository implements MusicRepository {
     required String serverUrl,
     required String username,
     required String password,
-  }) async => session ?? _authenticatedSession;
+  }) =>
+      loginCompleter?.future ?? Future.value(session ?? _authenticatedSession);
 
   @override
   Future<void> logout() async {}

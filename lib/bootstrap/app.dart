@@ -291,15 +291,18 @@ class _MusicPlayerAppState extends State<MusicPlayerApp> {
         child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
           buildWhen: (a, b) => a.themeMode != b.themeMode,
           builder: (context, settings) {
-            return LocalKeyboardShortcuts(
-              playerCubit: widget.playerCubit,
-              child: MaterialApp.router(
-                title: AppConstants.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.light(),
-                darkTheme: AppTheme.dark(),
-                themeMode: settings.themeMode,
-                routerConfig: _router,
+            return MaterialApp.router(
+              title: AppConstants.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: settings.themeMode,
+              routerConfig: _router,
+              builder: (context, child) => LocalKeyboardShortcuts(
+                key: const ValueKey('global-keyboard-shortcuts-v2'),
+                playerCubit: widget.playerCubit,
+                router: _router,
+                child: child ?? const SizedBox.shrink(),
               ),
             );
           },

@@ -160,6 +160,125 @@ class AppLoadingView extends StatelessWidget {
   }
 }
 
+enum AppPaginationStatus { idle, loading, failed, complete }
+
+class AppPaginationFooter extends StatelessWidget {
+  const AppPaginationFooter({
+    super.key,
+    required this.status,
+    this.errorMessage,
+    this.onRetry,
+    this.completeLabel = '到底了',
+  });
+
+  final AppPaginationStatus status;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+  final String completeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      container: true,
+      liveRegion:
+          status == AppPaginationStatus.loading ||
+          status == AppPaginationStatus.failed,
+      label: switch (status) {
+        AppPaginationStatus.idle => '可以继续加载',
+        AppPaginationStatus.loading => '正在加载更多内容',
+        AppPaginationStatus.failed => errorMessage ?? '加载更多失败',
+        AppPaginationStatus.complete => completeLabel,
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Center(
+          child: switch (status) {
+            AppPaginationStatus.idle => const SizedBox(height: 12),
+            AppPaginationStatus.loading => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 9),
+                Text(
+                  '正在加载更多…',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            AppPaginationStatus.failed => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.cloud_off_rounded,
+                  size: 24,
+                  color: colorScheme.error,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '无法连接到服务器',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ],
+            ),
+            AppPaginationStatus.complete => Text(
+              completeLabel,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class AppSliverPaginationFooter extends StatelessWidget {
+  const AppSliverPaginationFooter({
+    super.key,
+    required this.status,
+    this.errorMessage,
+    this.onRetry,
+    this.completeLabel = '到底了',
+  });
+
+  final AppPaginationStatus status;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+  final String completeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: AppPaginationFooter(
+        status: status,
+        errorMessage: errorMessage,
+        onRetry: onRetry,
+        completeLabel: completeLabel,
+      ),
+    );
+  }
+}
+
 class AppSliverStateView extends StatelessWidget {
   const AppSliverStateView.loading({
     super.key,

@@ -41,9 +41,15 @@ class DesktopPageToolbar extends StatelessWidget {
                   _pageTitle(path),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: path == '/search'
+                      ? theme.textTheme.headlineSmall?.copyWith(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                        )
+                      : theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                 ),
               ),
               if (path != '/search')
@@ -70,12 +76,12 @@ String _pageTitle(String path) {
   if (path == '/search') return '搜索';
   if (path == '/library') return '媒体库';
   if (path == '/favorites') return '收藏';
-  if (path == '/history') return '最近播放';
-  if (path.startsWith('/playlists/')) return '歌单详情';
-  if (path == '/playlists') return '歌单';
+  if (path == '/history') return '历史';
+  if (path.startsWith('/playlists/')) return '播放列表详情';
+  if (path == '/playlists') return '播放列表';
   if (path.startsWith('/album/')) return '专辑';
   if (path.startsWith('/artist/')) return '艺术家';
-  if (path == '/downloads') return '下载管理';
+  if (path == '/downloads') return '下载';
   if (path == '/settings/media-sources') return '歌词与封面';
   if (path == '/settings') return '设置';
   return '乐岛';

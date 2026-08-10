@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 abstract final class AppColorTokens {
   static const seed = Color(0xFF117E6E);
 
-  // Keep these values aligned with design.md.
+  // Keep these values aligned with the Stitch V3 design system.
   static const darkScaffold = Color(0xFF0C1315);
   static const darkSurface = Color(0xFF141C1E);
   static const darkSurfaceHigh = Color(0xFF1B2325);
@@ -99,7 +99,7 @@ abstract final class AppSpacingTokens {
   static const double cardPadding = 16;
   static const double headerPadding = 22;
 
-  static const double pageHorizontalCompact = 24;
+  static const double pageHorizontalCompact = 20;
   static const double pageHorizontalMedium = 28;
   static const double pageHorizontalExpanded = 36;
 
@@ -109,11 +109,11 @@ abstract final class AppSpacingTokens {
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 220;
   static const double desktopMiniPlayerHeight = 72;
-  static const double mobileMiniPlayerHeight = 58;
+  static const double mobileMiniPlayerHeight = 60;
   static const double mobileTabContentHeight = 54;
   static const double desktopMainContentPaddingX = 36;
   static const double desktopMainContentPaddingY = 28;
-  static const double mobilePageX = 24;
+  static const double mobilePageX = 20;
   static const double desktopCardGridMinWidth = 160;
   static const double desktopCardGridGapX = 18;
   static const double desktopCardGridGapY = 22;
