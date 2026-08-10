@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlist_detail_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlist_detail_state.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
@@ -107,11 +108,11 @@ class _PlaylistDetailView extends StatelessWidget {
       switch (state.status) {
         PlaylistDetailStatus.loading => const AppSliverStateView.loading(),
         PlaylistDetailStatus.failure => AppSliverStateView.message(
-          message: state.errorMessage ?? '加载歌单详情失败',
+          message: state.errorMessage ?? '加载播放列表详情失败',
         ),
         _ =>
           state.tracks.isEmpty
-              ? const AppSliverStateView.message(message: '当前歌单还没有歌曲。')
+              ? const AppSliverStateView.message(message: '当前播放列表还没有歌曲。')
               : SliverPadding(
                   padding: AppPageLayout.sectionPadding(
                     context,
@@ -171,11 +172,11 @@ class _PlaylistDetailView extends StatelessWidget {
       switch (state.status) {
         PlaylistDetailStatus.loading => const AppSliverStateView.loading(),
         PlaylistDetailStatus.failure => AppSliverStateView.message(
-          message: state.errorMessage ?? '加载歌单详情失败',
+          message: state.errorMessage ?? '加载播放列表详情失败',
         ),
         _ =>
           state.tracks.isEmpty
-              ? const AppSliverStateView.message(message: '当前歌单还没有歌曲。')
+              ? const AppSliverStateView.message(message: '当前播放列表还没有歌曲。')
               : _MobilePlaylistTrackSliver(
                   tracks: state.tracks,
                   currentTrackId: currentTrackId,
@@ -255,7 +256,7 @@ class _MobilePlaylistHero extends StatelessWidget {
             _MobilePlaylistArtwork(
               imageUrl: playlist?.artworkUrl ?? '',
               size: coverSize,
-              semanticLabel: '《$title》歌单封面',
+              semanticLabel: '《$title》播放列表封面',
             ),
             const SizedBox(height: 12),
             Text(
@@ -526,9 +527,10 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final selected = widget.selected;
+    final displayTitle = MediaDisplayText.trackTitle(widget.track.title);
 
     return Semantics(
-      label: '播放《${widget.track.title}》',
+      label: '播放《$displayTitle》',
       button: true,
       selected: selected,
       child: DecoratedBox(
@@ -600,7 +602,7 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            widget.track.title,
+                            displayTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -732,7 +734,10 @@ class _MobilePlaylistTrackIconButton extends StatelessWidget {
 Future<void> _addTrackToQueue(BuildContext context, MusicTrack track) async {
   await context.read<PlayerCubit>().addToQueue(track);
   if (!context.mounted) return;
-  AppSnackBar.show(context, '已加入队列：${track.title}');
+  AppSnackBar.show(
+    context,
+    '已加入队列：${MediaDisplayText.trackTitle(track.title)}',
+  );
 }
 
 class _PlaylistHero extends StatelessWidget {
@@ -778,7 +783,7 @@ class _PlaylistHero extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '歌单',
+                      '播放列表',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -790,7 +795,7 @@ class _PlaylistHero extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      playlist?.name ?? '歌单详情',
+                      _playlistTitle(playlist),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.start,
@@ -849,17 +854,13 @@ int _playlistTrackCount(MusicPlaylist? playlist, int loadedCount) {
 }
 
 String _playlistTitle(MusicPlaylist? playlist) {
-  final name = playlist?.name.trim();
-  if (name == null || name.isEmpty) return '歌单详情';
-  return name;
+  if (playlist == null) return '播放列表详情';
+  return MediaDisplayText.playlistName(playlist.name);
 }
 
 String _trackSubtitle(MusicTrack track) {
-  final parts = [
-    track.artistName.trim(),
-    track.albumTitle.trim(),
-  ].where((value) => value.isNotEmpty).toList();
-  return parts.isEmpty ? '未知艺术家' : parts.join(' · ');
+  return '${MediaDisplayText.artistName(track.artistName)} · '
+      '${MediaDisplayText.albumTitle(track.albumTitle)}';
 }
 
 double _mobileContentBottomInset(

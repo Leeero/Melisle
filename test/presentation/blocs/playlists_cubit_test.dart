@@ -55,6 +55,34 @@ void main() {
     expect(cubit.state.hasMore, isTrue);
   });
 
+  test('loadMore_canRetryAfterPartialFailure', () async {
+    final repository = _FakePlaylistRepository(
+      List.generate(
+        70,
+        (index) => MusicPlaylist(
+          id: 'playlist-$index',
+          name: '歌单 $index',
+          artworkUrl: '',
+        ),
+      ),
+    );
+    final cubit = PlaylistsCubit(FetchPlaylists(repository));
+    addTearDown(cubit.close);
+
+    await cubit.load();
+    repository.failNextRequest = true;
+    await cubit.loadMore();
+
+    expect(cubit.state.status, PlaylistsStatus.failure);
+    expect(cubit.state.allPlaylists.length, 30);
+
+    await cubit.loadMore();
+
+    expect(cubit.state.status, PlaylistsStatus.success);
+    expect(cubit.state.allPlaylists.length, 60);
+    expect(repository.requests.last.startIndex, 30);
+  });
+
   test('search_fetchesFirstPageFromRepository', () async {
     final repository = _FakePlaylistRepository([
       const MusicPlaylist(id: 'playlist-1', name: '深夜独处', artworkUrl: ''),
@@ -113,6 +141,7 @@ class _FakePlaylistRepository implements MusicRepository {
 
   final List<MusicPlaylist> playlists;
   final requests = <_PlaylistRequest>[];
+  bool failNextRequest = false;
 
   @override
   Future<List<MusicPlaylist>> fetchPlaylists({
@@ -127,6 +156,10 @@ class _FakePlaylistRepository implements MusicRepository {
         searchQuery: searchQuery,
       ),
     );
+    if (failNextRequest) {
+      failNextRequest = false;
+      throw Exception('offline');
+    }
     final filtered = searchQuery == null || searchQuery.trim().isEmpty
         ? playlists
         : playlists

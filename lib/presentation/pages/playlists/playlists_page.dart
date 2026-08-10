@@ -92,13 +92,15 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
     }
 
     if (state.status == PlaylistsStatus.failure && state.allPlaylists.isEmpty) {
-      return AppBodyStateView.message(message: state.errorMessage ?? '加载歌单失败');
+      return AppBodyStateView.message(
+        message: state.errorMessage ?? '加载播放列表失败',
+      );
     }
 
     if (state.allPlaylists.isEmpty) {
       if (state.isFiltering) {
         return AppBodyStateView.message(
-          message: '没有找到匹配的歌单。',
+          message: '没有找到匹配的播放列表。',
           action: TextButton.icon(
             onPressed: () => context.read<PlaylistsCubit>().search(''),
             icon: const Icon(Icons.close_rounded, size: 18),
@@ -106,12 +108,12 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
           ),
         );
       }
-      return const AppBodyStateView.message(message: '当前还没有歌单。');
+      return const AppBodyStateView.message(message: '当前还没有播放列表。');
     }
 
     if (state.playlists.isEmpty) {
       return AppBodyStateView.message(
-        message: '没有找到匹配的歌单。',
+        message: '没有找到匹配的播放列表。',
         action: TextButton.icon(
           onPressed: () => context.read<PlaylistsCubit>().search(''),
           icon: const Icon(Icons.close_rounded, size: 18),
@@ -159,8 +161,7 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
                       maxCrossAxisExtent: isWide ? 176 : 174,
                       crossAxisSpacing: isWide ? 18 : 14,
                       mainAxisSpacing: isWide ? 24 : 24,
-                      childAspectRatio: isWide ? 0.76 : 0.78,
-                      mainAxisExtent: isWide ? 226 : null,
+                      childAspectRatio: isWide ? 0.72 : 0.78,
                     ),
                   ),
                 );
@@ -174,27 +175,23 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
   }
 
   Widget _buildFooter(PlaylistsState state) {
-    if (state.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (state.status == PlaylistsStatus.failure &&
-        state.allPlaylists.isNotEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            state.errorMessage ?? '加载更多歌单失败',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
-        ),
-      );
-    }
-    return const SizedBox(height: 32);
+    final hasLoadMoreError =
+        state.status == PlaylistsStatus.failure &&
+        state.allPlaylists.isNotEmpty;
+
+    return AppPaginationFooter(
+      status: hasLoadMoreError
+          ? AppPaginationStatus.failed
+          : state.isLoadingMore
+          ? AppPaginationStatus.loading
+          : state.hasMore
+          ? AppPaginationStatus.idle
+          : AppPaginationStatus.complete,
+      errorMessage: state.errorMessage,
+      onRetry: hasLoadMoreError
+          ? () => context.read<PlaylistsCubit>().loadMore()
+          : null,
+    );
   }
 }
 
@@ -211,8 +208,8 @@ class _PlaylistsHeader extends StatelessWidget {
     final searchField = AppSearchField(
       controller: controller,
       dense: true,
-      hintText: '搜索歌单名称',
-      semanticLabel: '搜索歌单',
+      hintText: '搜索播放列表',
+      semanticLabel: '搜索播放列表',
       showCancelAction: false,
       onClear: () {
         controller.clear();
@@ -221,12 +218,12 @@ class _PlaylistsHeader extends StatelessWidget {
       onChanged: context.read<PlaylistsCubit>().search,
     );
     final summary = state.isFiltering
-        ? '找到 ${state.playlists.length} 个匹配歌单'
-        : '${state.allPlaylists.length} 个歌单';
+        ? '找到 ${state.playlists.length} 个匹配播放列表'
+        : '${state.allPlaylists.length} 个播放列表';
 
     if (!isWide || !hasDesktopToolbar) {
       return AppPageHeader(
-        title: '歌单',
+        title: '播放列表',
         description: summary,
         automaticImplyLeading: false,
         hideTitleOnCompactWithCenter: false,

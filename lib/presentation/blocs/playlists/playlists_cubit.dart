@@ -21,9 +21,11 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
   }
 
   Future<void> loadMore() async {
-    if (state.status != PlaylistsStatus.success ||
-        state.isLoadingMore ||
-        !state.hasMore) {
+    final canLoadMore =
+        state.status == PlaylistsStatus.success ||
+        (state.status == PlaylistsStatus.failure &&
+            state.allPlaylists.isNotEmpty);
+    if (!canLoadMore || state.isLoadingMore || !state.hasMore) {
       return;
     }
 
@@ -95,7 +97,7 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
         state.copyWith(
           status: PlaylistsStatus.failure,
           isLoadingMore: false,
-          errorMessage: '加载歌单失败：$error',
+          errorMessage: '加载播放列表失败：$error',
         ),
       );
     }
