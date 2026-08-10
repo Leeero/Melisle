@@ -11,8 +11,8 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sn
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/tracks/app_track_collection_view.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -115,56 +115,27 @@ class _FavoritesViewState extends State<_FavoritesView> {
       );
     }
 
-    if (AppBreakpoints.usesWideContent(context)) {
-      return ListView(
-        controller: _scrollController,
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          AppBreakpoints.usesDesktopToolbar(context) ? 8 : 0,
-          horizontalPadding,
-          24,
-        ),
+    return AppTrackCollectionView(
+      tracks: state.tracks,
+      currentTrackId: currentTrackId,
+      horizontalPadding: horizontalPadding,
+      scrollController: _scrollController,
+      mobileHeader: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MusicTrackTable(
-            tracks: state.tracks,
-            currentTrackId: currentTrackId,
-            showActionBar: false,
-            onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: index,
-            ),
-            trailingBuilder: (context, track, _) =>
-                _FavoriteTrackActionButton(track: track, compact: true),
-          ),
-          _FavoritesPaginationFooter(state: state),
-        ],
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      itemCount: state.tracks.length + 3,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _FavoritesPlayAllToolbar(state: state, expand: true);
-        }
-        if (index == 1) {
-          return AppSectionTitleRow(
+          _FavoritesPlayAllToolbar(state: state, expand: true),
+          AppSectionTitleRow(
             title: '收藏歌曲',
             badge: MetaPill(
               label: '${state.tracks.length} 首',
               size: MetaPillSize.compact,
             ),
-          );
-        }
-        final trackIndex = index - 2;
-        if (trackIndex == state.tracks.length) {
-          return _FavoritesPaginationFooter(state: state);
-        }
-
-        final track = state.tracks[trackIndex];
+          ),
+        ],
+      ),
+      desktopTrailingBuilder: (context, track, _) =>
+          _FavoriteTrackActionButton(track: track, compact: true),
+      mobileItemBuilder: (context, track, trackIndex, currentTrackId) {
         return _FavoriteTrackRow(
           track: track,
           currentTrackId: currentTrackId,
@@ -175,6 +146,12 @@ class _FavoritesViewState extends State<_FavoritesView> {
           ),
         );
       },
+      onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
+        context,
+        tracks: state.tracks,
+        startIndex: index,
+      ),
+      footer: _FavoritesPaginationFooter(state: state),
     );
   }
 }
@@ -358,21 +335,25 @@ class _FavoritesPaginationFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (!state.hasMore) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: Text('已经到底了', style: Theme.of(context).textTheme.bodySmall),
-        ),
-      );
-    }
-    return const SizedBox(height: 12);
+    final hasLoadMoreError =
+        state.errorMessage != null &&
+        !state.isLoadingMore &&
+        state.status == FavoritesListStatus.failure &&
+        state.tracks.isNotEmpty;
+
+    return AppPaginationFooter(
+      status: hasLoadMoreError
+          ? AppPaginationStatus.failed
+          : state.isLoadingMore
+          ? AppPaginationStatus.loading
+          : state.hasMore
+          ? AppPaginationStatus.idle
+          : AppPaginationStatus.complete,
+      errorMessage: state.errorMessage,
+      onRetry: hasLoadMoreError
+          ? () => context.read<FavoritesListCubit>().loadMore()
+          : null,
+    );
   }
 }
 

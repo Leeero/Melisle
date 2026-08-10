@@ -7,8 +7,8 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/tracks/app_track_collection_view.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -76,48 +76,20 @@ class _HistoryView extends StatelessWidget {
       );
     }
 
-    if (AppBreakpoints.usesWideContent(context)) {
-      return ListView(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          AppBreakpoints.usesDesktopToolbar(context) ? 8 : 0,
-          horizontalPadding,
-          24,
+    return AppTrackCollectionView(
+      tracks: state.tracks,
+      currentTrackId: currentTrackId,
+      horizontalPadding: horizontalPadding,
+      mobileHeader: AppSectionTitleRow(
+        title: '最近播放',
+        badge: MetaPill(
+          label: '${state.tracks.length} 条',
+          size: MetaPillSize.compact,
         ),
-        children: [
-          MusicTrackTable(
-            tracks: state.tracks,
-            currentTrackId: currentTrackId,
-            showActionBar: false,
-            onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: index,
-            ),
-            trailingBuilder: (context, track, _) => _HistoryPlayedAtButton(
-              label: _formatLastPlayed(track.lastPlayedAt),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      itemCount: state.tracks.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return AppSectionTitleRow(
-            title: '最近播放',
-            badge: MetaPill(
-              label: '${state.tracks.length} 条',
-              size: MetaPillSize.compact,
-            ),
-          );
-        }
-
-        final trackIndex = index - 1;
-        final track = state.tracks[trackIndex];
+      ),
+      desktopTrailingBuilder: (context, track, _) =>
+          _HistoryPlayedAtButton(label: _formatLastPlayed(track.lastPlayedAt)),
+      mobileItemBuilder: (context, track, trackIndex, currentTrackId) {
         return _HistoryTrackRow(
           track: track,
           currentTrackId: currentTrackId,
@@ -128,6 +100,11 @@ class _HistoryView extends StatelessWidget {
           ),
         );
       },
+      onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
+        context,
+        tracks: state.tracks,
+        startIndex: index,
+      ),
     );
   }
 }

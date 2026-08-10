@@ -17,9 +17,11 @@ class FavoritesListCubit extends Cubit<FavoritesListState> {
   }
 
   Future<void> loadMore() async {
-    if (state.status != FavoritesListStatus.success ||
-        state.isLoadingMore ||
-        !state.hasMore) {
+    final canLoadMore =
+        state.status == FavoritesListStatus.success ||
+        (state.status == FavoritesListStatus.failure &&
+            state.tracks.isNotEmpty);
+    if (!canLoadMore || state.isLoadingMore || !state.hasMore) {
       return;
     }
 
