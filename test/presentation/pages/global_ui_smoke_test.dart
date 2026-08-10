@@ -193,6 +193,94 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('LibraryPage_emptyState_keepsFourCategoriesAcrossBreakpoints', (
+    tester,
+  ) async {
+    final repository = _FakeMusicRepository();
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await _pumpForSizes(
+      tester,
+      build: () => _wrapLibrary(repository, playerCubit),
+      verify: (_) {
+        expect(find.text('歌曲'), findsOneWidget);
+        expect(find.text('专辑'), findsOneWidget);
+        expect(find.text('艺术家'), findsOneWidget);
+        expect(find.text('播放列表'), findsOneWidget);
+        expect(find.text('当前还没有歌曲。'), findsOneWidget);
+      },
+    );
+  });
+
+  testWidgets('LibraryPage_failureState_exposesRetryAction', (tester) async {
+    final repository = _FailingLibraryRepository();
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await _pumpMobile(
+      tester,
+      build: () => _wrapLibrary(repository, playerCubit),
+      verify: () {
+        expect(find.textContaining('加载媒体库失败'), findsOneWidget);
+        expect(find.widgetWithText(FilledButton, '重新加载'), findsOneWidget);
+      },
+    );
+  });
+
+  testWidgets('LibraryPage_switchesAlbumArtistAndPlaylistViews', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    final repository = _FakeMusicRepository(
+      libraryAlbums: const [
+        MusicAlbum(
+          id: 'album-1',
+          title: '很长的专辑名称用于验证媒体库布局',
+          artistName: '测试艺术家',
+          artworkUrl: '',
+          trackCount: 10,
+        ),
+      ],
+      libraryArtists: const [
+        MusicArtist(id: 'artist-1', name: '很长的艺术家名称用于验证媒体库布局', artworkUrl: ''),
+      ],
+      libraryPlaylists: const [
+        MusicPlaylist(
+          id: 'playlist-library-1',
+          name: '很长的歌单名称用于验证媒体库布局',
+          artworkUrl: '',
+        ),
+      ],
+    );
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await tester.pumpWidget(_wrapLibrary(repository, playerCubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('在歌曲中搜索'), findsOneWidget);
+
+    await tester.tap(find.text('专辑'));
+    await tester.pumpAndSettle();
+    expect(find.text('在专辑中搜索'), findsOneWidget);
+    expect(find.text('很长的专辑名称用于验证媒体库布局'), findsOneWidget);
+
+    await tester.tap(find.text('艺术家'));
+    await tester.pumpAndSettle();
+    expect(find.text('在艺术家中搜索'), findsOneWidget);
+    expect(find.text('很长的艺术家名称用于验证媒体库布局'), findsOneWidget);
+
+    await tester.tap(find.text('播放列表'));
+    await tester.pumpAndSettle();
+    expect(find.text('在播放列表中搜索'), findsOneWidget);
+    expect(find.text('很长的歌单名称用于验证媒体库布局'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('QueueSheet_emptyState_keepsResponsiveSheetStructure', (
     tester,
   ) async {
@@ -424,7 +512,14 @@ Future<void> _pumpForSizes(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  for (final size in const [Size(390, 844), Size(960, 680), Size(1280, 900)]) {
+  for (final size in const [
+    Size(375, 812),
+    Size(390, 844),
+    Size(768, 900),
+    Size(1080, 720),
+    Size(1280, 900),
+    Size(1440, 900),
+  ]) {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
 
@@ -456,6 +551,29 @@ Future<void> _pumpMobile(
 
   expect(tester.takeException(), isNull);
   verify();
+}
+
+Widget _wrapLibrary(MusicRepository repository, PlayerCubit playerCubit) {
+  final mediaSourceResolver = CustomMediaSourceResolver();
+  return MultiRepositoryProvider(
+    providers: [
+      RepositoryProvider<MusicRepository>.value(value: repository),
+      RepositoryProvider<CustomMediaSourceResolver>.value(
+        value: mediaSourceResolver,
+      ),
+    ],
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider<PlayerCubit>.value(value: playerCubit),
+        BlocProvider<AppSettingsCubit>(
+          create: (_) =>
+              AppSettingsCubit(_FakeSettingsRepository(), mediaSourceResolver)
+                ..load(),
+        ),
+      ],
+      child: const MaterialApp(home: Scaffold(body: LibraryPage())),
+    ),
+  );
 }
 
 class _SettingsHarness {
@@ -647,9 +765,17 @@ List<MusicTrack> _playlistTracks() {
 }
 
 class _FakeMusicRepository implements MusicRepository {
-  _FakeMusicRepository({this.playlistTracks = const []});
+  _FakeMusicRepository({
+    this.playlistTracks = const [],
+    this.libraryAlbums = const [],
+    this.libraryArtists = const [],
+    this.libraryPlaylists = const [],
+  });
 
   final List<MusicTrack> playlistTracks;
+  final List<MusicAlbum> libraryAlbums;
+  final List<MusicArtist> libraryArtists;
+  final List<MusicPlaylist> libraryPlaylists;
 
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
@@ -669,7 +795,7 @@ class _FakeMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async => [];
+  }) async => libraryAlbums;
 
   @override
   Future<List<MusicArtist>> fetchArtists({
@@ -677,7 +803,7 @@ class _FakeMusicRepository implements MusicRepository {
     int startIndex = 0,
     String? searchQuery,
     String? genreId,
-  }) async => [];
+  }) async => libraryArtists;
 
   @override
   Future<List<Genre>> fetchGenres() async => [];
@@ -687,7 +813,7 @@ class _FakeMusicRepository implements MusicRepository {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-  }) async => [];
+  }) async => libraryPlaylists;
 
   @override
   Future<List<MusicTrack>> fetchAlbumTracks(String albumId) async => [];
@@ -794,6 +920,17 @@ class _DelayedLibraryRepository extends _FakeMusicRepository {
     String? searchQuery,
   }) {
     return _tracksCompleter.future;
+  }
+}
+
+class _FailingLibraryRepository extends _FakeMusicRepository {
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchTracks({
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    throw Exception('offline');
   }
 }
 
