@@ -96,3 +96,11 @@ x86/
 sentry-debug.log
 
 .codex/
+design-reference/
+test/design_reference/
+docs/
+# Generated visual-regression artifacts.
+design-reference/screenshots/actual/*
+!design-reference/screenshots/actual/.gitkeep
+design-reference/screenshots/diff/*
+!design-reference/screenshots/diff/.gitkeep
