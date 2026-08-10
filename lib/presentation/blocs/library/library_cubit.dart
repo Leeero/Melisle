@@ -24,6 +24,7 @@ class LibraryCubit extends Cubit<LibraryState> {
   final FetchLibraryAlbums _fetchLibraryAlbums;
   final FetchLibraryArtists _fetchLibraryArtists;
   final MusicRepository _musicRepository;
+  int _requestVersion = 0;
 
   Future<void> load() async {
     emit(
@@ -95,8 +96,11 @@ class LibraryCubit extends Cubit<LibraryState> {
   }
 
   Future<void> _loadCurrentFilter({required bool reset}) async {
+    final requestVersion = ++_requestVersion;
+    final requestedFilter = state.currentFilter;
     final query = state.searchQuery.trim();
     final searchQuery = query.isEmpty ? null : query;
+    final selectedGenreId = state.selectedGenreId;
 
     if (reset) {
       emit(
@@ -112,7 +116,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     }
 
     try {
-      switch (state.currentFilter) {
+      switch (requestedFilter) {
         case LibraryFilter.tracks:
           final startIndex = reset ? 0 : state.tracks.length;
           final result = await _fetchLibraryTracks(
@@ -120,6 +124,7 @@ class LibraryCubit extends Cubit<LibraryState> {
             startIndex: startIndex,
             searchQuery: searchQuery,
           ).timeout(_requestTimeout);
+          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
             state.copyWith(
               status: LibraryStatus.success,
@@ -144,6 +149,7 @@ class LibraryCubit extends Cubit<LibraryState> {
             startIndex: startIndex,
             searchQuery: searchQuery,
           ).timeout(_requestTimeout);
+          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
             state.copyWith(
               status: LibraryStatus.success,
@@ -160,8 +166,9 @@ class LibraryCubit extends Cubit<LibraryState> {
             limit: _pageSize,
             startIndex: startIndex,
             searchQuery: searchQuery,
-            genreId: state.selectedGenreId,
+            genreId: selectedGenreId,
           ).timeout(_requestTimeout);
+          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
             state.copyWith(
               status: LibraryStatus.success,
@@ -181,6 +188,7 @@ class LibraryCubit extends Cubit<LibraryState> {
                 searchQuery: searchQuery,
               )
               .timeout(_requestTimeout);
+          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
             state.copyWith(
               status: LibraryStatus.success,
@@ -192,6 +200,7 @@ class LibraryCubit extends Cubit<LibraryState> {
           );
           break;
         case LibraryFilter.favorites:
+          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
             state.copyWith(
               status: LibraryStatus.success,
@@ -202,6 +211,7 @@ class LibraryCubit extends Cubit<LibraryState> {
           break;
       }
     } on TimeoutException {
+      if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
       if (reset) {
         emit(
           state.copyWith(
@@ -214,6 +224,7 @@ class LibraryCubit extends Cubit<LibraryState> {
         emit(state.copyWith(isLoadingMore: false, errorMessage: '加载超时，请稍后重试。'));
       }
     } catch (error) {
+      if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
       if (reset) {
         emit(
           state.copyWith(
@@ -226,6 +237,11 @@ class LibraryCubit extends Cubit<LibraryState> {
         emit(state.copyWith(isLoadingMore: false, errorMessage: '加载失败：$error'));
       }
     }
+  }
+
+  bool _isCurrentRequest(int requestVersion, LibraryFilter requestedFilter) {
+    return requestVersion == _requestVersion &&
+        requestedFilter == state.currentFilter;
   }
 
   bool _hasMore({
