@@ -30,9 +30,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('发现你想听的音乐'), findsOneWidget);
-    expect(find.text('热门发现'), findsOneWidget);
-    expect(find.text('周杰伦'), findsOneWidget);
+    expect(find.text('搜索音乐库'), findsOneWidget);
+    expect(find.text('热门发现'), findsNothing);
+    expect(find.text('周杰伦'), findsNothing);
     expect(find.text('搜索分类'), findsNothing);
     expect(find.text('输入关键词探索音乐库'), findsNothing);
     expect(find.text('继续刚才的搜索'), findsNothing);
@@ -51,7 +51,7 @@ void main() {
     expect(find.text('没有找到结果，换个关键词试试。'), findsOneWidget);
   });
 
-  testWidgets('SearchPage_results_defaultsToAllAndShowsScopeTabs', (
+  testWidgets('SearchPage_results_useSingleV3SectionFlowWithoutScopeTabs', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 900);
@@ -67,20 +67,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(_scopeTab('歌曲'), findsOneWidget);
-    expect(_scopeTab('专辑'), findsOneWidget);
-    expect(_scopeTab('艺术家'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsOneWidget);
-    expect(_scopeTab('全部'), findsOneWidget);
+    expect(find.byType(AppScopeTabs), findsNothing);
+    expect(find.text('全部'), findsNothing);
+    expect(find.text('最佳匹配'), findsOneWidget);
     expect(find.text('1 首'), findsWidgets);
     expect(find.text('夜曲'), findsOneWidget);
     expect(find.text('私人雷达'), findsOneWidget);
-
-    await tester.tap(_scopeTab('专辑'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('十一月的萧邦'), findsOneWidget);
-    expect(find.text('夜曲'), findsNothing);
+    expect(find.text('十一月的萧邦'), findsWidgets);
   });
 
   testWidgets('SearchPage_recentSearchChip_syncsInputAndSearches', (
@@ -113,7 +106,7 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     final searchField = tester.widget<TextField>(find.byType(TextField));
-    expect(searchField.decoration?.hintText, '搜索歌曲、专辑、艺术家、歌单');
+    expect(searchField.decoration?.hintText, '搜索歌曲、专辑、艺人');
 
     await tester.enterText(find.byType(TextField), '夜曲');
     await tester.pump();
@@ -159,24 +152,6 @@ void main() {
     expect(repository.queries.length, 2);
   });
 
-  testWidgets('SearchPage_scopeFilter_showsSelectedResultType', (tester) async {
-    await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
-    );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
-
-    await tester.tap(_scopeTab('艺术家'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('周杰伦'), findsWidgets);
-    expect(find.byType(MusicArtistGridCard), findsOneWidget);
-    expect(find.text('夜曲'), findsNothing);
-    expect(find.text('十一月的萧邦'), findsNothing);
-  });
-
   testWidgets('SearchPage_wideWidth_usesAlbumAndArtistGridCards', (
     tester,
   ) async {
@@ -193,19 +168,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    await tester.tap(_scopeTab('专辑'));
-    await tester.pumpAndSettle();
-
     expect(find.byType(MusicAlbumGridCard), findsOneWidget);
-    expect(find.text('十一月的萧邦'), findsOneWidget);
-    expect(find.text('夜曲'), findsNothing);
-
-    await tester.tap(_scopeTab('艺术家'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('十一月的萧邦'), findsWidgets);
     expect(find.byType(MusicArtistGridCard), findsOneWidget);
     expect(find.text('周杰伦'), findsWidgets);
-    expect(find.text('十一月的萧邦'), findsNothing);
+    expect(find.text('夜曲'), findsOneWidget);
   });
 
   testWidgets('SearchPage_clearRecent_canUndo', (tester) async {
@@ -245,35 +212,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(_scopeTab('歌曲'), findsOneWidget);
-    expect(_scopeTab('全部'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsOneWidget);
+    expect(find.byType(AppScopeTabs), findsNothing);
+    expect(find.text('全部'), findsNothing);
+    expect(find.text('最佳匹配'), findsOneWidget);
     expect(find.text('1 首'), findsOneWidget);
-    expect(_scopeTab('专辑'), findsOneWidget);
     expect(find.byTooltip('加入队列'), findsOneWidget);
     expect(find.byType(SliverGrid), findsOneWidget);
     expect(find.byType(MusicArtistGridCard), findsOneWidget);
-
-    await tester.tap(_scopeTab('歌单'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('私人雷达'), findsOneWidget);
-    final tabsRect = tester.getRect(
-      find.byWidgetPredicate((widget) => widget is AppScopeTabs),
-    );
-    expect(tabsRect.left, moreOrLessEquals(390 - tabsRect.right, epsilon: 0.1));
-
-    await tester.tap(_scopeTab('专辑'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SliverGrid), findsOneWidget);
     expect(find.byType(MusicAlbumGridCard), findsOneWidget);
-
-    await tester.tap(_scopeTab('艺术家'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SliverGrid), findsOneWidget);
-    expect(find.byType(MusicArtistGridCard), findsOneWidget);
   });
 
   testWidgets('SearchPage_mobileArtistGrid_fitsLongArtistNames', (
@@ -292,9 +238,6 @@ void main() {
 
     await tester.enterText(find.byType(TextField), '独立音乐');
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
-
-    await tester.tap(_scopeTab('艺术家'));
     await tester.pumpAndSettle();
 
     expect(find.byType(SliverGrid), findsOneWidget);
@@ -317,9 +260,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(_scopeTab('歌曲'), findsOneWidget);
-    expect(_scopeTab('全部'), findsOneWidget);
-    expect(_scopeTab('歌单'), findsOneWidget);
+    expect(find.byType(AppScopeTabs), findsNothing);
+    expect(find.text('全部'), findsNothing);
+    expect(find.text('最佳匹配'), findsOneWidget);
     expect(find.text('1 首'), findsWidgets);
     expect(find.text('播放全部'), findsNothing);
     expect(find.text('加入队列'), findsNothing);
@@ -346,14 +289,9 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(AppContentPage), findsOneWidget);
-      expect(_scopeTab('歌曲'), findsOneWidget);
+      expect(find.byType(AppScopeTabs), findsNothing);
     }
   });
-}
-
-Finder _scopeTab(String label) {
-  final tabs = find.byWidgetPredicate((widget) => widget is AppScopeTabs);
-  return find.descendant(of: tabs, matching: find.text(label));
 }
 
 Widget _buildSearchPage({

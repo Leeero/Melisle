@@ -13,7 +13,6 @@ import 'package:cross_platform_music_player/presentation/blocs/search/search_sta
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
@@ -26,87 +25,6 @@ import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
-enum _SearchScope { all, tracks, albums, artists, playlists }
-
-const _searchTypeScopes = [
-  _SearchScope.all,
-  _SearchScope.tracks,
-  _SearchScope.albums,
-  _SearchScope.artists,
-  _SearchScope.playlists,
-];
-
-const _hotSearchQueries = [
-  '周杰伦',
-  '夜曲',
-  '林俊杰',
-  '王菲',
-  '华语流行',
-  '独立民谣',
-  '睡前播放',
-  '整理音乐库',
-];
-
-extension _SearchScopeInfo on _SearchScope {
-  String get label {
-    return switch (this) {
-      _SearchScope.all => '全部',
-      _SearchScope.tracks => '歌曲',
-      _SearchScope.albums => '专辑',
-      _SearchScope.artists => '艺术家',
-      _SearchScope.playlists => '歌单',
-    };
-  }
-
-  IconData get icon {
-    return switch (this) {
-      _SearchScope.all => Icons.grid_view_rounded,
-      _SearchScope.tracks => Icons.music_note_rounded,
-      _SearchScope.albums => Icons.album_rounded,
-      _SearchScope.artists => Icons.person_rounded,
-      _SearchScope.playlists => Icons.queue_music_rounded,
-    };
-  }
-
-  int count(SearchResults results) {
-    return switch (this) {
-      _SearchScope.all => results.totalCount,
-      _SearchScope.tracks => results.tracks.length,
-      _SearchScope.albums => results.albums.length,
-      _SearchScope.artists => results.artists.length,
-      _SearchScope.playlists => results.playlists.length,
-    };
-  }
-
-  SearchResults apply(SearchResults results) {
-    return switch (this) {
-      _SearchScope.all => results,
-      _SearchScope.tracks => SearchResults(tracks: results.tracks),
-      _SearchScope.albums => SearchResults(albums: results.albums),
-      _SearchScope.artists => SearchResults(artists: results.artists),
-      _SearchScope.playlists => SearchResults(playlists: results.playlists),
-    };
-  }
-}
-
-List<AppScopeTabItem<_SearchScope>> _searchScopeItems(
-  SearchResults results, {
-  bool withIcons = true,
-  bool withCounts = true,
-  List<_SearchScope> scopes = _searchTypeScopes,
-}) {
-  return [
-    for (final scope in scopes)
-      AppScopeTabItem(
-        value: scope,
-        label: scope.label,
-        count: withCounts ? scope.count(results) : null,
-        icon: withIcons ? scope.icon : null,
-        semanticLabel: '查看${scope.label}结果',
-      ),
-  ];
-}
 
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key, this.initialQuery});
@@ -151,7 +69,6 @@ class _SearchView extends StatefulWidget {
 class _SearchViewState extends State<_SearchView> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
-  _SearchScope _selectedScope = _SearchScope.all;
 
   @override
   void initState() {
@@ -164,18 +81,12 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _onQueryChanged(String query) {
-    if (_selectedScope != _SearchScope.all) {
-      setState(() => _selectedScope = _SearchScope.all);
-    }
     context.read<SearchCubit>().onQueryChanged(query);
   }
 
   void _submitQuery(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
-    if (_selectedScope != _SearchScope.all) {
-      setState(() => _selectedScope = _SearchScope.all);
-    }
     if (_controller.text != trimmed) {
       _controller.value = TextEditingValue(
         text: trimmed,
@@ -187,7 +98,6 @@ class _SearchViewState extends State<_SearchView> {
 
   void _clearQuery() {
     _controller.clear();
-    setState(() => _selectedScope = _SearchScope.all);
     context.read<SearchCubit>().onQueryChanged('');
   }
 
@@ -205,20 +115,14 @@ class _SearchViewState extends State<_SearchView> {
         builder: (context, state) {
           return AppContentPage(
             header: _SearchHeader(
-              state: state,
-              selectedScope: _selectedScope,
               controller: _controller,
               focusNode: _focusNode,
               onClear: _clearQuery,
               onChanged: _onQueryChanged,
               onSubmitted: _submitQuery,
-              onScopeChanged: (scope) => setState(() {
-                _selectedScope = scope;
-              }),
             ),
             body: _SearchResultsView(
               state: state,
-              selectedScope: _selectedScope,
               onRecentSelected: _submitQuery,
             ),
           );
@@ -230,32 +134,23 @@ class _SearchViewState extends State<_SearchView> {
 
 class _SearchHeader extends StatelessWidget {
   const _SearchHeader({
-    required this.state,
-    required this.selectedScope,
     required this.controller,
     required this.focusNode,
     required this.onClear,
     required this.onChanged,
     required this.onSubmitted,
-    required this.onScopeChanged,
   });
 
-  final SearchState state;
-  final _SearchScope selectedScope;
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onClear;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
-  final ValueChanged<_SearchScope> onScopeChanged;
 
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
     final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
-    final showScopes =
-        state.query.trim().isNotEmpty && state.results.isNotEmpty;
-    final resultCount = state.results.totalCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,7 +173,7 @@ class _SearchHeader extends StatelessWidget {
                   focusNode: focusNode,
                   autofocus: true,
                   dense: true,
-                  hintText: compact ? '歌曲、专辑、艺术家' : '搜索歌曲、专辑、艺术家、歌单',
+                  hintText: compact ? '搜索歌曲、专辑、艺人、播放列表' : '搜索歌曲、专辑、艺人',
                   semanticLabel: '搜索音乐库',
                   showCancelAction: compact,
                   onClear: onClear,
@@ -290,32 +185,8 @@ class _SearchHeader extends StatelessWidget {
                 ),
               ),
             ),
-            if (!compact && showScopes) ...[
-              const SizedBox(width: 18),
-              MetaPill(label: '$resultCount 个结果', size: MetaPillSize.compact),
-            ],
           ],
         ),
-        if (showScopes) ...[
-          const SizedBox(height: 14),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: AppScopeTabs<_SearchScope>(
-              semanticLabel: '搜索结果分类',
-              variant: compact
-                  ? AppScopeTabsVariant.pill
-                  : AppScopeTabsVariant.underline,
-              items: _searchScopeItems(
-                state.results,
-                withIcons: false,
-                withCounts: false,
-              ),
-              selectedValue: selectedScope,
-              onChanged: onScopeChanged,
-              fillWidth: compact,
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -324,12 +195,10 @@ class _SearchHeader extends StatelessWidget {
 class _SearchResultsView extends StatelessWidget {
   const _SearchResultsView({
     required this.state,
-    required this.selectedScope,
     required this.onRecentSelected,
   });
 
   final SearchState state;
-  final _SearchScope selectedScope;
   final ValueChanged<String> onRecentSelected;
 
   @override
@@ -343,11 +212,7 @@ class _SearchResultsView extends StatelessWidget {
 
     if (state.status == SearchStatus.loading) {
       if (state.results.isNotEmpty) {
-        return _SearchResultsContent(
-          results: state.results,
-          selectedScope: selectedScope,
-          isLoading: true,
-        );
+        return _SearchResultsContent(results: state.results, isLoading: true);
       }
       return const _SearchLoadingState();
     }
@@ -364,22 +229,14 @@ class _SearchResultsView extends StatelessWidget {
       );
     }
 
-    return _SearchResultsContent(
-      results: state.results,
-      selectedScope: selectedScope,
-    );
+    return _SearchResultsContent(results: state.results);
   }
 }
 
 class _SearchResultsContent extends StatelessWidget {
-  const _SearchResultsContent({
-    required this.results,
-    required this.selectedScope,
-    this.isLoading = false,
-  });
+  const _SearchResultsContent({required this.results, this.isLoading = false});
 
   final SearchResults results;
-  final _SearchScope selectedScope;
   final bool isLoading;
 
   @override
@@ -392,13 +249,10 @@ class _SearchResultsContent extends StatelessWidget {
         if (!isWide) {
           return _CompactSearchResults(
             results: results,
-            selectedScope: selectedScope,
             isLoading: isLoading,
             horizontalPadding: horizontalPadding,
           );
         }
-        final effectiveScope = selectedScope;
-
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
@@ -414,31 +268,14 @@ class _SearchResultsContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isLoading) const _SearchLoadingBanner(),
-                  if (effectiveScope.apply(results).isEmpty)
-                    _ScopedNoResults(selectedScope: effectiveScope)
-                  else
-                    _WideSearchResults(results: effectiveScope.apply(results)),
+                  _BestMatchSection(results: results),
+                  _WideSearchResults(results: results),
                 ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class _ScopedNoResults extends StatelessWidget {
-  const _ScopedNoResults({required this.selectedScope});
-
-  final _SearchScope selectedScope;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SearchMessagePanel(
-      icon: selectedScope.icon,
-      title: '这次没有匹配的${selectedScope.label}',
-      message: '可以切换其他分类，或换个关键词再试。',
     );
   }
 }
@@ -652,22 +489,16 @@ class _SearchSkeletonRow extends StatelessWidget {
 class _CompactSearchResults extends StatelessWidget {
   const _CompactSearchResults({
     required this.results,
-    required this.selectedScope,
     required this.horizontalPadding,
     this.isLoading = false,
   });
 
   final SearchResults results;
-  final _SearchScope selectedScope;
   final double horizontalPadding;
   final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveScope = selectedScope;
-    final scopedResults = effectiveScope.apply(results);
-    final showAll = effectiveScope == _SearchScope.all;
-
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -680,17 +511,16 @@ class _CompactSearchResults extends StatelessWidget {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               if (isLoading) const _SearchLoadingBanner(),
-              if (scopedResults.isEmpty)
-                _ScopedNoResults(selectedScope: effectiveScope),
-              if (scopedResults.tracks.isNotEmpty)
+              _BestMatchSection(results: results),
+              if (results.tracks.isNotEmpty)
                 _SectionHeader(
                   title: '歌曲',
-                  countLabel: '${scopedResults.tracks.length} 首',
+                  countLabel: '${results.tracks.length} 首',
                 ),
             ]),
           ),
         ),
-        if (scopedResults.tracks.isNotEmpty)
+        if (results.tracks.isNotEmpty)
           SliverPadding(
             padding: EdgeInsets.fromLTRB(
               horizontalPadding,
@@ -699,16 +529,16 @@ class _CompactSearchResults extends StatelessWidget {
               0,
             ),
             sliver: SliverList.separated(
-              itemCount: scopedResults.tracks.length,
+              itemCount: results.tracks.length,
               itemBuilder: (context, index) {
-                final track = scopedResults.tracks[index];
+                final track = results.tracks[index];
                 return _CompactSearchTrackRow(
                   index: index,
                   track: track,
                   onTap: () => unawaited(
                     PlayerNavigation.playTracksAndOpenPlayer(
                       context,
-                      tracks: scopedResults.tracks,
+                      tracks: results.tracks,
                       startIndex: index,
                     ),
                   ),
@@ -719,23 +549,23 @@ class _CompactSearchResults extends StatelessWidget {
               separatorBuilder: (context, index) => const SizedBox.shrink(),
             ),
           ),
-        if (scopedResults.tracks.isNotEmpty)
+        if (results.tracks.isNotEmpty)
           const SliverToBoxAdapter(
             child: SizedBox(height: AppSpacingTokens.sectionGap),
           ),
         _CompactAlbumGrid(
-          albums: scopedResults.albums,
+          albums: results.albums,
           horizontalPadding: horizontalPadding,
-          horizontal: showAll,
+          horizontal: true,
         ),
         _CompactArtistGrid(
-          artists: scopedResults.artists,
+          artists: results.artists,
           horizontalPadding: horizontalPadding,
         ),
         _CompactPlaylistSection(
-          title: '歌单',
-          countLabel: '${scopedResults.playlists.length} 个',
-          playlists: scopedResults.playlists,
+          title: '播放列表',
+          countLabel: '${results.playlists.length} 个',
+          playlists: results.playlists,
           horizontalPadding: horizontalPadding,
         ),
         const SliverToBoxAdapter(
@@ -1094,6 +924,134 @@ class _CompactArtistGrid extends StatelessWidget {
   }
 }
 
+class _BestMatchSection extends StatelessWidget {
+  const _BestMatchSection({required this.results});
+
+  final SearchResults results;
+
+  @override
+  Widget build(BuildContext context) {
+    final artist = results.artists.firstOrNull;
+    final album = results.albums.firstOrNull;
+    final track = results.tracks.firstOrNull;
+    final playlist = results.playlists.firstOrNull;
+    if (artist == null && album == null && track == null && playlist == null) {
+      return const SizedBox.shrink();
+    }
+
+    final String title;
+    final String type;
+    final String artworkUrl;
+    final VoidCallback onTap;
+    final bool playsTrack;
+    if (artist != null) {
+      title = artist.name;
+      type = '艺术家';
+      artworkUrl = artist.artworkUrl;
+      onTap = () => context.push('/artist/${artist.id}', extra: artist);
+      playsTrack = false;
+    } else if (album != null) {
+      title = album.title;
+      type = '专辑';
+      artworkUrl = album.artworkUrl;
+      onTap = () => context.push('/album/${album.id}', extra: album);
+      playsTrack = false;
+    } else if (track != null) {
+      title = track.title;
+      type = '单曲';
+      artworkUrl = track.artworkUrl;
+      onTap = () => unawaited(
+        PlayerNavigation.playTracksAndOpenPlayer(
+          context,
+          tracks: results.tracks,
+          startIndex: 0,
+        ),
+      );
+      playsTrack = true;
+    } else {
+      title = playlist!.name;
+      type = '播放列表';
+      artworkUrl = playlist.artworkUrl;
+      onTap = () => context.push('/playlists/${playlist.id}', extra: playlist);
+      playsTrack = false;
+    }
+
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 26),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '最佳匹配',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Material(
+            color: colors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: colors.outlineVariant.withValues(alpha: 0.42),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: artworkUrl,
+                      size: 64,
+                      borderRadius: artist != null ? 32 : 10,
+                      semanticLabel: '$title封面',
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            type,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      child: Icon(
+                        playsTrack
+                            ? Icons.play_arrow_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 26,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WideSearchResults extends StatelessWidget {
   const _WideSearchResults({required this.results});
 
@@ -1122,7 +1080,7 @@ class _WideSearchResults extends StatelessWidget {
           ),
         if (results.playlists.isNotEmpty)
           _SearchGridSection(
-            title: '歌单',
+            title: '播放列表',
             countLabel: '${results.playlists.length} 个结果',
             child: _SearchPlaylistGrid(playlists: results.playlists),
           ),
@@ -1428,7 +1386,6 @@ class _SearchStartView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SearchStateScrollView(
       child: SearchEmptyView(
-        hotQueries: _hotSearchQueries,
         recentQueries: queries,
         onQuerySelected: onSelected,
         onClearRecent: queries.isEmpty
