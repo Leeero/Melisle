@@ -12,3 +12,4 @@ export 'music_track.dart';
 export 'paginated_result.dart';
 export 'play_history_entry.dart';
 export 'search_results.dart';
+export 'track_sort_option.dart';

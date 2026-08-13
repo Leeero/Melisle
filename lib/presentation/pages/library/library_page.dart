@@ -1,14 +1,9 @@
-import 'dart:async';
-
-import 'package:cross_platform_music_player/application/usecases/fetch_favorite_tracks.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
-import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
-import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_cubit.dart';
-import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
@@ -19,9 +14,6 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sc
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -139,48 +131,58 @@ class _LibraryViewState extends State<_LibraryView> {
       );
     }
 
+    final scrollView = CustomScrollView(
+      key: ValueKey('filter-${state.currentFilter.index}'),
+      controller: _scrollController,
+      slivers: [
+        switch (state.currentFilter) {
+          LibraryFilter.tracks => _buildTrackSliver(
+            context,
+            state,
+            horizontalPadding,
+            currentTrackId,
+          ),
+          LibraryFilter.albums => _buildAlbumSliver(
+            context,
+            state,
+            horizontalPadding,
+          ),
+          LibraryFilter.artists => _buildArtistSliver(
+            context,
+            state,
+            horizontalPadding,
+          ),
+          LibraryFilter.playlists => _buildPlaylistSliver(
+            context,
+            state,
+            horizontalPadding,
+          ),
+        },
+        _buildFooterSliver(state),
+      ],
+    );
+    final body =
+        state.currentFilter == LibraryFilter.artists &&
+            AppBreakpoints.usesWideContent(context)
+        ? Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 24),
+                child: scrollView,
+              ),
+              const Positioned(
+                right: 4,
+                top: 12,
+                bottom: 20,
+                child: _ArtistAlphabetRail(),
+              ),
+            ],
+          )
+        : scrollView;
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
-      child: CustomScrollView(
-        key: ValueKey('filter-${state.currentFilter.index}'),
-        controller: _scrollController,
-        slivers: [
-          switch (state.currentFilter) {
-            LibraryFilter.tracks => _buildTrackSliver(
-              context,
-              state,
-              horizontalPadding,
-              currentTrackId,
-            ),
-            LibraryFilter.albums => _buildAlbumSliver(
-              context,
-              state,
-              horizontalPadding,
-            ),
-            LibraryFilter.artists => _buildArtistSliver(
-              context,
-              state,
-              horizontalPadding,
-            ),
-            LibraryFilter.playlists => _buildPlaylistSliver(
-              context,
-              state,
-              horizontalPadding,
-            ),
-            LibraryFilter.favorites => SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                0,
-                horizontalPadding,
-                18,
-              ),
-              sliver: const _LibraryFavoritesSliver(),
-            ),
-          },
-          if (state.currentFilter != LibraryFilter.favorites)
-            _buildFooterSliver(state),
-        ],
-      ),
+      child: body,
     );
   }
 
@@ -194,6 +196,12 @@ class _LibraryViewState extends State<_LibraryView> {
       state: state,
       horizontalPadding: horizontalPadding,
       currentTrackId: currentTrackId,
+      desktopToolbarTrailing: AppBreakpoints.usesDesktopToolbar(context)
+          ? _LibraryTrackTools(
+              state: state,
+              searchController: _searchController,
+            )
+          : null,
       onPlayAll: () => _playAllLibraryTracks(context, state),
       onShuffleAll: () => _playAllLibraryTracks(context, state, shuffled: true),
       onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
@@ -202,7 +210,7 @@ class _LibraryViewState extends State<_LibraryView> {
         startIndex: index,
       ),
       desktopTrailingBuilder: (context, track, hovered) =>
-          hovered || track.isFavorite
+          !hovered && track.isFavorite
           ? _LibraryTrackFavoriteButton(track: track)
           : null,
       mobileItemBuilder: (context, track, index, isCurrent) =>
@@ -230,13 +238,7 @@ class _LibraryViewState extends State<_LibraryView> {
         context,
         loadedTracks: state.tracks,
         allLoaded: !state.hasMore,
-        fetchAll: () async {
-          final result = await context.read<MusicRepository>().fetchTracks(
-            limit: 500,
-            startIndex: 0,
-          );
-          return result.items;
-        },
+        fetchAll: context.read<LibraryCubit>().fetchAllTracks,
       );
     }
 
@@ -244,13 +246,7 @@ class _LibraryViewState extends State<_LibraryView> {
       context,
       loadedTracks: state.tracks,
       allLoaded: !state.hasMore,
-      fetchAll: () async {
-        final result = await context.read<MusicRepository>().fetchTracks(
-          limit: 500,
-          startIndex: 0,
-        );
-        return result.items;
-      },
+      fetchAll: context.read<LibraryCubit>().fetchAllTracks,
     );
   }
 
@@ -293,7 +289,7 @@ class _LibraryViewState extends State<_LibraryView> {
     }
 
     final hasLoadMoreError =
-        state.errorMessage != null &&
+        state.appendErrorMessage != null &&
         !state.isLoadingMore &&
         state.status == LibraryStatus.success;
 
@@ -305,10 +301,66 @@ class _LibraryViewState extends State<_LibraryView> {
           : state.hasMore
           ? AppPaginationStatus.idle
           : AppPaginationStatus.complete,
-      errorMessage: state.errorMessage,
+      errorMessage: state.appendErrorMessage,
       onRetry: hasLoadMoreError
           ? () => context.read<LibraryCubit>().loadMore()
           : null,
+    );
+  }
+}
+
+class _ArtistAlphabetRail extends StatelessWidget {
+  const _ArtistAlphabetRail();
+
+  static const _labels = [
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'I',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'O',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'U',
+    'V',
+    'W',
+    'X',
+    'Y',
+    'Z',
+    '#',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      label: '艺术家字母索引',
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (final label in _labels)
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 10,
+                height: 1,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -333,7 +385,6 @@ String _libraryFilterLabel(LibraryFilter filter) => switch (filter) {
   LibraryFilter.albums => '专辑',
   LibraryFilter.artists => '艺术家',
   LibraryFilter.playlists => '播放列表',
-  LibraryFilter.favorites => '收藏',
 };
 
 String _formatTrackDuration(Duration duration) {
@@ -557,7 +608,10 @@ class _LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWide = AppBreakpoints.usesWideContent(context);
-    final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
+    final trackToolsInList =
+        state.currentFilter == LibraryFilter.tracks &&
+        state.tracks.isNotEmpty &&
+        AppBreakpoints.usesDesktopToolbar(context);
     final cubit = context.read<LibraryCubit>();
     final tabs = AppScopeTabs<LibraryFilter>(
       semanticLabel: '媒体库分类',
@@ -603,7 +657,7 @@ class _LibraryHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!hasDesktopToolbar) ...[
+        if (AppBreakpoints.isCompact(context)) ...[
           AppPageHeader(
             title: '媒体库',
             description: _librarySummaryLabel(state),
@@ -616,8 +670,10 @@ class _LibraryHeader extends StatelessWidget {
           Row(
             children: [
               SizedBox(width: 420, child: tabs),
-              const Spacer(),
-              SizedBox(width: 280, child: search),
+              if (!trackToolsInList) ...[
+                const Spacer(),
+                SizedBox(width: 280, child: search),
+              ],
               if (filterButton != null) ...[
                 const SizedBox(width: 8),
                 filterButton,
@@ -642,6 +698,106 @@ class _LibraryHeader extends StatelessWidget {
   }
 }
 
+class _LibraryTrackTools extends StatelessWidget {
+  const _LibraryTrackTools({
+    required this.state,
+    required this.searchController,
+  });
+
+  final LibraryState state;
+  final TextEditingController searchController;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<LibraryCubit>();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 250,
+          child: AppSearchField(
+            controller: searchController,
+            dense: true,
+            showCancelAction: false,
+            hintText: '在列表中搜索…',
+            semanticLabel: '在歌曲列表中搜索',
+            onChanged: cubit.search,
+            onClear: () {
+              searchController.clear();
+              cubit.search('');
+            },
+          ),
+        ),
+        if (state.supportedTrackSortOptions.isNotEmpty) ...[
+          const SizedBox(width: 12),
+          _TrackSortMenu(state: state),
+        ],
+      ],
+    );
+  }
+}
+
+class _TrackSortMenu extends StatelessWidget {
+  const _TrackSortMenu({required this.state});
+
+  final LibraryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = state.trackSortOption ?? TrackSortOption.title;
+    final theme = Theme.of(context);
+    return PopupMenuButton<TrackSortOption>(
+      tooltip: '选择歌曲排序方式',
+      onSelected: context.read<LibraryCubit>().changeTrackSort,
+      itemBuilder: (context) => [
+        for (final option in state.supportedTrackSortOptions)
+          PopupMenuItem(
+            value: option,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  child: option == selected
+                      ? Icon(
+                          Icons.check_rounded,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        )
+                      : null,
+                ),
+                Text(_trackSortLabel(option)),
+              ],
+            ),
+          ),
+      ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '按${_trackSortLabel(selected)}排序',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down_rounded, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _trackSortLabel(TrackSortOption option) => switch (option) {
+  TrackSortOption.title => '标题',
+  TrackSortOption.artist => '艺术家',
+  TrackSortOption.album => '专辑',
+  TrackSortOption.dateAdded => '添加时间',
+};
+
 class _LibraryGenreMenu extends StatelessWidget {
   const _LibraryGenreMenu({required this.state});
 
@@ -665,200 +821,6 @@ class _LibraryGenreMenu extends StatelessWidget {
         smallSize: 7,
         child: const Icon(Icons.tune_rounded),
       ),
-    );
-  }
-}
-
-class _MobileTrackActionBar extends StatelessWidget {
-  const _MobileTrackActionBar({
-    required this.trackCount,
-    required this.onPlayAll,
-    required this.onShuffleAll,
-  });
-
-  final int trackCount;
-  final VoidCallback onPlayAll;
-  final VoidCallback onShuffleAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(
-        children: [
-          MetaPill(label: '$trackCount 首', size: MetaPillSize.compact),
-          const Spacer(),
-          PlayAllButton(
-            variant: PlayAllButtonVariant.compact,
-            onPressed: onPlayAll,
-            onShufflePressed: onShuffleAll,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LibraryFavoritesSliver extends StatelessWidget {
-  const _LibraryFavoritesSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => FavoritesListCubit(
-        FetchFavoriteTracks(context.read<MusicRepository>()),
-        context.read<FavoritesCubit>(),
-      )..load(),
-      child: BlocBuilder<FavoritesListCubit, FavoritesListState>(
-        builder: (context, state) {
-          if (state.status == FavoritesListStatus.loading &&
-              state.tracks.isEmpty) {
-            return const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            );
-          }
-
-          if (state.status == FavoritesListStatus.failure &&
-              state.tracks.isEmpty) {
-            return SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Center(
-                  child: Text(
-                    state.errorMessage ?? '加载收藏失败',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          final filteredTracks = state.tracks;
-
-          if (filteredTracks.isEmpty) {
-            return SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Center(
-                  child: Text(
-                    '还没有收藏歌曲，去媒体库挑几首喜欢的吧。',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          final currentTrackId = context.select<PlayerCubit, String?>(
-            (cubit) => cubit.state.currentTrack?.id,
-          );
-
-          return SliverMainAxisGroup(
-            slivers: [
-              SliverToBoxAdapter(
-                child: _MobileTrackActionBar(
-                  trackCount: filteredTracks.length,
-                  onPlayAll: () => PlayerNavigation.playAllAndOpenPlayer(
-                    context,
-                    loadedTracks: filteredTracks,
-                    allLoaded: !state.hasMore,
-                    fetchAll: () async {
-                      final cubit = context.read<FavoritesListCubit>();
-                      final tracks = <MusicTrack>[...state.tracks];
-                      while (cubit.state.hasMore) {
-                        await cubit.loadMore();
-                        final nextState = cubit.state;
-                        tracks
-                          ..clear()
-                          ..addAll(nextState.tracks);
-                      }
-                      return tracks;
-                    },
-                  ),
-                  onShuffleAll: () => PlayerNavigation.shuffleAllAndOpenPlayer(
-                    context,
-                    loadedTracks: filteredTracks,
-                    allLoaded: !state.hasMore,
-                    fetchAll: () async {
-                      final cubit = context.read<FavoritesListCubit>();
-                      final tracks = <MusicTrack>[...state.tracks];
-                      while (cubit.state.hasMore) {
-                        await cubit.loadMore();
-                        final nextState = cubit.state;
-                        tracks
-                          ..clear()
-                          ..addAll(nextState.tracks);
-                      }
-                      return tracks;
-                    },
-                  ),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final track = filteredTracks[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: MusicTrackTile.card(
-                      isCurrent: track.id == currentTrackId,
-                      artworkUrl: track.artworkUrl,
-                      title: track.title,
-                      subtitle: [
-                        track.artistName,
-                        track.albumTitle,
-                      ].where((item) => item.isNotEmpty).join(' · '),
-                      onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                        context,
-                        tracks: filteredTracks,
-                        startIndex: index,
-                      ),
-                    ),
-                  );
-                }, childCount: filteredTracks.length),
-              ),
-              _LibraryFavoritesFooter(state: state),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _LibraryFavoritesFooter extends StatelessWidget {
-  const _LibraryFavoritesFooter({required this.state});
-
-  final FavoritesListState state;
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.hasMore && !state.isLoadingMore) {
-      unawaited(context.read<FavoritesListCubit>().loadMore());
-    }
-
-    final hasLoadMoreError =
-        state.errorMessage != null &&
-        !state.isLoadingMore &&
-        state.status == FavoritesListStatus.failure;
-    return AppSliverPaginationFooter(
-      status: hasLoadMoreError
-          ? AppPaginationStatus.failed
-          : state.isLoadingMore
-          ? AppPaginationStatus.loading
-          : state.hasMore
-          ? AppPaginationStatus.idle
-          : AppPaginationStatus.complete,
-      errorMessage: state.errorMessage,
-      onRetry: hasLoadMoreError
-          ? () => context.read<FavoritesListCubit>().loadMore()
-          : null,
     );
   }
 }

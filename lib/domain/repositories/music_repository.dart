@@ -8,6 +8,7 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 
 /// 后端无关的音乐仓库契约。
 ///
@@ -116,4 +117,17 @@ abstract class MusicRepository {
 
   /// 跨类型搜索（歌曲 / 专辑 / 艺术家 / 歌单）。
   Future<SearchResults> search(String query);
+}
+
+/// Optional capability implemented only by protocols that support server-side
+/// track sorting. Callers must not synthesize unsupported options locally.
+abstract interface class TrackSortingRepository {
+  Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions();
+
+  Future<PaginatedResult<MusicTrack>> fetchSortedTracks({
+    required TrackSortOption sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  });
 }

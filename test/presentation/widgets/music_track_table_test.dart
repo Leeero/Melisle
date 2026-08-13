@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 
 void main() {
@@ -69,6 +72,45 @@ void main() {
     await tester.tap(find.text('夜曲'));
     await tester.pump();
     expect(playCount, 1);
+  });
+
+  testWidgets('library table renders quality and hover actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [
+            MusicTrack(
+              id: 'flac-track',
+              title: 'Midnight City',
+              artistName: 'M83',
+              albumTitle: "Hurry Up, We're Dreaming",
+              artworkUrl: '',
+              duration: Duration(minutes: 4, seconds: 3),
+              codec: 'flac',
+            ),
+          ],
+          libraryStyle: true,
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    expect(find.text('全部歌曲'), findsOneWidget);
+    expect(find.text('质量'), findsOneWidget);
+    expect(find.text('FLAC'), findsOneWidget);
+    expect(find.byType(CachedArtwork), findsNothing);
+
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await gesture.addPointer(
+      location: tester.getCenter(
+        find.byKey(const ValueKey('track-row-play-flac-track')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('更多操作'), findsOneWidget);
+    await gesture.removePointer();
   });
 }
 

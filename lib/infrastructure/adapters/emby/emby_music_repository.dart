@@ -8,12 +8,13 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/infrastructure/network/emby_api_client.dart';
 import 'package:cross_platform_music_player/infrastructure/persistence/auth_session_store.dart';
 
-class EmbyMusicRepository implements MusicRepository {
+class EmbyMusicRepository implements MusicRepository, TrackSortingRepository {
   EmbyMusicRepository({
     required EmbyApiClient client,
     required AuthSessionStore sessionStore,
@@ -89,6 +90,31 @@ class EmbyMusicRepository implements MusicRepository {
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
+    );
+    return PaginatedResult(items: result.tracks, totalCount: result.totalCount);
+  }
+
+  @override
+  Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions() async => const {
+    TrackSortOption.title,
+    TrackSortOption.artist,
+    TrackSortOption.album,
+    TrackSortOption.dateAdded,
+  };
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchSortedTracks({
+    required TrackSortOption sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    final result = await _client.fetchTracks(
+      await _requireSession(),
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+      sortOption: sortOption,
     );
     return PaginatedResult(items: result.tracks, totalCount: result.totalCount);
   }

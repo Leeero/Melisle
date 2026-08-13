@@ -42,7 +42,7 @@ class AppTrackCollectionView extends StatelessWidget {
         controller: scrollController,
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
-          AppBreakpoints.usesDesktopToolbar(context) ? 8 : 0,
+          0,
           horizontalPadding,
           24,
         ),

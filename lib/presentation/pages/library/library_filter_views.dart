@@ -1,4 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
@@ -28,6 +31,7 @@ class LibraryTrackSliver extends StatelessWidget {
     required this.onTrackTap,
     required this.desktopTrailingBuilder,
     required this.mobileItemBuilder,
+    this.desktopToolbarTrailing,
   });
 
   final LibraryState state;
@@ -38,6 +42,7 @@ class LibraryTrackSliver extends StatelessWidget {
   final ValueChanged<int> onTrackTap;
   final MusicTrackTableTrailingBuilder desktopTrailingBuilder;
   final LibraryTrackItemBuilder mobileItemBuilder;
+  final Widget? desktopToolbarTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +59,15 @@ class LibraryTrackSliver extends StatelessWidget {
               child: MusicTrackTable(
                 tracks: state.tracks,
                 currentTrackId: currentTrackId,
-                showActionBar: false,
+                showActionBar: true,
+                libraryStyle: true,
+                trackCountLabel:
+                    '${state.totalTrackCount ?? state.tracks.length} 首',
                 onTrackTap: (index, _) => onTrackTap(index),
                 onPlayAll: onPlayAll,
                 onShuffleAll: onShuffleAll,
                 trailingBuilder: desktopTrailingBuilder,
+                actionBarTrailing: desktopToolbarTrailing,
               ),
             )
           else ...[
@@ -140,38 +149,146 @@ class LibraryArtistSliver extends StatelessWidget {
       );
     }
     final compact = AppBreakpoints.isCompact(context);
+    final groups = _groupArtists(state.artists);
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
-      sliver: SliverMainAxisGroup(
-        slivers: [
-          if (state.artists.isEmpty)
-            const SliverToBoxAdapter(
-              child: SizedBox(
-                height: 120,
-                child: Center(child: Text('当前还没有艺术家。')),
-              ),
-            )
-          else
-            SliverGrid(
-              delegate: SliverChildBuilderDelegate((context, index) {
+      sliver: compact
+          ? SliverList.builder(
+              itemCount: state.artists.length,
+              itemBuilder: (context, index) {
                 final artist = state.artists[index];
-                return MusicArtistGridCard(
+                return _MobileArtistRow(
                   artist: artist,
                   onTap: () =>
                       context.push('/artist/${artist.id}', extra: artist),
-                  compact: compact,
                 );
-              }, childCount: state.artists.length),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(
-                  MediaQuery.sizeOf(context).width,
-                ),
-                mainAxisSpacing: compact ? 14 : 18,
-                crossAxisSpacing: compact ? 12 : 18,
-                childAspectRatio: compact ? 0.96 : 0.7,
-              ),
+              },
+            )
+          : SliverMainAxisGroup(
+              slivers: [
+                for (final group in groups.entries) ...[
+                  SliverToBoxAdapter(
+                    child: _ArtistGroupHeader(label: group.key),
+                  ),
+                  SliverGrid.builder(
+                    itemCount: group.value.length,
+                    itemBuilder: (context, index) {
+                      final artist = group.value[index];
+                      return MusicArtistGridCard(
+                        artist: artist,
+                        onTap: () =>
+                            context.push('/artist/${artist.id}', extra: artist),
+                      );
+                    },
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 32,
+                          mainAxisExtent: 206,
+                        ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                ],
+              ],
             ),
-        ],
+    );
+  }
+}
+
+Map<String, List<MusicArtist>> _groupArtists(List<MusicArtist> artists) {
+  final sorted = [...artists]
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  final groups = <String, List<MusicArtist>>{};
+  for (final artist in sorted) {
+    final name = MediaDisplayText.artistName(artist.name).trim();
+    final first = name.isEmpty ? '#' : name.characters.first.toUpperCase();
+    final key = RegExp(r'[A-Z]').hasMatch(first) ? first : '#';
+    groups.putIfAbsent(key, () => []).add(artist);
+  }
+  return groups;
+}
+
+class _ArtistGroupHeader extends StatelessWidget {
+  const _ArtistGroupHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: Text(label, style: theme.textTheme.titleMedium),
+    );
+  }
+}
+
+class _MobileArtistRow extends StatelessWidget {
+  const _MobileArtistRow({required this.artist, required this.onTap});
+
+  final MusicArtist artist;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = MediaDisplayText.artistName(artist.name);
+    return Semantics(
+      button: true,
+      label: '打开艺术家《$name》',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 80),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                CachedArtwork(
+                  imageUrl: artist.artworkUrl,
+                  size: 64,
+                  borderRadius: AppRadiusTokens.full,
+                  semanticLabel: '$name 头像',
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${artist.albumCount} 张专辑',
+                        maxLines: 1,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox.square(
+                  dimension: 44,
+                  child: Icon(Icons.chevron_right_rounded),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -3,10 +3,11 @@ import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
-enum LibraryFilter { tracks, albums, artists, playlists, favorites }
+enum LibraryFilter { tracks, albums, artists, playlists }
 
 class LibraryState {
   const LibraryState({
@@ -23,6 +24,9 @@ class LibraryState {
     this.hasMore = true,
     this.isLoadingMore = false,
     this.errorMessage,
+    this.appendErrorMessage,
+    this.supportedTrackSortOptions = const {},
+    this.trackSortOption,
   });
 
   const LibraryState.initial({
@@ -44,6 +48,9 @@ class LibraryState {
   final bool hasMore;
   final bool isLoadingMore;
   final String? errorMessage;
+  final String? appendErrorMessage;
+  final Set<TrackSortOption> supportedTrackSortOptions;
+  final TrackSortOption? trackSortOption;
 
   bool get isCurrentFilterEmpty {
     return switch (currentFilter) {
@@ -51,7 +58,6 @@ class LibraryState {
       LibraryFilter.albums => albums.isEmpty,
       LibraryFilter.artists => artists.isEmpty,
       LibraryFilter.playlists => playlists.isEmpty,
-      LibraryFilter.favorites => true,
     };
   }
 
@@ -61,7 +67,6 @@ class LibraryState {
       LibraryFilter.albums => albums.length,
       LibraryFilter.artists => artists.length,
       LibraryFilter.playlists => playlists.length,
-      LibraryFilter.favorites => 0,
     };
   }
 
@@ -79,6 +84,9 @@ class LibraryState {
     bool? hasMore,
     bool? isLoadingMore,
     Object? errorMessage = _sentinel,
+    Object? appendErrorMessage = _sentinel,
+    Set<TrackSortOption>? supportedTrackSortOptions,
+    Object? trackSortOption = _sentinel,
   }) {
     return LibraryState(
       status: status ?? this.status,
@@ -98,6 +106,14 @@ class LibraryState {
       errorMessage: identical(errorMessage, _sentinel)
           ? this.errorMessage
           : errorMessage as String?,
+      appendErrorMessage: identical(appendErrorMessage, _sentinel)
+          ? this.appendErrorMessage
+          : appendErrorMessage as String?,
+      supportedTrackSortOptions:
+          supportedTrackSortOptions ?? this.supportedTrackSortOptions,
+      trackSortOption: identical(trackSortOption, _sentinel)
+          ? this.trackSortOption
+          : trackSortOption as TrackSortOption?,
     );
   }
 }

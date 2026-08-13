@@ -4,6 +4,7 @@ import 'package:cross_platform_music_player/application/usecases/fetch_library_a
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,10 +34,49 @@ class LibraryCubit extends Cubit<LibraryState> {
         hasMore: true,
         isLoadingMore: false,
         errorMessage: null,
+        appendErrorMessage: null,
       ),
     );
-    await _loadGenres();
+    unawaited(_loadGenres());
+    unawaited(_loadTrackSortOptions());
     await _loadCurrentFilter(reset: true);
+  }
+
+  Future<void> _loadTrackSortOptions() async {
+    final options = await _fetchLibraryTracks.supportedSortOptions();
+    if (isClosed) return;
+    final selected = options.contains(state.trackSortOption)
+        ? state.trackSortOption
+        : options.contains(TrackSortOption.title)
+        ? TrackSortOption.title
+        : null;
+    emit(
+      state.copyWith(
+        supportedTrackSortOptions: options,
+        trackSortOption: selected,
+      ),
+    );
+  }
+
+  void changeTrackSort(TrackSortOption option) {
+    if (!state.supportedTrackSortOptions.contains(option) ||
+        state.trackSortOption == option) {
+      return;
+    }
+    emit(state.copyWith(trackSortOption: option));
+    unawaited(_loadCurrentFilter(reset: true));
+  }
+
+  Future<List<MusicTrack>> fetchAllTracks({int limit = 500}) async {
+    final result = await _fetchLibraryTracks(
+      limit: limit,
+      startIndex: 0,
+      searchQuery: state.searchQuery.trim().isEmpty
+          ? null
+          : state.searchQuery.trim(),
+      sortOption: state.trackSortOption,
+    ).timeout(_requestTimeout);
+    return result.items;
   }
 
   Future<void> _loadGenres() async {
@@ -71,6 +111,7 @@ class LibraryCubit extends Cubit<LibraryState> {
         hasMore: true,
         isLoadingMore: false,
         errorMessage: null,
+        appendErrorMessage: null,
       ),
     );
 
@@ -85,13 +126,20 @@ class LibraryCubit extends Cubit<LibraryState> {
         hasMore: true,
         isLoadingMore: false,
         errorMessage: null,
+        appendErrorMessage: null,
       ),
     );
     unawaited(_loadCurrentFilter(reset: true));
   }
 
   void search(String query) {
-    emit(state.copyWith(searchQuery: query, errorMessage: null));
+    emit(
+      state.copyWith(
+        searchQuery: query,
+        errorMessage: null,
+        appendErrorMessage: null,
+      ),
+    );
     unawaited(_loadCurrentFilter(reset: true));
   }
 
@@ -109,10 +157,11 @@ class LibraryCubit extends Cubit<LibraryState> {
           hasMore: true,
           isLoadingMore: false,
           errorMessage: null,
+          appendErrorMessage: null,
         ),
       );
     } else {
-      emit(state.copyWith(isLoadingMore: true, errorMessage: null));
+      emit(state.copyWith(isLoadingMore: true, appendErrorMessage: null));
     }
 
     try {
@@ -123,6 +172,7 @@ class LibraryCubit extends Cubit<LibraryState> {
             limit: _pageSize,
             startIndex: startIndex,
             searchQuery: searchQuery,
+            sortOption: state.trackSortOption,
           ).timeout(_requestTimeout);
           if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(
@@ -139,6 +189,7 @@ class LibraryCubit extends Cubit<LibraryState> {
               ),
               isLoadingMore: false,
               errorMessage: null,
+              appendErrorMessage: null,
             ),
           );
           break;
@@ -157,6 +208,7 @@ class LibraryCubit extends Cubit<LibraryState> {
               hasMore: albums.length == _pageSize,
               isLoadingMore: false,
               errorMessage: null,
+              appendErrorMessage: null,
             ),
           );
           break;
@@ -176,6 +228,7 @@ class LibraryCubit extends Cubit<LibraryState> {
               hasMore: artists.length == _pageSize,
               isLoadingMore: false,
               errorMessage: null,
+              appendErrorMessage: null,
             ),
           );
           break;
@@ -196,16 +249,7 @@ class LibraryCubit extends Cubit<LibraryState> {
               hasMore: playlists.length == _pageSize,
               isLoadingMore: false,
               errorMessage: null,
-            ),
-          );
-          break;
-        case LibraryFilter.favorites:
-          if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
-          emit(
-            state.copyWith(
-              status: LibraryStatus.success,
-              isLoadingMore: false,
-              errorMessage: null,
+              appendErrorMessage: null,
             ),
           );
           break;
@@ -221,7 +265,12 @@ class LibraryCubit extends Cubit<LibraryState> {
           ),
         );
       } else {
-        emit(state.copyWith(isLoadingMore: false, errorMessage: '加载超时，请稍后重试。'));
+        emit(
+          state.copyWith(
+            isLoadingMore: false,
+            appendErrorMessage: '加载超时，请稍后重试。',
+          ),
+        );
       }
     } catch (error) {
       if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
@@ -234,7 +283,12 @@ class LibraryCubit extends Cubit<LibraryState> {
           ),
         );
       } else {
-        emit(state.copyWith(isLoadingMore: false, errorMessage: '加载失败：$error'));
+        emit(
+          state.copyWith(
+            isLoadingMore: false,
+            appendErrorMessage: '加载失败：$error',
+          ),
+        );
       }
     }
   }

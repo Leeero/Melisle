@@ -1,6 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 
 class FetchLibraryTracks {
   const FetchLibraryTracks(this._repository);
@@ -11,11 +12,30 @@ class FetchLibraryTracks {
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
+    TrackSortOption? sortOption,
   }) {
+    final repository = _repository;
+    if (sortOption != null && repository is TrackSortingRepository) {
+      return (repository as TrackSortingRepository).fetchSortedTracks(
+        sortOption: sortOption,
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
     return _repository.fetchTracks(
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
     );
+  }
+
+  Future<Set<TrackSortOption>> supportedSortOptions() {
+    final repository = _repository;
+    if (repository is TrackSortingRepository) {
+      return (repository as TrackSortingRepository)
+          .fetchSupportedTrackSortOptions();
+    }
+    return Future.value(const {});
   }
 }

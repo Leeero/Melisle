@@ -8,9 +8,11 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
-class AutoDetectMusicRepository implements MusicRepository {
+class AutoDetectMusicRepository
+    implements MusicRepository, TrackSortingRepository {
   AutoDetectMusicRepository({
     required MusicRepository embyRepository,
     required MusicRepository navidromeRepository,
@@ -102,6 +104,38 @@ class AutoDetectMusicRepository implements MusicRepository {
     String? searchQuery,
   }) async {
     return (await _requireActiveRepository()).fetchTracks(
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+    );
+  }
+
+  @override
+  Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions() async {
+    final repository = await _requireActiveRepository();
+    return repository is TrackSortingRepository
+        ? (repository as TrackSortingRepository)
+              .fetchSupportedTrackSortOptions()
+        : const {};
+  }
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchSortedTracks({
+    required TrackSortOption sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    final repository = await _requireActiveRepository();
+    if (repository is TrackSortingRepository) {
+      return (repository as TrackSortingRepository).fetchSortedTracks(
+        sortOption: sortOption,
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
+    return repository.fetchTracks(
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,

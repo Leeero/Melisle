@@ -11,9 +11,10 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
-class CachedMusicRepository implements MusicRepository {
+class CachedMusicRepository implements MusicRepository, TrackSortingRepository {
   CachedMusicRepository({
     required MusicRepository delegate,
     MusicRepositoryCachePolicy policy = const MusicRepositoryCachePolicy(),
@@ -97,6 +98,47 @@ class CachedMusicRepository implements MusicRepository {
         'searchQuery': searchQuery,
       },
       loader: () => _delegate.fetchTracks(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      ),
+    );
+  }
+
+  @override
+  Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions() {
+    final delegate = _delegate;
+    return delegate is TrackSortingRepository
+        ? (delegate as TrackSortingRepository).fetchSupportedTrackSortOptions()
+        : Future.value(const {});
+  }
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchSortedTracks({
+    required TrackSortOption sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    final delegate = _delegate;
+    if (delegate is! TrackSortingRepository) {
+      return fetchTracks(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
+    return _cached(
+      'sortedTracks',
+      ttl: _policy.listTtl,
+      params: {
+        'sortOption': sortOption.name,
+        'limit': limit,
+        'startIndex': startIndex,
+        'searchQuery': searchQuery,
+      },
+      loader: () => (delegate as TrackSortingRepository).fetchSortedTracks(
+        sortOption: sortOption,
         limit: limit,
         startIndex: startIndex,
         searchQuery: searchQuery,

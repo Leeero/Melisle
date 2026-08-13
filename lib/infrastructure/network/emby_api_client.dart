@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:dio/dio.dart';
@@ -134,6 +135,7 @@ class EmbyApiClient {
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
+    TrackSortOption sortOption = TrackSortOption.title,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Users/${session.userId}/Items',
@@ -143,7 +145,12 @@ class EmbyApiClient {
         limit: limit,
         startIndex: startIndex,
         searchQuery: searchQuery,
-        sortBy: 'SortName',
+        sortBy: switch (sortOption) {
+          TrackSortOption.title => 'SortName',
+          TrackSortOption.artist => 'AlbumArtist,Artist',
+          TrackSortOption.album => 'Album,SortName',
+          TrackSortOption.dateAdded => 'DateCreated,SortName',
+        },
       ),
       options: _authorizedOptions(session, requestLabel: 'library.tracks'),
     );
