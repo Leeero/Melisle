@@ -89,7 +89,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ActionChip, '夜曲'));
+    await tester.tap(find.widgetWithText(InputChip, '夜曲'));
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byType(TextField));
@@ -198,6 +198,29 @@ void main() {
     expect(find.text('夜曲'), findsOneWidget);
   });
 
+  testWidgets('SearchPage_singleRecentDelete_removesOnlySelectedEntry', (
+    tester,
+  ) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.touchSearchHistory('夜曲');
+    await database.touchSearchHistory('晴天');
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('删除搜索历史：夜曲'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('夜曲'), findsNothing);
+    expect(find.text('晴天'), findsOneWidget);
+  });
+
   testWidgets('SearchPage_mobileWidth_rendersResults', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -275,7 +298,13 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    for (final size in const [Size(390, 844), Size(1280, 900)]) {
+    for (final size in const [
+      Size(375, 812),
+      Size(390, 844),
+      Size(768, 900),
+      Size(1080, 900),
+      Size(1440, 900),
+    ]) {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
 
@@ -290,6 +319,36 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(AppContentPage), findsOneWidget);
       expect(find.byType(AppScopeTabs), findsNothing);
+    }
+  });
+
+  testWidgets('SearchPage_albumGrid_hasNoOverflowAtRequiredTextScale', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final size in const [
+      Size(390, 844),
+      Size(768, 900),
+      Size(1080, 900),
+      Size(1440, 900),
+    ]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(size: size, textScaler: TextScaler.linear(1.3)),
+          child: _buildSearchPage(
+            repository: _FakeMusicRepository(results: _results()),
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), '周杰伦');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: '$size at 1.3x');
     }
   });
 }

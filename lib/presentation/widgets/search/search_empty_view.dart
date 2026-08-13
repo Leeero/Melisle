@@ -7,11 +7,13 @@ class SearchEmptyView extends StatelessWidget {
     required this.onQuerySelected,
     this.recentQueries = const [],
     this.onClearRecent,
+    this.onQueryRemoved,
   });
 
   final List<String> recentQueries;
   final ValueChanged<String> onQuerySelected;
   final VoidCallback? onClearRecent;
+  final ValueChanged<String>? onQueryRemoved;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +36,9 @@ class SearchEmptyView extends StatelessWidget {
                   label: query,
                   icon: Icons.history_rounded,
                   onPressed: () => onQuerySelected(query),
+                  onDeleted: onQueryRemoved == null
+                      ? null
+                      : () => onQueryRemoved!(query),
                 ),
             ],
           ),
@@ -169,18 +174,20 @@ class SearchSuggestionChip extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.onDeleted,
   });
 
   final String label;
   final IconData? icon;
   final VoidCallback onPressed;
+  final VoidCallback? onDeleted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return ActionChip(
+    return InputChip(
       avatar: icon == null
           ? null
           : Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
@@ -197,6 +204,8 @@ class SearchSuggestionChip extends StatelessWidget {
       shape: const StadiumBorder(),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       onPressed: onPressed,
+      onDeleted: onDeleted,
+      deleteButtonTooltipMessage: onDeleted == null ? null : '删除搜索历史：$label',
     );
   }
 }

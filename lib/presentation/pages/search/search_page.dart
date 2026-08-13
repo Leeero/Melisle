@@ -81,7 +81,16 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _onQueryChanged(String query) {
-    context.read<SearchCubit>().onQueryChanged(query);
+    final normalized = query.length <= SearchCubit.maxQueryLength
+        ? query
+        : query.substring(0, SearchCubit.maxQueryLength);
+    if (normalized != query) {
+      _controller.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+    context.read<SearchCubit>().onQueryChanged(normalized);
   }
 
   void _submitQuery(String query) {
@@ -150,19 +159,16 @@ class _SearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
-    final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!hasDesktopToolbar) ...[
-          AppPageHeader(
-            title: '搜索',
-            description: null,
-            hideTitleOnCompactWithCenter: false,
-          ),
-          SizedBox(height: compact ? 12 : 18),
-        ],
+        AppPageHeader(
+          title: '搜索',
+          description: null,
+          hideTitleOnCompactWithCenter: false,
+        ),
+        SizedBox(height: compact ? 12 : 18),
         Row(
           children: [
             Expanded(
@@ -215,6 +221,13 @@ class _SearchResultsView extends StatelessWidget {
         return _SearchResultsContent(results: state.results, isLoading: true);
       }
       return const _SearchLoadingState();
+    }
+
+    if (state.status == SearchStatus.input) {
+      return _SearchStartView(
+        queries: state.recentQueries,
+        onSelected: onRecentSelected,
+      );
     }
 
     if (state.status == SearchStatus.failure) {
@@ -855,7 +868,7 @@ class _CompactAlbumGrid extends StatelessWidget {
           crossAxisCount: AppBreakpoints.adaptiveAlbumGridCount(screenWidth),
           mainAxisSpacing: 18,
           crossAxisSpacing: 18,
-          childAspectRatio: 0.72,
+          childAspectRatio: 0.67,
         ),
       ),
     );
@@ -1135,7 +1148,7 @@ class _SearchAlbumGrid extends StatelessWidget {
         ),
         mainAxisSpacing: 22,
         crossAxisSpacing: 18,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.67,
       ),
       itemBuilder: (context, index) {
         final album = albums[index];
@@ -1197,7 +1210,7 @@ class _SearchPlaylistGrid extends StatelessWidget {
         ),
         mainAxisSpacing: 22,
         crossAxisSpacing: 18,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.67,
       ),
       itemBuilder: (context, index) {
         final playlist = playlists[index];
@@ -1388,6 +1401,7 @@ class _SearchStartView extends StatelessWidget {
       child: SearchEmptyView(
         recentQueries: queries,
         onQuerySelected: onSelected,
+        onQueryRemoved: context.read<SearchCubit>().removeRecent,
         onClearRecent: queries.isEmpty
             ? null
             : () => _clearRecentSearches(context, queries),

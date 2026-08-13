@@ -8,6 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'search_state.dart';
 
 class SearchCubit extends Cubit<SearchState> {
+  static const maxQueryLength = 100;
+  static const debounceDuration = Duration(milliseconds: 320);
+
   SearchCubit(this._repository, {AppDatabase? database})
     : _database = database,
       super(const SearchState()) {
@@ -22,13 +25,14 @@ class SearchCubit extends Cubit<SearchState> {
   /// Called on every keystroke — debounces then hits the backend.
   void onQueryChanged(String query) {
     _debounce?.cancel();
-    final trimmed = query.trim();
+    final normalized = _normalizeQuery(query);
+    final trimmed = normalized.trim();
     if (trimmed.isEmpty) {
       _requestId++;
       emit(
         state.copyWith(
           status: SearchStatus.idle,
-          query: query,
+          query: normalized,
           results: SearchResults.empty,
           errorMessage: null,
         ),
@@ -38,18 +42,19 @@ class SearchCubit extends Cubit<SearchState> {
     _requestId++;
     emit(
       state.copyWith(
-        status: SearchStatus.loading,
-        query: query,
+        status: SearchStatus.input,
+        query: normalized,
+        results: SearchResults.empty,
         errorMessage: null,
       ),
     );
-    _debounce = Timer(const Duration(milliseconds: 320), () => _run(trimmed));
+    _debounce = Timer(debounceDuration, () => _run(trimmed));
   }
 
   /// Run immediately — e.g. the user hit the keyboard submit button.
   Future<void> submit(String query) async {
     _debounce?.cancel();
-    final trimmed = query.trim();
+    final trimmed = _normalizeQuery(query).trim();
     if (trimmed.isEmpty) return;
     emit(state.copyWith(query: trimmed));
     await _run(trimmed, persist: true);
@@ -88,6 +93,20 @@ class SearchCubit extends Cubit<SearchState> {
     emit(state.copyWith(recentQueries: const []));
   }
 
+  Future<void> removeRecent(String query) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return;
+    await _database?.deleteSearchHistory(normalized);
+    emit(
+      state.copyWith(
+        recentQueries: [
+          for (final recent in state.recentQueries)
+            if (recent != normalized) recent,
+        ],
+      ),
+    );
+  }
+
   Future<void> restoreRecent(List<String> queries) async {
     final normalized = [
       for (final query in queries)
@@ -115,6 +134,11 @@ class SearchCubit extends Cubit<SearchState> {
     } catch (_) {
       /* ignore */
     }
+  }
+
+  static String _normalizeQuery(String query) {
+    if (query.length <= maxQueryLength) return query;
+    return query.substring(0, maxQueryLength);
   }
 
   @override

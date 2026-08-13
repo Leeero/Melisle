@@ -1,6 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 
-enum SearchStatus { idle, loading, success, failure }
+enum SearchStatus { idle, input, loading, success, failure }
 
 class SearchState {
   const SearchState({

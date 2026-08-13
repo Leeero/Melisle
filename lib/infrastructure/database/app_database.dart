@@ -123,12 +123,23 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<SearchHistoryData>> recentSearches({int limit = 10}) {
     return (select(searchHistory)
-          ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAtMs)])
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.lastUsedAtMs),
+            (t) => OrderingTerm.desc(t.id),
+          ])
           ..limit(limit))
         .get();
   }
 
   Future<void> clearSearchHistory() => delete(searchHistory).go();
+
+  Future<void> deleteSearchHistory(String query) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return Future<void>.value();
+    return (delete(
+      searchHistory,
+    )..where((t) => t.query.equals(normalized))).go().then((_) {});
+  }
 
   // ---- App settings (key/value) -------------------------------------------
 

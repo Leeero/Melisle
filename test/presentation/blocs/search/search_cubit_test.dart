@@ -40,6 +40,46 @@ void main() {
     expect(cubit.state.results.tracks.single.title, '夜曲');
   });
 
+  test('onQueryChanged_waitsInInputStateBeforeDebouncedSearch', () async {
+    final repository = _FakeMusicRepository();
+    final cubit = SearchCubit(repository);
+    addTearDown(cubit.close);
+
+    cubit.onQueryChanged('夜曲');
+
+    expect(cubit.state.status, SearchStatus.input);
+    expect(repository.queries, isEmpty);
+    await Future<void>.delayed(SearchCubit.debounceDuration);
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.queries, ['夜曲']);
+  });
+
+  test('submit_truncatesOverlongQueryAtCubitBoundary', () async {
+    final repository = _FakeMusicRepository();
+    final cubit = SearchCubit(repository);
+    addTearDown(cubit.close);
+    final query = List.filled(SearchCubit.maxQueryLength + 20, '长').join();
+
+    await cubit.submit(query);
+
+    expect(repository.queries.single.length, SearchCubit.maxQueryLength);
+    expect(cubit.state.query.length, SearchCubit.maxQueryLength);
+  });
+
+  test('removeRecent_deletesSingleHistoryEntry', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.touchSearchHistory('夜曲');
+    await database.touchSearchHistory('晴天');
+    final cubit = SearchCubit(_FakeMusicRepository(), database: database);
+    addTearDown(cubit.close);
+    await Future<void>.delayed(Duration.zero);
+
+    await cubit.removeRecent('夜曲');
+
+    expect(cubit.state.recentQueries, ['晴天']);
+  });
+
   test('submit_failure_emitsFailureWithMessage', () async {
     final repository = _FakeMusicRepository(error: Exception('offline'));
     final cubit = SearchCubit(repository);
