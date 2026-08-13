@@ -10,30 +10,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  bool _sidebarCollapsed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final selectedIndex = navigationShell.currentIndex;
+    final selectedIndex = widget.navigationShell.currentIndex;
     final layout = AppBreakpoints.of(context);
 
     return switch (layout) {
       AppLayoutSize.largeDesktop ||
       AppLayoutSize.desktop => _ExpandedShellScaffold(
-        navigationShell: navigationShell,
+        navigationShell: widget.navigationShell,
         selectedIndex: selectedIndex,
         onSelected: _go,
+        sidebarCollapsed: _sidebarCollapsed,
+        onToggleSidebar: () =>
+            setState(() => _sidebarCollapsed = !_sidebarCollapsed),
       ),
       AppLayoutSize.medium => _MediumShellScaffold(
-        navigationShell: navigationShell,
+        navigationShell: widget.navigationShell,
         selectedIndex: selectedIndex,
         onSelected: _go,
       ),
       AppLayoutSize.compact => _CompactShellScaffold(
-        navigationShell: navigationShell,
+        navigationShell: widget.navigationShell,
         selectedIndex: selectedIndex,
         onSelected: _go,
       ),
@@ -41,29 +51,27 @@ class AppShell extends StatelessWidget {
   }
 
   void _go(int index) {
-    // 一级导航始终进入对应分支的根页面，避免恢复该分支上次停留的
-    // 最近播放、歌单、下载管理或详情页。
-    navigationShell.goBranch(index, initialLocation: true);
+    widget.navigationShell.goBranch(
+      index,
+      initialLocation: index == widget.navigationShell.currentIndex,
+    );
   }
 }
 
-class _ExpandedShellScaffold extends StatefulWidget {
+class _ExpandedShellScaffold extends StatelessWidget {
   const _ExpandedShellScaffold({
     required this.navigationShell,
     required this.selectedIndex,
     required this.onSelected,
+    required this.sidebarCollapsed,
+    required this.onToggleSidebar,
   });
 
   final StatefulNavigationShell navigationShell;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
-
-  @override
-  State<_ExpandedShellScaffold> createState() => _ExpandedShellScaffoldState();
-}
-
-class _ExpandedShellScaffoldState extends State<_ExpandedShellScaffold> {
-  bool _sidebarCollapsed = false;
+  final bool sidebarCollapsed;
+  final VoidCallback onToggleSidebar;
 
   @override
   Widget build(BuildContext context) {
@@ -75,18 +83,17 @@ class _ExpandedShellScaffoldState extends State<_ExpandedShellScaffold> {
       body: Row(
         children: [
           _ShellSidebar(
-            selectedIndex: widget.selectedIndex,
-            onSelected: widget.onSelected,
-            compact: _sidebarCollapsed,
-            onToggleCompact: () =>
-                setState(() => _sidebarCollapsed = !_sidebarCollapsed),
+            selectedIndex: selectedIndex,
+            onSelected: onSelected,
+            compact: sidebarCollapsed,
+            onToggleCompact: onToggleSidebar,
           ),
           Expanded(
             child: _ShellContentSurface(
               body: Column(
                 children: [
                   const DesktopPageToolbar(),
-                  Expanded(child: widget.navigationShell),
+                  Expanded(child: navigationShell),
                 ],
               ),
               footer: const MiniPlayerBar(),
@@ -126,7 +133,12 @@ class _MediumShellScaffold extends StatelessWidget {
           ),
           Expanded(
             child: _ShellContentSurface(
-              body: navigationShell,
+              body: Column(
+                children: [
+                  const DesktopPageToolbar(),
+                  Expanded(child: navigationShell),
+                ],
+              ),
               footer: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: MiniPlayerBar(),
@@ -464,6 +476,7 @@ class _ShellBottomBar extends StatelessWidget {
     )!;
 
     return DecoratedBox(
+      key: const ValueKey('shell-bottom-bar'),
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.86),
         border: Border(
@@ -644,8 +657,17 @@ class _ShellNavButton extends StatefulWidget {
 }
 
 class _ShellNavButtonState extends State<_ShellNavButton> {
+  late final FocusNode _focusNode = FocusNode(
+    debugLabel: 'shell-nav-${widget.label}',
+  );
   bool _hovered = false;
   bool _focused = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   void _setHovered(bool value) {
     if (_hovered == value) return;
@@ -662,7 +684,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final highlighted = _hovered || _focused;
-    final radius = BorderRadius.circular(AppRadiusTokens.iconButton - 6);
+    final radius = BorderRadius.circular(AppRadiusTokens.sm);
     final hoverBackground = Color.alphaBlend(
       theme.musicTealSoft.withValues(
         alpha: theme.brightness == Brightness.dark ? 0.64 : 0.54,
@@ -670,6 +692,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
       theme.surfaceSidebar,
     );
     final idleBackground = hoverBackground.withValues(alpha: 0);
+    final selectedForeground = colorScheme.onPrimaryContainer;
 
     final button = Semantics(
       label: widget.label,
@@ -691,6 +714,8 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
             ),
           },
           child: Focus(
+            key: ValueKey('shell-nav-focus-${widget.label}'),
+            focusNode: _focusNode,
             onFocusChange: _setFocused,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -700,10 +725,11 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onTap,
                 child: AnimatedContainer(
+                  key: ValueKey('shell-nav-surface-${widget.label}'),
                   duration: AppMotion.micro,
                   curve: AppMotion.enter,
                   width: double.infinity,
-                  constraints: const BoxConstraints(minHeight: 34),
+                  constraints: const BoxConstraints(minHeight: 44),
                   padding: EdgeInsets.symmetric(
                     horizontal: widget.compact ? 8 : 12,
                     vertical: 8,
@@ -713,7 +739,14 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                         ? colorScheme.primaryContainer
                         : (highlighted ? hoverBackground : idleBackground),
                     borderRadius: radius,
-                    border: Border.all(color: Colors.transparent),
+                    border: Border.all(
+                      color: _focused
+                          ? widget.selected
+                                ? selectedForeground
+                                : colorScheme.primary
+                          : Colors.transparent,
+                      width: AppBorderTokens.focus,
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: widget.compact
@@ -724,7 +757,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                         widget.icon,
                         size: 18,
                         color: widget.selected
-                            ? colorScheme.primary
+                            ? selectedForeground
                             : colorScheme.onSurfaceVariant,
                       ),
                       if (!widget.compact) ...[
@@ -733,7 +766,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                           widget.label,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: widget.selected
-                                ? colorScheme.primary
+                                ? selectedForeground
                                 : highlighted
                                 ? colorScheme.onSurface
                                 : colorScheme.onSurfaceVariant,

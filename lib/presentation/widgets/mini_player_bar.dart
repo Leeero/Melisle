@@ -434,6 +434,7 @@ class _WideMiniPlayer extends StatelessWidget {
     return Row(
       children: [
         Expanded(
+          flex: 3,
           child: Row(
             children: [
               Expanded(
@@ -450,6 +451,7 @@ class _WideMiniPlayer extends StatelessWidget {
           ),
         ),
         Expanded(
+          flex: 4,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: BlocBuilder<PlayerCubit, PlayerViewState>(
@@ -469,6 +471,7 @@ class _WideMiniPlayer extends StatelessWidget {
           ),
         ),
         Expanded(
+          flex: 3,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [

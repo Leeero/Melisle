@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
@@ -40,6 +42,7 @@ import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,7 +87,7 @@ void main() {
   testWidgets('login keeps the V3 card stable across loading and failure', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(1280, 760);
+    tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -146,11 +149,11 @@ void main() {
     );
     expect(
       tester.getCenter(find.byKey(const ValueKey('v3-login-card'))).dx,
-      640,
+      720,
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(48, 48),
+      const Size(64, 64),
     );
 
     await tester.tap(find.text('连接服务器'));
@@ -176,13 +179,13 @@ void main() {
     expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(48, 48),
+      const Size(64, 64),
     );
 
     loginCompleter.completeError(Exception('network unavailable'));
     await tester.pumpAndSettle();
 
-    expect(find.text('连接失败，请检查服务器地址、登录凭据或网络连接。'), findsOneWidget);
+    expect(find.textContaining('network unavailable'), findsOneWidget);
     expect(find.text('重新连接'), findsOneWidget);
     expect(find.text('连接您的个人音乐服务器'), findsOneWidget);
     expect(
@@ -191,8 +194,28 @@ void main() {
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(48, 48),
+      const Size(64, 64),
     );
+    await _captureLogin(tester, 'login-desktop-light-1440x900');
+    await settingsCubit.setThemeMode(ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await _captureLogin(tester, 'login-desktop-dark-1440x900');
+
+    tester.view.physicalSize = const Size(390, 844);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-card'))).width,
+      374,
+    );
+    expect(find.textContaining('network unavailable'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _captureLogin(tester, 'login-mobile-dark-390x844-scale-1.3');
+    await settingsCubit.setThemeMode(ThemeMode.light);
+    await tester.pumpAndSettle();
+    await _captureLogin(tester, 'login-mobile-light-390x844-scale-1.3');
   });
 
   testWidgets('play all icon button exposes tooltip and touch target', (
@@ -228,8 +251,10 @@ void main() {
   ) async {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
 
     final repository = _FakeMusicRepository(session: _authenticatedSession);
     final settingsRepository = _FakeSettingsRepository();
@@ -241,7 +266,7 @@ void main() {
       logout: Logout(repository),
       fetchPlaylists: FetchPlaylists(repository),
     );
-    final playerCubit = PlayerCubit(
+    final playerCubit = _ControllablePlayerCubit(
       repository: repository,
       controller: AudioPlayerHandler(mediaSourceResolver: mediaSourceResolver),
     );
@@ -258,50 +283,146 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MusicPlayerApp(
-        repository: repository,
-        settingsRepository: settingsRepository,
-        mediaSourceResolver: mediaSourceResolver,
-        database: database,
-        authCubit: authCubit,
-        playerCubit: playerCubit,
-        settingsCubit: settingsCubit,
-        favoritesCubit: favoritesCubit,
-        downloadsCubit: downloadsCubit,
+      RepaintBoundary(
+        key: const ValueKey('app-shell-capture'),
+        child: MusicPlayerApp(
+          repository: repository,
+          settingsRepository: settingsRepository,
+          mediaSourceResolver: mediaSourceResolver,
+          database: database,
+          authCubit: authCubit,
+          playerCubit: playerCubit,
+          settingsCubit: settingsCubit,
+          favoritesCubit: favoritesCubit,
+          downloadsCubit: downloadsCubit,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('shell-compact')), findsOneWidget);
+    await _captureAppShell(tester, 'app-shell-390x844-hidden');
+    expect(
+      tester.getSize(find.byKey(const ValueKey('shell-bottom-bar'))).height,
+      AppSpacingTokens.mobileTabContentHeight + 34 + 5,
+    );
     for (final label in const ['首页', '搜索', '媒体库', '收藏', '设置']) {
       expect(find.text(label), findsWidgets);
     }
 
-    tester.view.physicalSize = const Size(960, 680);
+    playerCubit.update(
+      PlayerViewState(
+        queue: const [
+          MusicTrack(
+            id: 'shell-track',
+            title: '夜航星',
+            artistName: '乐岛测试艺术家',
+            albumTitle: '响应式壳层',
+            artworkUrl: '',
+            duration: Duration(minutes: 3, seconds: 42),
+          ),
+        ],
+        currentIndex: 0,
+      ),
+    );
     await tester.pumpAndSettle();
+    await _captureAppShell(tester, 'app-shell-390x844-visible');
+
+    tester.view.physicalSize = const Size(375, 812);
+    await tester.pumpAndSettle();
+    await _captureAppShell(tester, 'app-shell-375x812-visible');
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('shell-compact'))),
+    ).go('/history');
+    await tester.pumpAndSettle();
+    expect(find.text('播放历史'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(768, 900);
+    await tester.pumpAndSettle();
+    await _captureAppShell(tester, 'app-shell-768x900');
+    expect(tester.takeException(), isNull, reason: '768');
     expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-toolbar')), findsNothing);
+    expect(find.text('播放历史'), findsOneWidget);
 
-    tester.view.physicalSize = const Size(1280, 900);
+    final homeFocus = tester.widget<Focus>(
+      find.byKey(const ValueKey('shell-nav-focus-首页')),
+    );
+    homeFocus.focusNode!.requestFocus();
+    await tester.pumpAndSettle();
+    expect(homeFocus.focusNode?.hasFocus, isTrue);
+    final focusedSurface = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('shell-nav-surface-首页')),
+    );
+    final focusedDecoration = focusedSurface.decoration! as BoxDecoration;
+    expect(focusedDecoration.border?.top.width, AppBorderTokens.focus);
+    expect(
+      focusedDecoration.border?.top.color,
+      Theme.of(
+        tester.element(find.byKey(const ValueKey('shell-nav-surface-首页'))),
+      ).colorScheme.primary,
+    );
+
+    tester.view.physicalSize = const Size(1079, 900);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1080, 900);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-desktop')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
     expect(find.byTooltip('收起侧边栏'), findsOneWidget);
+    await _captureAppShell(tester, 'app-shell-1080x900-expanded');
+    expect(tester.takeException(), isNull, reason: '1080 expanded');
 
     await tester.tap(find.byTooltip('收起侧边栏'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
     expect(find.byTooltip('展开侧边栏'), findsOneWidget);
+    await _captureAppShell(tester, 'app-shell-1080x900-collapsed');
+    expect(tester.takeException(), isNull, reason: '1080 collapsed');
+
+    tester.view.physicalSize = const Size(767, 900);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-compact')), findsOneWidget);
+    expect(find.text('播放历史'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1080, 900);
+    expect(tester.takeException(), isNull, reason: '767');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1440, 900);
+    await tester.pumpAndSettle();
+    await _captureAppShell(tester, 'app-shell-1440x900-collapsed');
+    expect(tester.takeException(), isNull, reason: '1440');
 
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('搜索').last);
+    expect(tester.takeException(), isNull, reason: '390 before search');
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
+    final layoutException = tester.takeException();
+    expect(
+      layoutException,
+      isNull,
+      reason: layoutException is FlutterError
+          ? layoutException.toStringDeep()
+          : layoutException?.toString(),
+    );
     expect(find.text('搜索歌曲、专辑、艺人、播放列表'), findsOneWidget);
+
+    await tester.tap(find.text('首页').last);
+    await tester.pumpAndSettle();
+    expect(find.text('播放历史'), findsOneWidget);
   });
 
   testWidgets('mobile mini player follows V3 transport and touch targets', (
@@ -884,6 +1005,48 @@ void main() {
   });
 }
 
+Future<void> _captureAppShell(WidgetTester tester, String name) async {
+  if (Platform.environment['CAPTURE_APP_SHELL_SCREENSHOTS'] != 'true') return;
+
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('app-shell-capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (bytes == null) {
+      throw StateError('Unable to encode App Shell screenshot');
+    }
+
+    final directory = Directory('design-reference/screenshots/actual');
+    await directory.create(recursive: true);
+    await File(
+      '${directory.path}/$name.png',
+    ).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  });
+}
+
+Future<void> _captureLogin(WidgetTester tester, String name) async {
+  if (Platform.environment['CAPTURE_LOGIN_SCREENSHOTS'] != 'true') return;
+
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('v3-login-capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (bytes == null) throw StateError('Unable to encode login screenshot');
+
+    final directory = Directory('design-reference/screenshots/actual');
+    await directory.create(recursive: true);
+    await File(
+      '${directory.path}/$name.png',
+    ).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  });
+}
+
 const _authenticatedSession = AuthSession(
   serverUrl: 'https://music.example.test',
   userId: 'user-1',
@@ -899,6 +1062,15 @@ class _MiniPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ControllablePlayerCubit extends PlayerCubit {
+  _ControllablePlayerCubit({
+    required super.repository,
+    required super.controller,
+  });
+
+  void update(PlayerViewState next) => emit(next);
 }
 
 class _FakeMusicRepository implements MusicRepository {

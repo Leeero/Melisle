@@ -33,7 +33,6 @@ import 'package:cross_platform_music_player/presentation/pages/settings/settings
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
-import 'package:cross_platform_music_player/shared/theme/app_breakpoints.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,14 +49,9 @@ void main() {
     await _pumpForSizes(
       tester,
       build: () => harness.wrap(const SettingsPage()),
-      verify: (size) {
+      verify: (_) {
         expect(find.byType(AppContentPage), findsOneWidget);
-        expect(
-          find.text('设置'),
-          size.width < AppBreakpoints.desktopMinWidth
-              ? findsWidgets
-              : findsNothing,
-        );
+        expect(find.text('设置'), findsOneWidget);
         expect(find.text('服务器'), findsOneWidget);
         expect(find.text('外观'), findsOneWidget);
         expect(find.text('播放'), findsOneWidget);
@@ -128,14 +122,9 @@ void main() {
     await _pumpForSizes(
       tester,
       build: () => harness.wrap(const DownloadsPage()),
-      verify: (size) {
+      verify: (_) {
         expect(find.byType(AppContentPage), findsOneWidget);
-        expect(
-          find.text('下载管理'),
-          size.width < AppBreakpoints.desktopMinWidth
-              ? findsWidgets
-              : findsNothing,
-        );
+        expect(find.text('下载管理'), findsOneWidget);
         expect(find.text('管理离线缓存、下载任务和本地存储。'), findsNothing);
         expect(find.text('存储位置'), findsOneWidget);
         expect(find.text('修改'), findsOneWidget);

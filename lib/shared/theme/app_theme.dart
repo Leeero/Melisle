@@ -40,6 +40,8 @@ abstract final class AppTheme {
   // — Semantic colours (light)
   static const _lightPrimary = AppColorTokens.lightPrimary;
   static const _lightPrimaryContainer = AppColorTokens.lightPrimaryContainer;
+  static const _lightOnPrimaryContainer =
+      AppColorTokens.lightOnPrimaryContainer;
   static const _lightSecondary = AppColorTokens.lightSecondary;
   static const _lightSecondaryContainer =
       AppColorTokens.lightSecondaryContainer;
@@ -129,22 +131,22 @@ abstract final class AppTheme {
             primary: _lightPrimary,
             onPrimary: const Color(0xFFF9FAFF),
             primaryContainer: _lightPrimaryContainer,
-            onPrimaryContainer: _lightOnSurface,
+            onPrimaryContainer: _lightOnPrimaryContainer,
             secondary: _lightSecondary,
             onSecondary: const Color(0xFFF8FCFC),
             secondaryContainer: _lightSecondaryContainer,
             onSecondaryContainer: _lightOnSurface,
-            error: AppColorTokens.lightDanger,
+            error: const Color(0xFFBA1A1A),
             onError: const Color(0xFFFFFAF8),
-            errorContainer: const Color(0xFFFFDAD9),
+            errorContainer: const Color(0xFFFFDAD6),
             onErrorContainer: const Color(0xFF410006),
             surface: _lightSurface,
-            surfaceDim: const Color(0xFFE1E9E8),
+            surfaceDim: const Color(0xFFE0E5E2),
             surfaceBright: _lightSurface,
             surfaceContainerLowest: _lightSurface,
-            surfaceContainerLow: const Color(0xFFFBFEFE),
+            surfaceContainerLow: AppColorTokens.lightSurfaceLow,
             surfaceContainer: _lightSurfaceHigh,
-            surfaceContainerHigh: const Color(0xFFF4FAF9),
+            surfaceContainerHigh: const Color(0xFFE5E9E6),
             surfaceContainerHighest: _lightSurfaceHighest,
             onSurface: _lightOnSurface,
             onSurfaceVariant: _lightOnSurfaceVariant,
@@ -188,62 +190,83 @@ abstract final class AppTheme {
           headlineLarge: baseTextTheme.headlineLarge?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w700,
+            fontSize: 31,
+            height: 41 / 31,
             letterSpacing: 0,
           ),
           headlineMedium: baseTextTheme.headlineMedium?.copyWith(
             fontFamily: _productFont,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            fontSize: 26,
+            height: 34 / 26,
             letterSpacing: 0,
           ),
           headlineSmall: baseTextTheme.headlineSmall?.copyWith(
             fontFamily: _productFont,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            fontSize: 24,
+            height: 32 / 24,
             letterSpacing: 0,
           ),
           titleLarge: baseTextTheme.titleLarge?.copyWith(
             fontFamily: _productFont,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            height: 24 / 18,
             letterSpacing: 0,
           ),
           titleMedium: baseTextTheme.titleMedium?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
+            fontSize: 16,
+            height: 24 / 16,
             letterSpacing: 0,
           ),
           titleSmall: baseTextTheme.titleSmall?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
+            fontSize: 14,
+            height: 20 / 14,
             letterSpacing: 0,
           ),
           bodyLarge: baseTextTheme.bodyLarge?.copyWith(
             fontFamily: _productFont,
-            height: 1.5,
+            fontSize: 16,
+            height: 24 / 16,
             letterSpacing: 0,
           ),
           bodyMedium: baseTextTheme.bodyMedium?.copyWith(
             fontFamily: _productFont,
-            height: 1.5,
+            fontSize: 15,
+            height: 22 / 15,
             letterSpacing: 0,
           ),
           bodySmall: baseTextTheme.bodySmall?.copyWith(
             fontFamily: _productFont,
             color: colorScheme.onSurfaceVariant,
-            height: 1.4,
+            fontSize: 13,
+            height: 18 / 13,
             letterSpacing: 0,
           ),
           labelLarge: baseTextTheme.labelLarge?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
+            fontSize: 14,
+            height: 20 / 14,
             letterSpacing: 0,
           ),
           labelMedium: baseTextTheme.labelMedium?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w500,
+            fontSize: 13,
+            height: 18 / 13,
             letterSpacing: 0,
           ),
           labelSmall: baseTextTheme.labelSmall?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w500,
+            fontSize: 12,
+            height: 16 / 12,
             letterSpacing: 0,
           ),
         );
@@ -284,13 +307,13 @@ abstract final class AppTheme {
             : colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black.withValues(alpha: isDark ? 0 : 0.05),
-        elevation: isDark ? 0 : 0.35,
+        elevation: isDark ? 0 : 0.5,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusCard),
           side: BorderSide(
             color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.46 : 0.82,
+              alpha: isDark ? 0.46 : 1,
             ),
           ),
         ),
@@ -298,7 +321,7 @@ abstract final class AppTheme {
 
       // ─── ListTile ───
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         minLeadingWidth: 0,
         minVerticalPadding: 8,
         iconColor: colorScheme.onSurfaceVariant,
@@ -355,10 +378,13 @@ abstract final class AppTheme {
         ),
         focusedBorder: _inputBorder(
           colorScheme.primary.withValues(alpha: isDark ? 0.68 : 0.86),
-          width: 1.25,
+          width: AppBorderTokens.focus,
         ),
         errorBorder: _inputBorder(colorScheme.error.withValues(alpha: 0.78)),
-        focusedErrorBorder: _inputBorder(colorScheme.error, width: 1.25),
+        focusedErrorBorder: _inputBorder(
+          colorScheme.error,
+          width: AppBorderTokens.focus,
+        ),
       ),
 
       // ─── Buttons ───
@@ -449,7 +475,7 @@ abstract final class AppTheme {
         highlightElevation: 0,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
       // ─── Tooltip ───
@@ -473,7 +499,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: isDark ? 0 : 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
           side: BorderSide(
             color: colorScheme.outlineVariant.withValues(
               alpha: isDark ? 0.48 : 0.78,
@@ -490,7 +516,9 @@ abstract final class AppTheme {
         modalBarrierColor: colorScheme.scrim.withValues(alpha: 0.46),
         dragHandleColor: colorScheme.outlineVariant,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadiusTokens.xl),
+          ),
         ),
       ),
 

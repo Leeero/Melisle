@@ -25,12 +25,10 @@ class SettingsPage extends StatelessWidget {
       builder: (context, state) {
         if (state.isLoading) {
           return AppContentPage(
-            header: AppBreakpoints.usesDesktopToolbar(context)
-                ? null
-                : const AppPageHeader(
-                    title: '设置',
-                    automaticImplyLeading: false,
-                  ),
+            header: const AppPageHeader(
+              title: '设置',
+              automaticImplyLeading: false,
+            ),
             body: const AppBodyStateView.loading(),
           );
         }
@@ -39,14 +37,15 @@ class SettingsPage extends StatelessWidget {
         final colorScheme = Theme.of(context).colorScheme;
 
         return AppContentPage(
-          header: AppBreakpoints.usesDesktopToolbar(context)
-              ? null
-              : const AppPageHeader(title: '设置', automaticImplyLeading: false),
+          header: const AppPageHeader(
+            title: '设置',
+            automaticImplyLeading: false,
+          ),
           body: ListView(
             padding: EdgeInsets.only(
               left: horizontalPadding,
               right: horizontalPadding,
-              top: AppBreakpoints.usesDesktopToolbar(context) ? 24 : 0,
+              top: 0,
               bottom: AppPageLayout.contentBottomInset,
             ),
             children: [

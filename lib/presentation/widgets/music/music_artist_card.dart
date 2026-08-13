@@ -102,7 +102,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                 final artworkSize = math.min(
                   compact
                       ? math.min(preferredArtworkSize, 96.0)
-                      : preferredArtworkSize,
+                      : math.min(preferredArtworkSize, 100.0),
                   math.max(56.0, maxArtworkSize),
                 );
                 return Column(
@@ -148,7 +148,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                     ),
                     SizedBox(height: subtitleGap),
                     Text(
-                      '${artist.trackCount} 首歌曲',
+                      '${artist.albumCount} 张专辑',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,

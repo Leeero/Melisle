@@ -86,16 +86,7 @@ class AppScopeTabs<T> extends StatelessWidget {
     return Semantics(
       label: semanticLabel,
       child: effectiveVariant == AppScopeTabsVariant.underline
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.76),
-                  ),
-                ),
-              ),
-              child: tabs,
-            )
+          ? tabs
           : DecoratedBox(
               decoration: BoxDecoration(
                 color: colorScheme.outlineVariant.withValues(

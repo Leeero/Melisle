@@ -143,10 +143,7 @@ class HomeCubit extends Cubit<HomeState> {
       final albums = await _fetchLatestAlbums(limit: _homeAlbumsLimit);
       return _HomeSectionResult(data: albums);
     } catch (error) {
-      return _HomeSectionResult(
-        data: const [],
-        errorMessage: '最近加入加载失败：$error',
-      );
+      return _HomeSectionResult(data: const [], errorMessage: '最新添加加载失败，请稍后重试');
     }
   }
 
@@ -155,10 +152,7 @@ class HomeCubit extends Cubit<HomeState> {
       final albums = await _fetchRandomAlbums(limit: _randomPicksLimit);
       return _HomeSectionResult(data: albums);
     } catch (error) {
-      return _HomeSectionResult(
-        data: const [],
-        errorMessage: '今日推荐加载失败：$error',
-      );
+      return _HomeSectionResult(data: const [], errorMessage: '随机内容加载失败，请稍后重试');
     }
   }
 
@@ -178,7 +172,7 @@ class HomeCubit extends Cubit<HomeState> {
     } catch (error) {
       return _HomeSectionResult(
         data: local,
-        errorMessage: local.isEmpty ? '最近在听加载失败：$error' : null,
+        errorMessage: local.isEmpty ? '最近播放加载失败，请稍后重试' : null,
       );
     }
   }
@@ -195,7 +189,7 @@ class HomeCubit extends Cubit<HomeState> {
     } catch (error) {
       return _HomeSectionResult(
         data: local,
-        errorMessage: local.isEmpty ? '常听的歌加载失败：$error' : null,
+        errorMessage: local.isEmpty ? '最常播放加载失败，请稍后重试' : null,
       );
     }
   }

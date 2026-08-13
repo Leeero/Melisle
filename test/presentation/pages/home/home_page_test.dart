@@ -1,0 +1,235 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:cross_platform_music_player/application/usecases/fetch_latest_albums.dart';
+import 'package:cross_platform_music_player/application/usecases/fetch_random_albums.dart';
+import 'package:cross_platform_music_player/domain/entities/music_album.dart';
+import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
+import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
+import 'package:cross_platform_music_player/presentation/blocs/home/home_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/home/home_state.dart';
+import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
+import 'package:cross_platform_music_player/presentation/pages/home/home_page.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('首页空、部分失败和完全失败状态可见', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    await _pumpHome(tester, cubit, const HomeState(status: HomeStatus.success));
+    expect(find.text('还没有可展示的音乐'), findsOneWidget);
+    await _pumpHome(
+      tester,
+      cubit,
+      HomeState(
+        status: HomeStatus.success,
+        albums: _albums,
+        errorMessage: '随机内容加载失败，请稍后重试',
+      ),
+    );
+    expect(find.text('随机内容加载失败，请稍后重试'), findsOneWidget);
+    expect(find.text('最新添加'), findsOneWidget);
+    await _pumpHome(
+      tester,
+      cubit,
+      const HomeState(status: HomeStatus.failure, errorMessage: '首页加载失败'),
+    );
+    expect(find.text('首页加载失败'), findsOneWidget);
+    expect(find.text('重新加载'), findsOneWidget);
+  });
+
+  testWidgets('首页加载状态保持区块骨架', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    await _pumpHome(tester, cubit, const HomeState(status: HomeStatus.loading));
+    expect(find.byKey(const ValueKey('home-loading-sections')), findsOneWidget);
+  });
+
+  testWidgets('移动首页覆盖最新添加、最常播放、随机内容和长标题', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    await _setViewport(tester, const ui.Size(390, 844), textScale: 1.3);
+    await _pumpHome(tester, cubit, _successState);
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('最新添加'), findsOneWidget);
+    expect(find.text('最常播放'), findsOneWidget);
+    expect(find.text('随机探索'), findsOneWidget);
+    expect(find.textContaining('用于验证超长标题'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('首页五个固定视口无溢出并可生成截图', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    for (final size in _viewports) {
+      for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+        for (final scale in [1.0, 1.3]) {
+          await _setViewport(tester, size, textScale: scale);
+          await _pumpHome(
+            tester,
+            cubit,
+            _successState,
+            capture: true,
+            themeMode: mode,
+          );
+          expect(tester.takeException(), isNull, reason: '$size $mode $scale');
+          final brightness = mode == ThemeMode.light ? 'light' : 'dark';
+          await _capture(
+            tester,
+            'home-${size.width.toInt()}x${size.height.toInt()}-$brightness-scale-$scale',
+          );
+        }
+      }
+    }
+  });
+}
+
+Future<void> _pumpHome(
+  WidgetTester tester,
+  _TestHomeCubit cubit,
+  HomeState state, {
+  bool capture = false,
+  ThemeMode themeMode = ThemeMode.light,
+}) async {
+  cubit.show(state);
+  final resolver = CustomMediaSourceResolver();
+  final settingsCubit = AppSettingsCubit(_SettingsRepository(), resolver);
+  addTearDown(settingsCubit.close);
+  await tester.pumpWidget(
+    RepositoryProvider<CustomMediaSourceResolver>.value(
+      value: resolver,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<HomeCubit>.value(value: cubit),
+          BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode,
+          home: RepaintBoundary(
+            key: capture ? const ValueKey('home-capture') : null,
+            child: const HomeView(),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+Future<void> _setViewport(
+  WidgetTester tester,
+  ui.Size size, {
+  double textScale = 1,
+}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+}
+
+Future<void> _capture(WidgetTester tester, String name) async {
+  if (Platform.environment['CAPTURE_HOME_SCREENSHOTS'] != 'true') return;
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('home-capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (bytes == null) throw StateError('Unable to encode home screenshot');
+    final directory = Directory('design-reference/screenshots/actual');
+    await directory.create(recursive: true);
+    await File(
+      '${directory.path}/$name.png',
+    ).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  });
+}
+
+class _TestHomeCubit extends HomeCubit {
+  _TestHomeCubit()
+    : super(
+        FetchLatestAlbums(_Repository()),
+        FetchRandomAlbums(_Repository()),
+        _Repository(),
+      );
+  void show(HomeState state) => emit(state);
+}
+
+class _Repository implements MusicRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _SettingsRepository implements SettingsRepository {
+  @override
+  Future<AppSettingsSnapshot> load() async => const AppSettingsSnapshot();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+const _albums = [
+  MusicAlbum(
+    id: 'album-1',
+    title: '用于验证超长标题在有限宽度内稳定省略且不发生横向溢出的最新专辑',
+    artistName: '未知艺术家',
+    artworkUrl: '',
+    trackCount: 12,
+  ),
+  MusicAlbum(
+    id: 'album-2',
+    title: '无封面专辑',
+    artistName: '测试艺术家',
+    artworkUrl: '',
+    trackCount: 8,
+  ),
+  MusicAlbum(
+    id: 'album-3',
+    title: '随机专辑',
+    artistName: '测试艺术家',
+    artworkUrl: '',
+    trackCount: 10,
+  ),
+];
+
+const _tracks = [
+  MusicTrack(
+    id: 'track-1',
+    title: '用于验证超长标题在排行榜中稳定省略且不发生横向溢出的歌曲',
+    artistName: '未知艺术家',
+    albumTitle: '未知专辑',
+    artworkUrl: '',
+    duration: Duration(minutes: 4),
+    playCount: 42,
+  ),
+  MusicTrack(
+    id: 'track-2',
+    title: '无封面歌曲',
+    artistName: '测试艺术家',
+    albumTitle: '测试专辑',
+    artworkUrl: '',
+    duration: Duration(minutes: 3),
+    playCount: 21,
+  ),
+];
+
+const _successState = HomeState(
+  status: HomeStatus.success,
+  albums: _albums,
+  randomPicks: _albums,
+  mostPlayed: _tracks,
+);
+const _viewports = [
+  ui.Size(375, 812),
+  ui.Size(390, 844),
+  ui.Size(768, 900),
+  ui.Size(1080, 900),
+  ui.Size(1440, 900),
+];

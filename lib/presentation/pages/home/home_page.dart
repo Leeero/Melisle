@@ -32,7 +32,7 @@ class HomePage extends StatelessWidget {
         context.read<MusicRepository>(),
         database: _tryReadDatabase(context),
       )..load(),
-      child: const _HomeView(),
+      child: const HomeView(),
     );
   }
 
@@ -45,8 +45,8 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
-  const _HomeView();
+class HomeView extends StatelessWidget {
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -110,17 +110,31 @@ class _HomeLoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        if (!AppBreakpoints.usesDesktopToolbar(context))
+        if (AppBreakpoints.isCompact(context))
           const SliverPadding(
             padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
             sliver: SliverToBoxAdapter(child: _MobileHomeTitle()),
           ),
         SliverPadding(
           padding: EdgeInsets.symmetric(
-            horizontal: AppBreakpoints.isCompact(context) ? 20 : 40,
-            vertical: 24,
+            horizontal: AppBreakpoints.isCompact(context)
+                ? AppSpacingTokens.pageHorizontalCompact
+                : AppSpacingTokens.pageHorizontalExpanded,
+            vertical: AppSpacingTokens.sectionGap,
           ),
-          sliver: SliverToBoxAdapter(child: AppSkeleton.grid(count: 6)),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              key: const ValueKey('home-loading-sections'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeleton.row(height: 120, borderRadius: AppRadiusTokens.md),
+                const SizedBox(height: 48),
+                AppSkeleton.grid(count: 6),
+                const SizedBox(height: 48),
+                for (var index = 0; index < 3; index++) AppSkeleton.trackRow(),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -137,7 +151,12 @@ class _DesktopHomeContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: context.read<HomeCubit>().load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(40, 32, 40, 48),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacingTokens.pageHorizontalExpanded,
+          AppSpacingTokens.sectionGap,
+          AppSpacingTokens.pageHorizontalExpanded,
+          48,
+        ),
         children: [
           if (state.errorMessage != null) ...[
             _HomeInlineError(message: state.errorMessage!),
@@ -172,6 +191,12 @@ class _DesktopHomeContent extends StatelessWidget {
               ],
             ),
           ],
+          if (state.mostPlayed.isNotEmpty) ...[
+            const SizedBox(height: 44),
+            _DesktopMostPlayedSection(
+              tracks: state.mostPlayed.take(6).toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -185,12 +210,16 @@ class _MobileHomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final continueTrack =
-        state.recentlyPlayed.firstOrNull ?? state.mostPlayed.firstOrNull;
+    final continueTrack = state.recentlyPlayed.firstOrNull;
     return RefreshIndicator(
       onRefresh: context.read<HomeCubit>().load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacingTokens.pageHorizontalCompact,
+          AppSpacingTokens.pageHorizontalCompact,
+          AppSpacingTokens.pageHorizontalCompact,
+          40,
+        ),
         children: [
           const _MobileHomeTitle(),
           const SizedBox(height: 24),
@@ -208,6 +237,15 @@ class _MobileHomeContent extends StatelessWidget {
           ],
           if (state.mostPlayed.isNotEmpty)
             _MobileMostPlayedSection(tracks: state.mostPlayed.take(3).toList()),
+          if (state.mostPlayed.isNotEmpty &&
+              (state.albums.isNotEmpty || state.randomPicks.isNotEmpty))
+            const SizedBox(height: 32),
+          if (state.albums.isNotEmpty) ...[
+            _LatestAlbumsSection(albums: state.albums.take(3).toList()),
+            if (state.randomPicks.isNotEmpty) const SizedBox(height: 32),
+          ],
+          if (state.randomPicks.isNotEmpty)
+            _RandomExploreCard(albums: state.randomPicks),
         ],
       ),
     );
@@ -806,6 +844,47 @@ class _MobileMostPlayedSection extends StatelessWidget {
         const SizedBox(height: 16),
         for (var index = 0; index < tracks.length; index++)
           _MostPlayedRow(index: index, track: tracks[index], queue: tracks),
+      ],
+    );
+  }
+}
+
+class _DesktopMostPlayedSection extends StatelessWidget {
+  const _DesktopMostPlayedSection({required this.tracks});
+
+  final List<MusicTrack> tracks;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      key: const ValueKey('home-most-played-desktop'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: '最常播放'),
+        const SizedBox(height: AppSpacingTokens.sectionTitleBottomGap),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                for (var index = 0; index < tracks.length; index++)
+                  _MostPlayedRow(
+                    index: index,
+                    track: tracks[index],
+                    queue: tracks,
+                  ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

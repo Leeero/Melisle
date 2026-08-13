@@ -203,8 +203,6 @@ class _PlaylistsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = AppBreakpoints.usesWideContent(context);
-    final hasDesktopToolbar = AppBreakpoints.usesDesktopToolbar(context);
     final searchField = AppSearchField(
       controller: controller,
       dense: true,
@@ -221,25 +219,15 @@ class _PlaylistsHeader extends StatelessWidget {
         ? '找到 ${state.playlists.length} 个匹配播放列表'
         : '${state.allPlaylists.length} 个播放列表';
 
-    if (!isWide || !hasDesktopToolbar) {
-      return AppPageHeader(
-        title: '播放列表',
-        description: summary,
-        automaticImplyLeading: false,
-        hideTitleOnCompactWithCenter: false,
-        center: searchField,
-        trailing: MetaPill(
-          label: '${state.playlists.length} 项',
-          size: MetaPillSize.compact,
-        ),
-      );
-    }
-
-    return Align(
-      alignment: Alignment.centerRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: searchField,
+    return AppPageHeader(
+      title: '播放列表',
+      description: summary,
+      automaticImplyLeading: false,
+      hideTitleOnCompactWithCenter: false,
+      center: searchField,
+      trailing: MetaPill(
+        label: '${state.playlists.length} 项',
+        size: MetaPillSize.compact,
       ),
     );
   }

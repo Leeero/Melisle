@@ -12,9 +12,10 @@ abstract final class AppColorTokens {
 
   static const lightScaffold = Color(0xFFF7FCFC);
   static const lightSurface = Color(0xFFFFFFFF);
-  static const lightSurfaceHigh = Color(0xFFFAFEFE);
-  static const lightSurfaceHighest = Color(0xFFF1F9F8);
-  static const lightSurfaceSidebar = Color(0xFFF1F9F8);
+  static const lightSurfaceLow = Color(0xFFF0F5F2);
+  static const lightSurfaceHigh = Color(0xFFEBEFEC);
+  static const lightSurfaceHighest = Color(0xFFDFE3E1);
+  static const lightSurfaceSidebar = Color(0xFFF0F5F4);
   static const onArtworkScrim = Color(0xFFF6F8FC);
 
   static const darkPrimary = Color(0xFF46B49E);
@@ -29,15 +30,18 @@ abstract final class AppColorTokens {
   static const darkOutlineVariant = Color(0xFF222829);
 
   static const lightPrimary = Color(0xFF117E6E);
-  static const lightPrimaryHover = Color(0xFF0B695F);
-  static const lightPrimaryContainer = Color(0xFFD4F1E9);
+  static const lightPrimaryRole = Color(0xFF006356);
+  static const lightPrimaryHover = Color(0xFF0E6B5D);
+  static const lightPrimaryContainer = Color(0xFF117E6E);
+  static const lightOnPrimaryContainer = Color(0xFFCFFFF3);
   static const lightSecondary = Color(0xFF45A592);
   static const lightSecondaryContainer = Color(0xFFD9F4ED);
-  static const lightOnSurface = Color(0xFF070F11);
-  static const lightOnSurfaceVariant = Color(0xFF444F52);
-  static const lightMuted = Color(0xFF647173);
-  static const lightOutline = Color(0xFFD8DEDD);
-  static const lightOutlineVariant = Color(0xFFE8ECEC);
+  static const lightOnSurface = Color(0xFF181D1B);
+  static const lightOnSurfaceVariant = Color(0xFF3E4946);
+  static const lightMuted = Color(0xFF5F6C68);
+  static const lightOutline = Color(0xFF6E7A76);
+  static const lightOutlineVariant = Color(0xFFBDC9C5);
+  static const lightSimplifiedBorder = Color(0xFFD1DAD6);
 
   static const darkLyricHighlight = Color(0xFFD6917B);
   static const lightLyricHighlight = Color(0xFF20373B);
@@ -71,21 +75,29 @@ abstract final class AppColorTokens {
 }
 
 abstract final class AppRadiusTokens {
-  static const double desktopSm = 6;
-  static const double desktopMd = 10;
-  static const double desktopLg = 14;
-  static const double desktopXl = 20;
-  static const double mobileSm = 8;
-  static const double mobileMd = 12;
-  static const double mobileLg = 16;
-  static const double mobileXl = 24;
-  static const double shellContainer = desktopXl;
-  static const double card = desktopLg;
-  static const double button = 999;
-  static const double input = desktopMd;
-  static const double iconButton = mobileMd;
-  static const double coverGrid = desktopLg;
-  static const double coverDetail = desktopXl;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double full = 9999;
+  static const double desktopSm = xs;
+  static const double desktopMd = sm;
+  static const double desktopLg = md;
+  static const double desktopXl = lg;
+  static const double mobileSm = sm;
+  static const double mobileMd = md;
+  static const double mobileLg = lg;
+  static const double mobileXl = xl;
+  static const double shellContainer = md;
+  static const double card = sm;
+  static const double button = sm;
+  static const double input = sm;
+  static const double iconButton = sm;
+  static const double coverGrid = sm;
+  static const double coverDetail = md;
+  static const double miniPlayer = 14;
+  static const double miniPlayerArtwork = 10;
 }
 
 abstract final class AppSpacingTokens {
@@ -101,7 +113,7 @@ abstract final class AppSpacingTokens {
 
   static const double pageHorizontalCompact = 20;
   static const double pageHorizontalMedium = 28;
-  static const double pageHorizontalExpanded = 36;
+  static const double pageHorizontalExpanded = 40;
 
   static const double shellOuterPadding = 0;
   static const double shellGap = 0;
@@ -111,7 +123,8 @@ abstract final class AppSpacingTokens {
   static const double desktopMiniPlayerHeight = 72;
   static const double mobileMiniPlayerHeight = 60;
   static const double mobileTabContentHeight = 54;
-  static const double desktopMainContentPaddingX = 36;
+  static const double desktopToolbarHeight = 54;
+  static const double desktopMainContentPaddingX = 40;
   static const double desktopMainContentPaddingY = 28;
   static const double mobilePageX = 20;
   static const double desktopCardGridMinWidth = 160;
@@ -137,5 +150,5 @@ abstract final class AppSpacingTokens {
 
 abstract final class AppBorderTokens {
   static const double thin = 1;
-  static const double focus = 1.25;
+  static const double focus = 2;
 }

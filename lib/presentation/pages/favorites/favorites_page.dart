@@ -75,9 +75,7 @@ class _FavoritesViewState extends State<_FavoritesView> {
     return BlocBuilder<FavoritesListCubit, FavoritesListState>(
       builder: (context, state) {
         return AppContentPage(
-          header: AppBreakpoints.usesDesktopToolbar(context)
-              ? _FavoritesDesktopActions(state: state)
-              : _FavoritesHeader(state: state),
+          header: _FavoritesHeader(state: state),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -152,30 +150,6 @@ class _FavoritesViewState extends State<_FavoritesView> {
         startIndex: index,
       ),
       footer: _FavoritesPaginationFooter(state: state),
-    );
-  }
-}
-
-class _FavoritesDesktopActions extends StatelessWidget {
-  const _FavoritesDesktopActions({required this.state});
-
-  final FavoritesListState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final count = state.tracks.length;
-    return Row(
-      children: [
-        MetaPill(label: '$count 首', size: MetaPillSize.compact),
-        const Spacer(),
-        if (count > 0)
-          PlayAllButton(
-            variant: PlayAllButtonVariant.compact,
-            onPressed: () => _playAllFavorites(context, state),
-            onShufflePressed: () =>
-                _playAllFavorites(context, state, shuffled: true),
-          ),
-      ],
     );
   }
 }
