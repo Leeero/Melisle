@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:dio/dio.dart';
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -14,7 +15,8 @@ import 'package:cross_platform_music_player/domain/entities/search_results.dart'
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
-class CachedMusicRepository implements MusicRepository, TrackSortingRepository {
+class CachedMusicRepository
+    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
   CachedMusicRepository({
     required MusicRepository delegate,
     MusicRepositoryCachePolicy policy = const MusicRepositoryCachePolicy(),
@@ -33,6 +35,12 @@ class CachedMusicRepository implements MusicRepository, TrackSortingRepository {
 
   String _sessionScopeKey = 'anonymous';
   int _cacheEpoch = 0;
+
+  /// Clears only temporary in-memory responses. Downloaded audio is managed
+  /// separately and is intentionally retained.
+  Future<void> clearTemporaryCache() async {
+    _clearCache();
+  }
 
   @override
   Future<AuthSession?> restoreSession() async {
@@ -185,6 +193,53 @@ class CachedMusicRepository implements MusicRepository, TrackSortingRepository {
         'genreId': genreId,
       },
       loader: () => _delegate.fetchArtists(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+        genreId: genreId,
+      ),
+    );
+  }
+
+  @override
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() {
+    final delegate = _delegate;
+    return delegate is ArtistSortingRepository
+        ? (delegate as ArtistSortingRepository)
+              .fetchSupportedArtistSortOptions()
+        : Future.value(const {});
+  }
+
+  @override
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) {
+    final delegate = _delegate;
+    if (delegate is! ArtistSortingRepository) {
+      return fetchArtists(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+        genreId: genreId,
+      );
+    }
+    final sortingDelegate = delegate as ArtistSortingRepository;
+    return _cached(
+      'sortedArtists',
+      ttl: _policy.listTtl,
+      params: {
+        'sortOption': sortOption.name,
+        'limit': limit,
+        'startIndex': startIndex,
+        'searchQuery': searchQuery,
+        'genreId': genreId,
+      },
+      loader: () => sortingDelegate.fetchSortedArtists(
+        sortOption: sortOption,
         limit: limit,
         startIndex: startIndex,
         searchQuery: searchQuery,

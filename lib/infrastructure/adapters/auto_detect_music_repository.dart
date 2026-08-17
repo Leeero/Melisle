@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -12,7 +13,7 @@ import 'package:cross_platform_music_player/domain/entities/track_sort_option.da
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
 class AutoDetectMusicRepository
-    implements MusicRepository, TrackSortingRepository {
+    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
   AutoDetectMusicRepository({
     required MusicRepository embyRepository,
     required MusicRepository navidromeRepository,
@@ -163,6 +164,42 @@ class AutoDetectMusicRepository
     String? genreId,
   }) async {
     return (await _requireActiveRepository()).fetchArtists(
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+      genreId: genreId,
+    );
+  }
+
+  @override
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() async {
+    final repository = await _requireActiveRepository();
+    return repository is ArtistSortingRepository
+        ? (repository as ArtistSortingRepository)
+              .fetchSupportedArtistSortOptions()
+        : const {};
+  }
+
+  @override
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) async {
+    final repository = await _requireActiveRepository();
+    if (repository is ArtistSortingRepository) {
+      final sortingRepository = repository as ArtistSortingRepository;
+      return sortingRepository.fetchSortedArtists(
+        sortOption: sortOption,
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+        genreId: genreId,
+      );
+    }
+    return repository.fetchArtists(
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,

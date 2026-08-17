@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -14,7 +15,8 @@ import 'package:cross_platform_music_player/infrastructure/media/custom_media_so
 import 'package:cross_platform_music_player/infrastructure/network/emby_api_client.dart';
 import 'package:cross_platform_music_player/infrastructure/persistence/auth_session_store.dart';
 
-class EmbyMusicRepository implements MusicRepository, TrackSortingRepository {
+class EmbyMusicRepository
+    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
   EmbyMusicRepository({
     required EmbyApiClient client,
     required AuthSessionStore sessionStore,
@@ -146,6 +148,28 @@ class EmbyMusicRepository implements MusicRepository, TrackSortingRepository {
       startIndex: startIndex,
       searchQuery: searchQuery,
       genreId: genreId,
+    );
+  }
+
+  @override
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() async =>
+      const {ArtistSortOption.name, ArtistSortOption.dateAdded};
+
+  @override
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) async {
+    return _client.fetchArtists(
+      await _requireSession(),
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+      genreId: genreId,
+      sortOption: sortOption,
     );
   }
 

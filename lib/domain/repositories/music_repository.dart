@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -129,5 +130,19 @@ abstract interface class TrackSortingRepository {
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,
+  });
+}
+
+/// Optional capability implemented only by protocols that support server-side
+/// artist sorting. Callers must not synthesize unsupported options locally.
+abstract interface class ArtistSortingRepository {
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions();
+
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
   });
 }

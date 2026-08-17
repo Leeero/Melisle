@@ -47,10 +47,13 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
-  Future<List<PlayHistoryData>> recentPlays({int limit = 40}) {
+  Future<List<PlayHistoryData>> recentPlays({int limit = 40, int offset = 0}) {
     return (select(playHistory)
-          ..orderBy([(t) => OrderingTerm.desc(t.playedAtMs)])
-          ..limit(limit))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.playedAtMs),
+            (t) => OrderingTerm.desc(t.id),
+          ])
+          ..limit(limit, offset: offset))
         .get();
   }
 

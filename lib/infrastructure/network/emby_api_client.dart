@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
@@ -200,6 +201,7 @@ class EmbyApiClient {
     int startIndex = 0,
     String? searchQuery,
     String? genreId,
+    ArtistSortOption sortOption = ArtistSortOption.name,
   }) async {
     final params = _buildQueryParameters(
       includeItemTypes: 'MusicArtist',
@@ -207,7 +209,14 @@ class EmbyApiClient {
       limit: limit,
       startIndex: startIndex,
       searchQuery: searchQuery,
-      sortBy: 'SortName',
+      sortBy: switch (sortOption) {
+        ArtistSortOption.name => 'SortName',
+        ArtistSortOption.dateAdded => 'DateCreated,SortName',
+      },
+      sortOrder: switch (sortOption) {
+        ArtistSortOption.name => 'Ascending',
+        ArtistSortOption.dateAdded => 'Descending,Ascending',
+      },
     );
     if (genreId != null && genreId.isNotEmpty) {
       params['GenreIds'] = genreId;
@@ -779,6 +788,7 @@ class EmbyApiClient {
     required int startIndex,
     required String? searchQuery,
     String sortBy = 'SortName',
+    String? sortOrder,
   }) {
     final queryParameters = <String, dynamic>{
       'IncludeItemTypes': includeItemTypes,
@@ -793,6 +803,9 @@ class EmbyApiClient {
     final normalizedSearchQuery = searchQuery?.trim();
     if (normalizedSearchQuery != null && normalizedSearchQuery.isNotEmpty) {
       queryParameters['SearchTerm'] = normalizedSearchQuery;
+    }
+    if (sortOrder != null) {
+      queryParameters['SortOrder'] = sortOrder;
     }
 
     return queryParameters;
