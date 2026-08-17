@@ -57,7 +57,7 @@ class SearchEmptyView extends StatelessWidget {
                     title: '搜索音乐库',
                     icon: Icons.search_rounded,
                     child: Text(
-                      '输入歌曲、专辑、艺人或播放列表名称。',
+                      '输入歌曲、专辑、艺人或歌单名称。',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),

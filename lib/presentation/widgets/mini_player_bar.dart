@@ -41,6 +41,7 @@ class MiniPlayerBar extends StatelessWidget {
                   artistName: artistName,
                   artworkUrl: track.artworkUrl,
                   sourceContext: artworkSourceContext,
+                  qualityLabel: _qualityLabel(track),
                 )
               : _CompactMiniPlayer(
                   trackTitle: trackTitle,
@@ -204,6 +205,8 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
           previous.isPlaying != current.isPlaying ||
           previous.isLoading != current.isLoading ||
           previous.errorMessage != current.errorMessage ||
+          previous.sleepRemaining != current.sleepRemaining ||
+          previous.sleepEndOfTrack != current.sleepEndOfTrack ||
           previous.position != current.position ||
           previous.duration != current.duration,
       builder: (context, state) {
@@ -212,6 +215,10 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
             ? state.errorMessage!
             : state.isLoading
             ? '正在缓冲…'
+            : state.sleepRemaining != null
+            ? '${_formatSleepRemaining(state.sleepRemaining!)} 后停止'
+            : state.sleepEndOfTrack
+            ? '本曲结束后停止'
             : widget.artistName;
         return Semantics(
           label: '当前播放：${widget.trackTitle}，$subtitle。点击展开播放页。',
@@ -289,6 +296,9 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                                         ? theme.colorScheme.error
                                         : state.isLoading
                                         ? theme.colorScheme.secondary
+                                        : state.sleepRemaining != null ||
+                                              state.sleepEndOfTrack
+                                        ? theme.colorScheme.tertiary
                                         : theme.colorScheme.onSurfaceVariant,
                                     fontSize: 13,
                                     height: 18 / 13,
@@ -299,7 +309,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                           ),
                           const SizedBox(width: 8),
                           if (failed)
-                            const _MiniRetryButton(compact: true)
+                            const _MiniRetryButton()
                           else
                             LoadingPlayPauseButton(
                               isLoading: state.isLoading,
@@ -364,7 +374,7 @@ class _CompactArtwork extends StatelessWidget {
             child: CachedArtwork(
               imageUrl: imageUrl,
               size: 40,
-              borderRadius: 8,
+              borderRadius: AppRadiusTokens.miniPlayerArtwork,
               sourceContext: sourceContext,
             ),
           ),
@@ -422,19 +432,21 @@ class _WideMiniPlayer extends StatelessWidget {
     required this.artistName,
     required this.artworkUrl,
     required this.sourceContext,
+    required this.qualityLabel,
   });
 
   final String trackTitle;
   final String artistName;
   final String artworkUrl;
   final ArtworkSourceContext sourceContext;
+  final String qualityLabel;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          flex: 3,
+          flex: 1,
           child: Row(
             children: [
               Expanded(
@@ -451,44 +463,40 @@ class _WideMiniPlayer extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 4,
+          flex: 2,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: BlocBuilder<PlayerCubit, PlayerViewState>(
-              buildWhen: (previous, current) =>
-                  previous.errorMessage != current.errorMessage,
-              builder: (context, state) => state.errorMessage == null
-                  ? const Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _MiniTransportControls(),
-                        SizedBox(height: 2),
-                        _MiniTimelineBlock(showElapsedLabels: true),
-                      ],
-                    )
-                  : _MiniErrorMessage(message: state.errorMessage!),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MiniTransportControls(),
+                SizedBox(height: 2),
+                _MiniTimelineBlock(showElapsedLabels: true),
+              ],
             ),
           ),
         ),
         Expanded(
-          flex: 3,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _MiniControlButton(
-                icon: Icons.lyrics_outlined,
-                onPressed: () => PlayerNavigation.openPlayerPage(context),
-                tooltip: '查看歌词',
-              ),
-              const SizedBox(width: 4),
-              _MiniControlButton(
-                icon: Icons.queue_music_rounded,
-                onPressed: () => _showMiniQueueSheet(context),
-                tooltip: '当前播放列表',
-              ),
-              const SizedBox(width: 8),
-              const _MiniVolumeControl(width: 96),
-            ],
+          flex: 1,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compactControls = constraints.maxWidth < 270;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (!compactControls) ...[
+                    _MiniQualityBadge(label: qualityLabel),
+                    const SizedBox(width: 12),
+                  ],
+                  _MiniVolumeControl(width: compactControls ? 46 : 112),
+                  _MiniControlButton(
+                    icon: Icons.queue_music_rounded,
+                    onPressed: () => _showMiniQueueSheet(context),
+                    tooltip: '当前歌单',
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -517,7 +525,7 @@ class _MiniFavoriteButton extends StatelessWidget {
           style: AppActionButtonStyle.icon(
             context,
             selected: isFavorite,
-            size: 36,
+            size: 44,
             iconSize: 20,
           ),
           icon: Icon(
@@ -525,6 +533,39 @@ class _MiniFavoriteButton extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _MiniQualityBadge extends StatelessWidget {
+  const _MiniQualityBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final qualityColor = theme.colorScheme.secondary;
+    return Semantics(
+      label: '音质：$label',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: qualityColor.withValues(alpha: 0.78)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: qualityColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -620,16 +661,21 @@ class _MiniTransportControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gap = 12.0;
+    const gap = 16.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const _MiniShuffleButton(),
-        const SizedBox(width: gap),
-        _MiniControlButton(
-          icon: Icons.skip_previous_rounded,
-          onPressed: context.read<PlayerCubit>().previous,
-          tooltip: '上一曲',
+        BlocBuilder<PlayerCubit, PlayerViewState>(
+          buildWhen: (prev, next) =>
+              prev.isLoading != next.isLoading ||
+              prev.errorMessage != next.errorMessage,
+          builder: (context, state) => _MiniControlButton(
+            icon: Icons.skip_previous_rounded,
+            onPressed: state.isLoading || state.errorMessage != null
+                ? null
+                : context.read<PlayerCubit>().previous,
+            tooltip: '上一曲',
+          ),
         ),
         SizedBox(width: gap),
         BlocBuilder<PlayerCubit, PlayerViewState>(
@@ -649,118 +695,40 @@ class _MiniTransportControls extends StatelessWidget {
                 ),
         ),
         SizedBox(width: gap),
-        _MiniControlButton(
-          icon: Icons.skip_next_rounded,
-          onPressed: context.read<PlayerCubit>().next,
-          tooltip: '下一曲',
+        BlocBuilder<PlayerCubit, PlayerViewState>(
+          buildWhen: (prev, next) =>
+              prev.isLoading != next.isLoading ||
+              prev.errorMessage != next.errorMessage,
+          builder: (context, state) => _MiniControlButton(
+            icon: Icons.skip_next_rounded,
+            onPressed: state.isLoading || state.errorMessage != null
+                ? null
+                : context.read<PlayerCubit>().next,
+            tooltip: '下一曲',
+          ),
         ),
-        const SizedBox(width: gap),
-        const _MiniRepeatButton(),
       ],
     );
   }
 }
 
-class _MiniShuffleButton extends StatelessWidget {
-  const _MiniShuffleButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<PlayerCubit, PlayerViewState, bool>(
-      selector: (state) => state.shuffleEnabled,
-      builder: (context, enabled) => IconButton(
-        onPressed: context.read<PlayerCubit>().toggleShuffle,
-        tooltip: enabled ? '关闭随机播放' : '随机播放',
-        style: AppActionButtonStyle.icon(
-          context,
-          selected: enabled,
-          size: 36,
-          iconSize: 20,
-        ),
-        icon: const Icon(Icons.shuffle_rounded),
-      ),
-    );
-  }
-}
-
-class _MiniRepeatButton extends StatelessWidget {
-  const _MiniRepeatButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<PlayerCubit, PlayerViewState, PlaybackModeOption>(
-      selector: (state) => state.playbackMode,
-      builder: (context, mode) => IconButton(
-        onPressed: context.read<PlayerCubit>().toggleLoopMode,
-        tooltip: _playbackModeLabel(mode),
-        style: AppActionButtonStyle.icon(
-          context,
-          selected:
-              mode == PlaybackModeOption.loopAll ||
-              mode == PlaybackModeOption.loopOne,
-          size: 36,
-          iconSize: 20,
-        ),
-        icon: Icon(
-          mode == PlaybackModeOption.loopOne
-              ? Icons.repeat_one_rounded
-              : Icons.repeat_rounded,
-        ),
-      ),
-    );
-  }
-}
-
 class _MiniRetryButton extends StatelessWidget {
-  const _MiniRetryButton({this.compact = false});
-
-  final bool compact;
+  const _MiniRetryButton();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: compact ? 36 : 44,
+      dimension: 44,
       child: IconButton(
         tooltip: '重试播放',
         onPressed: context.read<PlayerCubit>().togglePlayback,
         style: AppActionButtonStyle.icon(
           context,
           tone: AppActionButtonTone.danger,
-          size: compact ? 36 : 44,
-          iconSize: compact ? 18 : 20,
+          size: 44,
+          iconSize: 20,
         ),
         icon: const Icon(Icons.refresh_rounded),
-      ),
-    );
-  }
-}
-
-class _MiniErrorMessage extends StatelessWidget {
-  const _MiniErrorMessage({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: message,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline_rounded, size: 18, color: colorScheme.error),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Text(
-              '播放失败，请重试',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -819,7 +787,7 @@ class _MiniVolumeControl extends StatelessWidget {
               style: AppActionButtonStyle.icon(
                 context,
                 selected: state.volume == 0,
-                size: 32,
+                size: 44,
                 iconSize: 18,
               ),
               icon: Icon(
@@ -935,7 +903,7 @@ class _MiniControlButton extends StatefulWidget {
 class _MiniControlButtonState extends State<_MiniControlButton> {
   @override
   Widget build(BuildContext context) {
-    final size = widget.compact ? 44.0 : 36.0;
+    const size = 44.0;
     return IconButton(
       onPressed: widget.onPressed,
       tooltip: widget.tooltip,
@@ -950,13 +918,17 @@ class _MiniControlButtonState extends State<_MiniControlButton> {
   }
 }
 
-String _playbackModeLabel(PlaybackModeOption mode) {
-  return switch (mode) {
-    PlaybackModeOption.sequence => '顺序播放',
-    PlaybackModeOption.loopAll => '列表循环',
-    PlaybackModeOption.loopOne => '单曲循环',
-    PlaybackModeOption.shuffle => '随机播放',
-  };
+String _qualityLabel(MusicTrack track) {
+  final codec = (track.codec ?? track.container ?? '').toLowerCase();
+  if (codec == 'flac' || codec == 'alac' || codec == 'wav') return '无损音质';
+  if ((track.bitRate ?? 0) >= 300000) return '高品质';
+  return '标准音质';
+}
+
+String _formatSleepRemaining(Duration remaining) {
+  final minutes = remaining.inMinutes;
+  final seconds = remaining.inSeconds.remainder(60);
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
 int _volumePercent(double volume) => (volume.clamp(0, 1) * 100).round();

@@ -12,6 +12,9 @@ abstract final class AppColorTokens {
 
   static const lightScaffold = Color(0xFFF7FCFC);
   static const lightSurface = Color(0xFFFFFFFF);
+  // V3-17 fullscreen-player transport surface.
+  static const lightPlayerFooter = Color(0xFFF6FAF7);
+  static const darkPlayerFooter = Color(0xFF141C1E);
   static const lightSurfaceLow = Color(0xFFF0F5F2);
   static const lightSurfaceHigh = Color(0xFFEBEFEC);
   static const lightSurfaceHighest = Color(0xFFDFE3E1);
@@ -109,6 +112,9 @@ abstract final class AppSpacingTokens {
   static const double sectionGap = 24;
   static const double sectionTitleBottomGap = 16;
   static const double cardPadding = 16;
+  static const double favoriteTrackPadding = 8;
+  static const double favoriteTrackArtwork = 56;
+  static const double favoriteTrackContentGap = 16;
   static const double headerPadding = 22;
 
   static const double pageHorizontalCompact = 20;
@@ -130,6 +136,9 @@ abstract final class AppSpacingTokens {
   static const double desktopCardGridMinWidth = 160;
   static const double desktopCardGridGapX = 18;
   static const double desktopCardGridGapY = 22;
+  static const double formLabelGap = 8;
+  static const double formFieldVerticalPadding = 12;
+  static const double snackbarMargin = 20;
 
   static const double playerHorizontalPadding = 28;
   static const double playerControlGap = 14;

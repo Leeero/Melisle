@@ -4,11 +4,10 @@ import 'package:cross_platform_music_player/presentation/blocs/history/history_c
 import 'package:cross_platform_music_player/presentation/blocs/history/history_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
-import 'package:cross_platform_music_player/presentation/widgets/tracks/app_track_collection_view.dart';
+import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,7 +29,6 @@ class _HistoryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final horizontalPadding = AppPageLayout.horizontalPadding(context);
     final currentTrackId = context.select<PlayerCubit, String?>(
       (cubit) => cubit.state.currentTrack?.id,
     );
@@ -38,11 +36,8 @@ class _HistoryView extends StatelessWidget {
     return BlocBuilder<HistoryCubit, HistoryState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _HistoryHeader(
-            count: state.tracks.length,
-            tracks: state.tracks,
-          ),
-          body: _buildBody(context, state, horizontalPadding, currentTrackId),
+          header: const _HistoryHeader(),
+          body: _buildBody(context, state, currentTrackId),
         );
       },
     );
@@ -51,7 +46,6 @@ class _HistoryView extends StatelessWidget {
   Widget _buildBody(
     BuildContext context,
     HistoryState state,
-    double horizontalPadding,
     String? currentTrackId,
   ) {
     if (state.status == HistoryStatus.loading && state.tracks.isEmpty) {
@@ -63,6 +57,11 @@ class _HistoryView extends StatelessWidget {
         message: '播放历史加载失败',
         description: state.errorMessage,
         icon: Icons.error_outline_rounded,
+        action: FilledButton.icon(
+          onPressed: () => context.read<HistoryCubit>().load(),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('重试'),
+        ),
       );
     }
 
@@ -74,102 +73,52 @@ class _HistoryView extends StatelessWidget {
       );
     }
 
-    return AppTrackCollectionView(
-      tracks: state.tracks,
-      currentTrackId: currentTrackId,
-      horizontalPadding: horizontalPadding,
-      mobileHeader: AppSectionTitleRow(
-        title: '最近播放',
-        badge: MetaPill(
-          label: '${state.tracks.length} 条',
-          size: MetaPillSize.compact,
-        ),
-      ),
-      desktopTrailingBuilder: (context, track, _) =>
-          _HistoryPlayedAtButton(label: _formatLastPlayed(track.lastPlayedAt)),
-      mobileItemBuilder: (context, track, trackIndex, currentTrackId) {
-        return _HistoryTrackRow(
-          track: track,
-          currentTrackId: currentTrackId,
-          onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-            context,
-            tracks: state.tracks,
-            startIndex: trackIndex,
-          ),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.extentAfter < 240) {
+          context.read<HistoryCubit>().loadMore();
+        }
+        return false;
       },
-      onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
-        context,
-        tracks: state.tracks,
-        startIndex: index,
+      child: _HistoryGroups(
+        state: state,
+        currentTrackId: currentTrackId,
       ),
     );
   }
 }
 
 class _HistoryHeader extends StatelessWidget {
-  const _HistoryHeader({required this.count, required this.tracks});
-
-  final int count;
-  final List<MusicTrack> tracks;
+  const _HistoryHeader();
 
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
     final canPop = Navigator.of(context).canPop();
-    final playAllButton = count == 0
-        ? null
-        : PlayAllButton(
-            variant: PlayAllButtonVariant.compact,
-            onPressed: () => PlayerNavigation.playAllAndOpenPlayer(
-              context,
-              loadedTracks: tracks,
-              allLoaded: true,
-              fetchAll: () async => tracks,
-            ),
-            onShufflePressed: () => PlayerNavigation.shuffleAllAndOpenPlayer(
-              context,
-              loadedTracks: tracks,
-              allLoaded: true,
-              fetchAll: () async => tracks,
-            ),
-          );
-
     if (compact) {
-      return _MobileHistoryHeader(canPop: canPop, playAllButton: playAllButton);
+      return _MobileHistoryHeader(canPop: canPop);
     }
 
-    return AppPageHeader(
-      title: '播放历史',
-      description: '过去 7 天的播放记录',
-      trailing: playAllButton,
-    );
+    return const AppPageHeader(title: '历史');
   }
 }
 
 class _MobileHistoryHeader extends StatelessWidget {
-  const _MobileHistoryHeader({required this.canPop, this.playAllButton});
+  const _MobileHistoryHeader({required this.canPop});
 
   final bool canPop;
-  final Widget? playAllButton;
 
   @override
   Widget build(BuildContext context) {
-    final showActionRow = canPop || playAllButton != null;
     final theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showActionRow) ...[
+        if (canPop) ...[
           Row(
             children: [
-              if (canPop)
-                AppBackButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-              const Spacer(),
-              ?playAllButton,
+              AppBackButton(onPressed: () => Navigator.of(context).maybePop()),
             ],
           ),
           const SizedBox(height: 8),
@@ -190,56 +139,266 @@ class _MobileHistoryHeader extends StatelessWidget {
   }
 }
 
-class _HistoryTrackRow extends StatelessWidget {
-  const _HistoryTrackRow({
-    required this.track,
-    required this.currentTrackId,
-    required this.onTap,
-  });
+class _HistoryGroups extends StatelessWidget {
+  const _HistoryGroups({required this.state, required this.currentTrackId});
 
-  final MusicTrack track;
+  final HistoryState state;
   final String? currentTrackId;
-  final Future<void> Function() onTap;
 
   @override
   Widget build(BuildContext context) {
-    return MusicTrackTile.row(
-      isCurrent: track.id == currentTrackId,
-      artworkUrl: track.artworkUrl,
-      title: track.title,
-      subtitle: [
-        track.artistName,
-        track.albumTitle,
-      ].where((item) => item.isNotEmpty).join(' · '),
-      statusLabel: _formatLastPlayed(track.lastPlayedAt),
-      idleIcon: Icons.history_rounded,
-      extraTrailing: _HistoryPlayedAtButton(
-        label: _formatLastPlayed(track.lastPlayedAt),
-      ),
-      onTap: onTap,
+    final compact = AppBreakpoints.isCompact(context);
+    final horizontalPadding = AppPageLayout.horizontalPadding(context);
+    final groups = _groupHistory(state.tracks);
+    final children = <Widget>[
+      if (compact)
+        Padding(
+          padding: EdgeInsets.only(bottom: AppPageLayout.sectionTitleBottomGap),
+          child: AppSectionTitleRow(
+            title: '最近播放',
+            badge: MetaPill(
+              label: '${state.tracks.length} 条',
+              size: MetaPillSize.compact,
+            ),
+          ),
+        ),
+      for (final group in groups) ...[
+        _HistoryGroupHeader(label: group.label),
+        const SizedBox(height: 8),
+        for (final item in group.items)
+          _HistoryTrackRow(
+            track: item.track,
+            currentTrackId: currentTrackId,
+            compact: compact,
+            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+              context,
+              tracks: state.tracks,
+              startIndex: item.index,
+            ),
+          ),
+        const SizedBox(height: AppPageLayout.sectionGap),
+      ],
+      _HistoryLoadFooter(state: state),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
+      children: children,
     );
   }
 }
 
-class _HistoryPlayedAtButton extends StatelessWidget {
-  const _HistoryPlayedAtButton({required this.label});
+class _HistoryGroupHeader extends StatelessWidget {
+  const _HistoryGroupHeader({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: label,
-      child: SizedBox.square(
-        dimension: 36,
-        child: Icon(
-          Icons.history_rounded,
-          size: 18,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+          ),
+        ),
+      ),
+      child: Text(label, style: theme.textTheme.titleMedium),
+    );
+  }
+}
+
+class _HistoryTrackRow extends StatelessWidget {
+  const _HistoryTrackRow({
+    required this.track,
+    required this.currentTrackId,
+    required this.onTap,
+    required this.compact,
+  });
+
+  final MusicTrack track;
+  final String? currentTrackId;
+  final Future<void> Function() onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isCurrent = track.id == currentTrackId;
+    final subtitle = [track.artistName, track.albumTitle]
+        .where((item) => item.isNotEmpty)
+        .join(' · ');
+    return Semantics(
+      label: '播放《${track.title}》',
+      selected: isCurrent,
+      button: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Material(
+          color: isCurrent ? theme.selectedWash : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: () => showTrackActionsSheet(context, track),
+            mouseCursor: SystemMouseCursors.click,
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+            child: SizedBox(
+              height: compact ? 60 : 56,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 12),
+                child: Row(
+                  children: [
+                    _HistoryArtwork(track: track),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            track.title.isEmpty ? '未知曲目' : track.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isCurrent
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle.isEmpty ? '未知艺术家' : subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      compact
+                          ? _formatLastPlayed(track.lastPlayedAt)
+                          : _formatDuration(track.duration),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Tooltip(
+                      message: '更多操作',
+                      child: IconButton(
+                        onPressed: () => showTrackActionsSheet(context, track),
+                        icon: const Icon(Icons.more_vert_rounded),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _HistoryArtwork extends StatelessWidget {
+  const _HistoryArtwork({required this.track});
+
+  final MusicTrack track;
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedArtwork(
+      imageUrl: track.artworkUrl,
+      size: 40,
+      borderRadius: AppRadiusTokens.desktopSm,
+      semanticLabel: track.artworkUrl.isEmpty ? '无封面' : '《${track.title}》封面',
+    );
+  }
+}
+
+class _HistoryLoadFooter extends StatelessWidget {
+  const _HistoryLoadFooter({required this.state});
+
+  final HistoryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+    if (state.status == HistoryStatus.failure) {
+      return Center(
+        child: TextButton.icon(
+          onPressed: () => context.read<HistoryCubit>().loadMore(),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('加载失败，重试'),
+        ),
+      );
+    }
+    if (!state.hasMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            '已经到底了，多听听音乐吧',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox(height: 48);
+  }
+}
+
+class _HistoryGroup {
+  const _HistoryGroup(this.label, this.items);
+
+  final String label;
+  final List<_HistoryItem> items;
+}
+
+class _HistoryItem {
+  const _HistoryItem(this.track, this.index);
+
+  final MusicTrack track;
+  final int index;
+}
+
+List<_HistoryGroup> _groupHistory(List<MusicTrack> tracks, {DateTime? now}) {
+  final reference = now ?? DateTime.now();
+  final today = DateTime(reference.year, reference.month, reference.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  final groups = <String, List<_HistoryItem>>{};
+  for (var index = 0; index < tracks.length; index++) {
+    final playedAt = tracks[index].lastPlayedAt;
+    final day = playedAt == null
+        ? null
+        : DateTime(playedAt.year, playedAt.month, playedAt.day);
+    final label = day == today
+        ? '今天'
+        : day == yesterday
+        ? '昨天'
+        : '更早';
+    groups.putIfAbsent(label, () => []).add(_HistoryItem(tracks[index], index));
+  }
+  return [
+    for (final label in const ['今天', '昨天', '更早'])
+      if (groups[label] case final items?) _HistoryGroup(label, items),
+  ];
 }
 
 String _formatLastPlayed(DateTime? value) {
@@ -249,4 +408,10 @@ String _formatLastPlayed(DateTime? value) {
   final hour = value.hour.toString().padLeft(2, '0');
   final minute = value.minute.toString().padLeft(2, '0');
   return '$month-$day $hour:$minute';
+}
+
+String _formatDuration(Duration value) {
+  final minutes = value.inMinutes;
+  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
 }

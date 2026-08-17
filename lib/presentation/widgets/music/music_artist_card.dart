@@ -62,20 +62,29 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final textScaler = MediaQuery.textScalerOf(context);
+                final desktop = AppBreakpoints.usesDesktopToolbar(context);
                 final narrow = constraints.maxWidth < 118 || compact;
-                final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontSize: compact ? 13 : null,
-                  fontWeight: FontWeight.w500,
-                  height: narrow ? 1.22 : 1.28,
-                );
-                final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                  fontSize: compact ? 12 : null,
-                  height: narrow ? 1.18 : 1.25,
-                );
-                final titleGap = narrow ? 7.0 : 10.0;
-                final subtitleGap = narrow ? 1.0 : 2.0;
+                final titleStyle = (desktop
+                        ? theme.textTheme.titleLarge
+                        : theme.textTheme.bodyMedium)
+                    ?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontSize: compact ? 13 : null,
+                      fontWeight: desktop ? FontWeight.w600 : FontWeight.w500,
+                      height: desktop ? 1.28 : (narrow ? 1.22 : 1.28),
+                    );
+                final subtitleStyle = (desktop
+                        ? theme.textTheme.bodyMedium
+                        : theme.textTheme.bodySmall)
+                    ?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: desktop ? 0.76 : 0.7,
+                      ),
+                      fontSize: compact ? 12 : null,
+                      height: desktop ? 1.28 : (narrow ? 1.18 : 1.25),
+                    );
+                final titleGap = desktop ? 14.0 : (narrow ? 7.0 : 10.0);
+                final subtitleGap = desktop ? 3.0 : (narrow ? 1.0 : 2.0);
                 final titleLineHeight =
                     textScaler.scale(
                       titleStyle?.fontSize ??
@@ -91,16 +100,23 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                     ) *
                     (subtitleStyle?.height ?? 1.18);
                 final textHeight =
-                    titleLineHeight * 2 +
+                    titleLineHeight * (desktop ? 1 : 2) +
                     subtitleLineHeight +
                     titleGap +
                     subtitleGap;
-                final preferredArtworkSize = constraints.maxWidth * 0.78;
+                final preferredArtworkSize = desktop
+                    ? 150.0
+                    : constraints.maxWidth * 0.78;
                 final maxArtworkSize = constraints.maxHeight.isFinite
                     ? constraints.maxHeight - textHeight
                     : preferredArtworkSize;
+                final artworkHorizontalPadding = desktop
+                    ? 0.0
+                    : constraints.maxWidth * (compact ? 0.16 : 0.11);
                 final artworkSize = math.min(
-                  compact
+                  desktop
+                      ? preferredArtworkSize
+                      : compact
                       ? math.min(preferredArtworkSize, 96.0)
                       : math.min(preferredArtworkSize, 100.0),
                   math.max(56.0, maxArtworkSize),
@@ -110,8 +126,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                   children: [
                     Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal:
-                            constraints.maxWidth * (compact ? 0.16 : 0.11),
+                        horizontal: artworkHorizontalPadding,
                       ),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -141,14 +156,14 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                     SizedBox(height: titleGap),
                     Text(
                       displayName,
-                      maxLines: 2,
+                      maxLines: desktop ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: titleStyle,
                     ),
                     SizedBox(height: subtitleGap),
                     Text(
-                      '${artist.albumCount} 张专辑',
+                      MediaDisplayText.artistItemCount(artist),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,

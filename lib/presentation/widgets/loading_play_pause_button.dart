@@ -81,16 +81,9 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
     final tapTargetSize = math.max(size, 44.0);
     final tooltip = _tooltip;
     final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
-    final backgroundColor = Color.alphaBlend(
-      theme.musicRose.withValues(alpha: widget.isLoading ? 0.20 : 0.12),
-      colorScheme.onSurface,
-    );
-    final foregroundColor = colorScheme.surface;
-    final ringColor = Color.lerp(
-      colorScheme.primary,
-      theme.musicRose,
-      theme.brightness == Brightness.dark ? 0.45 : 0.30,
-    )!;
+    final backgroundColor = colorScheme.primaryContainer;
+    final foregroundColor = colorScheme.onPrimaryContainer;
+    final ringColor = colorScheme.primary;
 
     return Tooltip(
       message: tooltip,

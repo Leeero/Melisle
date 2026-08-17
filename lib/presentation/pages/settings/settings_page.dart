@@ -4,7 +4,6 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -20,23 +19,30 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
-      buildWhen: (a, b) => a.isLoading != b.isLoading,
-      builder: (context, state) {
-        if (state.isLoading) {
+    return BlocListener<AppSettingsCubit, AppSettingsState>(
+      listenWhen: (previous, current) => previous.feedback != current.feedback,
+      listener: (context, state) {
+        final feedback = state.feedback;
+        if (feedback == null) return;
+        AppSnackBar.show(context, feedback.message);
+      },
+      child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+        buildWhen: (a, b) => a.isLoading != b.isLoading,
+        builder: (context, state) {
+          if (state.isLoading) {
+            return AppContentPage(
+              header: const AppPageHeader(
+                title: '设置',
+                automaticImplyLeading: false,
+              ),
+              body: const AppBodyStateView.loading(),
+            );
+          }
+
+          final horizontalPadding = AppPageLayout.horizontalPadding(context);
+          final colorScheme = Theme.of(context).colorScheme;
+
           return AppContentPage(
-            header: const AppPageHeader(
-              title: '设置',
-              automaticImplyLeading: false,
-            ),
-            body: const AppBodyStateView.loading(),
-          );
-        }
-
-        final horizontalPadding = AppPageLayout.horizontalPadding(context);
-        final colorScheme = Theme.of(context).colorScheme;
-
-        return AppContentPage(
           header: const AppPageHeader(
             title: '设置',
             automaticImplyLeading: false,
@@ -78,7 +84,8 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
         );
-      },
+        },
+      ),
     );
   }
 }
@@ -88,7 +95,13 @@ class CustomMediaSourcesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
+    return BlocListener<AppSettingsCubit, AppSettingsState>(
+      listenWhen: (previous, current) => previous.feedback != current.feedback,
+      listener: (context, state) {
+        final feedback = state.feedback;
+        if (feedback != null) AppSnackBar.show(context, feedback.message);
+      },
+      child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
       buildWhen: (a, b) => a.isLoading != b.isLoading,
       builder: (context, state) {
         if (state.isLoading) {
@@ -106,6 +119,15 @@ class CustomMediaSourcesPage extends StatelessWidget {
             title: '歌词与封面',
             description: compact ? null : '配置自定义媒体来源地址。',
             titleMaxWidth: compact ? 220 : 300,
+            trailing: compact
+                ? null
+                : FilledButton.icon(
+                    onPressed: context
+                        .read<AppSettingsCubit>()
+                        .saveCustomMediaSources,
+                    icon: const Icon(Icons.save_rounded, size: 18),
+                    label: const Text('保存全部'),
+                  ),
             leading: compact
                 ? AppBackButton(
                     onPressed: () {
@@ -132,6 +154,7 @@ class CustomMediaSourcesPage extends StatelessWidget {
           ),
         );
       },
+      ),
     );
   }
 }
@@ -160,11 +183,7 @@ Future<void> _showClearCacheConfirmation(BuildContext context) async {
     tone: AppModalTone.danger,
   );
   if (confirmed && context.mounted) {
-    // 缓存清理操作：in-memory 缓存由 CachedMusicRepository 管理，
-    // 登出时自动清除。此处重置会话即可触发缓存刷新。
-    if (context.mounted) {
-      AppSnackBar.show(context, '缓存已清理');
-    }
+    await context.read<AppSettingsCubit>().clearCache();
   }
 }
 
@@ -237,7 +256,7 @@ class _DownloadsSettingsCard extends StatelessWidget {
           _HoverableListTile(
             title: const Text('清理缓存'),
             subtitle: const Text('清除临时数据，已下载离线曲目不会受到影响。'),
-            trailing: const _SettingValue(label: '清理'),
+            trailing: const _SettingValue(label: '清理', chevron: true),
             onTap: () => _showClearCacheConfirmation(context),
           ),
         ],
@@ -887,11 +906,11 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                 hintText:
                     '例如：https://api.lrc.cx/cover 或 https://example.com/cover?source={sourceUrl}&size={size}',
                 testState: state.artworkSourceTest,
-                testingLabel: '正在测试封面地址…',
                 customEnabledLabel: '当前生效：自定义封面地址优先',
                 builtinEnabledLabel: '当前生效：数据源内置封面地址',
                 emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置封面地址',
                 onTest: cubit.testCustomArtworkSource,
+                onSave: cubit.saveCustomMediaSources,
               ),
               Divider(
                 height: 32,
@@ -908,11 +927,11 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
                 controller: _lyricsController,
                 hintText: '例如：https://api.lrc.cx/lyrics',
                 testState: state.lyricsSourceTest,
-                testingLabel: '正在测试歌词地址…',
                 customEnabledLabel: '当前生效：自定义歌词地址优先',
                 builtinEnabledLabel: '当前生效：数据源内置歌词接口',
                 emptyAddressLabel: '已开启，但地址为空，当前仍使用数据源内置歌词接口',
                 onTest: cubit.testCustomLyricsSource,
+                onSave: cubit.saveCustomMediaSources,
               ),
             ],
           ),
@@ -961,11 +980,11 @@ class _SourceSection extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.testState,
-    required this.testingLabel,
     required this.customEnabledLabel,
     required this.builtinEnabledLabel,
     required this.emptyAddressLabel,
     required this.onTest,
+    required this.onSave,
   });
 
   final IconData icon;
@@ -977,11 +996,11 @@ class _SourceSection extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final SourceTestState testState;
-  final String testingLabel;
   final String customEnabledLabel;
   final String builtinEnabledLabel;
   final String emptyAddressLabel;
   final Future<void> Function() onTest;
+  final Future<void> Function() onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -1087,8 +1106,9 @@ class _SourceSection extends StatelessWidget {
             controller: controller,
             hintText: hintText,
             isTesting: isTesting,
-            testingLabel: testingLabel,
-            onTest: addressIsEmpty || isTesting ? null : onTest,
+            errorText: testState.status == SourceTestStatus.failure
+                ? testState.message
+                : null,
           ),
           const SizedBox(height: 8),
           _SourceHelperText(
@@ -1098,6 +1118,13 @@ class _SourceSection extends StatelessWidget {
             const SizedBox(height: 12),
             _SourceTestBanner(testState: testState),
           ],
+          const SizedBox(height: 12),
+          _SourceActions(
+            enabled: !isTesting,
+            isTesting: isTesting,
+            onTest: addressIsEmpty || isTesting ? null : onTest,
+            onSave: isTesting ? null : onSave,
+          ),
         ],
       ],
     );
@@ -1274,15 +1301,13 @@ class _SourceUrlField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.isTesting,
-    required this.testingLabel,
-    required this.onTest,
+    this.errorText,
   });
 
   final TextEditingController controller;
   final String hintText;
   final bool isTesting;
-  final String testingLabel;
-  final Future<void> Function()? onTest;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -1295,6 +1320,7 @@ class _SourceUrlField extends StatelessWidget {
       enableSuggestions: false,
       keyboardType: TextInputType.url,
       textInputAction: TextInputAction.done,
+      enabled: !isTesting,
       minLines: 1,
       maxLines: 2,
       cursorColor: colorScheme.primary,
@@ -1306,18 +1332,9 @@ class _SourceUrlField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: '自定义地址',
         hintText: hintText,
-        helperText: null,
+        errorText: errorText,
         prefixIcon: const Icon(Icons.link_rounded, size: 18),
-        suffixIcon: _SourceInlineTestButton(
-          isTesting: isTesting,
-          testingLabel: testingLabel,
-          onPressed: onTest,
-        ),
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: 52,
-          minHeight: 52,
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         hintStyle: theme.textTheme.bodySmall?.copyWith(
           color: theme.muted.withValues(alpha: 0.72),
           fontSize: 13,
@@ -1325,6 +1342,51 @@ class _SourceUrlField extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SourceActions extends StatelessWidget {
+  const _SourceActions({
+    required this.enabled,
+    required this.isTesting,
+    required this.onTest,
+    required this.onSave,
+  });
+
+  final bool enabled;
+  final bool isTesting;
+  final Future<void> Function()? onTest;
+  final Future<void> Function()? onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+    final children = [
+      Expanded(
+        child: OutlinedButton.icon(
+          onPressed: onTest == null ? null : () => onTest!(),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+          icon: isTesting
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.network_check_rounded, size: 18),
+          label: Text(isTesting ? '测试中…' : '测试连接'),
+        ),
+      ),
+      if (compact) ...[
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton(
+            onPressed: !enabled || onSave == null ? null : () => onSave!(),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+            child: const Text('保存设置'),
+          ),
+        ),
+      ],
+    ];
+    return Row(children: children);
   }
 }
 
@@ -1342,52 +1404,6 @@ class _SourceHelperText extends StatelessWidget {
         color: theme.muted,
         fontSize: 12,
         height: 1.35,
-      ),
-    );
-  }
-}
-
-class _SourceInlineTestButton extends StatelessWidget {
-  const _SourceInlineTestButton({
-    required this.isTesting,
-    required this.testingLabel,
-    required this.onPressed,
-  });
-
-  final bool isTesting;
-  final String testingLabel;
-  final Future<void> Function()? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Tooltip(
-      message: isTesting ? testingLabel : '测试地址',
-      child: SizedBox.square(
-        dimension: 46,
-        child: IconButton(
-          onPressed: onPressed == null ? null : () => onPressed!(),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 46, height: 46),
-          icon: isTesting
-              ? SizedBox.square(
-                  dimension: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: colorScheme.primary,
-                  ),
-                )
-              : const Icon(Icons.network_check_rounded, size: 18),
-          style: AppActionButtonStyle.icon(
-            context,
-            tone: AppActionButtonTone.primary,
-            size: 46,
-            iconSize: 18,
-            radius: AppRadiusTokens.mobileSm,
-          ),
-        ),
       ),
     );
   }

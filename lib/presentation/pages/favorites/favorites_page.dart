@@ -9,10 +9,12 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/tracks/app_track_collection_view.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -97,6 +99,11 @@ class _FavoritesViewState extends State<_FavoritesView> {
         message: '收藏加载失败',
         description: state.errorMessage,
         icon: Icons.error_outline_rounded,
+        action: FilledButton.icon(
+          onPressed: () => context.read<FavoritesListCubit>().load(),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('重试'),
+        ),
       );
     }
 
@@ -109,6 +116,21 @@ class _FavoritesViewState extends State<_FavoritesView> {
           onPressed: () => context.go('/library'),
           icon: const Icon(Icons.library_music_rounded),
           label: const Text('去媒体库看看'),
+        ),
+      );
+    }
+
+    if (AppBreakpoints.usesTrackTable(context)) {
+      return _FavoritesDesktopTrackList(
+        tracks: state.tracks,
+        currentTrackId: currentTrackId,
+        horizontalPadding: horizontalPadding,
+        scrollController: _scrollController,
+        footer: _FavoritesPaginationFooter(state: state),
+        onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
+          context,
+          tracks: state.tracks,
+          startIndex: index,
         ),
       );
     }
@@ -131,8 +153,6 @@ class _FavoritesViewState extends State<_FavoritesView> {
           ),
         ],
       ),
-      desktopTrailingBuilder: (context, track, _) =>
-          _FavoriteTrackActionButton(track: track, compact: true),
       mobileItemBuilder: (context, track, trackIndex, currentTrackId) {
         return _FavoriteTrackRow(
           track: track,
@@ -142,6 +162,9 @@ class _FavoritesViewState extends State<_FavoritesView> {
             tracks: state.tracks,
             startIndex: trackIndex,
           ),
+          onUnfavorite: () => _toggleFavorite(context, track),
+          onDismissed: () =>
+              context.read<FavoritesListCubit>().removeTrack(track.id),
         );
       },
       onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
@@ -161,22 +184,72 @@ class _FavoritesHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = AppBreakpoints.isCompact(context);
-    final count = state.tracks.length;
-    final playAllButton = count == 0
-        ? null
-        : PlayAllButton(
-            variant: PlayAllButtonVariant.compact,
-            onPressed: () => _playAllFavorites(context, state),
-            onShufflePressed: () =>
-                _playAllFavorites(context, state, shuffled: true),
-          );
+    if (AppBreakpoints.usesDesktopToolbar(context)) {
+      return AppPageHeader(
+        title: '收藏',
+        automaticImplyLeading: false,
+        trailing: _FavoritesDesktopActions(state: state),
+      );
+    }
 
     return AppPageHeader(
       title: '收藏',
-      description: count == 0 ? '你标记喜欢的歌曲' : '$count 首收藏歌曲',
+      description: state.tracks.isEmpty
+          ? '你标记喜欢的歌曲'
+          : '${state.tracks.length} 首收藏歌曲',
       automaticImplyLeading: false,
-      trailing: compact ? null : playAllButton,
+    );
+  }
+}
+
+class _FavoritesDesktopActions extends StatelessWidget {
+  const _FavoritesDesktopActions({required this.state});
+
+  final FavoritesListState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = state.tracks.isNotEmpty;
+    final colors = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilledButton.icon(
+          onPressed: enabled ? () => _playAllFavorites(context, state) : null,
+          icon: const Icon(Icons.play_arrow_rounded, size: 18),
+          label: const Text('全部播放'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: shape,
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton.icon(
+          onPressed: enabled
+              ? () => _playAllFavorites(context, state, shuffled: true)
+              : null,
+          icon: const Icon(Icons.shuffle_rounded, size: 18),
+          label: const Text('随机播放'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.primary,
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            side: BorderSide(color: colors.primary),
+            shape: shape,
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -206,29 +279,302 @@ class _FavoritesPlayAllToolbar extends StatelessWidget {
   }
 }
 
+class _FavoritesDesktopTrackList extends StatelessWidget {
+  const _FavoritesDesktopTrackList({
+    required this.tracks,
+    required this.currentTrackId,
+    required this.horizontalPadding,
+    required this.scrollController,
+    required this.onTrackTap,
+    required this.footer,
+  });
+
+  final List<MusicTrack> tracks;
+  final String? currentTrackId;
+  final double horizontalPadding;
+  final ScrollController scrollController;
+  final ValueChanged<int> onTrackTap;
+  final Widget footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      controller: scrollController,
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
+      children: [
+        const _FavoritesDesktopTableHeader(),
+        for (var index = 0; index < tracks.length; index++)
+          _FavoritesDesktopTrackRow(
+            track: tracks[index],
+            isCurrent: tracks[index].id == currentTrackId,
+            onTap: () => onTrackTap(index),
+          ),
+        footer,
+      ],
+    );
+  }
+}
+
+class _FavoritesDesktopTableHeader extends StatelessWidget {
+  const _FavoritesDesktopTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final labelStyle = theme.textTheme.labelMedium?.copyWith(
+      color: theme.muted,
+      fontWeight: FontWeight.w600,
+      fontSize: 11,
+    );
+
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 56),
+          Expanded(flex: 4, child: Text('标题', style: labelStyle)),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: Text('艺术家', style: labelStyle)),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 100,
+            child: Text('时长', style: labelStyle, textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoritesDesktopTrackRow extends StatefulWidget {
+  const _FavoritesDesktopTrackRow({
+    required this.track,
+    required this.isCurrent,
+    required this.onTap,
+  });
+
+  final MusicTrack track;
+  final bool isCurrent;
+  final VoidCallback onTap;
+
+  @override
+  State<_FavoritesDesktopTrackRow> createState() =>
+      _FavoritesDesktopTrackRowState();
+}
+
+class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final highlighted = _hovered || _focused;
+    final title = MediaDisplayText.trackTitle(widget.track.title);
+    final primaryTextColor = widget.isCurrent
+        ? colors.primary
+        : colors.onSurface;
+    final secondaryTextColor = widget.isCurrent ? colors.primary : theme.muted;
+
+    return Semantics(
+      label: '播放《$title》',
+      button: true,
+      selected: widget.isCurrent,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Material(
+          color: widget.isCurrent
+              ? theme.selectedWash
+              : highlighted
+              ? theme.hoverWash
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: ValueKey('favorite-track-row-play-${widget.track.id}'),
+            onTap: widget.onTap,
+            onFocusChange: (value) => setState(() => _focused = value),
+            hoverColor: Colors.transparent,
+            splashColor: colors.primary.withValues(alpha: 0.06),
+            highlightColor: Colors.transparent,
+            mouseCursor: SystemMouseCursors.click,
+            child: SizedBox(
+              height: 64,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    CachedArtwork(
+                      imageUrl: widget.track.artworkUrl,
+                      size: 40,
+                      borderRadius: AppRadiusTokens.desktopSm,
+                      semanticLabel: '$title 封面',
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: primaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 3,
+                      child: _FavoritesDesktopCellText(
+                        MediaDisplayText.artistName(widget.track.artistName),
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 3,
+                      child: _FavoritesDesktopCellText(
+                        MediaDisplayText.albumTitle(widget.track.albumTitle),
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 100,
+                      child: Stack(
+                        alignment: Alignment.centerRight,
+                        children: [
+                          AnimatedOpacity(
+                            opacity: highlighted ? 0 : 1,
+                            duration: AppMotion.micro,
+                            child: Text(
+                              _formatFavoriteDuration(widget.track.duration),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: secondaryTextColor,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                          AnimatedOpacity(
+                            opacity: highlighted || widget.isCurrent ? 1 : 0,
+                            duration: AppMotion.micro,
+                            child: IgnorePointer(
+                              ignoring: !highlighted && !widget.isCurrent,
+                              child: _FavoriteTrackActionButton(
+                                track: widget.track,
+                                compact: true,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FavoritesDesktopCellText extends StatelessWidget {
+  const _FavoritesDesktopCellText(this.value, {required this.color});
+
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      value,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+    );
+  }
+}
+
+String _formatFavoriteDuration(Duration duration) {
+  final totalSeconds = duration.inSeconds;
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
+}
+
 class _FavoriteTrackRow extends StatelessWidget {
   const _FavoriteTrackRow({
     required this.track,
     required this.currentTrackId,
     required this.onTap,
+    required this.onUnfavorite,
+    required this.onDismissed,
   });
 
   final MusicTrack track;
   final String? currentTrackId;
   final Future<void> Function() onTap;
+  final Future<bool> Function() onUnfavorite;
+  final VoidCallback onDismissed;
 
   @override
   Widget build(BuildContext context) {
-    return MusicTrackTile.row(
-      isCurrent: track.id == currentTrackId,
-      artworkUrl: track.artworkUrl,
-      title: track.title,
-      subtitle: [
-        track.artistName,
-        track.albumTitle,
-      ].where((item) => item.isNotEmpty).join(' · '),
-      onTap: onTap,
-      extraTrailing: _FavoriteTrackActionButton(track: track),
+    return Dismissible(
+      key: ValueKey('favorite-${track.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => onUnfavorite(),
+      onDismissed: (_) => onDismissed(),
+      secondaryBackground: const _UnfavoriteBackground(),
+      child: MusicTrackTile.favorite(
+        isCurrent: track.id == currentTrackId,
+        artworkUrl: track.artworkUrl,
+        title: track.title,
+        subtitle: track.artistName,
+        onTap: onTap,
+        extraTrailing: _FavoriteTrackActionButton(track: track),
+      ),
+    );
+  }
+}
+
+class _UnfavoriteBackground extends StatelessWidget {
+  const _UnfavoriteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '取消收藏',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.error,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+        ),
+        child: const Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: EdgeInsets.only(right: AppSpacingTokens.sectionGap),
+            child: Icon(Icons.delete_outline_rounded, color: Colors.white),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -285,21 +631,30 @@ class _FavoriteTrackActionButton extends StatelessWidget {
       onPressed: isPending
           ? null
           : () async {
-              final favoritesCubit = context.read<FavoritesCubit>();
-              final listCubit = context.read<FavoritesListCubit>();
-              await favoritesCubit.toggle(track.id, currentValue: isFavorite);
-              final stillFavorite = favoritesCubit.isFavorite(
-                track.id,
-                fallback: track.isFavorite,
-              );
-              if (!stillFavorite) {
-                listCubit.removeTrack(track.id);
+              if (await _toggleFavorite(context, track) && context.mounted) {
+                context.read<FavoritesListCubit>().removeTrack(track.id);
               }
-              if (!context.mounted) return;
-              AppSnackBar.show(context, stillFavorite ? '已收藏' : '取消收藏');
             },
     );
   }
+}
+
+Future<bool> _toggleFavorite(BuildContext context, MusicTrack track) async {
+  final favoritesCubit = context.read<FavoritesCubit>();
+  final wasUpdated = await favoritesCubit.toggle(
+    track.id,
+    currentValue: favoritesCubit.isFavorite(
+      track.id,
+      fallback: track.isFavorite,
+    ),
+  );
+  if (!context.mounted) return false;
+  if (!wasUpdated) {
+    AppSnackBar.show(context, '取消收藏失败，请重试');
+    return false;
+  }
+  AppSnackBar.show(context, '已取消收藏');
+  return true;
 }
 
 class _FavoritesPaginationFooter extends StatelessWidget {
@@ -392,8 +747,9 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
     const dimension = 44.0;
     final iconSize = widget.compact ? 18.0 : 22.0;
 
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return ScaleTransition(
-      scale: _scaleAnimation,
+      scale: reduceMotion ? const AlwaysStoppedAnimation(1) : _scaleAnimation,
       child: SizedBox.square(
         dimension: dimension,
         child: IconButton(

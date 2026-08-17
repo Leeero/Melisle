@@ -223,7 +223,7 @@ class AppPaginationFooter extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '无法连接到服务器',
+                  errorMessage ?? '无法连接到服务器',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.error,

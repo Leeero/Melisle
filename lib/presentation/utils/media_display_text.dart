@@ -1,3 +1,5 @@
+import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+
 abstract final class MediaDisplayText {
   static final RegExp _invisibleCharacters = RegExp(
     r'[\u200B-\u200D\u2060-\u2064\uFEFF]',
@@ -10,7 +12,13 @@ abstract final class MediaDisplayText {
 
   static String artistName(String? value) => _clean(value, '未知艺术家');
 
-  static String playlistName(String? value) => _clean(value, '未命名播放列表');
+  static String playlistName(String? value) => _clean(value, '未命名歌单');
+
+  static String artistItemCount(MusicArtist artist) {
+    if (artist.albumCount > 0) return '${artist.albumCount} 张专辑';
+    if (artist.trackCount > 0) return '${artist.trackCount} 首歌曲';
+    return '暂无统计';
+  }
 
   static String metadata(String? value, {String fallback = '未知信息'}) =>
       _clean(value, fallback);

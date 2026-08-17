@@ -62,12 +62,12 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
     if (isControlPressed) {
       if (logical == LogicalKeyboardKey.keyJ) {
         final offset = player.state.lyricSyncOffset;
-        player.setLyricSyncOffset(offset - const Duration(milliseconds: 100));
+        player.setLyricSyncOffset(offset - const Duration(milliseconds: 500));
         return true;
       }
       if (logical == LogicalKeyboardKey.keyK) {
         final offset = player.state.lyricSyncOffset;
-        player.setLyricSyncOffset(offset + const Duration(milliseconds: 100));
+        player.setLyricSyncOffset(offset + const Duration(milliseconds: 500));
         return true;
       }
     }
@@ -162,8 +162,10 @@ class _LocalKeyboardShortcutsState extends State<LocalKeyboardShortcuts> {
   bool _isEditingText() {
     final focusContext = FocusManager.instance.primaryFocus?.context;
     if (focusContext == null) return false;
-    if (focusContext.widget is EditableText) return true;
-    return focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
+    final focusedWidget = focusContext.widget;
+    if (focusedWidget is EditableText || focusedWidget is Slider) return true;
+    return focusContext.findAncestorWidgetOfExactType<EditableText>() != null ||
+        focusContext.findAncestorWidgetOfExactType<Slider>() != null;
   }
 
   void _closeTopRoute() {

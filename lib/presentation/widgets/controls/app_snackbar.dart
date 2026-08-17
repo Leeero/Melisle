@@ -1,3 +1,5 @@
+import 'package:cross_platform_music_player/presentation/widgets/layout/app_page_layout.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 /// 统一的 SnackBar 反馈。
@@ -8,7 +10,14 @@ class AppSnackBar {
   AppSnackBar._();
 
   /// 显示一条成功消息。
-  static void show(BuildContext context, String message) {
+  static void show(
+    BuildContext context,
+    String message, {
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    assert(actionLabel == null || onAction != null);
+    final horizontalMargin = AppPageLayout.horizontalPadding(context);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -17,7 +26,15 @@ class AppSnackBar {
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          margin: EdgeInsets.zero,
+          margin: EdgeInsets.fromLTRB(
+            horizontalMargin,
+            0,
+            horizontalMargin,
+            AppSpacingTokens.snackbarMargin,
+          ),
+          action: actionLabel == null
+              ? null
+              : SnackBarAction(label: actionLabel, onPressed: onAction!),
         ),
       );
   }

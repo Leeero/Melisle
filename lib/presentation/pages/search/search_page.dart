@@ -179,7 +179,7 @@ class _SearchHeader extends StatelessWidget {
                   focusNode: focusNode,
                   autofocus: true,
                   dense: true,
-                  hintText: compact ? '搜索歌曲、专辑、艺人、播放列表' : '搜索歌曲、专辑、艺人',
+                  hintText: compact ? '搜索歌曲、专辑、艺人、歌单' : '搜索歌曲、专辑、艺人',
                   semanticLabel: '搜索音乐库',
                   showCancelAction: compact,
                   onClear: onClear,
@@ -576,7 +576,7 @@ class _CompactSearchResults extends StatelessWidget {
           horizontalPadding: horizontalPadding,
         ),
         _CompactPlaylistSection(
-          title: '播放列表',
+          title: '歌单',
           countLabel: '${results.playlists.length} 个',
           playlists: results.playlists,
           horizontalPadding: horizontalPadding,
@@ -983,7 +983,7 @@ class _BestMatchSection extends StatelessWidget {
       playsTrack = true;
     } else {
       title = playlist!.name;
-      type = '播放列表';
+      type = '歌单';
       artworkUrl = playlist.artworkUrl;
       onTap = () => context.push('/playlists/${playlist.id}', extra: playlist);
       playsTrack = false;
@@ -1093,7 +1093,7 @@ class _WideSearchResults extends StatelessWidget {
           ),
         if (results.playlists.isNotEmpty)
           _SearchGridSection(
-            title: '播放列表',
+            title: '歌单',
             countLabel: '${results.playlists.length} 个结果',
             child: _SearchPlaylistGrid(playlists: results.playlists),
           ),

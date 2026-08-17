@@ -22,6 +22,7 @@ class DownloadsPage extends StatefulWidget {
 
 class _DownloadsPageState extends State<DownloadsPage> {
   Future<List<Download>>? _future;
+  int _activeTab = 0;
 
   @override
   void initState() {
@@ -65,7 +66,12 @@ class _DownloadsPageState extends State<DownloadsPage> {
             final rows = snapshot.data ?? const <Download>[];
             return BlocBuilder<DownloadsCubit, DownloadsState>(
               builder: (context, state) {
-                final pendingJobs = state.jobs.values.toList();
+                final activeJobs = state.jobs.values
+                    .where((job) => job.status != DownloadJobStatus.failed)
+                    .toList();
+                final failedJobs = state.jobs.values
+                    .where((job) => job.status == DownloadJobStatus.failed)
+                    .toList();
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
@@ -76,51 +82,75 @@ class _DownloadsPageState extends State<DownloadsPage> {
                   children: [
                     _DownloadStorageGroup(
                       rows: rows,
-                      pendingJobs: pendingJobs,
+                      pendingJobs: activeJobs,
                       state: state,
                     ),
                     const SizedBox(height: 24),
-                    if (pendingJobs.isNotEmpty)
-                      _DownloadSection(
-                        label: '进行中',
-                        child: _DownloadSectionBody(
-                          children: [
-                            for (final job in pendingJobs) _JobRow(job: job),
-                          ],
-                        ),
+                    _DownloadStatusTabs(
+                      activeIndex: _activeTab,
+                      activeCount: activeJobs.length,
+                      completedCount: rows.length,
+                      failedCount: failedJobs.length,
+                      onChanged: (index) => setState(() => _activeTab = index),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_activeTab == 0 && activeJobs.isNotEmpty)
+                      _DownloadSectionBody(
+                        children: [
+                          for (final job in activeJobs) _JobRow(job: job),
+                        ],
                       ),
-                    if (pendingJobs.isNotEmpty && rows.isNotEmpty)
-                      const _DownloadSectionSpacer(),
-                    if (rows.isNotEmpty)
-                      _DownloadSection(
-                        label: '已下载',
-                        child: AppBreakpoints.isCompact(context)
-                            ? _DownloadSectionBody(
-                                children: [
-                                  for (final row in rows)
-                                    _DownloadRow(
-                                      record: row,
-                                      onDelete: () async {
-                                        await context
-                                            .read<DownloadsCubit>()
-                                            .remove(row.trackId);
-                                        _reload();
-                                      },
+                    if (_activeTab == 1 && rows.isNotEmpty)
+                      AppBreakpoints.isCompact(context)
+                          ? _DownloadSectionBody(
+                              children: [
+                                for (final row in rows)
+                                  _DownloadRow(
+                                    record: row,
+                                    fileMissing: state.missingTrackIds.contains(
+                                      row.trackId,
                                     ),
-                                ],
-                              )
-                            : _DownloadTable(
-                                rows: rows,
-                                onDelete: (row) async {
-                                  await context.read<DownloadsCubit>().remove(
-                                    row.trackId,
-                                  );
-                                  _reload();
-                                },
-                              ),
+                                    onDelete: () async {
+                                      await context
+                                          .read<DownloadsCubit>()
+                                          .remove(row.trackId);
+                                      _reload();
+                                    },
+                                  ),
+                              ],
+                            )
+                          : _DownloadTable(
+                              rows: rows,
+                              missingTrackIds: state.missingTrackIds,
+                              onDelete: (row) async {
+                                await context.read<DownloadsCubit>().remove(
+                                  row.trackId,
+                                );
+                                _reload();
+                              },
+                            ),
+                    if (_activeTab == 2 && failedJobs.isNotEmpty)
+                      _DownloadSectionBody(
+                        children: [
+                          for (final job in failedJobs) _JobRow(job: job),
+                        ],
                       ),
-                    if (rows.isEmpty && pendingJobs.isEmpty)
+                    if (rows.isEmpty &&
+                        activeJobs.isEmpty &&
+                        failedJobs.isEmpty)
                       const _DownloadsEmptyState(),
+                    if (_activeTab == 0 &&
+                        activeJobs.isEmpty &&
+                        rows.isNotEmpty)
+                      const _DownloadsTabEmptyState(message: '没有正在下载的任务'),
+                    if (_activeTab == 1 &&
+                        rows.isEmpty &&
+                        activeJobs.isNotEmpty)
+                      const _DownloadsTabEmptyState(message: '还没有完成的下载'),
+                    if (_activeTab == 2 &&
+                        failedJobs.isEmpty &&
+                        activeJobs.isNotEmpty)
+                      const _DownloadsTabEmptyState(message: '没有下载失败的任务'),
                   ],
                 );
               },
@@ -141,19 +171,53 @@ class _DownloadsHeader extends StatelessWidget {
   }
 }
 
-class _DownloadsSectionTitle extends StatelessWidget {
-  const _DownloadsSectionTitle({required this.label});
+class _DownloadStatusTabs extends StatelessWidget {
+  const _DownloadStatusTabs({
+    required this.activeIndex,
+    required this.activeCount,
+    required this.completedCount,
+    required this.failedCount,
+    required this.onChanged,
+  });
 
-  final String label;
+  final int activeIndex;
+  final int activeCount;
+  final int completedCount;
+  final int failedCount;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return AppSectionTitleRow(
-      title: label,
-      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 4),
-      titleStyle: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    final labels = [
+      '正在下载 ($activeCount)',
+      '已下载 ($completedCount)',
+      '下载失败 ($failedCount)',
+    ];
+    return Semantics(
+      label: '下载状态筛选',
+      child: SizedBox(
+        height: 48,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: labels.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 24),
+          itemBuilder: (context, index) => TextButton(
+            onPressed: () => onChanged(index),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              foregroundColor: index == activeIndex
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface,
+              textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: index == activeIndex
+                    ? FontWeight.w700
+                    : FontWeight.w600,
+              ),
+            ),
+            child: Text(labels[index]),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -533,6 +597,20 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
               fontSize: 12,
             ),
           ),
+          if (widget.state.directoryValidation ==
+                  DownloadDirectoryValidation.invalid &&
+              widget.state.directoryValidationMessage != null) ...[
+            const SizedBox(height: 6),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                widget.state.directoryValidationMessage!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -644,11 +722,19 @@ class _JobRow extends StatelessWidget {
       artworkUrl: job.track.artworkUrl,
       title: job.track.title,
       subtitle: _statusLabel(job),
-      trailing: IconButton(
-        icon: const Icon(Icons.close_rounded),
-        tooltip: '取消下载',
-        onPressed: () => context.read<DownloadsCubit>().cancel(job.track.id),
-      ),
+      trailing: job.status == DownloadJobStatus.failed
+          ? IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: '重试下载',
+              onPressed: () =>
+                  context.read<DownloadsCubit>().retry(job.track.id),
+            )
+          : IconButton(
+              icon: const Icon(Icons.close_rounded),
+              tooltip: '取消下载',
+              onPressed: () =>
+                  context.read<DownloadsCubit>().cancel(job.track.id),
+            ),
       progress: ClipRRect(
         borderRadius: BorderRadius.circular(999),
         child: LinearProgressIndicator(
@@ -683,9 +769,14 @@ class _JobRow extends StatelessWidget {
 }
 
 class _DownloadRow extends StatefulWidget {
-  const _DownloadRow({required this.record, required this.onDelete});
+  const _DownloadRow({
+    required this.record,
+    required this.fileMissing,
+    required this.onDelete,
+  });
 
   final Download record;
+  final bool fileMissing;
   final Future<void> Function() onDelete;
 
   @override
@@ -703,6 +794,7 @@ class _DownloadRowState extends State<_DownloadRow> {
       artworkUrl: widget.record.artworkUrl ?? '',
       title: widget.record.title,
       subtitle: [
+        if (widget.fileMissing) '文件缺失',
         widget.record.artistName,
         if ((widget.record.container ?? '').isNotEmpty)
           widget.record.container!.toUpperCase(),
@@ -732,9 +824,14 @@ class _DownloadRowState extends State<_DownloadRow> {
 }
 
 class _DownloadTable extends StatelessWidget {
-  const _DownloadTable({required this.rows, required this.onDelete});
+  const _DownloadTable({
+    required this.rows,
+    required this.missingTrackIds,
+    required this.onDelete,
+  });
 
   final List<Download> rows;
+  final Set<String> missingTrackIds;
   final Future<void> Function(Download row) onDelete;
 
   @override
@@ -747,6 +844,7 @@ class _DownloadTable extends StatelessWidget {
             _DownloadTableRow(
               index: i,
               record: rows[i],
+              fileMissing: missingTrackIds.contains(rows[i].trackId),
               onDelete: () => onDelete(rows[i]),
             ),
         ],
@@ -798,11 +896,13 @@ class _DownloadTableRow extends StatefulWidget {
   const _DownloadTableRow({
     required this.index,
     required this.record,
+    required this.fileMissing,
     required this.onDelete,
   });
 
   final int index;
   final Download record;
+  final bool fileMissing;
   final Future<void> Function() onDelete;
 
   @override
@@ -853,13 +953,17 @@ class _DownloadTableRowState extends State<_DownloadTableRow> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
+                        color: widget.fileMissing
+                            ? colorScheme.error
+                            : colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      widget.record.artistName ?? '未知艺术家',
+                      widget.fileMissing
+                          ? '文件缺失 · ${widget.record.artistName ?? '未知艺术家'}'
+                          : widget.record.artistName ?? '未知艺术家',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -1043,31 +1147,6 @@ class _DownloadSectionBody extends StatelessWidget {
   }
 }
 
-class _DownloadSection extends StatelessWidget {
-  const _DownloadSection({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DownloadsSectionTitle(label: label),
-        child,
-      ],
-    );
-  }
-}
-
-class _DownloadSectionSpacer extends StatelessWidget {
-  const _DownloadSectionSpacer();
-
-  @override
-  Widget build(BuildContext context) => const SizedBox(height: 24);
-}
-
 class _DownloadsEmptyState extends StatelessWidget {
   const _DownloadsEmptyState();
 
@@ -1082,6 +1161,24 @@ class _DownloadsEmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DownloadsTabEmptyState extends StatelessWidget {
+  const _DownloadsTabEmptyState({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 38),
+    child: Center(
+      child: Text(
+        message,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).muted),
+      ),
+    ),
+  );
 }
 
 Future<void> _confirmDeleteDownload(

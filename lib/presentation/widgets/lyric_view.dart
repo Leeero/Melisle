@@ -93,6 +93,8 @@ class _LyricViewState extends State<LyricView> {
 
     _lastScrolledIndex = idx;
     final viewport = _scrollController.position.viewportDimension;
+    // Wrapped lyric lines have variable height. The estimate is deliberately
+    // bounded; the ListView keeps scrolling stable without a second state source.
     final rawOffset =
         _verticalPadding + idx * _estimatedLineExtent - viewport / 2;
     final target = rawOffset
@@ -312,7 +314,8 @@ class _LyricLineTile extends StatelessWidget {
     return Semantics(
       selected: isCurrent,
       button: onTap != null,
-      label: isCurrent ? '当前歌词：${line.text}' : line.text,
+      label: isCurrent ? '当前歌词，${line.text}' : '歌词，${line.text}',
+      hint: onTap == null ? null : '双击跳转到此句',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -336,13 +339,17 @@ class _CurrentLyricButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: '定位到当前歌词',
-      child: IconButton(
-        onPressed: onPressed,
-        icon: const Icon(Icons.my_location_rounded, size: 18),
-        style: AppActionButtonStyle.icon(
-          context,
-          tone: AppActionButtonTone.primary,
-          iconSize: 18,
+      child: Semantics(
+        button: true,
+        label: '回到当前歌词',
+        child: IconButton(
+          onPressed: onPressed,
+          icon: const Icon(Icons.my_location_rounded, size: 18),
+          style: AppActionButtonStyle.icon(
+            context,
+            tone: AppActionButtonTone.primary,
+            iconSize: 18,
+          ),
         ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_library_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
@@ -170,11 +172,17 @@ class _LibraryViewState extends State<_LibraryView> {
                 padding: const EdgeInsets.only(right: 24),
                 child: scrollView,
               ),
-              const Positioned(
+              Positioned(
                 right: 4,
                 top: 12,
                 bottom: 20,
-                child: _ArtistAlphabetRail(),
+                child: _ArtistAlphabetRail(
+                  artists: sortLibraryArtists(state.artists),
+                  onSelected: (label) => _scrollToArtistLabel(
+                    label,
+                    state.artists,
+                  ),
+                ),
               ),
             ],
           )
@@ -183,6 +191,30 @@ class _LibraryViewState extends State<_LibraryView> {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       child: body,
+    );
+  }
+
+  void _scrollToArtistLabel(String label, List<MusicArtist> artists) {
+    if (!_scrollController.hasClients) return;
+
+    final sortedArtists = sortLibraryArtists(artists);
+    final targetIndex = sortedArtists.indexWhere(
+      (artist) => _artistIndexLabel(artist.name) == label,
+    );
+    if (targetIndex < 0) return;
+
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = libraryGridCount(width);
+    final row = targetIndex ~/ crossAxisCount;
+    final rowExtent = AppBreakpoints.usesDesktopToolbar(context) ? 344.0 : 230.0;
+    final offset = (row * rowExtent)
+        .toDouble()
+        .clamp(0.0, _scrollController.position.maxScrollExtent)
+        .toDouble();
+    _scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -196,11 +228,10 @@ class _LibraryViewState extends State<_LibraryView> {
       state: state,
       horizontalPadding: horizontalPadding,
       currentTrackId: currentTrackId,
-      desktopToolbarTrailing: AppBreakpoints.usesDesktopToolbar(context)
-          ? _LibraryTrackTools(
-              state: state,
-              searchController: _searchController,
-            )
+      desktopToolbarTrailing:
+          AppBreakpoints.usesDesktopToolbar(context) &&
+              state.supportedTrackSortOptions.isNotEmpty
+          ? _TrackSortMenu(state: state)
           : null,
       onPlayAll: () => _playAllLibraryTracks(context, state),
       onShuffleAll: () => _playAllLibraryTracks(context, state, shuffled: true),
@@ -310,7 +341,10 @@ class _LibraryViewState extends State<_LibraryView> {
 }
 
 class _ArtistAlphabetRail extends StatelessWidget {
-  const _ArtistAlphabetRail();
+  const _ArtistAlphabetRail({required this.artists, required this.onSelected});
+
+  final List<MusicArtist> artists;
+  final ValueChanged<String> onSelected;
 
   static const _labels = [
     'A',
@@ -345,24 +379,61 @@ class _ArtistAlphabetRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final availableLabels = artists
+        .map((artist) => _artistIndexLabel(artist.name))
+        .toSet();
     return Semantics(
       label: '艺术家字母索引',
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          for (final label in _labels)
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontSize: 10,
-                height: 1,
-              ),
+          for (final label in _labels) ...[
+            Builder(
+              builder: (context) {
+                final enabled = availableLabels.contains(label);
+                final color = enabled
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3);
+                return Semantics(
+                  button: enabled,
+                  enabled: enabled,
+                  label: '$label 开头的艺术家',
+                  child: MouseRegion(
+                    cursor: enabled
+                        ? SystemMouseCursors.click
+                        : SystemMouseCursors.basic,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: enabled ? () => onSelected(label) : null,
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
+          ],
         ],
       ),
     );
   }
+}
+
+String _artistIndexLabel(String name) {
+  final trimmed = name.trimLeft();
+  if (trimmed.isEmpty) return '#';
+  final first = trimmed.codeUnitAt(0);
+  if (first >= 65 && first <= 90) return String.fromCharCode(first);
+  if (first >= 97 && first <= 122) return String.fromCharCode(first - 32);
+  return '#';
 }
 
 String _librarySummaryLabel(LibraryState state) {
@@ -371,20 +442,20 @@ String _librarySummaryLabel(LibraryState state) {
     if (trackCount > 0) '$trackCount 首',
     if (state.albums.isNotEmpty) '${state.albums.length} 专辑',
     if (state.artists.isNotEmpty) '${state.artists.length} 艺术家',
-    if (state.playlists.isNotEmpty) '${state.playlists.length} 播放列表',
+    if (state.playlists.isNotEmpty) '${state.playlists.length} 歌单',
   ];
 
   if (state.status == LibraryStatus.loading && parts.isEmpty) {
     return '正在整理你的媒体库。';
   }
-  return parts.isEmpty ? '歌曲、专辑、艺术家和播放列表会按音乐源实时展示。' : parts.join(' · ');
+  return parts.isEmpty ? '歌曲、专辑、艺术家和歌单会按音乐源实时展示。' : parts.join(' · ');
 }
 
 String _libraryFilterLabel(LibraryFilter filter) => switch (filter) {
   LibraryFilter.tracks => '歌曲',
   LibraryFilter.albums => '专辑',
   LibraryFilter.artists => '艺术家',
-  LibraryFilter.playlists => '播放列表',
+  LibraryFilter.playlists => '歌单',
 };
 
 String _formatTrackDuration(Duration duration) {
@@ -608,10 +679,6 @@ class _LibraryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWide = AppBreakpoints.usesWideContent(context);
-    final trackToolsInList =
-        state.currentFilter == LibraryFilter.tracks &&
-        state.tracks.isNotEmpty &&
-        AppBreakpoints.usesDesktopToolbar(context);
     final cubit = context.read<LibraryCubit>();
     final tabs = AppScopeTabs<LibraryFilter>(
       semanticLabel: '媒体库分类',
@@ -627,13 +694,12 @@ class _LibraryHeader extends StatelessWidget {
               AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
               AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
               AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-              AppScopeTabItem(value: LibraryFilter.playlists, label: '播放列表'),
             ]
           : const [
               AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
               AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
               AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-              AppScopeTabItem(value: LibraryFilter.playlists, label: '播放列表'),
+              AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
             ],
     );
 
@@ -653,6 +719,12 @@ class _LibraryHeader extends StatelessWidget {
         state.currentFilter == LibraryFilter.artists && state.genres.isNotEmpty
         ? _LibraryGenreMenu(state: state)
         : null;
+    final artistSortButton =
+        isWide &&
+            state.currentFilter == LibraryFilter.artists &&
+            state.supportedArtistSortOptions.isNotEmpty
+        ? _ArtistSortMenu(state: state)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,70 +739,65 @@ class _LibraryHeader extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (isWide)
-          Row(
-            children: [
-              SizedBox(width: 420, child: tabs),
-              if (!trackToolsInList) ...[
-                const Spacer(),
-                SizedBox(width: 280, child: search),
-              ],
-              if (filterButton != null) ...[
-                const SizedBox(width: 8),
-                filterButton,
-              ],
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final artistControls = [
+                if (filterButton != null) filterButton,
+                if (artistSortButton != null) artistSortButton,
+              ];
+              if (constraints.maxWidth < 760) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: tabs),
+                        const SizedBox(width: 16),
+                        SizedBox(width: 280, child: search),
+                      ],
+                    ),
+                    if (artistControls.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Wrap(
+                          spacing: 8,
+                          children: artistControls,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(width: 420, child: tabs),
+                      const Spacer(),
+                      SizedBox(width: 280, child: search),
+                    ],
+                  ),
+                  if (artistControls.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(spacing: 8, children: artistControls),
+                    ),
+                  ],
+                ],
+              );
+            },
           )
         else ...[
-          Row(
-            children: [
-              Expanded(child: search),
-              if (filterButton != null) ...[
-                const SizedBox(width: 8),
-                filterButton,
-              ],
-            ],
-          ),
+          search,
+          if (filterButton != null) ...[
+            const SizedBox(height: 12),
+            Align(alignment: Alignment.centerRight, child: filterButton),
+          ],
           const SizedBox(height: 12),
           tabs,
-        ],
-      ],
-    );
-  }
-}
-
-class _LibraryTrackTools extends StatelessWidget {
-  const _LibraryTrackTools({
-    required this.state,
-    required this.searchController,
-  });
-
-  final LibraryState state;
-  final TextEditingController searchController;
-
-  @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<LibraryCubit>();
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 250,
-          child: AppSearchField(
-            controller: searchController,
-            dense: true,
-            showCancelAction: false,
-            hintText: '在列表中搜索…',
-            semanticLabel: '在歌曲列表中搜索',
-            onChanged: cubit.search,
-            onClear: () {
-              searchController.clear();
-              cubit.search('');
-            },
-          ),
-        ),
-        if (state.supportedTrackSortOptions.isNotEmpty) ...[
-          const SizedBox(width: 12),
-          _TrackSortMenu(state: state),
         ],
       ],
     );
@@ -791,11 +858,70 @@ class _TrackSortMenu extends StatelessWidget {
   }
 }
 
+class _ArtistSortMenu extends StatelessWidget {
+  const _ArtistSortMenu({required this.state});
+
+  final LibraryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = state.artistSortOption ?? ArtistSortOption.name;
+    final theme = Theme.of(context);
+    return PopupMenuButton<ArtistSortOption>(
+      tooltip: '选择艺术家排序方式',
+      onSelected: context.read<LibraryCubit>().changeArtistSort,
+      itemBuilder: (context) => [
+        for (final option in state.supportedArtistSortOptions)
+          PopupMenuItem(
+            value: option,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  child: option == selected
+                      ? Icon(
+                          Icons.check_rounded,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        )
+                      : null,
+                ),
+                Text(_artistSortLabel(option)),
+              ],
+            ),
+          ),
+      ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '按${_artistSortLabel(selected)}排序',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down_rounded, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String _trackSortLabel(TrackSortOption option) => switch (option) {
   TrackSortOption.title => '标题',
   TrackSortOption.artist => '艺术家',
   TrackSortOption.album => '专辑',
   TrackSortOption.dateAdded => '添加时间',
+};
+
+String _artistSortLabel(ArtistSortOption option) => switch (option) {
+  ArtistSortOption.name => '名称',
+  ArtistSortOption.dateAdded => '添加时间',
 };
 
 class _LibraryGenreMenu extends StatelessWidget {

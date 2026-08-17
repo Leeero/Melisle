@@ -14,7 +14,6 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sn
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -61,7 +60,8 @@ class _PlaylistDetailView extends StatelessWidget {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              BlurredCoverBackground(imageUrl: playlist?.artworkUrl),
+              if (!isWide)
+                BlurredCoverBackground(imageUrl: playlist?.artworkUrl),
               SafeArea(
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (notification) {
@@ -108,11 +108,11 @@ class _PlaylistDetailView extends StatelessWidget {
       switch (state.status) {
         PlaylistDetailStatus.loading => const AppSliverStateView.loading(),
         PlaylistDetailStatus.failure => AppSliverStateView.message(
-          message: state.errorMessage ?? '加载播放列表详情失败',
+          message: state.errorMessage ?? '加载歌单详情失败',
         ),
         _ =>
           state.tracks.isEmpty
-              ? const AppSliverStateView.message(message: '当前播放列表还没有歌曲。')
+              ? const AppSliverStateView.message(message: '当前歌单还没有歌曲。')
               : SliverPadding(
                   padding: AppPageLayout.sectionPadding(
                     context,
@@ -123,6 +123,7 @@ class _PlaylistDetailView extends StatelessWidget {
                       tracks: state.tracks,
                       currentTrackId: currentTrackId,
                       showActionBar: false,
+                      playlistStyle: true,
                       onTrackTap: (index, _) =>
                           _playPlaylistFromIndex(context, index),
                     ),
@@ -172,11 +173,11 @@ class _PlaylistDetailView extends StatelessWidget {
       switch (state.status) {
         PlaylistDetailStatus.loading => const AppSliverStateView.loading(),
         PlaylistDetailStatus.failure => AppSliverStateView.message(
-          message: state.errorMessage ?? '加载播放列表详情失败',
+          message: state.errorMessage ?? '加载歌单详情失败',
         ),
         _ =>
           state.tracks.isEmpty
-              ? const AppSliverStateView.message(message: '当前播放列表还没有歌曲。')
+              ? const AppSliverStateView.message(message: '当前歌单还没有歌曲。')
               : _MobilePlaylistTrackSliver(
                   tracks: state.tracks,
                   currentTrackId: currentTrackId,
@@ -256,7 +257,7 @@ class _MobilePlaylistHero extends StatelessWidget {
             _MobilePlaylistArtwork(
               imageUrl: playlist?.artworkUrl ?? '',
               size: coverSize,
-              semanticLabel: '《$title》播放列表封面',
+              semanticLabel: '《$title》歌单封面',
             ),
             const SizedBox(height: 12),
             Text(
@@ -765,35 +766,35 @@ class _PlaylistHero extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final coverSize = constraints.maxWidth < 820 ? 172.0 : 200.0;
+        final coverSize = constraints.maxWidth < 980 ? 200.0 : 256.0;
 
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PlaylistHeroArtwork(
               imageUrl: playlist?.artworkUrl ?? '',
               size: coverSize,
             ),
-            const SizedBox(width: 28),
+            const SizedBox(width: 32),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.only(top: 2, bottom: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '播放列表',
+                      'PLAYLIST',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.muted,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.32,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       _playlistTitle(playlist),
                       maxLines: 2,
@@ -801,13 +802,13 @@ class _PlaylistHero extends StatelessWidget {
                       textAlign: TextAlign.start,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: colorScheme.onSurface,
-                        fontSize: 32,
+                        fontSize: 48,
                         height: 1.12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       '$trackCountLabel 首歌曲',
                       maxLines: 1,
@@ -819,16 +820,12 @@ class _PlaylistHero extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    PlayAllButton(
-                      variant: PlayAllButtonVariant.primary,
-                      onPressed: tracksCount == 0 || isLoading
-                          ? null
-                          : onPlayAll,
-                      onShufflePressed: tracksCount == 0 || isLoading
-                          ? null
-                          : onShuffleAll,
+                    const SizedBox(height: 24),
+                    _PlaylistDesktopActions(
+                      enabled: tracksCount > 0 && !isLoading,
                       isLoading: isLoading,
+                      onPlayAll: onPlayAll,
+                      onShuffleAll: onShuffleAll,
                     ),
                   ],
                 ),
@@ -837,6 +834,72 @@ class _PlaylistHero extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _PlaylistDesktopActions extends StatelessWidget {
+  const _PlaylistDesktopActions({
+    required this.enabled,
+    required this.isLoading,
+    required this.onPlayAll,
+    required this.onShuffleAll,
+  });
+
+  final bool enabled;
+  final bool isLoading;
+  final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilledButton.icon(
+          onPressed: enabled ? onPlayAll : null,
+          icon: isLoading
+              ? SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.onPrimary,
+                  ),
+                )
+              : const Icon(Icons.play_arrow_rounded, size: 20),
+          label: const Text('播放全部'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            shape: shape,
+            textStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        OutlinedButton.icon(
+          onPressed: enabled ? onShuffleAll : null,
+          icon: const Icon(Icons.shuffle_rounded, size: 20),
+          label: const Text('随机播放'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.onSurface,
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            side: BorderSide(color: colors.outlineVariant),
+            shape: shape,
+            textStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -854,7 +917,7 @@ int _playlistTrackCount(MusicPlaylist? playlist, int loadedCount) {
 }
 
 String _playlistTitle(MusicPlaylist? playlist) {
-  if (playlist == null) return '播放列表详情';
+  if (playlist == null) return '歌单详情';
   return MediaDisplayText.playlistName(playlist.name);
 }
 

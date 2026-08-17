@@ -27,6 +27,7 @@ class MusicTrackTable extends StatelessWidget {
     this.trailingBuilder,
     this.showActionBar = true,
     this.libraryStyle = false,
+    this.playlistStyle = false,
     this.actionBarTrailing,
   });
 
@@ -41,6 +42,7 @@ class MusicTrackTable extends StatelessWidget {
   final MusicTrackTableTrailingBuilder? trailingBuilder;
   final bool showActionBar;
   final bool libraryStyle;
+  final bool playlistStyle;
   final Widget? actionBarTrailing;
 
   @override
@@ -61,7 +63,10 @@ class MusicTrackTable extends StatelessWidget {
         ],
         Column(
           children: [
-            _MusicTrackTableHeader(libraryStyle: libraryStyle),
+            _MusicTrackTableHeader(
+              libraryStyle: libraryStyle,
+              playlistStyle: playlistStyle,
+            ),
             for (var index = 0; index < tracks.length; index++)
               _MusicTrackTableRow(
                 index: index,
@@ -73,6 +78,7 @@ class MusicTrackTable extends StatelessWidget {
                     : () => onAddTrackToQueue!(tracks[index]),
                 trailingBuilder: trailingBuilder,
                 libraryStyle: libraryStyle,
+                playlistStyle: playlistStyle,
               ),
           ],
         ),
@@ -140,9 +146,13 @@ class _MusicTrackTableActionBar extends StatelessWidget {
 }
 
 class _MusicTrackTableHeader extends StatelessWidget {
-  const _MusicTrackTableHeader({required this.libraryStyle});
+  const _MusicTrackTableHeader({
+    required this.libraryStyle,
+    required this.playlistStyle,
+  });
 
   final bool libraryStyle;
+  final bool playlistStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -155,15 +165,25 @@ class _MusicTrackTableHeader extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showAlbum = constraints.maxWidth >= 620;
+        final showAlbum = constraints.maxWidth >= (playlistStyle ? 680 : 620);
         final showQuality = libraryStyle && constraints.maxWidth >= 760;
+        final horizontalPadding = libraryStyle
+            ? 20.0
+            : playlistStyle
+            ? 16.0
+            : 12.0;
+        final verticalPadding = libraryStyle
+            ? 10.0
+            : playlistStyle
+            ? 8.0
+            : 4.0;
 
         return Container(
           padding: EdgeInsets.fromLTRB(
-            libraryStyle ? 20 : 12,
-            libraryStyle ? 10 : 4,
-            libraryStyle ? 20 : 12,
-            libraryStyle ? 10 : 8,
+            horizontalPadding,
+            verticalPadding,
+            horizontalPadding,
+            libraryStyle ? 10 : playlistStyle ? 8 : 8,
           ),
           decoration: BoxDecoration(
             border: Border(
@@ -175,38 +195,43 @@ class _MusicTrackTableHeader extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 36,
+                width: playlistStyle ? 48 : 36,
                 child: Text(
                   '#',
                   style: labelStyle,
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: playlistStyle ? 0 : 12),
               Expanded(flex: 4, child: Text('标题', style: labelStyle)),
               if (libraryStyle) ...[
                 const SizedBox(width: 12),
                 Expanded(flex: 2, child: Text('艺术家', style: labelStyle)),
               ],
               if (showAlbum) ...[
-                const SizedBox(width: 12),
-                Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
+                SizedBox(width: playlistStyle ? 0 : 12),
+                if (playlistStyle)
+                  SizedBox(width: 192, child: Text('专辑', style: labelStyle))
+                else
+                  Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
               ],
               if (showQuality) ...[
                 const SizedBox(width: 12),
                 SizedBox(width: 64, child: Text('质量', style: labelStyle)),
               ],
-              const SizedBox(width: 12),
+              SizedBox(width: playlistStyle ? 0 : 12),
               SizedBox(
-                width: 80,
+                width: playlistStyle ? 64 : 80,
                 child: Text(
                   '时长',
                   style: labelStyle,
                   textAlign: TextAlign.right,
                 ),
               ),
-              const SizedBox(width: 8),
-              const SizedBox(width: 88),
+              if (!playlistStyle) ...[
+                const SizedBox(width: 8),
+                const SizedBox(width: 88),
+              ],
             ],
           ),
         );
@@ -224,6 +249,7 @@ class _MusicTrackTableRow extends StatefulWidget {
     this.onAddToQueue,
     this.trailingBuilder,
     required this.libraryStyle,
+    required this.playlistStyle,
   });
 
   final int index;
@@ -233,6 +259,7 @@ class _MusicTrackTableRow extends StatefulWidget {
   final VoidCallback? onAddToQueue;
   final MusicTrackTableTrailingBuilder? trailingBuilder;
   final bool libraryStyle;
+  final bool playlistStyle;
 
   @override
   State<_MusicTrackTableRow> createState() => _MusicTrackTableRowState();
@@ -256,7 +283,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
     final highlighted = _hovered || _focused || _menuOpen;
     final track = widget.track;
     final displayTitle = MediaDisplayText.trackTitle(track.title);
-    final indexLabel = widget.libraryStyle
+    final indexLabel = widget.libraryStyle || widget.playlistStyle
         ? '${widget.index + 1}'
         : (widget.index + 1).toString().padLeft(2, '0');
     final trailing = widget.trailingBuilder?.call(context, track, _hovered);
@@ -270,7 +297,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
         onExit: (_) => setState(() => _hovered = false),
         opaque: true,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 1),
+          padding: EdgeInsets.symmetric(vertical: widget.playlistStyle ? 0 : 1),
           child: Material(
             color: widget.isCurrent
                 ? theme.selectedWash
@@ -291,23 +318,34 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
               onSecondaryTap: () => _showMenu(track),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final showAlbum = constraints.maxWidth >= 620;
+                  final showAlbum = constraints.maxWidth >=
+                      (widget.playlistStyle ? 680 : 620);
                   final showQuality =
                       widget.libraryStyle && constraints.maxWidth >= 760;
 
                   return ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: widget.libraryStyle ? 56 : 0,
+                      minHeight: widget.libraryStyle || widget.playlistStyle
+                          ? 56
+                          : 0,
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: widget.libraryStyle ? 20 : 12,
-                        vertical: widget.libraryStyle ? 6 : 8,
+                        horizontal: widget.libraryStyle
+                            ? 20
+                            : widget.playlistStyle
+                            ? 16
+                            : 12,
+                        vertical: widget.libraryStyle
+                            ? 6
+                            : widget.playlistStyle
+                            ? 0
+                            : 8,
                       ),
                       child: Row(
                         children: [
                           SizedBox(
-                            width: 36,
+                            width: widget.playlistStyle ? 48 : 36,
                             child: Center(
                               child: widget.isCurrent
                                   ? Icon(
@@ -333,7 +371,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                                     ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: widget.playlistStyle ? 0 : 12),
                           Expanded(
                             flex: 4,
                             child: _MusicTrackTitleCell(
@@ -354,14 +392,23 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                             ),
                           ],
                           if (showAlbum) ...[
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 3,
-                              child: _MusicTrackTableText(
-                                MediaDisplayText.albumTitle(track.albumTitle),
-                                highlighted: widget.isCurrent,
+                            SizedBox(width: widget.playlistStyle ? 0 : 12),
+                            if (widget.playlistStyle)
+                              SizedBox(
+                                width: 192,
+                                child: _MusicTrackTableText(
+                                  MediaDisplayText.albumTitle(track.albumTitle),
+                                  highlighted: widget.isCurrent,
+                                ),
+                              )
+                            else
+                              Expanded(
+                                flex: 3,
+                                child: _MusicTrackTableText(
+                                  MediaDisplayText.albumTitle(track.albumTitle),
+                                  highlighted: widget.isCurrent,
+                                ),
                               ),
-                            ),
                           ],
                           if (showQuality) ...[
                             const SizedBox(width: 12),
@@ -376,9 +423,9 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                               ),
                             ),
                           ],
-                          const SizedBox(width: 12),
+                          SizedBox(width: widget.playlistStyle ? 0 : 12),
                           SizedBox(
-                            width: 80,
+                            width: widget.playlistStyle ? 64 : 80,
                             child: Text(
                               _formatTrackDuration(track.duration),
                               textAlign: TextAlign.right,
@@ -392,18 +439,19 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          AnimatedOpacity(
-                            duration: AppMotion.micro,
-                            curve: AppMotion.enter,
-                            opacity: highlighted || widget.isCurrent ? 1 : 0,
-                            child: SizedBox(
-                              width: 88,
-                              child:
-                                  trailing ??
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
+                          if (!widget.playlistStyle) ...[
+                            const SizedBox(width: 8),
+                            AnimatedOpacity(
+                              duration: AppMotion.micro,
+                              curve: AppMotion.enter,
+                              opacity: highlighted || widget.isCurrent ? 1 : 0,
+                              child: SizedBox(
+                                width: 88,
+                                child: trailing ??
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.end,
+                                      children: [
                                       if (widget.onAddToQueue != null)
                                         _MusicTrackTableIconButton(
                                           icon: Icons.playlist_add_rounded,
@@ -415,10 +463,11 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                                         tooltip: '更多操作',
                                         onPressed: () => _showMenu(track),
                                       ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

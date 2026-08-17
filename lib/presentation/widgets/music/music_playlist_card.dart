@@ -57,7 +57,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
         : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
 
     return Semantics(
-      label: '打开播放列表《$displayName》',
+      label: '打开歌单《$displayName》',
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -75,19 +75,22 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: contentPadding,
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(widget.artworkRadius),
-                      onTap: widget.onTap,
-                      mouseCursor: SystemMouseCursors.click,
-                      onHighlightChanged: (pressed) =>
-                          setState(() => _pressed = pressed),
-                      child: AnimatedContainer(
+              Flexible(
+                child: Padding(
+                  padding: contentPadding,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(
+                          widget.artworkRadius,
+                        ),
+                        onTap: widget.onTap,
+                        mouseCursor: SystemMouseCursors.click,
+                        onHighlightChanged: (pressed) =>
+                            setState(() => _pressed = pressed),
+                        child: AnimatedContainer(
                         duration: AppMotion.short,
                         curve: AppMotion.enter,
                         decoration: BoxDecoration(
@@ -131,7 +134,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                     imageUrl: playlist.artworkUrl,
                                     size: constraints.maxWidth,
                                     borderRadius: 0,
-                                    semanticLabel: '《$displayName》播放列表封面',
+                                    semanticLabel: '《$displayName》歌单封面',
                                   );
                                 },
                               ),
@@ -169,6 +172,7 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                           ),
                         ),
                       ),
+                    ),
                     ),
                   ),
                 ),
@@ -227,7 +231,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
     final subtitle = _playlistSubtitle(playlist);
 
     return Semantics(
-      label: '打开播放列表《$displayName》',
+      label: '打开歌单《$displayName》',
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -257,7 +261,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                       imageUrl: playlist.artworkUrl,
                       size: 52,
                       borderRadius: 12,
-                      semanticLabel: '《$displayName》播放列表封面',
+                      semanticLabel: '《$displayName》歌单封面',
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -298,7 +302,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
 }
 
 String _playlistSubtitle(MusicPlaylist playlist) {
-  return playlist.trackCount > 0 ? '${playlist.trackCount} 首歌曲' : '播放列表';
+  return playlist.trackCount > 0 ? '${playlist.trackCount} 首歌曲' : '歌单';
 }
 
 class _PlaylistCountBadge extends StatelessWidget {

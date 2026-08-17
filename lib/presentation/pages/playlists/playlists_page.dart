@@ -5,7 +5,6 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_state.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -35,13 +34,11 @@ class _PlaylistsView extends StatefulWidget {
 
 class _PlaylistsViewState extends State<_PlaylistsView> {
   late final ScrollController _scrollController;
-  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _searchController = TextEditingController();
   }
 
   @override
@@ -49,7 +46,6 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -65,20 +61,14 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
   Widget build(BuildContext context) {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
-    return BlocConsumer<PlaylistsCubit, PlaylistsState>(
-      listener: (context, state) {
-        if (_searchController.text == state.searchQuery) return;
-        _searchController.value = TextEditingValue(
-          text: state.searchQuery,
-          selection: TextSelection.collapsed(offset: state.searchQuery.length),
-        );
-      },
-      builder: (context, state) {
-        return AppContentPage(
-          header: _PlaylistsHeader(state: state, controller: _searchController),
-          body: _buildBody(context, state, horizontalPadding),
-        );
-      },
+    return BlocBuilder<PlaylistsCubit, PlaylistsState>(
+      builder: (context, state) => AppContentPage(
+        header: const AppPageHeader(
+          title: '歌单',
+          automaticImplyLeading: false,
+        ),
+        body: _buildBody(context, state, horizontalPadding),
+      ),
     );
   }
 
@@ -93,14 +83,14 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
 
     if (state.status == PlaylistsStatus.failure && state.allPlaylists.isEmpty) {
       return AppBodyStateView.message(
-        message: state.errorMessage ?? '加载播放列表失败',
+        message: state.errorMessage ?? '加载歌单失败',
       );
     }
 
     if (state.allPlaylists.isEmpty) {
       if (state.isFiltering) {
         return AppBodyStateView.message(
-          message: '没有找到匹配的播放列表。',
+          message: '没有找到匹配的歌单。',
           action: TextButton.icon(
             onPressed: () => context.read<PlaylistsCubit>().search(''),
             icon: const Icon(Icons.close_rounded, size: 18),
@@ -108,12 +98,12 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
           ),
         );
       }
-      return const AppBodyStateView.message(message: '当前还没有播放列表。');
+      return const AppBodyStateView.message(message: '当前还没有歌单。');
     }
 
     if (state.playlists.isEmpty) {
       return AppBodyStateView.message(
-        message: '没有找到匹配的播放列表。',
+        message: '没有找到匹配的歌单。',
         action: TextButton.icon(
           onPressed: () => context.read<PlaylistsCubit>().search(''),
           icon: const Icon(Icons.close_rounded, size: 18),
@@ -191,44 +181,6 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
       onRetry: hasLoadMoreError
           ? () => context.read<PlaylistsCubit>().loadMore()
           : null,
-    );
-  }
-}
-
-class _PlaylistsHeader extends StatelessWidget {
-  const _PlaylistsHeader({required this.state, required this.controller});
-
-  final PlaylistsState state;
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final searchField = AppSearchField(
-      controller: controller,
-      dense: true,
-      hintText: '搜索播放列表',
-      semanticLabel: '搜索播放列表',
-      showCancelAction: false,
-      onClear: () {
-        controller.clear();
-        context.read<PlaylistsCubit>().search('');
-      },
-      onChanged: context.read<PlaylistsCubit>().search,
-    );
-    final summary = state.isFiltering
-        ? '找到 ${state.playlists.length} 个匹配播放列表'
-        : '${state.allPlaylists.length} 个播放列表';
-
-    return AppPageHeader(
-      title: '播放列表',
-      description: summary,
-      automaticImplyLeading: false,
-      hideTitleOnCompactWithCenter: false,
-      center: searchField,
-      trailing: MetaPill(
-        label: '${state.playlists.length} 项',
-        size: MetaPillSize.compact,
-      ),
     );
   }
 }

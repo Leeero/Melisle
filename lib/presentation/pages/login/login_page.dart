@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_form_field.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 
 class LoginPage extends StatefulWidget {
@@ -582,54 +583,18 @@ class _LoginField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            fontSize: 12,
-            color: colors.onSurface,
-          ),
-        ),
-        const SizedBox(height: 7),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          enabled: enabled,
-          onFieldSubmitted: onSubmitted,
-          validator: validator,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, size: 19),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: colors.surfaceContainerHigh,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 13,
-            ),
-            constraints: const BoxConstraints(minHeight: 48),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: colors.primary, width: 1.5),
-            ),
-          ),
-        ),
-      ],
+    return AppFormField(
+      label: label,
+      controller: controller,
+      hintText: hintText,
+      prefixIcon: icon,
+      suffixIcon: suffixIcon,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      validator: validator,
+      onSubmitted: onSubmitted,
+      obscureText: obscureText,
+      enabled: enabled,
     );
   }
 }

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// 播放队列底部表。支持左滑删除、长按拖拽排序。
-class QueueSheet extends StatelessWidget {
+class QueueSheet extends StatefulWidget {
   const QueueSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -46,10 +46,15 @@ class QueueSheet extends StatelessWidget {
   }
 
   @override
+  State<QueueSheet> createState() => _QueueSheetState();
+}
+
+class _QueueSheetState extends State<QueueSheet> {
+  @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.82,
+      initialChildSize: 0.67,
       minChildSize: 0.42,
       maxChildSize: 0.94,
       builder: (context, scrollController) {
@@ -59,7 +64,19 @@ class QueueSheet extends StatelessWidget {
             return AppSheetScaffold(
               title: '播放队列',
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-              trailing: _QueueCountLabel(count: headerState.queue.length),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _QueueCountLabel(count: headerState.queue.length),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: headerState.queue.isEmpty
+                        ? null
+                        : () => _confirmClear(context),
+                    child: const Text('清空'),
+                  ),
+                ],
+              ),
               child: Expanded(
                 child: BlocBuilder<PlayerCubit, PlayerViewState>(
                   buildWhen: (prev, next) =>
@@ -99,6 +116,29 @@ class QueueSheet extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _confirmClear(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确定清空播放队列？'),
+        content: const Text('清空后无法恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('清空'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<PlayerCubit>().clearQueue();
+    }
   }
 
   /// Proxy decorator for the dragged item — adds elevation and scale.
@@ -149,6 +189,7 @@ class _DesktopQueuePanel extends StatefulWidget {
 
 class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
   late final ScrollController _scrollController;
+  bool _confirmingClear = false;
 
   @override
   void initState() {
@@ -196,6 +237,19 @@ class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
                           ),
                         ),
                         _QueueCountLabel(count: state.queue.length),
+                        TextButton(
+                          onPressed: state.queue.isEmpty
+                              ? null
+                              : () {
+                                  if (_confirmingClear) {
+                                    context.read<PlayerCubit>().clearQueue();
+                                    setState(() => _confirmingClear = false);
+                                    return;
+                                  }
+                                  setState(() => _confirmingClear = true);
+                                },
+                          child: Text(_confirmingClear ? '确认清空' : '清空'),
+                        ),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           tooltip: '关闭播放队列',
@@ -212,7 +266,7 @@ class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
                             scrollController: _scrollController,
                             padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                             buildDefaultDragHandles: false,
-                            proxyDecorator: QueueSheet._proxyDecorator,
+                            proxyDecorator: _QueueSheetState._proxyDecorator,
                             itemCount: state.queue.length,
                             onReorder: context
                                 .read<PlayerCubit>()

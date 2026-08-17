@@ -362,7 +362,7 @@ class _ShellSidebar extends StatelessWidget {
               const SizedBox(height: 2),
               _ShellNavButton(
                 icon: Icons.queue_music_rounded,
-                label: '播放列表',
+                label: '歌单',
                 compact: compact,
                 selected: path.startsWith('/playlists'),
                 onTap: () {
@@ -445,7 +445,7 @@ class _SidebarToggleButton extends StatelessWidget {
     return IconButton(
       onPressed: onPressed,
       tooltip: compact ? '展开侧边栏' : '收起侧边栏',
-      style: AppActionButtonStyle.icon(context, size: 32, iconSize: 18),
+      style: AppActionButtonStyle.icon(context, iconSize: 18),
       icon: Icon(
         compact
             ? Icons.keyboard_double_arrow_right_rounded

@@ -3,7 +3,7 @@ import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
-enum MusicTrackTileStyle { card, row, list }
+enum MusicTrackTileStyle { card, favorite, row, list }
 
 class MusicTrackTile extends StatefulWidget {
   const MusicTrackTile.card({
@@ -14,10 +14,25 @@ class MusicTrackTile extends StatefulWidget {
     required this.isCurrent,
     required this.onTap,
     this.onLongPress,
+    this.onMore,
     this.statusLabel,
     this.extraTrailing,
     this.idleIcon = Icons.play_arrow_rounded,
   }) : style = MusicTrackTileStyle.card;
+
+  const MusicTrackTile.favorite({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.artworkUrl,
+    required this.isCurrent,
+    required this.onTap,
+    this.onLongPress,
+    this.onMore,
+    this.statusLabel,
+    this.extraTrailing,
+    this.idleIcon = Icons.play_arrow_rounded,
+  }) : style = MusicTrackTileStyle.favorite;
 
   const MusicTrackTile.row({
     super.key,
@@ -27,6 +42,7 @@ class MusicTrackTile extends StatefulWidget {
     required this.isCurrent,
     required this.onTap,
     this.onLongPress,
+    this.onMore,
     this.statusLabel,
     this.extraTrailing,
     this.idleIcon = Icons.play_arrow_rounded,
@@ -42,6 +58,7 @@ class MusicTrackTile extends StatefulWidget {
   }) : style = MusicTrackTileStyle.list,
        isCurrent = false,
        onLongPress = null,
+       onMore = null,
        statusLabel = null,
        extraTrailing = null;
 
@@ -51,6 +68,7 @@ class MusicTrackTile extends StatefulWidget {
   final bool isCurrent;
   final Future<void> Function() onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onMore;
   final String? statusLabel;
   final Widget? extraTrailing;
   final IconData idleIcon;
@@ -74,14 +92,26 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isCard = widget.style == MusicTrackTileStyle.card;
+    final isCard =
+        widget.style == MusicTrackTileStyle.card ||
+        widget.style == MusicTrackTileStyle.favorite;
+    final isFavorite = widget.style == MusicTrackTileStyle.favorite;
     final radius = isCard
         ? AppRadiusTokens.mobileLg
         : AppRadiusTokens.desktopSm;
-    final artworkSize = isCard ? 58.0 : 44.0;
+    final artworkSize = isFavorite
+        ? AppSpacingTokens.favoriteTrackArtwork
+        : (isCard ? 58.0 : 44.0);
     final artworkRadius = isCard ? AppRadiusTokens.mobileLg : 8.0;
-    final horizontalPadding = isCard ? 14.0 : 12.0;
-    final verticalPadding = isCard ? 12.0 : 8.0;
+    final horizontalPadding = isFavorite
+        ? AppSpacingTokens.favoriteTrackPadding
+        : (isCard ? 14.0 : 12.0);
+    final verticalPadding = isFavorite
+        ? AppSpacingTokens.favoriteTrackPadding
+        : (isCard ? 12.0 : 8.0);
+    final contentGap = isFavorite
+        ? AppSpacingTokens.favoriteTrackContentGap
+        : 14.0;
     final shadow = isCard && _hovered && !widget.isCurrent
         ? [
             BoxShadow(
@@ -143,7 +173,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                       borderRadius: artworkRadius,
                       semanticLabel: '《${widget.title}》封面',
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: contentGap),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +213,10 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                       widget.extraTrailing!,
                       const SizedBox(width: 10),
                     ],
-                    _buildIndicator(context, isCard),
+                    if (widget.onMore != null)
+                      _MoreButton(onPressed: widget.onMore!)
+                    else
+                      _buildIndicator(context, isCard),
                   ],
                 ),
               ),
@@ -273,6 +306,9 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                     if (widget.extraTrailing != null) ...[
                       const SizedBox(width: 8),
                       widget.extraTrailing!,
+                    ] else if (widget.onMore != null) ...[
+                      const SizedBox(width: 8),
+                      _MoreButton(onPressed: widget.onMore!),
                     ] else ...[
                       const SizedBox(width: 8),
                       SizedBox.square(
@@ -304,6 +340,10 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         widget.style == MusicTrackTileStyle.row;
     final titleStyle = switch (widget.style) {
       MusicTrackTileStyle.card => theme.textTheme.titleMedium,
+      MusicTrackTileStyle.favorite => theme.textTheme.bodyMedium?.copyWith(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
       MusicTrackTileStyle.row =>
         compactRow
             ? theme.textTheme.bodyMedium?.copyWith(
@@ -347,6 +387,30 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
       color: widget.isCurrent
           ? colorScheme.primary
           : colorScheme.onSurfaceVariant,
+    );
+  }
+}
+
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '更多操作',
+      button: true,
+      child: Tooltip(
+        message: '更多操作',
+        child: SizedBox.square(
+          dimension: 44,
+          child: IconButton(
+            onPressed: onPressed,
+            icon: const Icon(Icons.more_horiz_rounded),
+          ),
+        ),
+      ),
     );
   }
 }

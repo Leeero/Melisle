@@ -109,7 +109,7 @@ class LibraryAlbumSliver extends StatelessWidget {
     return _LibraryGridSliver(
       horizontalPadding: horizontalPadding,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _albumGridCount(width),
+        crossAxisCount: libraryGridCount(width),
         mainAxisSpacing: compact ? 14 : 18,
         crossAxisSpacing: compact ? 12 : 18,
         childAspectRatio: compact ? 0.80 : 0.72,
@@ -148,8 +148,10 @@ class LibraryArtistSliver extends StatelessWidget {
         sliver: AppSliverStateView.message(message: '当前还没有艺术家。'),
       );
     }
+    final width = MediaQuery.sizeOf(context).width;
     final compact = AppBreakpoints.isCompact(context);
-    final groups = _groupArtists(state.artists);
+    final desktop = AppBreakpoints.usesDesktopToolbar(context);
+    final artists = sortLibraryArtists(state.artists);
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
       sliver: compact
@@ -164,71 +166,29 @@ class LibraryArtistSliver extends StatelessWidget {
                 );
               },
             )
-          : SliverMainAxisGroup(
-              slivers: [
-                for (final group in groups.entries) ...[
-                  SliverToBoxAdapter(
-                    child: _ArtistGroupHeader(label: group.key),
-                  ),
-                  SliverGrid.builder(
-                    itemCount: group.value.length,
-                    itemBuilder: (context, index) {
-                      final artist = group.value[index];
-                      return MusicArtistGridCard(
-                        artist: artist,
-                        onTap: () =>
-                            context.push('/artist/${artist.id}', extra: artist),
-                      );
-                    },
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 24,
-                          crossAxisSpacing: 32,
-                          mainAxisExtent: 206,
-                        ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                ],
-              ],
+          : SliverGrid.builder(
+              itemCount: artists.length,
+              itemBuilder: (context, index) {
+                final artist = artists[index];
+                return MusicArtistGridCard(
+                  artist: artist,
+                  onTap: () =>
+                      context.push('/artist/${artist.id}', extra: artist),
+                );
+              },
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: libraryGridCount(width),
+                mainAxisSpacing: desktop ? 56 : 24,
+                crossAxisSpacing: desktop ? 48 : 32,
+                mainAxisExtent: desktop ? 288 : 206,
+              ),
             ),
     );
   }
 }
 
-Map<String, List<MusicArtist>> _groupArtists(List<MusicArtist> artists) {
-  final sorted = [...artists]
-    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  final groups = <String, List<MusicArtist>>{};
-  for (final artist in sorted) {
-    final name = MediaDisplayText.artistName(artist.name).trim();
-    final first = name.isEmpty ? '#' : name.characters.first.toUpperCase();
-    final key = RegExp(r'[A-Z]').hasMatch(first) ? first : '#';
-    groups.putIfAbsent(key, () => []).add(artist);
-  }
-  return groups;
-}
-
-class _ArtistGroupHeader extends StatelessWidget {
-  const _ArtistGroupHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-      ),
-      child: Text(label, style: theme.textTheme.titleMedium),
-    );
-  }
-}
+List<MusicArtist> sortLibraryArtists(List<MusicArtist> artists) => [...artists]
+  ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
 class _MobileArtistRow extends StatelessWidget {
   const _MobileArtistRow({required this.artist, required this.onTap});
@@ -272,7 +232,7 @@ class _MobileArtistRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${artist.albumCount} 张专辑',
+                        MediaDisplayText.artistItemCount(artist),
                         maxLines: 1,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -307,14 +267,14 @@ class LibraryPlaylistSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.playlists.isEmpty) {
-      return const AppSliverStateView.message(message: '当前还没有播放列表。');
+      return const AppSliverStateView.message(message: '当前还没有歌单。');
     }
     final width = MediaQuery.sizeOf(context).width;
     final compact = AppBreakpoints.isCompact(context);
     return _LibraryGridSliver(
       horizontalPadding: horizontalPadding,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _albumGridCount(width),
+        crossAxisCount: libraryGridCount(width),
         mainAxisSpacing: compact ? 14 : 22,
         crossAxisSpacing: compact ? 12 : 18,
         childAspectRatio: compact ? 0.80 : 0.72,
@@ -368,7 +328,7 @@ class _LibraryGridSliver extends StatelessWidget {
   }
 }
 
-int _albumGridCount(double width) {
+int libraryGridCount(double width) {
   if (AppBreakpoints.isCompactWidth(width)) {
     const minTileWidth = 118.0;
     const gap = 12.0;
