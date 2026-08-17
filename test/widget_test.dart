@@ -32,6 +32,7 @@ import 'package:cross_platform_music_player/presentation/blocs/settings/app_sett
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/local_keyboard_shortcuts.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
@@ -349,7 +350,7 @@ void main() {
     expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-toolbar')), findsNothing);
-    expect(find.text('播放历史'), findsOneWidget);
+    expect(find.text('历史'), findsOneWidget);
 
     final homeFocus = tester.widget<Focus>(
       find.byKey(const ValueKey('shell-nav-focus-首页')),
@@ -418,7 +419,7 @@ void main() {
           ? layoutException.toStringDeep()
           : layoutException?.toString(),
     );
-    expect(find.text('搜索歌曲、专辑、艺人、播放列表'), findsOneWidget);
+    expect(find.text('搜索歌曲、专辑、艺人、歌单'), findsOneWidget);
 
     await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
@@ -441,7 +442,7 @@ void main() {
       artworkUrl: '',
       duration: const Duration(minutes: 3, seconds: 46),
     );
-    final playerCubit = _MiniPlayerCubit(
+    final playerCubit = _TrackingMiniPlayerCubit(
       PlayerViewState(queue: [track], currentIndex: 0),
     );
     final mediaSourceResolver = CustomMediaSourceResolver();
@@ -487,6 +488,8 @@ void main() {
     expect(tester.getSize(find.byTooltip('播放')).height, 44);
     expect(tester.getSize(find.byTooltip('下一曲')).width, 44);
     expect(tester.getSize(find.byTooltip('下一曲')).height, 44);
+    expect(tester.getSize(find.byType(CachedArtwork)).width, 40);
+    expect(tester.getSize(find.byType(CachedArtwork)).height, 40);
 
     expect(
       find.byWidgetPredicate(
@@ -495,6 +498,20 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    final swipeDetector = tester.widget<GestureDetector>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is GestureDetector && widget.onHorizontalDragEnd != null,
+      ),
+    );
+    swipeDetector.onHorizontalDragEnd!(
+      DragEndDetails(
+        primaryVelocity: -300,
+        velocity: const Velocity(pixelsPerSecond: Offset(-300, 0)),
+      ),
+    );
+    expect(playerCubit.nextCalls, 1);
 
     playerCubit.update(
       playerCubit.state.copyWith(isLoading: true, isPlaying: false),
@@ -536,6 +553,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.byTooltip('重试播放'), findsOneWidget);
+    expect(tester.getSize(find.byTooltip('重试播放')), const Size(44, 44));
+    expect(tester.getSize(find.byTooltip('下一曲')), const Size(44, 44));
   });
 
   testWidgets('desktop mini player follows V3 three-zone controls', (
@@ -593,17 +612,18 @@ void main() {
     expect(tester.getSize(find.byType(MiniPlayerBar)).height, 72);
     for (final tooltip in const [
       '收藏',
-      '随机播放',
       '上一曲',
       '播放',
       '下一曲',
-      '顺序播放',
-      '查看歌词',
-      '当前播放列表',
+      '当前歌单',
       '静音',
     ]) {
       expect(find.byTooltip(tooltip), findsOneWidget);
     }
+    expect(find.text('标准音质'), findsOneWidget);
+    expect(find.byTooltip('随机播放'), findsNothing);
+    expect(find.byTooltip('顺序播放'), findsNothing);
+    expect(find.byTooltip('查看歌词'), findsNothing);
     expect(find.byTooltip('展开播放器'), findsNothing);
   });
 
@@ -635,70 +655,75 @@ void main() {
     },
   );
 
-  testWidgets('mobile queue sheet uses restored header and row actions', (
-    tester,
-  ) async {
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
+  testWidgets(
+    'mobile queue sheet supports row actions and clear confirmation',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
 
-    final tracks = [
-      const MusicTrack(
-        id: 'queue-1',
-        title: '夜曲',
-        artistName: '周杰伦',
-        albumTitle: '十一月的萧邦',
-        artworkUrl: '',
-        duration: Duration(minutes: 3, seconds: 46),
-      ),
-      const MusicTrack(
-        id: 'queue-2',
-        title: '晴天',
-        artistName: '周杰伦',
-        albumTitle: '叶惠美',
-        artworkUrl: '',
-        duration: Duration(minutes: 4, seconds: 29),
-      ),
-    ];
-    final playerCubit = _MiniPlayerCubit(
-      PlayerViewState(queue: tracks, currentIndex: 0, isPlaying: true),
-    );
-    final mediaSourceResolver = CustomMediaSourceResolver();
-    final settingsCubit = AppSettingsCubit(
-      _FakeSettingsRepository(),
-      mediaSourceResolver,
-    );
-    await settingsCubit.load();
-    addTearDown(playerCubit.close);
-    addTearDown(settingsCubit.close);
-
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<CustomMediaSourceResolver>.value(
-            value: mediaSourceResolver,
-          ),
-        ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<PlayerCubit>.value(value: playerCubit),
-            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
-          ],
-          child: const MaterialApp(home: Scaffold(body: QueueSheet())),
+      final tracks = [
+        const MusicTrack(
+          id: 'queue-1',
+          title: '夜曲',
+          artistName: '周杰伦',
+          albumTitle: '十一月的萧邦',
+          artworkUrl: '',
+          duration: Duration(minutes: 3, seconds: 46),
         ),
-      ),
-    );
-    await tester.pump();
+        const MusicTrack(
+          id: 'queue-2',
+          title: '晴天',
+          artistName: '周杰伦',
+          albumTitle: '叶惠美',
+          artworkUrl: '',
+          duration: Duration(minutes: 4, seconds: 29),
+        ),
+      ];
+      final playerCubit = _MiniPlayerCubit(
+        PlayerViewState(queue: tracks, currentIndex: 0, isPlaying: true),
+      );
+      final mediaSourceResolver = CustomMediaSourceResolver();
+      final settingsCubit = AppSettingsCubit(
+        _FakeSettingsRepository(),
+        mediaSourceResolver,
+      );
+      await settingsCubit.load();
+      addTearDown(playerCubit.close);
+      addTearDown(settingsCubit.close);
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('播放队列'), findsOneWidget);
-    expect(find.text('2 首歌曲'), findsOneWidget);
-    expect(find.text('清空'), findsNothing);
-    expect(find.text('完成'), findsNothing);
-    expect(find.byTooltip('移出队列'), findsNWidgets(2));
-    expect(find.byTooltip('拖拽排序'), findsNWidgets(2));
-  });
+      await tester.pumpWidget(
+        MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<CustomMediaSourceResolver>.value(
+              value: mediaSourceResolver,
+            ),
+          ],
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PlayerCubit>.value(value: playerCubit),
+              BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+            ],
+            child: const MaterialApp(home: Scaffold(body: QueueSheet())),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('播放队列'), findsOneWidget);
+      expect(find.text('2 首歌曲'), findsOneWidget);
+      expect(find.text('清空'), findsOneWidget);
+      expect(find.byTooltip('移出队列'), findsNWidgets(2));
+      expect(find.byTooltip('拖拽排序'), findsNWidgets(2));
+
+      await tester.tap(find.text('清空'));
+      await tester.pumpAndSettle();
+      expect(find.text('确定清空播放队列？'), findsOneWidget);
+      expect(find.text('取消'), findsOneWidget);
+    },
+  );
 
   testWidgets('mobile playlist grid card keeps title within compact cell', (
     tester,
@@ -729,7 +754,7 @@ void main() {
               body: Center(
                 child: SizedBox(
                   width: 164,
-                  height: 210,
+                  height: 193.7,
                   child: MusicPlaylistGridCard(
                     playlist: const MusicPlaylist(
                       id: 'playlist-overflow',
@@ -801,7 +826,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is Semantics &&
-            widget.properties.label == '打开播放列表《《2026 必听热曲大合集》》',
+            widget.properties.label == '打开歌单《《2026 必听热曲大合集》》',
       ),
       findsOneWidget,
     );
@@ -929,7 +954,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('播放历史'), findsWidgets);
+    expect(find.text('历史'), findsWidgets);
     expect(find.text('还没有播放历史'), findsOneWidget);
     expect(find.text('开始播放后，最近听过的歌曲会自动记录在这里。'), findsOneWidget);
     expect(find.byTooltip('返回'), findsNothing);
@@ -959,7 +984,7 @@ void main() {
         title: '最近听过的歌',
         artistName: const Value('测试艺术家'),
         albumTitle: const Value('测试专辑'),
-        playedAtMs: DateTime(2026, 1, 1, 9, 30).millisecondsSinceEpoch,
+        playedAtMs: DateTime.now().millisecondsSinceEpoch,
       ),
     );
     final playerCubit = PlayerCubit(
@@ -999,9 +1024,11 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('返回'), findsOneWidget);
-    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.text('播放全部'), findsNothing);
     expect(find.text('播放历史'), findsWidgets);
     expect(find.text('最近听过的歌'), findsOneWidget);
+    expect(find.text('今天'), findsOneWidget);
+    expect(find.text('清空'), findsNothing);
   });
 }
 
@@ -1062,6 +1089,17 @@ class _MiniPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _TrackingMiniPlayerCubit extends _MiniPlayerCubit {
+  _TrackingMiniPlayerCubit(super.initialState);
+
+  int nextCalls = 0;
+
+  @override
+  Future<void> next() async {
+    nextCalls += 1;
+  }
 }
 
 class _ControllablePlayerCubit extends PlayerCubit {

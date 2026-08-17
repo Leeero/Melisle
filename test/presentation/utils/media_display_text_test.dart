@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,7 +13,7 @@ void main() {
       expect(MediaDisplayText.trackTitle('\u2062'), '未知歌曲');
       expect(MediaDisplayText.albumTitle(''), '未知专辑');
       expect(MediaDisplayText.artistName(null), '未知艺术家');
-      expect(MediaDisplayText.playlistName('  '), '未命名播放列表');
+      expect(MediaDisplayText.playlistName('  '), '未命名歌单');
     });
 
     test('包含 Unicode 替换字符的损坏文本不进入界面', () {
@@ -29,6 +30,38 @@ void main() {
       expect(MediaDisplayText.year(null), '未知年份');
       expect(MediaDisplayText.year(0), '未知年份');
       expect(MediaDisplayText.year(2026), '2026');
+    });
+
+    test('艺术家数量优先展示专辑，缺失时回退歌曲数量', () {
+      expect(
+        MediaDisplayText.artistItemCount(
+          const MusicArtist(
+            id: 'artist-1',
+            name: 'Artist',
+            artworkUrl: '',
+            albumCount: 3,
+            trackCount: 42,
+          ),
+        ),
+        '3 张专辑',
+      );
+      expect(
+        MediaDisplayText.artistItemCount(
+          const MusicArtist(
+            id: 'artist-2',
+            name: 'Artist',
+            artworkUrl: '',
+            trackCount: 42,
+          ),
+        ),
+        '42 首歌曲',
+      );
+      expect(
+        MediaDisplayText.artistItemCount(
+          const MusicArtist(id: 'artist-3', name: 'Artist', artworkUrl: ''),
+        ),
+        '暂无统计',
+      );
     });
   });
 }

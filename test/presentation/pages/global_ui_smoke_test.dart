@@ -110,7 +110,35 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('自定义地址'), findsOneWidget);
-    expect(find.byTooltip('测试地址'), findsOneWidget);
+    expect(find.text('测试连接'), findsOneWidget);
+    expect(find.text('保存设置'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'not-a-url');
+    await tester.pump();
+    await tester.tap(find.text('测试连接'));
+    await tester.pump();
+
+    expect(find.text('请输入合法的 http/https URL。'), findsWidgets);
+  });
+
+  testWidgets('CustomMediaSourcesPage_desktopExposesSaveAll', (tester) async {
+    final harness = await _SettingsHarness.create();
+    addTearDown(harness.dispose);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(harness.wrap(const CustomMediaSourcesPage()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+
+    await tester.tap(find.bySemanticsLabel('开启 歌曲封面来源'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('测试连接'), findsOneWidget);
+    expect(find.text('保存全部'), findsOneWidget);
   });
 
   testWidgets('DownloadsPage_responsiveSmoke_hasNoLayoutExceptions', (
@@ -196,7 +224,7 @@ void main() {
         expect(find.text('歌曲'), findsOneWidget);
         expect(find.text('专辑'), findsOneWidget);
         expect(find.text('艺术家'), findsOneWidget);
-        expect(find.text('播放列表'), findsOneWidget);
+        expect(find.text('歌单'), findsOneWidget);
         expect(find.text('当前还没有歌曲。'), findsOneWidget);
       },
     );
@@ -217,9 +245,7 @@ void main() {
     );
   });
 
-  testWidgets('LibraryPage_switchesAlbumArtistAndPlaylistViews', (
-    tester,
-  ) async {
+  testWidgets('LibraryPage_desktopHidesPlaylistFilter', (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     tester.view.physicalSize = const Size(1280, 900);
@@ -252,6 +278,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('在歌曲中搜索'), findsOneWidget);
+    expect(find.bySemanticsLabel('在歌曲列表中搜索'), findsNothing);
 
     await tester.tap(find.text('专辑'));
     await tester.pumpAndSettle();
@@ -263,10 +290,7 @@ void main() {
     expect(find.text('在艺术家中搜索'), findsOneWidget);
     expect(find.text('很长的艺术家名称用于验证媒体库布局'), findsOneWidget);
 
-    await tester.tap(find.text('播放列表'));
-    await tester.pumpAndSettle();
-    expect(find.text('在播放列表中搜索'), findsOneWidget);
-    expect(find.text('很长的歌单名称用于验证媒体库布局'), findsOneWidget);
+    expect(find.text('歌单'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -287,83 +311,88 @@ void main() {
     );
   });
 
-  testWidgets('PlayerPage_desktopSmoke_usesTwoColumnLayoutAndDesktopQueue', (
-    tester,
-  ) async {
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    tester.view.physicalSize = const Size(1280, 900);
-    tester.view.devicePixelRatio = 1;
+  testWidgets(
+    'PlayerPage_desktopSmoke_usesThreeColumnLayoutAndPersistentQueue',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
 
-    final tracks = _playlistTracks();
-    final repository = _FakeMusicRepository(playlistTracks: tracks);
-    final database = AppDatabase.forTesting(NativeDatabase.memory());
-    final playerCubit = _FakeQueuePlayerCubit(
-      PlayerViewState(
-        queue: tracks,
-        currentIndex: 0,
-        isPlaying: true,
-        position: const Duration(minutes: 1, seconds: 18),
-        duration: tracks.first.duration,
-      ),
-    );
-    final favoritesCubit = FavoritesCubit(repository);
-    final downloadsCubit = DownloadsCubit(
-      repository: repository,
-      database: database,
-      cacheManager: AudioCacheManager(),
-    );
-    final mediaSourceResolver = CustomMediaSourceResolver();
-    final settingsCubit = AppSettingsCubit(
-      _FakeSettingsRepository(),
-      mediaSourceResolver,
-    );
-    await settingsCubit.load();
-    addTearDown(playerCubit.close);
-    addTearDown(favoritesCubit.close);
-    addTearDown(downloadsCubit.close);
-    addTearDown(settingsCubit.close);
-    addTearDown(database.close);
-
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<MusicRepository>.value(value: repository),
-          RepositoryProvider<CustomMediaSourceResolver>.value(
-            value: mediaSourceResolver,
-          ),
-        ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<PlayerCubit>.value(value: playerCubit),
-            BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
-            BlocProvider<DownloadsCubit>.value(value: downloadsCubit),
-            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
-          ],
-          child: const MaterialApp(home: PlayerPage()),
+      final tracks = _playlistTracks();
+      final repository = _FakeMusicRepository(playlistTracks: tracks);
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      final playerCubit = _FakeQueuePlayerCubit(
+        PlayerViewState(
+          queue: tracks,
+          currentIndex: 0,
+          isPlaying: true,
+          position: const Duration(minutes: 1, seconds: 18),
+          duration: tracks.first.duration,
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
+      );
+      final favoritesCubit = FavoritesCubit(repository);
+      final downloadsCubit = DownloadsCubit(
+        repository: repository,
+        database: database,
+        cacheManager: AudioCacheManager(),
+      );
+      final mediaSourceResolver = CustomMediaSourceResolver();
+      final settingsCubit = AppSettingsCubit(
+        _FakeSettingsRepository(),
+        mediaSourceResolver,
+      );
+      await settingsCubit.load();
+      addTearDown(playerCubit.close);
+      addTearDown(favoritesCubit.close);
+      addTearDown(downloadsCubit.close);
+      addTearDown(settingsCubit.close);
+      addTearDown(database.close);
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('正在播放'), findsOneWidget);
-    expect(find.text('夜曲'), findsOneWidget);
-    expect(find.text('接下来'), findsNothing);
-    expect(find.text('红豆'), findsNothing);
-    expect(find.byTooltip('收起播放页'), findsOneWidget);
-    expect(find.byTooltip('更多操作'), findsOneWidget);
-    expect(find.byTooltip('播放队列'), findsWidgets);
+      await tester.pumpWidget(
+        MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<MusicRepository>.value(value: repository),
+            RepositoryProvider<CustomMediaSourceResolver>.value(
+              value: mediaSourceResolver,
+            ),
+          ],
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PlayerCubit>.value(value: playerCubit),
+              BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+              BlocProvider<DownloadsCubit>.value(value: downloadsCubit),
+              BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+            ],
+            child: const MaterialApp(home: PlayerPage()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
 
-    await tester.tap(find.byTooltip('播放队列').first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 320));
+      expect(tester.takeException(), isNull);
+      expect(find.text('正在播放'), findsOneWidget);
+      expect(find.text('夜曲'), findsWidgets);
+      expect(find.textContaining('播放队列'), findsOneWidget);
+      expect(find.text('红豆'), findsOneWidget);
+      expect(find.text('HI-RES'), findsOneWidget);
+      expect(find.text('FLAC'), findsOneWidget);
+      expect(find.byTooltip('收起播放页'), findsOneWidget);
+      expect(find.byTooltip('更多操作'), findsOneWidget);
+      expect(find.byTooltip('播放队列'), findsWidgets);
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('播放队列'), findsOneWidget);
-    expect(find.byTooltip('清空队列'), findsOneWidget);
-  });
+      await tester.tap(find.byTooltip('更多操作'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('添加到当前队列'), findsOneWidget);
+      expect(find.text('播放音质'), findsOneWidget);
+      expect(find.text('睡眠定时'), findsOneWidget);
+      expect(find.byTooltip('清空队列'), findsOneWidget);
+    },
+  );
 
   testWidgets('PlaylistDetailPage_mobileSmoke_hasNoLayoutExceptions', (
     tester,
@@ -733,6 +762,8 @@ List<MusicTrack> _playlistTracks() {
       albumTitle: '十一月的萧邦',
       artworkUrl: '',
       duration: Duration(minutes: 3, seconds: 46),
+      bitRate: 1_100_000,
+      codec: 'flac',
     ),
     MusicTrack(
       id: 'track-2',

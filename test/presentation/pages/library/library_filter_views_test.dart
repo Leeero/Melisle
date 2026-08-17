@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/infrastructure/media/custom_media_so
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/pages/library/library_filter_views.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -102,6 +103,60 @@ void main() {
 
     expect(find.text('12 张专辑'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+  });
+
+  testWidgets('renders the desktop artist directory in the V3 layout', (
+    tester,
+  ) async {
+    await _pumpSliver(
+      tester,
+      LibraryArtistSliver(
+        state: const LibraryState(
+          status: LibraryStatus.success,
+          currentFilter: LibraryFilter.artists,
+          artists: [
+            MusicArtist(
+              id: 'artist-1',
+              name: '(1982) 郑绪岚',
+              artworkUrl: '',
+              albumCount: 0,
+            ),
+            MusicArtist(
+              id: 'artist-2',
+              name: '(1985) 徐小凤',
+              artworkUrl: '',
+              albumCount: 0,
+            ),
+            MusicArtist(
+              id: 'artist-3',
+              name: '(1986) 罗大佑',
+              artworkUrl: '',
+              albumCount: 0,
+            ),
+          ],
+          hasMore: false,
+        ),
+        horizontalPadding: 40,
+      ),
+      size: const Size(1440, 900),
+    );
+
+    expect(find.text('#'), findsNothing);
+    expect(find.text('(1982) 郑绪岚'), findsOneWidget);
+    expect(find.text('暂无统计'), findsNWidgets(3));
+    final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+    expect(
+      (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      7,
+    );
+    expect(
+      tester
+          .widgetList<CachedArtwork>(find.byType(CachedArtwork))
+          .every((artwork) => artwork.size == 150),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders the playlists view', (tester) async {

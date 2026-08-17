@@ -4,6 +4,8 @@ import 'package:cross_platform_music_player/application/usecases/fetch_library_a
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
@@ -126,6 +128,31 @@ void main() {
     expect(repository.lastSortOption, TrackSortOption.artist);
     expect(cubit.state.trackSortOption, TrackSortOption.artist);
   });
+
+  test('supported server sort reloads artists', () async {
+    final repository = _PagedLibraryRepository();
+    final cubit = LibraryCubit(
+      FetchLibraryTracks(repository),
+      FetchLibraryAlbums(repository),
+      FetchLibraryArtists(repository),
+      repository,
+    );
+    addTearDown(cubit.close);
+
+    await cubit.load();
+    await Future<void>.delayed(Duration.zero);
+    expect(
+      cubit.state.supportedArtistSortOptions,
+      contains(ArtistSortOption.dateAdded),
+    );
+
+    await cubit.changeFilter(LibraryFilter.artists);
+    cubit.changeArtistSort(ArtistSortOption.dateAdded);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(repository.lastArtistSortOption, ArtistSortOption.dateAdded);
+    expect(cubit.state.artistSortOption, ArtistSortOption.dateAdded);
+  });
 }
 
 MusicTrack _track({required String title}) {
@@ -178,13 +205,14 @@ class _DelayedLibraryRepository implements MusicRepository {
 }
 
 class _PagedLibraryRepository
-    implements MusicRepository, TrackSortingRepository {
+    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
   _PagedLibraryRepository({this.failFirstAppend = false});
 
   final bool failFirstAppend;
   int trackRequests = 0;
   bool _appendFailed = false;
   TrackSortOption? lastSortOption;
+  ArtistSortOption? lastArtistSortOption;
 
   @override
   Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions() async => const {
@@ -206,6 +234,34 @@ class _PagedLibraryRepository
       searchQuery: searchQuery,
     );
   }
+
+  @override
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() async =>
+      const {ArtistSortOption.name, ArtistSortOption.dateAdded};
+
+  @override
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) async {
+    lastArtistSortOption = sortOption;
+    return const [
+      MusicArtist(id: 'artist', name: '艺术家', artworkUrl: '', albumCount: 1),
+    ];
+  }
+
+  @override
+  Future<List<MusicArtist>> fetchArtists({
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) async => const [
+    MusicArtist(id: 'artist', name: '艺术家', artworkUrl: '', albumCount: 1),
+  ];
 
   @override
   Future<List<Genre>> fetchGenres() async => [];

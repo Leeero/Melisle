@@ -105,7 +105,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('无法连接到服务器'), findsOneWidget);
+    expect(find.text('加载更多失败，请稍后重试。'), findsOneWidget);
 
     final retry = find.widgetWithText(OutlinedButton, '重试');
     expect(tester.getSize(retry).height, greaterThanOrEqualTo(44));
