@@ -3,6 +3,8 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 /// 一个下载任务的实时状态。
 enum DownloadJobStatus { pending, running, completed, failed, canceled }
 
+enum DownloadDirectoryValidation { idle, saving, valid, invalid }
+
 class DownloadJob {
   const DownloadJob({
     required this.track,
@@ -43,11 +45,14 @@ class DownloadsState {
   const DownloadsState({
     this.jobs = const {},
     this.completedTrackIds = const {},
+    this.missingTrackIds = const {},
     this.downloadDirectoryPath = '',
     this.customDownloadDirectoryPath = '',
     this.cachedBytes = 0,
     this.removedStaleRecords = 0,
     this.removedPartialFiles = 0,
+    this.directoryValidation = DownloadDirectoryValidation.idle,
+    this.directoryValidationMessage,
   });
 
   /// 目前在进行中的任务（按 trackId 索引）。
@@ -55,6 +60,9 @@ class DownloadsState {
 
   /// 已经下载完毕（落在 drift Downloads 表里）的 trackId 集合，供 UI 快速查询。
   final Set<String> completedTrackIds;
+
+  /// 已存在记录但本地文件不可用的曲目；保留记录以便界面说明并允许删除。
+  final Set<String> missingTrackIds;
 
   /// 当前有效下载目录。为空表示尚未加载完成。
   final String downloadDirectoryPath;
@@ -71,20 +79,27 @@ class DownloadsState {
   /// 最近一次加载时清理掉的残留临时下载文件数量。
   final int removedPartialFiles;
 
+  final DownloadDirectoryValidation directoryValidation;
+  final String? directoryValidationMessage;
+
   bool get usesDefaultDownloadDirectory => customDownloadDirectoryPath.isEmpty;
 
   DownloadsState copyWith({
     Map<String, DownloadJob>? jobs,
     Set<String>? completedTrackIds,
+    Set<String>? missingTrackIds,
     String? downloadDirectoryPath,
     String? customDownloadDirectoryPath,
     int? cachedBytes,
     int? removedStaleRecords,
     int? removedPartialFiles,
+    DownloadDirectoryValidation? directoryValidation,
+    String? directoryValidationMessage,
   }) {
     return DownloadsState(
       jobs: jobs ?? this.jobs,
       completedTrackIds: completedTrackIds ?? this.completedTrackIds,
+      missingTrackIds: missingTrackIds ?? this.missingTrackIds,
       downloadDirectoryPath:
           downloadDirectoryPath ?? this.downloadDirectoryPath,
       customDownloadDirectoryPath:
@@ -92,6 +107,9 @@ class DownloadsState {
       cachedBytes: cachedBytes ?? this.cachedBytes,
       removedStaleRecords: removedStaleRecords ?? this.removedStaleRecords,
       removedPartialFiles: removedPartialFiles ?? this.removedPartialFiles,
+      directoryValidation: directoryValidation ?? this.directoryValidation,
+      directoryValidationMessage:
+          directoryValidationMessage ?? this.directoryValidationMessage,
     );
   }
 }

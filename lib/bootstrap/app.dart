@@ -94,6 +94,7 @@ final class AppBootstrap {
     final settingsCubit = AppSettingsCubit(
       settingsRepository,
       mediaSourceResolver,
+      clearTemporaryCache: repository.clearTemporaryCache,
     );
     // 先把设置读出来，让首帧就能用正确的主题 / 默认音质渲染。
     await settingsCubit.load();

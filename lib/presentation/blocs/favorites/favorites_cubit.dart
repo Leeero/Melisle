@@ -31,18 +31,21 @@ class FavoritesCubit extends Cubit<FavoritesState> {
     return state.entries[itemId] ?? fallback;
   }
 
-  Future<void> toggle(String itemId, {required bool currentValue}) async {
+  /// Returns whether the server accepted the requested favorite state.
+  Future<bool> toggle(String itemId, {required bool currentValue}) async {
     final desired = !currentValue;
     // Optimistic update.
     final next = Map<String, bool>.from(state.entries)..[itemId] = desired;
     emit(state.copyWith(entries: next, pending: {...state.pending, itemId}));
     try {
       await _repository.setFavorite(itemId, desired);
+      return true;
     } catch (_) {
       // Roll back on failure.
       final rolled = Map<String, bool>.from(state.entries)
         ..[itemId] = currentValue;
       emit(state.copyWith(entries: rolled));
+      return false;
     } finally {
       final pending = {...state.pending}..remove(itemId);
       emit(state.copyWith(pending: pending));

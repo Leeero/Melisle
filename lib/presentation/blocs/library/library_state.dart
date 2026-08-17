@@ -1,4 +1,5 @@
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
@@ -27,6 +28,8 @@ class LibraryState {
     this.appendErrorMessage,
     this.supportedTrackSortOptions = const {},
     this.trackSortOption,
+    this.supportedArtistSortOptions = const {},
+    this.artistSortOption,
   });
 
   const LibraryState.initial({
@@ -51,6 +54,8 @@ class LibraryState {
   final String? appendErrorMessage;
   final Set<TrackSortOption> supportedTrackSortOptions;
   final TrackSortOption? trackSortOption;
+  final Set<ArtistSortOption> supportedArtistSortOptions;
+  final ArtistSortOption? artistSortOption;
 
   bool get isCurrentFilterEmpty {
     return switch (currentFilter) {
@@ -87,6 +92,8 @@ class LibraryState {
     Object? appendErrorMessage = _sentinel,
     Set<TrackSortOption>? supportedTrackSortOptions,
     Object? trackSortOption = _sentinel,
+    Set<ArtistSortOption>? supportedArtistSortOptions,
+    Object? artistSortOption = _sentinel,
   }) {
     return LibraryState(
       status: status ?? this.status,
@@ -114,6 +121,11 @@ class LibraryState {
       trackSortOption: identical(trackSortOption, _sentinel)
           ? this.trackSortOption
           : trackSortOption as TrackSortOption?,
+      supportedArtistSortOptions:
+          supportedArtistSortOptions ?? this.supportedArtistSortOptions,
+      artistSortOption: identical(artistSortOption, _sentinel)
+          ? this.artistSortOption
+          : artistSortOption as ArtistSortOption?,
     );
   }
 }

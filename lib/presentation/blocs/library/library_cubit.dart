@@ -4,6 +4,7 @@ import 'package:cross_platform_music_player/application/usecases/fetch_library_a
 import 'package:cross_platform_music_player/application/usecases/fetch_library_artists.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_library_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
@@ -39,6 +40,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     );
     unawaited(_loadGenres());
     unawaited(_loadTrackSortOptions());
+    unawaited(_loadArtistSortOptions());
     await _loadCurrentFilter(reset: true);
   }
 
@@ -64,6 +66,31 @@ class LibraryCubit extends Cubit<LibraryState> {
       return;
     }
     emit(state.copyWith(trackSortOption: option));
+    unawaited(_loadCurrentFilter(reset: true));
+  }
+
+  Future<void> _loadArtistSortOptions() async {
+    final options = await _fetchLibraryArtists.supportedSortOptions();
+    if (isClosed) return;
+    final selected = options.contains(state.artistSortOption)
+        ? state.artistSortOption
+        : options.contains(ArtistSortOption.name)
+        ? ArtistSortOption.name
+        : null;
+    emit(
+      state.copyWith(
+        supportedArtistSortOptions: options,
+        artistSortOption: selected,
+      ),
+    );
+  }
+
+  void changeArtistSort(ArtistSortOption option) {
+    if (!state.supportedArtistSortOptions.contains(option) ||
+        state.artistSortOption == option) {
+      return;
+    }
+    emit(state.copyWith(artistSortOption: option));
     unawaited(_loadCurrentFilter(reset: true));
   }
 
@@ -219,6 +246,7 @@ class LibraryCubit extends Cubit<LibraryState> {
             startIndex: startIndex,
             searchQuery: searchQuery,
             genreId: selectedGenreId,
+            sortOption: state.artistSortOption,
           ).timeout(_requestTimeout);
           if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(

@@ -19,11 +19,14 @@ class AlbumState {
     AlbumStatus? status,
     List<MusicTrack>? tracks,
     String? errorMessage,
+    bool clearErrorMessage = false,
   }) {
     return AlbumState(
       status: status ?? this.status,
       tracks: tracks ?? this.tracks,
-      errorMessage: errorMessage,
+      errorMessage: clearErrorMessage
+          ? null
+          : errorMessage ?? this.errorMessage,
     );
   }
 }

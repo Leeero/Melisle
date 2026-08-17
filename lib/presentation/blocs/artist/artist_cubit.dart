@@ -1,6 +1,8 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_top_tracks.dart';
+import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,10 +27,12 @@ class ArtistCubit extends Cubit<ArtistState> {
     );
 
     try {
-      final albumsFuture = _fetchArtistAlbums(artistId);
-      final tracksFuture = _fetchArtistTopTracks(artistId);
-      final albums = await albumsFuture;
-      final topTracks = await tracksFuture;
+      final results = await Future.wait<Object>([
+        _fetchArtistAlbums(artistId),
+        _fetchArtistTopTracks(artistId),
+      ]);
+      final albums = results[0] as List<MusicAlbum>;
+      final topTracks = results[1] as List<MusicTrack>;
 
       emit(
         state.copyWith(

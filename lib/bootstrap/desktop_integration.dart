@@ -179,82 +179,15 @@ class DesktopIntegration
     // Linux: hotkey_manager 暂未适配。完全跳过这两个平台。
     if (!Platform.isWindows) return;
 
-    // Windows: media keys + 普通键均可走 hotkey_manager。
+    // 仅注册系统媒体键。普通输入键会和 Flutter 的文本输入事件流竞争，
+    // 使 HardwareKeyboard 的按键状态失同步；应用内快捷键由
+    // LocalKeyboardShortcuts 在非输入焦点时处理。
     final bindings = <HotKey, Future<void> Function()>{
-      // --- 播放控制 ---
+      // --- Windows 专用媒体键 ---
       HotKey(key: PhysicalKeyboardKey.mediaPlayPause):
           playerCubit.togglePlayback,
-      HotKey(key: PhysicalKeyboardKey.space): playerCubit.togglePlayback,
-
-      // --- 切歌 ---
-      HotKey(key: PhysicalKeyboardKey.arrowRight): playerCubit.next,
-      HotKey(key: PhysicalKeyboardKey.arrowLeft): playerCubit.previous,
-
-      // --- 音量调节（步进 10%） ---
-      HotKey(key: PhysicalKeyboardKey.arrowUp): () async {
-        final vol = (playerCubit.state.volume + 0.1).clamp(0.0, 1.0);
-        await playerCubit.setVolume(vol);
-      },
-      HotKey(key: PhysicalKeyboardKey.arrowDown): () async {
-        final vol = (playerCubit.state.volume - 0.1).clamp(0.0, 1.0);
-        await playerCubit.setVolume(vol);
-      },
-
-      // --- 随机 / 循环 ---
-      HotKey(key: PhysicalKeyboardKey.keyS): playerCubit.toggleShuffle,
-      HotKey(key: PhysicalKeyboardKey.keyR): playerCubit.toggleLoopMode,
-      HotKey(key: PhysicalKeyboardKey.keyL): () async {
-        final modes = PlaybackModeOption.values;
-        final idx =
-            (modes.indexOf(playerCubit.state.playbackMode) + 1) % modes.length;
-        await playerCubit.setPlaybackMode(modes[idx]);
-      },
-
-      // --- 歌词偏移微调（每次 ±100ms） ---
-      HotKey(
-        key: PhysicalKeyboardKey.keyK,
-        modifiers: [HotKeyModifier.control],
-      ): () async {
-        final current = playerCubit.state.lyricSyncOffset;
-        playerCubit.setLyricSyncOffset(
-          current + const Duration(milliseconds: 100),
-        );
-      },
-      HotKey(
-        key: PhysicalKeyboardKey.keyJ,
-        modifiers: [HotKeyModifier.control],
-      ): () async {
-        final current = playerCubit.state.lyricSyncOffset;
-        playerCubit.setLyricSyncOffset(
-          current - const Duration(milliseconds: 100),
-        );
-      },
-
-      // --- Windows 专用媒体键 ---
       HotKey(key: PhysicalKeyboardKey.mediaTrackNext): playerCubit.next,
       HotKey(key: PhysicalKeyboardKey.mediaTrackPrevious): playerCubit.previous,
-
-      // --- 导航快捷键 (Ctrl + 按键) ---
-      HotKey(
-        key: PhysicalKeyboardKey.keyL,
-        modifiers: [HotKeyModifier.control],
-      ): _navigateToPlayer,
-
-      HotKey(
-        key: PhysicalKeyboardKey.comma,
-        modifiers: [HotKeyModifier.control],
-      ): _navigateToSettings,
-
-      HotKey(
-        key: PhysicalKeyboardKey.keyF,
-        modifiers: [HotKeyModifier.control],
-      ): _navigateToSearch,
-
-      // --- 窗口控制 ---
-      HotKey(
-        key: PhysicalKeyboardKey.keyM,
-        modifiers: [HotKeyModifier.control],
-      ): _minimizeWindow,
     };
 
     for (final entry in bindings.entries) {
@@ -269,29 +202,6 @@ class DesktopIntegration
         debugPrint('DesktopIntegration: 跳过快捷键 ${entry.key.key}：$error');
       }
     }
-  }
-
-  // --- Navigation helpers ---
-
-  Future<void> _navigateToPlayer() async {
-    // 通过全局 navigatorKey 获取 context，或者直接使用 GoRouter
-    // 这里暂时使用 windowManager.show() 作为兜底
-    windowManager.show();
-    windowManager.focus();
-  }
-
-  Future<void> _navigateToSettings() async {
-    windowManager.show();
-    windowManager.focus();
-  }
-
-  Future<void> _navigateToSearch() async {
-    windowManager.show();
-    windowManager.focus();
-  }
-
-  Future<void> _minimizeWindow() async {
-    await windowManager.minimize();
   }
 
   // --- Tray ---

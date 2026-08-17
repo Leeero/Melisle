@@ -957,7 +957,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     final trackId = track.id;
     final myToken = ++_lyricsToken;
 
-    emit(state.copyWith(isLyricsLoading: true));
+    emit(state.copyWith(isLyricsLoading: true, lyricErrorMessage: null));
     try {
       final lyrics = await _fetchLyricsCached(trackId);
       if (myToken != _lyricsToken ||
@@ -969,6 +969,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         emit(
           state.copyWith(
             isLyricsLoading: false,
+            lyricErrorMessage: null,
             lyricSyncState: const LyricSyncState(),
           ),
         );
@@ -977,6 +978,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       emit(
         state.copyWith(
           isLyricsLoading: false,
+          lyricErrorMessage: null,
           lyricSyncState: _buildLyricSyncState(lyrics),
         ),
       );
@@ -990,6 +992,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         state.copyWith(
           isLyricsLoading: false,
           lyricSyncState: const LyricSyncState(),
+          lyricErrorMessage: '歌词加载失败，请重试。',
         ),
       );
     }

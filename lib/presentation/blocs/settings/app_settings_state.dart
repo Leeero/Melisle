@@ -5,6 +5,15 @@ import '../../../domain/repositories/settings_repository.dart';
 
 enum SourceTestStatus { idle, testing, success, failure }
 
+enum SettingsFeedbackKind { success, failure }
+
+class SettingsFeedback {
+  const SettingsFeedback(this.kind, this.message);
+
+  final SettingsFeedbackKind kind;
+  final String message;
+}
+
 class SourceTestState {
   const SourceTestState({
     this.status = SourceTestStatus.idle,
@@ -31,6 +40,7 @@ class AppSettingsState {
     this.isLoading = false,
     this.artworkSourceTest = const SourceTestState(),
     this.lyricsSourceTest = const SourceTestState(),
+    this.feedback,
   });
 
   const AppSettingsState.initial()
@@ -45,7 +55,8 @@ class AppSettingsState {
       customLyricsSourceUrl = '',
       isLoading = true,
       artworkSourceTest = const SourceTestState(),
-      lyricsSourceTest = const SourceTestState();
+      lyricsSourceTest = const SourceTestState(),
+      feedback = null;
 
   final ThemeMode themeMode;
   final AudioQuality defaultQuality;
@@ -59,6 +70,7 @@ class AppSettingsState {
   final bool isLoading;
   final SourceTestState artworkSourceTest;
   final SourceTestState lyricsSourceTest;
+  final SettingsFeedback? feedback;
 
   AppSettingsSnapshot toSnapshot() {
     return AppSettingsSnapshot(
@@ -87,6 +99,8 @@ class AppSettingsState {
     bool? isLoading,
     SourceTestState? artworkSourceTest,
     SourceTestState? lyricsSourceTest,
+    SettingsFeedback? feedback,
+    bool clearFeedback = false,
   }) {
     return AppSettingsState(
       themeMode: themeMode ?? this.themeMode,
@@ -105,6 +119,7 @@ class AppSettingsState {
       isLoading: isLoading ?? this.isLoading,
       artworkSourceTest: artworkSourceTest ?? this.artworkSourceTest,
       lyricsSourceTest: lyricsSourceTest ?? this.lyricsSourceTest,
+      feedback: clearFeedback ? null : (feedback ?? this.feedback),
     );
   }
 }

@@ -8,11 +8,17 @@ class AlbumCubit extends Cubit<AlbumState> {
   final FetchAlbumTracks _fetchAlbumTracks;
 
   Future<void> load(String albumId) async {
-    emit(state.copyWith(status: AlbumStatus.loading, errorMessage: null));
+    emit(state.copyWith(status: AlbumStatus.loading, clearErrorMessage: true));
 
     try {
       final tracks = await _fetchAlbumTracks(albumId);
-      emit(state.copyWith(status: AlbumStatus.success, tracks: tracks));
+      emit(
+        state.copyWith(
+          status: AlbumStatus.success,
+          tracks: tracks,
+          clearErrorMessage: true,
+        ),
+      );
     } catch (error) {
       emit(
         state.copyWith(

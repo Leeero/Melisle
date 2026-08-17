@@ -22,6 +22,7 @@ class PlayerViewState {
     this.quality = AudioQuality.auto,
     this.lyricSyncState = const LyricSyncState(),
     this.isLyricsLoading = false,
+    this.lyricErrorMessage,
     this.sleepRemaining,
     this.sleepEndOfTrack = false,
     this.gapBetweenTracks = Duration.zero,
@@ -55,6 +56,9 @@ class PlayerViewState {
 
   /// 正在拉取歌词。
   final bool isLyricsLoading;
+
+  /// 歌词加载边界错误；与同步时间线同属播放器唯一状态源。
+  final String? lyricErrorMessage;
 
   /// 睡眠定时器剩余（null = 未启用）。
   final Duration? sleepRemaining;
@@ -102,6 +106,7 @@ class PlayerViewState {
     AudioQuality? quality,
     LyricSyncState? lyricSyncState,
     bool? isLyricsLoading,
+    Object? lyricErrorMessage = _noChange,
     Object? sleepRemaining = _noChange,
     bool? sleepEndOfTrack,
     Duration? gapBetweenTracks,
@@ -121,6 +126,9 @@ class PlayerViewState {
       quality: quality ?? this.quality,
       lyricSyncState: lyricSyncState ?? this.lyricSyncState,
       isLyricsLoading: isLyricsLoading ?? this.isLyricsLoading,
+      lyricErrorMessage: identical(lyricErrorMessage, _noChange)
+          ? this.lyricErrorMessage
+          : lyricErrorMessage as String?,
       sleepRemaining: identical(sleepRemaining, _noChange)
           ? this.sleepRemaining
           : sleepRemaining as Duration?,

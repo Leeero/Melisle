@@ -6,33 +6,69 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class HistoryCubit extends Cubit<HistoryState> {
   HistoryCubit(this._database) : super(const HistoryState.initial());
 
+  static const _pageSize = 30;
+
   final AppDatabase _database;
+  final Set<String> _seenTrackIds = <String>{};
+  int _offset = 0;
 
   Future<void> load() async {
-    emit(state.copyWith(status: HistoryStatus.loading, errorMessage: null));
+    _seenTrackIds.clear();
+    _offset = 0;
+    emit(
+      state.copyWith(
+        status: HistoryStatus.loading,
+        tracks: const [],
+        errorMessage: null,
+        isLoadingMore: false,
+        hasMore: false,
+      ),
+    );
+
+    await _loadPage(replace: true);
+  }
+
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || !state.hasMore) return;
+    emit(state.copyWith(isLoadingMore: true, errorMessage: null));
+    await _loadPage(replace: false);
+  }
+
+  Future<void> _loadPage({required bool replace}) async {
+    final previousTracks = replace ? const <MusicTrack>[] : state.tracks;
 
     try {
-      final rows = await _database.recentPlays(limit: 80);
-      final seen = <String>{};
-      final tracks = <MusicTrack>[];
-      for (final row in rows) {
-        if (!seen.add(row.trackId)) {
-          continue;
+      var hasMore = false;
+      final additions = <MusicTrack>[];
+
+      while (additions.length < _pageSize) {
+        final rows = await _database.recentPlays(
+          limit: _pageSize,
+          offset: _offset,
+        );
+        _offset += rows.length;
+        for (final row in rows) {
+          if (_seenTrackIds.add(row.trackId)) additions.add(_toTrack(row));
         }
-        tracks.add(_toTrack(row));
+        if (rows.length < _pageSize) break;
+        hasMore = true;
       }
       emit(
         state.copyWith(
           status: HistoryStatus.success,
-          tracks: tracks,
+          tracks: [...previousTracks, ...additions],
           errorMessage: null,
+          isLoadingMore: false,
+          hasMore: hasMore,
         ),
       );
     } catch (error) {
       emit(
         state.copyWith(
           status: HistoryStatus.failure,
+          tracks: previousTracks,
           errorMessage: '加载历史失败：$error',
+          isLoadingMore: false,
         ),
       );
     }

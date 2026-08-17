@@ -15,6 +15,8 @@ class PlaylistDetailState {
   const PlaylistDetailState.initial()
     : this(status: PlaylistDetailStatus.initial);
 
+  static const _sentinel = Object();
+
   final PlaylistDetailStatus status;
   final List<MusicTrack> tracks;
   final bool hasMore;
@@ -28,7 +30,7 @@ class PlaylistDetailState {
     bool? hasMore,
     bool? isLoadingMore,
     bool? isLoadingAll,
-    String? errorMessage,
+    Object? errorMessage = _sentinel,
   }) {
     return PlaylistDetailState(
       status: status ?? this.status,
@@ -36,7 +38,9 @@ class PlaylistDetailState {
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isLoadingAll: isLoadingAll ?? this.isLoadingAll,
-      errorMessage: errorMessage,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 }

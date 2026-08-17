@@ -10,11 +10,52 @@ import 'app_settings_state.dart';
 /// custom artwork/lyrics source, gap preferences). Persists via
 /// [SettingsRepository].
 class AppSettingsCubit extends Cubit<AppSettingsState> {
-  AppSettingsCubit(this._repository, this._mediaSourceResolver)
-    : super(const AppSettingsState.initial());
+  AppSettingsCubit(
+    this._repository,
+    this._mediaSourceResolver, {
+    Future<void> Function()? clearTemporaryCache,
+  }) : _clearTemporaryCache = clearTemporaryCache,
+       super(const AppSettingsState.initial());
 
   final SettingsRepository _repository;
   final CustomMediaSourceResolver _mediaSourceResolver;
+  final Future<void> Function()? _clearTemporaryCache;
+
+  Future<void> clearCache() async {
+    final clear = _clearTemporaryCache;
+    if (clear == null) {
+      emit(
+        state.copyWith(
+          feedback: const SettingsFeedback(
+            SettingsFeedbackKind.failure,
+            '当前缓存服务不可用，请稍后重试。',
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await clear();
+      emit(
+        state.copyWith(
+          feedback: const SettingsFeedback(
+            SettingsFeedbackKind.success,
+            '缓存已清理，已下载的离线曲目未受影响。',
+          ),
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          feedback: const SettingsFeedback(
+            SettingsFeedbackKind.failure,
+            '清理缓存失败，请稍后重试。',
+          ),
+        ),
+      );
+    }
+  }
 
   Future<void> load() async {
     final snap = await _repository.load();
@@ -96,6 +137,38 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
     );
     _applyMediaSettings(nextState);
     await _repository.saveCustomLyricsSourceUrl(url.trim());
+  }
+
+  Future<void> saveCustomMediaSources() async {
+    try {
+      await Future.wait([
+        _repository.saveCustomArtworkSourceEnabled(
+          state.customArtworkSourceEnabled,
+        ),
+        _repository.saveCustomArtworkSourceUrl(state.customArtworkSourceUrl),
+        _repository.saveCustomLyricsSourceEnabled(
+          state.customLyricsSourceEnabled,
+        ),
+        _repository.saveCustomLyricsSourceUrl(state.customLyricsSourceUrl),
+      ]);
+      emit(
+        state.copyWith(
+          feedback: const SettingsFeedback(
+            SettingsFeedbackKind.success,
+            '自定义媒体来源已保存。',
+          ),
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          feedback: const SettingsFeedback(
+            SettingsFeedbackKind.failure,
+            '保存失败，请稍后重试。',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> testCustomArtworkSource() async {

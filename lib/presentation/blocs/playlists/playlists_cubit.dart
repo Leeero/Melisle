@@ -97,7 +97,7 @@ class PlaylistsCubit extends Cubit<PlaylistsState> {
         state.copyWith(
           status: PlaylistsStatus.failure,
           isLoadingMore: false,
-          errorMessage: '加载播放列表失败：$error',
+          errorMessage: '加载歌单失败：$error',
         ),
       );
     }
