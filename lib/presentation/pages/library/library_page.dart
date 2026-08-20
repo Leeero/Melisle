@@ -15,6 +15,7 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_ac
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/fade_slide_transition.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -169,7 +170,7 @@ class _LibraryViewState extends State<_LibraryView> {
         ? Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.only(right: 24),
+                padding: const EdgeInsets.only(right: AppSpacingTokens.sectionPadding),
                 child: scrollView,
               ),
               Positioned(
@@ -189,7 +190,7 @@ class _LibraryViewState extends State<_LibraryView> {
         : scrollView;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: AppMotion.micro,
       child: body,
     );
   }
@@ -213,8 +214,8 @@ class _LibraryViewState extends State<_LibraryView> {
         .toDouble();
     _scrollController.animateTo(
       offset,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.state,
+      curve: AppMotion.standard,
     );
   }
 
@@ -245,16 +246,20 @@ class _LibraryViewState extends State<_LibraryView> {
           ? _LibraryTrackFavoriteButton(track: track)
           : null,
       mobileItemBuilder: (context, track, index, isCurrent) =>
-          _MobileLibraryTrackRow(
-            track: track,
+          StaggeredFadeSlide(
             index: index,
-            isCurrent: isCurrent,
-            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: index,
+            delay: const Duration(milliseconds: 30),
+            child: _MobileLibraryTrackRow(
+              track: track,
+              index: index,
+              isCurrent: isCurrent,
+              onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                context,
+                tracks: state.tracks,
+                startIndex: index,
+              ),
+              onMore: () => showTrackActionsSheet(context, track),
             ),
-            onMore: () => showTrackActionsSheet(context, track),
           ),
     );
   }
@@ -471,7 +476,8 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return SizedBox.square(
       dimension: 44,
@@ -489,7 +495,7 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
           }
         },
         icon: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
+          duration: AppMotion.micro,
           transitionBuilder: (child, animation) =>
               ScaleTransition(scale: animation, child: child),
           child: Icon(
@@ -499,7 +505,7 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
             key: ValueKey(track.isFavorite),
             size: 18,
             color: track.isFavorite
-                ? Colors.redAccent
+                ? colorScheme.primary
                 : colorScheme.onSurfaceVariant,
           ),
         ),
@@ -587,7 +593,7 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
                 child: Row(
                   children: [
                     SizedBox(
@@ -840,7 +846,7 @@ class _TrackSortMenu extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -894,7 +900,7 @@ class _ArtistSortMenu extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

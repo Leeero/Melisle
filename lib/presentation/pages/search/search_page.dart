@@ -692,7 +692,7 @@ class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.inlineGap),
                 child: Row(
                   children: [
                     SizedBox(
@@ -1015,7 +1015,7 @@ class _BestMatchSection extends StatelessWidget {
             child: InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacingTokens.cardPadding),
                 child: Row(
                   children: [
                     CachedArtwork(

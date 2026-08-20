@@ -209,7 +209,7 @@ class _MobileArtistRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 80),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
             child: Row(
               children: [
                 CachedArtwork(

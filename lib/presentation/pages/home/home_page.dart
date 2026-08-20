@@ -112,7 +112,12 @@ class _HomeLoadingView extends StatelessWidget {
       slivers: [
         if (AppBreakpoints.isCompact(context))
           const SliverPadding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacingTokens.pageHorizontalCompact,
+              AppSpacingTokens.pageHorizontalCompact,
+              AppSpacingTokens.pageHorizontalCompact,
+              AppSpacingTokens.cardPadding,
+            ),
             sliver: SliverToBoxAdapter(child: _MobileHomeTitle()),
           ),
         SliverPadding(
@@ -358,7 +363,7 @@ class _DesktopContinueCard extends StatelessWidget {
     return Material(
       color: colors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.md),
         side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.45)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -379,7 +384,7 @@ class _DesktopContinueCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacingTokens.cardPadding),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +439,7 @@ class _CurrentTrackProgress extends StatelessWidget {
         return LinearProgressIndicator(
           value: progress,
           minHeight: 4,
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.full),
         );
       },
     );
@@ -492,7 +497,7 @@ class _RecentArtworkCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadiusTokens.md),
       onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
         context,
         tracks: queue,
@@ -547,13 +552,13 @@ class _LatestAlbumsSection extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
             color: colors.surface.withValues(alpha: 0.50),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
             border: Border.all(
               color: colors.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacingTokens.inlineGap),
             child: Column(
               children: [
                 for (final album in albums) _LatestAlbumRow(album: album),
@@ -574,10 +579,10 @@ class _LatestAlbumRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
       onTap: () => context.push('/album/${album.id}', extra: album),
       child: SizedBox(
-        height: 56,
+        height: AppSpacingTokens.listTileHeight.toDouble(),
         child: Row(
           children: [
             CachedArtwork(
@@ -637,7 +642,7 @@ class _RandomExploreCard extends StatelessWidget {
             colors.primaryContainer.withValues(alpha: 0.18),
             colors.surface,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () {
@@ -647,7 +652,7 @@ class _RandomExploreCard extends StatelessWidget {
             child: SizedBox(
               height: 200,
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(AppSpacingTokens.sectionPadding),
                 child: Row(
                   children: [
                     Expanded(
@@ -694,7 +699,7 @@ class _MobileContinueCard extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 2,
       child: Material(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.md),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
@@ -715,12 +720,15 @@ class _MobileContinueCard extends StatelessWidget {
                   sourceContext: ArtworkSourceContext.track(track),
                 ),
               ),
-              const DecoratedBox(
+              DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xA6000000)],
+                    colors: [
+                      Colors.transparent,
+                      AppColorTokens.overlayDarkHeavy,
+                    ],
                   ),
                 ),
               ),
@@ -735,10 +743,10 @@ class _MobileContinueCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             '继续播放',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: AppColorTokens.onDarkOverlayMuted,
                               fontSize: 12,
                             ),
                           ),
@@ -747,8 +755,8 @@ class _MobileContinueCard extends StatelessWidget {
                             MediaDisplayText.trackTitle(track.title),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: AppColorTokens.onDarkOverlayStrong,
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                             ),
@@ -757,8 +765,8 @@ class _MobileContinueCard extends StatelessWidget {
                             '${MediaDisplayText.artistName(track.artistName)} · ${MediaDisplayText.albumTitle(track.albumTitle)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: AppColorTokens.onDarkOverlayMuted,
                               fontSize: 13,
                             ),
                           ),
@@ -872,7 +880,7 @@ class _DesktopMostPlayedSection extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacingTokens.inlineGap),
             child: Column(
               children: [
                 for (var index = 0; index < tracks.length; index++)
@@ -904,14 +912,14 @@ class _MostPlayedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
       onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
         context,
         tracks: queue,
         startIndex: index,
       ),
       child: SizedBox(
-        height: 56,
+        height: AppSpacingTokens.listTileHeight.toDouble(),
         child: Row(
           children: [
             SizedBox(
@@ -975,15 +983,18 @@ class _HomeInlineError extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.errorContainer.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.md),
         border: Border.all(color: colors.error.withValues(alpha: 0.18)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacingTokens.buttonPaddingCompactH,
+          vertical: AppSpacingTokens.listTileVPadding,
+        ),
         child: Row(
           children: [
             Icon(Icons.info_outline_rounded, size: 18, color: colors.error),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacingTokens.listTileVPadding),
             Expanded(
               child: Text(
                 message,

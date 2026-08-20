@@ -224,7 +224,7 @@ class _FavoritesDesktopActions extends StatelessWidget {
           label: const Text('全部播放'),
           style: FilledButton.styleFrom(
             minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
             shape: shape,
             textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
@@ -241,7 +241,7 @@ class _FavoritesDesktopActions extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: colors.primary,
             minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
             side: BorderSide(color: colors.primary),
             shape: shape,
             textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -329,7 +329,7 @@ class _FavoritesDesktopTableHeader extends StatelessWidget {
 
     return Container(
       height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -413,7 +413,7 @@ class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
             child: SizedBox(
               height: 64,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
                 child: Row(
                   children: [
                     CachedArtwork(
@@ -567,11 +567,11 @@ class _UnfavoriteBackground extends StatelessWidget {
           color: colors.error,
           borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
         ),
-        child: const Align(
+        child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: EdgeInsets.only(right: AppSpacingTokens.sectionGap),
-            child: Icon(Icons.delete_outline_rounded, color: Colors.white),
+            padding: const EdgeInsets.only(right: AppSpacingTokens.sectionGap),
+            child: Icon(Icons.delete_outline_rounded, color: colors.onError),
           ),
         ),
       ),
@@ -777,7 +777,7 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
                       : Icons.favorite_border_rounded,
                   size: iconSize,
                   color: widget.isFavorite
-                      ? widget.colorScheme.error
+                      ? widget.colorScheme.primary
                       : widget.colorScheme.onSurfaceVariant,
                 ),
         ),

@@ -492,7 +492,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
             label: const Text('修改'),
             style: TextButton.styleFrom(
               minimumSize: const Size(72, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
@@ -540,7 +540,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
             label: Text(_choosing ? '正在选择' : '选择文件夹'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(108, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.contentGap),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),

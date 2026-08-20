@@ -133,7 +133,10 @@ class _PlaylistDetailView extends StatelessWidget {
       if (state.status == PlaylistDetailStatus.success && state.isLoadingMore)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(0, 4, 0, 28),
+            padding: const EdgeInsets.only(
+              top: AppSpacingTokens.compactGap,
+              bottom: AppSpacingTokens.pageTop,
+            ),
             child: Center(child: CircularProgressIndicator()),
           ),
         ),
@@ -188,7 +191,10 @@ class _PlaylistDetailView extends StatelessWidget {
       if (state.status == PlaylistDetailStatus.success && state.isLoadingMore)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(0, 4, 0, 28),
+            padding: const EdgeInsets.only(
+              top: AppSpacingTokens.compactGap,
+              bottom: AppSpacingTokens.pageTop,
+            ),
             child: Center(child: CircularProgressIndicator()),
           ),
         ),
@@ -351,7 +357,7 @@ class _MobilePlaylistArtwork extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(AppSpacingTokens.compactGap),
         child: CachedArtwork(
           imageUrl: imageUrl,
           size: size,
@@ -473,7 +479,7 @@ class _MobilePlaylistSectionHeader extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 2, 0, 8),
+      padding: const EdgeInsets.only(bottom: AppSpacingTokens.inlineGap),
       child: Row(
         children: [
           Text(
@@ -570,7 +576,7 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
                 child: Row(
                   children: [
                     SizedBox(
@@ -775,10 +781,13 @@ class _PlaylistHero extends StatelessWidget {
               imageUrl: playlist?.artworkUrl ?? '',
               size: coverSize,
             ),
-            const SizedBox(width: 32),
+            const SizedBox(width: AppSpacingTokens.sectionGap),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 2, bottom: 4),
+                padding: const EdgeInsets.only(
+                  top: AppSpacingTokens.inlineGapCompact,
+                  bottom: AppSpacingTokens.compactGap,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -876,7 +885,7 @@ class _PlaylistDesktopActions extends StatelessWidget {
           label: const Text('播放全部'),
           style: FilledButton.styleFrom(
             minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
             shape: shape,
             textStyle: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w700,
@@ -891,7 +900,7 @@ class _PlaylistDesktopActions extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: colors.onSurface,
             minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
             side: BorderSide(color: colors.outlineVariant),
             shape: shape,
             textStyle: theme.textTheme.labelLarge?.copyWith(
@@ -961,7 +970,7 @@ class _PlaylistHeroArtwork extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(AppSpacingTokens.compactGap),
         child: CachedArtwork(
           imageUrl: imageUrl,
           size: size,

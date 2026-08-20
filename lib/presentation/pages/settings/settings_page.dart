@@ -787,12 +787,15 @@ class _MediaSourceStatusPill extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacingTokens.inlineGapCompact,
+          vertical: AppSpacingTokens.compactGap,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 15, color: foreground),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacingTokens.compactGap),
             Text(
               '$label${enabled ? '已启用' : '使用内置'}',
               style: theme.textTheme.labelMedium?.copyWith(
@@ -873,7 +876,7 @@ class _CustomMediaSourcesCardState extends State<_CustomMediaSourcesCard> {
       builder: (context, state) {
         final cubit = context.read<AppSettingsCubit>();
         return _SettingsGroupSurface(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacingTokens.cardPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1263,7 +1266,12 @@ class _SourceStatusBand extends StatelessWidget {
           border: Border.all(color: borderColor),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 7, 11, 7),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacingTokens.inlineGapCompact,
+            AppSpacingTokens.compactGap,
+            AppSpacingTokens.inlineGapCompact,
+            AppSpacingTokens.compactGap,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1334,7 +1342,7 @@ class _SourceUrlField extends StatelessWidget {
         hintText: hintText,
         errorText: errorText,
         prefixIcon: const Icon(Icons.link_rounded, size: 18),
-        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        contentPadding: const EdgeInsets.all(AppSpacingTokens.cardPadding),
         hintStyle: theme.textTheme.bodySmall?.copyWith(
           color: theme.muted.withValues(alpha: 0.72),
           fontSize: 13,
@@ -1584,7 +1592,7 @@ class _SourceTestBanner extends StatelessWidget {
       label: '测试结果',
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacingTokens.contentGap),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(16),

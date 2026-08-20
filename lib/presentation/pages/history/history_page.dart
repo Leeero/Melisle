@@ -334,7 +334,7 @@ class _HistoryLoadFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isLoadingMore) {
       return const Padding(
-        padding: EdgeInsets.all(24),
+        padding: EdgeInsets.all(AppSpacingTokens.sectionPadding),
         child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
       );
     }

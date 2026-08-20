@@ -500,9 +500,9 @@ class _LoginLogo extends StatelessWidget {
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(mobile ? 20 : 16),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.library_music_rounded,
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.onPrimaryContainer,
         size: 32,
       ),
     );
@@ -520,10 +520,13 @@ class _LoginErrorBanner extends StatelessWidget {
       liveRegion: true,
       label: message ?? '连接失败，请检查服务器地址、登录凭据或网络连接。',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacingTokens.buttonPaddingCompactH,
+          vertical: AppSpacingTokens.buttonPaddingV,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
           border: Border.all(
             color: Theme.of(context).colorScheme.error.withValues(alpha: .2),
           ),
@@ -668,7 +671,8 @@ class _LoginButtonContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Row(
+      final onPrimary = Theme.of(context).colorScheme.onPrimary;
+      return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
@@ -676,11 +680,11 @@ class _LoginButtonContent extends StatelessWidget {
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: onPrimary,
             ),
           ),
-          SizedBox(width: 10),
-          Text('正在连接…'),
+          const SizedBox(width: 10),
+          const Text('正在连接…'),
         ],
       );
     }
