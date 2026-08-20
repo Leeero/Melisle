@@ -30,20 +30,24 @@ class AppActionButton extends StatelessWidget {
   }
 }
 
+/// Refined button styles with consistent tokens and polished interactions.
 abstract final class AppActionButtonStyle {
+  /// Link-style button (inline text action).
   static ButtonStyle link(
     BuildContext context, {
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 4),
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacingTokens.inlineGap,
+    ),
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return TextButton.styleFrom(
-      minimumSize: const Size(44, 44),
+      minimumSize: Size.square(AppSpacingTokens.buttonHeight),
       padding: padding,
       tapTargetSize: MaterialTapTargetSize.padded,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
       ),
     ).copyWith(
       backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -71,11 +75,13 @@ abstract final class AppActionButtonStyle {
         if (!states.contains(WidgetState.focused)) return BorderSide.none;
         return BorderSide(
           color: colorScheme.primary.withValues(alpha: 0.58),
+          width: AppBorderTokens.focus,
         );
       }),
     );
   }
 
+  /// Text button with optional background tint.
   static ButtonStyle text(
     BuildContext context, {
     AppActionButtonTone tone = AppActionButtonTone.neutral,
@@ -83,6 +89,8 @@ abstract final class AppActionButtonStyle {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final foreground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.onPrimary,
       AppActionButtonTone.secondary => colorScheme.secondary,
@@ -91,29 +99,28 @@ abstract final class AppActionButtonStyle {
     };
     final background = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primary,
-      AppActionButtonTone.secondary =>
-        colorScheme.secondaryContainer.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.42 : 0.74,
-        ),
+      AppActionButtonTone.secondary => colorScheme.secondaryContainer.withValues(
+        alpha: isDark ? 0.42 : 0.74,
+      ),
       AppActionButtonTone.neutral => Colors.transparent,
       AppActionButtonTone.danger => Colors.transparent,
     };
     final hoverBackground = switch (tone) {
       AppActionButtonTone.primary => theme.accentHover,
       AppActionButtonTone.secondary => colorScheme.secondaryContainer
-          .withValues(alpha: theme.brightness == Brightness.dark ? 0.52 : 0.82),
+          .withValues(alpha: isDark ? 0.52 : 0.82),
       AppActionButtonTone.neutral => theme.hoverWash,
       AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.28 : 0.36,
+        alpha: isDark ? 0.28 : 0.36,
       ),
     };
     final pressedBackground = switch (tone) {
       AppActionButtonTone.primary => theme.accentHover,
       AppActionButtonTone.secondary => colorScheme.secondaryContainer
-          .withValues(alpha: theme.brightness == Brightness.dark ? 0.60 : 0.90),
+          .withValues(alpha: isDark ? 0.60 : 0.90),
       AppActionButtonTone.neutral => _pressedWash(theme),
       AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.42 : 0.50,
+        alpha: isDark ? 0.42 : 0.50,
       ),
     };
     final borderColor = switch (tone) {
@@ -122,7 +129,7 @@ abstract final class AppActionButtonStyle {
         alpha: 0.18,
       ),
       AppActionButtonTone.neutral => colorScheme.outlineVariant.withValues(
-        alpha: 0.72,
+        alpha: isDark ? 0.46 : 0.72,
       ),
       AppActionButtonTone.danger => colorScheme.error.withValues(alpha: 0.20),
     };
@@ -133,16 +140,18 @@ abstract final class AppActionButtonStyle {
       backgroundColor: background,
       disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
       padding: EdgeInsets.symmetric(
-        horizontal: dense ? 14 : 18,
-        vertical: dense ? 10 : 10,
+        horizontal: dense
+            ? AppSpacingTokens.buttonPaddingCompactH
+            : AppSpacingTokens.buttonPaddingH,
+        vertical: AppSpacingTokens.buttonPaddingV,
       ),
-      minimumSize: const Size(44, 44),
+      minimumSize: Size(0, dense ? 40 : AppSpacingTokens.buttonHeight),
       tapTargetSize: MaterialTapTargetSize.padded,
-      textStyle: Theme.of(
-        context,
-      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      textStyle: theme.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
       ),
       side: BorderSide(color: borderColor),
     ).copyWith(
@@ -163,16 +172,19 @@ abstract final class AppActionButtonStyle {
     );
   }
 
+  /// Icon button with refined hover/press states.
   static ButtonStyle icon(
     BuildContext context, {
     AppActionButtonTone tone = AppActionButtonTone.neutral,
     bool selected = false,
-    double size = 44,
+    double size = 48, // 44 → 48
     double iconSize = 20,
     double? radius,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final foreground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primary,
       AppActionButtonTone.secondary => colorScheme.secondary,
@@ -182,37 +194,41 @@ abstract final class AppActionButtonStyle {
     final activeForeground = tone == AppActionButtonTone.neutral
         ? colorScheme.primary
         : foreground;
+
     final selectedBackground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primaryContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.44 : 0.62,
+        alpha: isDark ? 0.44 : 0.62,
       ),
       AppActionButtonTone.secondary => colorScheme.secondaryContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.44 : 0.62,
+        alpha: isDark ? 0.44 : 0.62,
       ),
       AppActionButtonTone.neutral => theme.selectedWash.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.62 : 0.72,
+        alpha: isDark ? 0.62 : 0.72,
       ),
       AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.36 : 0.48,
+        alpha: isDark ? 0.36 : 0.48,
       ),
     };
+
     final pressedBackground = switch (tone) {
       AppActionButtonTone.primary => colorScheme.primaryContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.52 : 0.70,
+        alpha: isDark ? 0.52 : 0.70,
       ),
       AppActionButtonTone.secondary => colorScheme.secondaryContainer
-          .withValues(alpha: theme.brightness == Brightness.dark ? 0.52 : 0.70),
+          .withValues(alpha: isDark ? 0.52 : 0.70),
       AppActionButtonTone.neutral => _pressedWash(theme),
       AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.42 : 0.56,
+        alpha: isDark ? 0.42 : 0.56,
       ),
     };
+
     final hoverBackground = switch (tone) {
       AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.26 : 0.34,
+        alpha: isDark ? 0.26 : 0.34,
       ),
       _ => selected ? selectedBackground : theme.hoverWash,
     };
+
     final interactiveForeground = tone == AppActionButtonTone.neutral
         ? (selected ? activeForeground : colorScheme.onSurface)
         : foreground;
@@ -227,7 +243,7 @@ abstract final class AppActionButtonStyle {
       side: BorderSide.none,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(
-          radius ?? AppRadiusTokens.iconButton,
+          radius ?? AppRadiusTokens.sm,
         ),
       ),
     ).copyWith(
@@ -261,8 +277,10 @@ abstract final class AppActionButtonStyle {
         return BorderSide(
           color: focused
               ? colorScheme.primary.withValues(alpha: 0.72)
-              : colorScheme.outlineVariant.withValues(alpha: 0.30),
-          width: focused ? 1.5 : 1.0,
+              : colorScheme.outlineVariant.withValues(
+                  alpha: isDark ? 0.30 : 0.50,
+                ),
+          width: focused ? AppBorderTokens.focus : AppBorderTokens.thin,
         );
       }),
     );

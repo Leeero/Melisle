@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/playing_indicator.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -115,12 +116,16 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
     final shadow = isCard && _hovered && !widget.isCurrent
         ? [
             BoxShadow(
-              color: theme.musicTeal.withValues(alpha: 0.12),
-              blurRadius: 18,
-              offset: const Offset(0, 7),
+              color: theme.brightness == Brightness.dark
+                  ? Colors.black.withValues(alpha: 0.24)
+                  : Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ]
-        : const <BoxShadow>[];
+        : (isCard && theme.brightness == Brightness.light
+            ? AppShadowTokens.card
+            : <BoxShadow>[]);
 
     return Semantics(
       label: '播放《${widget.title}》',
@@ -130,7 +135,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: AppMotion.micro,
           decoration: BoxDecoration(
             color: widget.isCurrent
                 ? theme.selectedWash
@@ -184,6 +189,11 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                                 Expanded(child: _buildTitle(context)),
                                 if (widget.isCurrent) ...[
                                   const SizedBox(width: 8),
+                                  const PlayingIndicator(
+                                    isPlaying: true,
+                                    size: 8,
+                                  ),
+                                  const SizedBox(width: 6),
                                   const MetaPill(
                                     label: '当前播放',
                                     size: MetaPillSize.compact,
@@ -274,7 +284,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
                 child: Row(
                   children: [
                     CachedArtwork(

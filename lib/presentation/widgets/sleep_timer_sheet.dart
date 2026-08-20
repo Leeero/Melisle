@@ -432,11 +432,14 @@ class _SleepTimerOptionRowState extends State<_SleepTimerOptionRow> {
             splashColor: accent.withValues(alpha: 0.08),
             highlightColor: Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.contentGap,
+                vertical: AppSpacingTokens.listTileVPadding,
+              ),
               child: Row(
                 children: [
                   Icon(widget.icon, size: 21, color: accent),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacingTokens.contentGap),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

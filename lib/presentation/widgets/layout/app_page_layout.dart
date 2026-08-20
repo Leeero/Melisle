@@ -79,7 +79,7 @@ class _AppContentPageState extends State<AppContentPage>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: AppMotion.medium,
+      duration: AppMotion.normal,
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,

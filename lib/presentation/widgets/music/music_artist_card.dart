@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/hover_scale.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -23,9 +24,6 @@ class MusicArtistGridCard extends StatefulWidget {
 }
 
 class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
-  bool _hovered = false;
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -38,35 +36,20 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
       label: '打开艺术家《$displayName》',
       button: true,
       onTap: widget.onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: AnimatedScale(
-          duration: AppMotion.short,
-          curve: AppMotion.enter,
-          scale: _pressed
-              ? 0.992
-              : _hovered
-              ? 1.012
-              : 1,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
-            onTapDown: (_) => setState(() => _pressed = true),
-            onTapUp: (_) => setState(() => _pressed = false),
-            onTapCancel: () => setState(() => _pressed = false),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textScaler = MediaQuery.textScalerOf(context);
-                final desktop = AppBreakpoints.usesDesktopToolbar(context);
-                final narrow = constraints.maxWidth < 118 || compact;
-                final titleStyle = (desktop
-                        ? theme.textTheme.titleLarge
-                        : theme.textTheme.bodyMedium)
+      child: HoverScale(
+        scale: 1.012,
+        translateY: -2.0,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final textScaler = MediaQuery.textScalerOf(context);
+              final desktop = AppBreakpoints.usesDesktopToolbar(context);
+              final narrow = constraints.maxWidth < 118 || compact;
+              final titleStyle = (desktop
+                      ? theme.textTheme.titleLarge
+                      : theme.textTheme.bodyMedium)
                     ?.copyWith(
                       color: colorScheme.onSurface,
                       fontSize: compact ? 13 : null,
@@ -131,19 +114,9 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          boxShadow: _hovered
-                              ? [
-                                  BoxShadow(
-                                    color: theme.musicTeal.withValues(
-                                      alpha: theme.brightness == Brightness.dark
-                                          ? 0.16
-                                          : 0.12,
-                                    ),
-                                    blurRadius: compact ? 14 : 18,
-                                    offset: Offset(0, compact ? 5 : 7),
-                                  ),
-                                ]
-                              : const <BoxShadow>[],
+                          boxShadow: theme.brightness == Brightness.dark
+                              ? <BoxShadow>[]
+                              : AppShadowTokens.card,
                         ),
                         child: CachedArtwork(
                           imageUrl: artist.artworkUrl,
@@ -175,7 +148,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
+

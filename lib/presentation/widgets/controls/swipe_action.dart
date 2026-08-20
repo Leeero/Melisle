@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/shared/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -38,7 +39,7 @@ class _SwipeActionState extends State<SwipeAction>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: AppMotion.state,
     );
   }
 
@@ -133,6 +134,7 @@ class _SwipeActionState extends State<SwipeAction>
     final actions = isLeftSwipe
         ? widget.leadingActions
         : widget.trailingActions;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Positioned.fill(
       child: Row(
@@ -142,21 +144,21 @@ class _SwipeActionState extends State<SwipeAction>
           return Container(
             width: 72,
             decoration: BoxDecoration(
-              color: action.backgroundColor ?? Colors.blue,
+              color: action.backgroundColor ?? colorScheme.primary,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   action.icon,
-                  color: action.iconColor ?? Colors.white,
+                  color: action.iconColor ?? colorScheme.onPrimary,
                   size: 24,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   action.label,
                   style: TextStyle(
-                    color: action.labelColor ?? Colors.white,
+                    color: action.labelColor ?? colorScheme.onPrimary,
                     fontSize: 12,
                   ),
                 ),

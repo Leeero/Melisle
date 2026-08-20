@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/presentation/widgets/feedback/shimmer_loading.dart';
 import 'package:flutter/material.dart';
 
 /// 骨架屏组件，支持行、网格、卡片三种变体。
@@ -154,7 +155,7 @@ class _SkeletonTrackRow extends StatelessWidget {
   }
 }
 
-class _SkeletonBase extends StatefulWidget {
+class _SkeletonBase extends StatelessWidget {
   const _SkeletonBase({
     super.key,
     this.width,
@@ -167,62 +168,21 @@ class _SkeletonBase extends StatefulWidget {
   final double borderRadius;
 
   @override
-  State<_SkeletonBase> createState() => _SkeletonBaseState();
-}
-
-class _SkeletonBaseState extends State<_SkeletonBase>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _animation = Tween<double>(begin: 0.3, end: 0.7).animate(_controller);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
-    if (disableAnimations) {
-      _controller
-        ..stop()
-        ..value = 0.5;
-    } else if (!_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: Color.alphaBlend(
-              colorScheme.onSurface.withValues(alpha: _animation.value * 0.10),
-              colorScheme.surfaceContainerHighest,
-            ),
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-          ),
-        );
-      },
+    final block = ShimmerBlock(
+      width: width,
+      height: height,
+      borderRadius: BorderRadius.circular(borderRadius),
+    );
+
+    if (disableAnimations) return block;
+
+    return ShimmerLoading(
+      duration: const Duration(milliseconds: 1500),
+      child: block,
     );
   }
 }

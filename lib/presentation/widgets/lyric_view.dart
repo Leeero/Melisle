@@ -110,8 +110,8 @@ class _LyricViewState extends State<LyricView> {
     } else {
       _scrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.page,
+        curve: AppMotion.enter,
       );
     }
   }
@@ -287,12 +287,12 @@ class _LyricLineTile extends StatelessWidget {
         (isCurrent ? currentTextStyle : inactiveTextStyle) ?? fallbackStyle;
 
     Widget content = AnimatedScale(
-      duration: const Duration(milliseconds: 420),
+      duration: AppMotion.lyrics,
       curve: AppMotion.enter,
       scale: isCurrent ? currentScale : 1.0,
       alignment: alignment,
       child: AnimatedDefaultTextStyle(
-        duration: const Duration(milliseconds: 420),
+        duration: AppMotion.lyrics,
         curve: AppMotion.enter,
         style: style,
         child: Text(

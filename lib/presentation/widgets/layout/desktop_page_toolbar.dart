@@ -28,7 +28,7 @@ class DesktopPageToolbar extends StatelessWidget {
         key: const ValueKey('shell-toolbar'),
         height: AppSpacingTokens.desktopToolbarHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
           child: Row(
             children: [
               if (showsBack) ...[

@@ -12,6 +12,8 @@ class LoadingPlayPauseButton extends StatefulWidget {
     this.size = 56,
     this.iconSize = 28,
     this.loadingStrokeWidth = 2.8,
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   final bool isLoading;
@@ -20,6 +22,8 @@ class LoadingPlayPauseButton extends StatefulWidget {
   final double size;
   final double iconSize;
   final double loadingStrokeWidth;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   State<LoadingPlayPauseButton> createState() => _LoadingPlayPauseButtonState();
@@ -81,8 +85,8 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
     final tapTargetSize = math.max(size, 44.0);
     final tooltip = _tooltip;
     final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
-    final backgroundColor = colorScheme.primaryContainer;
-    final foregroundColor = colorScheme.onPrimaryContainer;
+    final backgroundColor = widget.backgroundColor ?? colorScheme.primaryContainer;
+    final foregroundColor = widget.foregroundColor ?? colorScheme.onPrimaryContainer;
     final ringColor = colorScheme.primary;
 
     return Tooltip(

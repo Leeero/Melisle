@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 
 class SectionHeader extends StatelessWidget {
@@ -5,7 +6,12 @@ class SectionHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.trailing,
-    this.padding = const EdgeInsets.fromLTRB(20, 8, 20, 12),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacingTokens.pageHorizontalCompact,
+      AppSpacingTokens.inlineGap,
+      AppSpacingTokens.pageHorizontalCompact,
+      AppSpacingTokens.contentGap,
+    ),
     this.bold = true,
   });
 

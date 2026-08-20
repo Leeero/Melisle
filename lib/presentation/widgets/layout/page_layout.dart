@@ -505,7 +505,10 @@ class AppSectionTitleRow extends StatelessWidget {
     required this.title,
     this.badge,
     this.action,
-    this.padding = const EdgeInsets.fromLTRB(0, 6, 0, 10),
+    this.padding = const EdgeInsets.only(
+      top: AppSpacingTokens.compactGap,
+      bottom: AppSpacingTokens.listTileVPadding,
+    ),
     this.titleStyle,
   });
 

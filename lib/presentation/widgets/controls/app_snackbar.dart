@@ -25,7 +25,10 @@ class AppSnackBar {
           content: Text(message),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacingTokens.cardPadding,
+            vertical: AppSpacingTokens.buttonPaddingV,
+          ),
           margin: EdgeInsets.fromLTRB(
             horizontalMargin,
             0,

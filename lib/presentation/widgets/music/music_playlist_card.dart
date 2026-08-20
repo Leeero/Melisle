@@ -1,6 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/hover_scale.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -25,9 +26,6 @@ class MusicPlaylistGridCard extends StatefulWidget {
 }
 
 class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
-  bool _hovered = false;
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -59,67 +57,42 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
     return Semantics(
       label: '打开歌单《$displayName》',
       button: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedScale(
-          duration: AppMotion.short,
-          curve: AppMotion.enter,
-          scale: _pressed
-              ? 0.992
-              : _hovered
-              ? widget.scaleOnHover
-              : 1,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Padding(
-                  padding: contentPadding,
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(
-                          widget.artworkRadius,
-                        ),
-                        onTap: widget.onTap,
-                        mouseCursor: SystemMouseCursors.click,
-                        onHighlightChanged: (pressed) =>
-                            setState(() => _pressed = pressed),
-                        child: AnimatedContainer(
-                        duration: AppMotion.short,
-                        curve: AppMotion.enter,
+      child: HoverScale(
+        scale: widget.scaleOnHover,
+        translateY: -2.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Padding(
+                padding: contentPadding,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(
+                        widget.artworkRadius,
+                      ),
+                      onTap: widget.onTap,
+                      mouseCursor: SystemMouseCursors.click,
+                      child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(
                             widget.artworkRadius,
                           ),
                           border: Border.all(
-                            color: _hovered
-                                ? colorScheme.outlineVariant.withValues(
-                                    alpha: theme.brightness == Brightness.dark
-                                        ? 0.42
-                                        : 0.56,
-                                  )
-                                : Colors.transparent,
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: theme.brightness == Brightness.dark
+                                  ? 0.30
+                                  : 0.50,
+                            ),
                             width: 1.0,
                           ),
-                          boxShadow: _hovered
-                              ? [
-                                  BoxShadow(
-                                    color: theme.musicTeal.withValues(
-                                      alpha: theme.brightness == Brightness.dark
-                                          ? 0.18
-                                          : 0.14,
-                                    ),
-                                    blurRadius: compact ? 14 : 18,
-                                    offset: Offset(0, compact ? 5 : 7),
-                                  ),
-                                ]
-                              : const <BoxShadow>[],
+                          boxShadow: theme.brightness == Brightness.dark
+                              ? <BoxShadow>[]
+                              : AppShadowTokens.card,
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(
@@ -147,58 +120,40 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                                     compact: compact,
                                   ),
                                 ),
-                              Positioned.fill(
-                                child: AnimatedOpacity(
-                                  duration: AppMotion.micro,
-                                  curve: AppMotion.enter,
-                                  opacity: _hovered ? 1 : 0,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.scrim
-                                          .withValues(alpha: 0.12),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.play_circle_fill_rounded,
-                                        size: compact ? 34 : 42,
-                                        color: AppColorTokens.onArtworkScrim
-                                            .withValues(alpha: 0.88),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    ),
                   ),
                 ),
               ),
-              SizedBox(height: compact ? 7 : 10),
-              Padding(
-                padding: contentPadding,
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
-                ),
+            ),
+            SizedBox(
+              height: compact
+                  ? AppSpacingTokens.compactGap
+                  : AppSpacingTokens.inlineGapCompact,
+            ),
+            Padding(
+              padding: contentPadding,
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: titleStyle,
               ),
-              SizedBox(height: compact ? 1 : 2),
-              Padding(
-                padding: contentPadding,
-                child: Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: subtitleStyle,
-                ),
+            ),
+            SizedBox(height: compact ? 1 : 2),
+            Padding(
+              padding: contentPadding,
+              child: Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: subtitleStyle,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -242,28 +197,28 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
           curve: AppMotion.enter,
           decoration: BoxDecoration(
             color: _hovered ? theme.hoverWash : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
               onTap: widget.onTap,
               mouseCursor: SystemMouseCursors.click,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
+                  horizontal: AppSpacingTokens.inlineGapCompact,
+                  vertical: AppSpacingTokens.inlineGapCompact,
                 ),
                 child: Row(
                   children: [
                     CachedArtwork(
                       imageUrl: playlist.artworkUrl,
                       size: 52,
-                      borderRadius: 12,
+                      borderRadius: AppRadiusTokens.md,
                       semanticLabel: '《$displayName》歌单封面',
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacingTokens.contentGap),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +229,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacingTokens.compactGap),
                           Text(
                             subtitle,
                             maxLines: 1,
@@ -285,7 +240,7 @@ class _MusicPlaylistListTileState extends State<MusicPlaylistListTile> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacingTokens.inlineGap),
                     Icon(
                       Icons.chevron_right_rounded,
                       color: colorScheme.onSurfaceVariant,
@@ -316,12 +271,12 @@ class _PlaylistCountBadge extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.full),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 6 : 8,
-          vertical: compact ? 3 : 4,
+          horizontal: compact ? AppSpacingTokens.compactGap : AppSpacingTokens.inlineGap,
+          vertical: compact ? 3 : AppSpacingTokens.compactGap,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -331,7 +286,7 @@ class _PlaylistCountBadge extends StatelessWidget {
               size: compact ? 11 : 13,
               color: AppColorTokens.onArtworkScrim,
             ),
-            SizedBox(width: compact ? 3 : 4),
+            SizedBox(width: compact ? 3 : AppSpacingTokens.compactGap),
             Text(
               '$count',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(

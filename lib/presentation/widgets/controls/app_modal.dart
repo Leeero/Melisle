@@ -11,7 +11,12 @@ class AppSheetScaffold extends StatelessWidget {
     required this.child,
     this.description,
     this.trailing,
-    this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 24),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacingTokens.pageHorizontalCompact,
+      AppSpacingTokens.contentGap,
+      AppSpacingTokens.pageHorizontalCompact,
+      AppSpacingTokens.sectionPadding,
+    ),
   });
 
   final String title;
@@ -241,7 +246,10 @@ class _AppOptionTileState<T> extends State<AppOptionTile<T>> {
                   ? () => widget.onSelected(widget.value)
                   : null,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacingTokens.contentGap,
+                  vertical: AppSpacingTokens.listTileVPadding,
+                ),
                 child: Row(
                   children: [
                     if (widget.icon != null) ...[
@@ -364,11 +372,19 @@ class _AppConfirmationDialog extends StatelessWidget {
         : colorScheme.onPrimaryContainer;
 
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacingTokens.sectionPadding,
+        vertical: AppSpacingTokens.sectionPadding,
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacingTokens.buttonPaddingH,
+            AppSpacingTokens.buttonPaddingH,
+            AppSpacingTokens.buttonPaddingH,
+            AppSpacingTokens.contentGap + 2,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

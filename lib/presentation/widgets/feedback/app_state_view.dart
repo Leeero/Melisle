@@ -42,30 +42,35 @@ class AppBodyStateView extends StatelessWidget {
       label: displayTitle,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacingTokens.mobilePageX),
+          padding: const EdgeInsets.all(AppSpacingTokens.sectionGap),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 32, color: colorScheme.onSurfaceVariant),
-                const SizedBox(height: 12),
+                Icon(icon, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                const SizedBox(height: AppSpacingTokens.cardPadding),
               ],
               Text(
                 displayTitle,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
               ),
               if (description != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacingTokens.inlineGap),
                 Text(
                   description!,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
-              if (action != null) ...[const SizedBox(height: 14), action!],
+              if (action != null) ...[
+                const SizedBox(height: AppSpacingTokens.sectionGap),
+                action!,
+              ],
             ],
           ),
         ),
@@ -193,7 +198,7 @@ class AppPaginationFooter extends StatelessWidget {
         AppPaginationStatus.complete => completeLabel,
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.all(AppSpacingTokens.cardPadding),
         child: Center(
           child: switch (status) {
             AppPaginationStatus.idle => const SizedBox(height: 12),

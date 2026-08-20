@@ -140,7 +140,7 @@ class _MediumShellScaffold extends StatelessWidget {
                 ],
               ),
               footer: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
                 child: MiniPlayerBar(),
               ),
             ),

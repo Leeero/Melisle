@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/infrastructure/media/custom_media_so
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
+import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -174,7 +175,7 @@ class _ArtworkPlaceholder extends StatelessWidget {
               height: size * 0.56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
+                color: AppColorTokens.onDarkOverlaySubtle,
               ),
             ),
           ),
@@ -182,7 +183,7 @@ class _ArtworkPlaceholder extends StatelessWidget {
             child: Icon(
               Icons.graphic_eq_rounded,
               size: math.max(24, size * 0.34),
-              color: Colors.white.withValues(alpha: 0.88),
+              color: AppColorTokens.onDarkOverlayStrong,
             ),
           ),
         ],
