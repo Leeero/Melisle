@@ -12,16 +12,20 @@ abstract final class AppTheme {
   // — Brand seed
   static const _seedColor = AppColorTokens.seed;
 
-  // — Dark mode surfaces (deep-blue-black)
+  // — Dark mode surfaces (deeper, more refined)
   static const _darkScaffold = AppColorTokens.darkScaffold;
   static const _darkSurface = AppColorTokens.darkSurface;
+  static const _darkSurfaceElevated = AppColorTokens.darkSurfaceElevated;
   static const _darkSurfaceHigh = AppColorTokens.darkSurfaceHigh;
   static const _darkSurfaceHighest = AppColorTokens.darkSurfaceHighest;
+  static const _darkSurfaceOverlay = AppColorTokens.darkSurfaceOverlay;
   static const _darkSurfaceSidebar = AppColorTokens.darkSurfaceSidebar;
 
   // — Light mode surfaces
   static const _lightScaffold = AppColorTokens.lightScaffold;
   static const _lightSurface = AppColorTokens.lightSurface;
+  static const _lightSurfaceLow = AppColorTokens.lightSurfaceLow;
+  static const _lightSurfaceMid = AppColorTokens.lightSurfaceMid;
   static const _lightSurfaceHigh = AppColorTokens.lightSurfaceHigh;
   static const _lightSurfaceHighest = AppColorTokens.lightSurfaceHighest;
   static const _lightSurfaceSidebar = AppColorTokens.lightSurfaceSidebar;
@@ -112,10 +116,10 @@ abstract final class AppTheme {
             surfaceDim: _darkScaffold,
             surfaceBright: _darkSurfaceHighest,
             surfaceContainerLowest: _darkScaffold,
-            surfaceContainerLow: _darkSurfaceSidebar,
+            surfaceContainerLow: _darkSurfaceElevated,
             surfaceContainer: _darkSurfaceHigh,
-            surfaceContainerHigh: _darkSurfaceHigh,
-            surfaceContainerHighest: _darkSurfaceHighest,
+            surfaceContainerHigh: _darkSurfaceHighest,
+            surfaceContainerHighest: _darkSurfaceOverlay,
             onSurface: _darkOnSurface,
             onSurfaceVariant: _darkOnSurfaceVariant,
             outline: _darkOutline,
@@ -141,12 +145,12 @@ abstract final class AppTheme {
             errorContainer: const Color(0xFFFFDAD6),
             onErrorContainer: const Color(0xFF410006),
             surface: _lightSurface,
-            surfaceDim: const Color(0xFFE0E5E2),
+            surfaceDim: _lightSurfaceLow,
             surfaceBright: _lightSurface,
             surfaceContainerLowest: _lightSurface,
-            surfaceContainerLow: AppColorTokens.lightSurfaceLow,
-            surfaceContainer: _lightSurfaceHigh,
-            surfaceContainerHigh: const Color(0xFFE5E9E6),
+            surfaceContainerLow: _lightSurfaceLow,
+            surfaceContainer: _lightSurfaceMid,
+            surfaceContainerHigh: _lightSurfaceHigh,
             surfaceContainerHighest: _lightSurfaceHighest,
             onSurface: _lightOnSurface,
             onSurfaceVariant: _lightOnSurfaceVariant,
@@ -187,87 +191,88 @@ abstract final class AppTheme {
             letterSpacing: 0,
           ),
           // Product pages use the platform font for Chinese readability.
+          // Refined: larger sizes, more breathing room
           headlineLarge: baseTextTheme.headlineLarge?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w700,
-            fontSize: 31,
-            height: 41 / 31,
-            letterSpacing: 0,
+            fontSize: 34, // 31 → 34
+            height: 1.2,
+            letterSpacing: -0.5,
           ),
           headlineMedium: baseTextTheme.headlineMedium?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
-            fontSize: 26,
-            height: 34 / 26,
-            letterSpacing: 0,
+            fontSize: 28, // 26 → 28
+            height: 1.25,
+            letterSpacing: -0.3,
           ),
           headlineSmall: baseTextTheme.headlineSmall?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
             fontSize: 24,
-            height: 32 / 24,
+            height: 1.3,
             letterSpacing: 0,
           ),
           titleLarge: baseTextTheme.titleLarge?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
-            fontSize: 18,
-            height: 24 / 18,
+            fontSize: 20, // 18 → 20
+            height: 1.3,
             letterSpacing: 0,
           ),
           titleMedium: baseTextTheme.titleMedium?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            height: 24 / 16,
+            height: 1.4,
             letterSpacing: 0,
           ),
           titleSmall: baseTextTheme.titleSmall?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            height: 20 / 14,
+            height: 1.4,
             letterSpacing: 0,
           ),
           bodyLarge: baseTextTheme.bodyLarge?.copyWith(
             fontFamily: _productFont,
             fontSize: 16,
-            height: 24 / 16,
+            height: 1.5, // 1.4 → 1.5
             letterSpacing: 0,
           ),
           bodyMedium: baseTextTheme.bodyMedium?.copyWith(
             fontFamily: _productFont,
             fontSize: 15,
-            height: 22 / 15,
+            height: 1.5, // 1.4 → 1.5
             letterSpacing: 0,
           ),
           bodySmall: baseTextTheme.bodySmall?.copyWith(
             fontFamily: _productFont,
             color: colorScheme.onSurfaceVariant,
             fontSize: 13,
-            height: 18 / 13,
+            height: 1.4,
             letterSpacing: 0,
           ),
           labelLarge: baseTextTheme.labelLarge?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            height: 20 / 14,
+            height: 1.4,
             letterSpacing: 0,
           ),
           labelMedium: baseTextTheme.labelMedium?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w500,
             fontSize: 13,
-            height: 18 / 13,
+            height: 1.4,
             letterSpacing: 0,
           ),
           labelSmall: baseTextTheme.labelSmall?.copyWith(
             fontFamily: _productFont,
             fontWeight: FontWeight.w500,
-            fontSize: 12,
-            height: 16 / 12,
-            letterSpacing: 0,
+            fontSize: 11, // 12 → 11
+            height: 1.3,
+            letterSpacing: 0.5,
           ),
         );
 
@@ -303,19 +308,21 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         clipBehavior: Clip.antiAlias,
         color: isDark
-            ? colorScheme.surface.withValues(alpha: 0.78)
+            ? colorScheme.surfaceContainerLow
             : colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black.withValues(alpha: isDark ? 0 : 0.05),
-        elevation: isDark ? 0 : 0.5,
+        shadowColor: isDark
+            ? Colors.transparent
+            : AppShadowTokens.sm.color,
+        elevation: isDark ? 0 : AppShadowTokens.sm.blurRadius / 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusCard),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: isDark ? 0.46 : 1,
-            ),
-          ),
+          side: isDark
+              ? const BorderSide(color: AppShadowTokens.darkBorder)
+              : BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
         ),
       ),
 
@@ -362,8 +369,8 @@ abstract final class AppTheme {
             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.58)
             : colorScheme.surfaceContainer.withValues(alpha: 0.72),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: AppSpacingTokens.inputPadding,
+          vertical: AppSpacingTokens.formFieldVerticalPadding,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant,
@@ -657,10 +664,13 @@ abstract final class AppTheme {
     bool isDark,
   ) {
     return FilledButton.styleFrom(
-      minimumSize: const Size(0, 44),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      minimumSize: Size(0, AppSpacingTokens.buttonHeight),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacingTokens.buttonPaddingH,
+        vertical: AppSpacingTokens.buttonPaddingV,
+      ),
       elevation: 0,
-      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusButton),
       ),
@@ -704,8 +714,11 @@ abstract final class AppTheme {
     bool isDark,
   ) {
     return OutlinedButton.styleFrom(
-      minimumSize: const Size(0, 44),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      minimumSize: Size(0, AppSpacingTokens.buttonHeight),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacingTokens.buttonPaddingH,
+        vertical: AppSpacingTokens.buttonPaddingV,
+      ),
       foregroundColor: colorScheme.onSurface,
       textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(
@@ -994,4 +1007,41 @@ extension MelisleThemeX on ThemeData {
   Color get ambientGradientStart => brightness == Brightness.dark
       ? AppColorTokens.darkAmbientGradientStart
       : AppColorTokens.lightAmbientGradientStart;
+
+  // ──── Overlay & Scrim ────
+
+  /// 封面/图片上深色渐变遮罩（轻量，12% 黑）。
+  Color get overlayDark => AppColorTokens.overlayDark;
+
+  /// 封面/图片上深色渐变遮罩（中等，16% 黑）。
+  Color get overlayDarkMedium => AppColorTokens.overlayDarkMedium;
+
+  /// 封面/图片上深色渐变遮罩（重度，65% 黑），用于重叠文字。
+  Color get overlayDarkHeavy => AppColorTokens.overlayDarkHeavy;
+
+  /// 深色背景上的白色前景图标（12% 白）。
+  Color get onDarkSubtle => AppColorTokens.onDarkOverlaySubtle;
+
+  /// 深色背景上的白色前景文字（88% 白）。
+  Color get onDarkStrong => AppColorTokens.onDarkOverlayStrong;
+
+  /// 深色背景上的次要白色文字（70% 白）。
+  Color get onDarkMuted => AppColorTokens.onDarkOverlayMuted;
+
+  // ──── Semantic State ────
+
+  /// 收藏/喜欢心形图标颜色。
+  Color get favoriteColor => brightness == Brightness.dark
+      ? AppColorTokens.darkFavorite
+      : AppColorTokens.lightFavorite;
+
+  /// 失败态 artwork 去饱和灰色。
+  Color get desaturated => AppColorTokens.desaturatedGrey;
+
+  // ──── Shadow ────
+
+  /// 卡片/浮层阴影基准色（浅色 3% 黑，深色 0%）。
+  Color get shadowBase => brightness == Brightness.dark
+      ? Colors.transparent
+      : Colors.black.withValues(alpha: 0.03);
 }
