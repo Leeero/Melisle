@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/presentation/utils/media_display_tex
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/effects/glass_container.dart';
 import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -95,15 +96,15 @@ class _MiniPlayerSurface extends StatelessWidget {
 
     if (isWide) {
       return SizedBox(
-        height: AppSpacingTokens.desktopMiniPlayerHeight,
+        height: AppSpacingTokens.desktopMiniPlayerHeight.toDouble(),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: colorScheme.surface,
             border: Border(
               top: BorderSide(
-                color: colorScheme.outlineVariant.withValues(
-                  alpha: theme.brightness == Brightness.dark ? 0.72 : 1,
-                ),
+                color: theme.brightness == Brightness.dark
+                    ? AppShadowTokens.darkBorder
+                    : colorScheme.outlineVariant.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -122,34 +123,24 @@ class _MiniPlayerSurface extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: SizedBox(
-        height: 60,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: failed
-                  ? colorScheme.errorContainer.withValues(alpha: 0.30)
-                  : colorScheme.surface.withValues(alpha: paused ? 0.80 : 0.90),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: failed
-                    ? colorScheme.error.withValues(alpha: 0.30)
-                    : colorScheme.outlineVariant.withValues(alpha: 0.30),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Opacity(
-              opacity: paused ? 0.80 : 1,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: child,
-              ),
+        height: AppSpacingTokens.mobileMiniPlayerHeight.toDouble(),
+        child: GlassContainer(
+          blurRadius: 24,
+          opacity: paused ? 0.70 : 0.85,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.miniPlayer),
+          border: Border.all(
+            color: failed
+                ? colorScheme.error.withValues(alpha: 0.30)
+                : Colors.white.withValues(alpha: 0.10),
+          ),
+          tintColor: failed
+              ? colorScheme.errorContainer.withValues(alpha: 0.30)
+              : null,
+          child: Opacity(
+            opacity: paused ? 0.80 : 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: child,
             ),
           ),
         ),
@@ -264,7 +255,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                             failed: failed,
                             loading: state.isLoading,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -274,10 +265,10 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                                   widget.trackTitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontSize: 14,
-                                    height: 20 / 14,
-                                    fontWeight: FontWeight.w400,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontSize: 13,
+                                    height: 18 / 13,
+                                    fontWeight: FontWeight.w500,
                                     decoration: failed
                                         ? TextDecoration.lineThrough
                                         : null,
@@ -291,7 +282,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                                   subtitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
+                                  style: theme.textTheme.labelSmall?.copyWith(
                                     color: failed
                                         ? theme.colorScheme.error
                                         : state.isLoading
@@ -300,14 +291,12 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                                               state.sleepEndOfTrack
                                         ? theme.colorScheme.tertiary
                                         : theme.colorScheme.onSurfaceVariant,
-                                    fontSize: 13,
-                                    height: 18 / 13,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           if (failed)
                             const _MiniRetryButton()
                           else
@@ -317,9 +306,9 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                               onPressed: context
                                   .read<PlayerCubit>()
                                   .togglePlayback,
-                              size: 44,
-                              iconSize: 24,
-                              loadingStrokeWidth: 2.4,
+                              size: 36,
+                              iconSize: 20,
+                              loadingStrokeWidth: 2.0,
                             ),
                           _MiniControlButton(
                             icon: Icons.skip_next_rounded,
@@ -369,12 +358,15 @@ class _CompactArtwork extends StatelessWidget {
               : 1,
           child: ColorFiltered(
             colorFilter: failed
-                ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                ? ColorFilter.mode(
+                    AppColorTokens.desaturatedGrey,
+                    BlendMode.saturation,
+                  )
                 : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
             child: CachedArtwork(
               imageUrl: imageUrl,
-              size: 40,
-              borderRadius: AppRadiusTokens.miniPlayerArtwork,
+              size: 32,
+              borderRadius: AppRadiusTokens.sm,
               sourceContext: sourceContext,
             ),
           ),
@@ -486,9 +478,8 @@ class _WideMiniPlayer extends StatelessWidget {
                 children: [
                   if (!compactControls) ...[
                     _MiniQualityBadge(label: qualityLabel),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                   ],
-                  _MiniVolumeControl(width: compactControls ? 46 : 112),
                   _MiniControlButton(
                     icon: Icons.queue_music_rounded,
                     onPressed: () => _showMiniQueueSheet(context),
@@ -554,7 +545,7 @@ class _MiniQualityBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
@@ -665,6 +656,8 @@ class _MiniTransportControls extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const _MiniPlaybackModeButton(),
+        SizedBox(width: gap),
         BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (prev, next) =>
               prev.isLoading != next.isLoading ||
@@ -707,7 +700,127 @@ class _MiniTransportControls extends StatelessWidget {
             tooltip: '下一曲',
           ),
         ),
+        SizedBox(width: gap),
+        const _MiniVolumePopoverButton(),
       ],
+    );
+  }
+}
+
+class _MiniPlaybackModeButton extends StatelessWidget {
+  const _MiniPlaybackModeButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<PlayerCubit, PlayerViewState>(
+      buildWhen: (previous, current) =>
+          previous.shuffleEnabled != current.shuffleEnabled ||
+          previous.loopMode != current.loopMode,
+      builder: (context, state) {
+        final mode = state.playbackMode;
+        return _MiniControlButton(
+          icon: _playbackModeIcon(mode),
+          onPressed: context.read<PlayerCubit>().cyclePlaybackMode,
+          tooltip: '播放模式：${_playbackModeLabel(mode)}，点击切换',
+          selected: mode != PlaybackModeOption.sequence,
+        );
+      },
+    );
+  }
+}
+
+class _MiniVolumePopoverButton extends StatefulWidget {
+  const _MiniVolumePopoverButton();
+
+  @override
+  State<_MiniVolumePopoverButton> createState() =>
+      _MiniVolumePopoverButtonState();
+}
+
+class _MiniVolumePopoverButtonState extends State<_MiniVolumePopoverButton> {
+  final MenuController _menuController = MenuController();
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuAnchor(
+      controller: _menuController,
+      alignmentOffset: const Offset(0, -8),
+      style: MenuStyle(
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: WidgetStatePropertyAll(
+          Theme.of(context).colorScheme.surfaceContainerHigh,
+        ),
+        elevation: const WidgetStatePropertyAll(8),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+          ),
+        ),
+      ),
+      menuChildren: const [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: _MiniVolumePopoverContent(),
+        ),
+      ],
+      builder: (context, controller, child) {
+        return BlocBuilder<PlayerCubit, PlayerViewState>(
+          buildWhen: (previous, current) => previous.volume != current.volume,
+          builder: (context, state) => _MiniControlButton(
+            icon: _volumeIcon(state.volume),
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            tooltip: '调节音量',
+            selected: controller.isOpen,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MiniVolumePopoverContent extends StatelessWidget {
+  const _MiniVolumePopoverContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return SizedBox(
+      width: 208,
+      child: BlocBuilder<PlayerCubit, PlayerViewState>(
+        buildWhen: (previous, current) => previous.volume != current.volume,
+        builder: (context, state) => Row(
+          children: [
+            Icon(_volumeIcon(state.volume), color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Slider(
+                value: state.volume,
+                semanticFormatterCallback: (value) =>
+                    '音量 ${_volumePercent(value)}%',
+                onChanged: context.read<PlayerCubit>().setVolume,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '${_volumePercent(state.volume)}%',
+                textAlign: TextAlign.end,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -757,58 +870,6 @@ class _MiniTimelineBlock extends StatelessWidget {
           Text(
             _format(state.duration),
             style: Theme.of(context).textTheme.labelSmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniVolumeControl extends StatelessWidget {
-  const _MiniVolumeControl({this.width = 132});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: width,
-      child: Row(
-        children: [
-          BlocBuilder<PlayerCubit, PlayerViewState>(
-            buildWhen: (prev, next) => prev.volume != next.volume,
-            builder: (context, state) => IconButton(
-              onPressed: () => context.read<PlayerCubit>().setVolume(
-                state.volume > 0 ? 0 : 1,
-              ),
-              tooltip: state.volume > 0 ? '静音' : '恢复音量',
-              style: AppActionButtonStyle.icon(
-                context,
-                selected: state.volume == 0,
-                size: 44,
-                iconSize: 18,
-              ),
-              icon: Icon(
-                state.volume == 0
-                    ? Icons.volume_off_rounded
-                    : Icons.volume_up_rounded,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(width: 2),
-          Expanded(
-            child: BlocBuilder<PlayerCubit, PlayerViewState>(
-              buildWhen: (prev, next) => prev.volume != next.volume,
-              builder: (context, state) => Slider(
-                value: state.volume,
-                semanticFormatterCallback: (value) =>
-                    '音量 ${_volumePercent(value)}%',
-                onChanged: context.read<PlayerCubit>().setVolume,
-              ),
-            ),
           ),
         ],
       ),
@@ -889,12 +950,14 @@ class _MiniControlButton extends StatefulWidget {
     required this.onPressed,
     this.tooltip,
     this.compact = false,
+    this.selected = false,
   });
 
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
   final bool compact;
+  final bool selected;
 
   @override
   State<_MiniControlButton> createState() => _MiniControlButtonState();
@@ -903,17 +966,18 @@ class _MiniControlButton extends StatefulWidget {
 class _MiniControlButtonState extends State<_MiniControlButton> {
   @override
   Widget build(BuildContext context) {
-    const size = 44.0;
+    final size = widget.compact ? 28.0 : 36.0;
     return IconButton(
       onPressed: widget.onPressed,
       tooltip: widget.tooltip,
       style: AppActionButtonStyle.icon(
         context,
         tone: AppActionButtonTone.neutral,
+        selected: widget.selected,
         size: size,
-        iconSize: widget.compact ? 20 : 18,
+        iconSize: widget.compact ? 14 : 16,
       ),
-      icon: Icon(widget.icon),
+      icon: Icon(widget.icon, size: widget.compact ? 14 : 16),
     );
   }
 }
@@ -932,6 +996,30 @@ String _formatSleepRemaining(Duration remaining) {
 }
 
 int _volumePercent(double volume) => (volume.clamp(0, 1) * 100).round();
+
+IconData _playbackModeIcon(PlaybackModeOption mode) {
+  return switch (mode) {
+    PlaybackModeOption.sequence ||
+    PlaybackModeOption.loopAll => Icons.repeat_rounded,
+    PlaybackModeOption.loopOne => Icons.repeat_one_rounded,
+    PlaybackModeOption.shuffle => Icons.shuffle_rounded,
+  };
+}
+
+String _playbackModeLabel(PlaybackModeOption mode) {
+  return switch (mode) {
+    PlaybackModeOption.sequence => '顺序播放',
+    PlaybackModeOption.loopAll => '列表循环',
+    PlaybackModeOption.loopOne => '单曲循环',
+    PlaybackModeOption.shuffle => '随机播放',
+  };
+}
+
+IconData _volumeIcon(double volume) {
+  if (volume <= 0.001) return Icons.volume_off_rounded;
+  if (volume < 0.5) return Icons.volume_down_rounded;
+  return Icons.volume_up_rounded;
+}
 
 String _format(Duration duration) {
   final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
