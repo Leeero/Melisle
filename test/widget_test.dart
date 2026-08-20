@@ -609,22 +609,19 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(MiniPlayerBar)).height, 72);
-    for (final tooltip in const [
-      '收藏',
-      '上一曲',
-      '播放',
-      '下一曲',
-      '当前歌单',
-      '静音',
-    ]) {
+    expect(tester.getSize(find.byType(MiniPlayerBar)).height, 76);
+    for (final tooltip in const ['收藏', '上一曲', '播放', '下一曲', '当前歌单', '调节音量']) {
       expect(find.byTooltip(tooltip), findsOneWidget);
     }
     expect(find.text('标准音质'), findsOneWidget);
-    expect(find.byTooltip('随机播放'), findsNothing);
-    expect(find.byTooltip('顺序播放'), findsNothing);
+    expect(find.byTooltip('播放模式：顺序播放，点击切换'), findsOneWidget);
     expect(find.byTooltip('查看歌词'), findsNothing);
     expect(find.byTooltip('展开播放器'), findsNothing);
+
+    await tester.tap(find.byTooltip('调节音量'));
+    await tester.pumpAndSettle();
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2));
   });
 
   testWidgets(

@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
@@ -18,6 +21,7 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sc
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -351,11 +355,14 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$size at 1.3x');
     }
   });
+
+  _addScreenshotTests();
 }
 
 Widget _buildSearchPage({
   required _FakeMusicRepository repository,
   AppDatabase? database,
+  ThemeMode themeMode = ThemeMode.light,
 }) {
   final mediaSourceResolver = CustomMediaSourceResolver();
   final settingsCubit = AppSettingsCubit(
@@ -374,7 +381,15 @@ Widget _buildSearchPage({
     ],
     child: BlocProvider<AppSettingsCubit>(
       create: (_) => settingsCubit,
-      child: const MaterialApp(home: SearchPage()),
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
+        home: const RepaintBoundary(
+          key: ValueKey('search-capture'),
+          child: SearchPage(),
+        ),
+      ),
     ),
   );
 }
@@ -411,6 +426,76 @@ SearchResults _results() {
     ],
   );
 }
+
+// ──── Screenshot capture tests ────
+
+void _addScreenshotTests() {
+  group('SearchPage screenshots', () {
+    for (final size in _viewports) {
+      for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+        for (final scale in [1.0, 1.3]) {
+          testWidgets(
+            '${size.width.toInt()}x${size.height.toInt()} $mode scale-$scale',
+            (tester) async {
+              await _setViewport(tester, size, textScale: scale);
+              await tester.pumpWidget(
+                _buildSearchPage(
+                  repository: _FakeMusicRepository(results: _results()),
+                  themeMode: mode,
+                ),
+              );
+              await tester.enterText(find.byType(TextField), '周杰伦');
+              await tester.pump(const Duration(milliseconds: 400));
+              await tester.pumpAndSettle();
+              expect(tester.takeException(), isNull);
+              final brightness = mode == ThemeMode.light ? 'light' : 'dark';
+              await _capture(
+                tester,
+                'search-${size.width.toInt()}x${size.height.toInt()}-$brightness-scale-$scale',
+              );
+            },
+          );
+        }
+      }
+    }
+  });
+}
+
+Future<void> _setViewport(
+  WidgetTester tester,
+  ui.Size size, {
+  double textScale = 1,
+}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+}
+
+Future<void> _capture(WidgetTester tester, String name) async {
+  if (Platform.environment['CAPTURE_SEARCH_SCREENSHOTS'] != 'true') return;
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('search-capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (bytes == null) throw StateError('Unable to encode search screenshot');
+    final directory = Directory('design-reference/screenshots/actual');
+    await directory.create(recursive: true);
+    await File(
+      '${directory.path}/$name.png',
+    ).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  });
+}
+
+const _viewports = [
+  ui.Size(375, 812),
+  ui.Size(390, 844),
+  ui.Size(768, 900),
+  ui.Size(1080, 900),
+  ui.Size(1440, 900),
+];
 
 SearchResults _longArtistResults() {
   return const SearchResults(
