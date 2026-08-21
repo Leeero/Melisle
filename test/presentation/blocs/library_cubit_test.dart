@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
@@ -153,13 +154,52 @@ void main() {
     expect(repository.lastArtistSortOption, ArtistSortOption.dateAdded);
     expect(cubit.state.artistSortOption, ArtistSortOption.dateAdded);
   });
+
+  test('artist genre filter reloads artists with the selected genre', () async {
+    final repository = _PagedLibraryRepository();
+    final cubit = LibraryCubit(
+      FetchLibraryTracks(repository),
+      FetchLibraryAlbums(repository),
+      FetchLibraryArtists(repository),
+      repository,
+    );
+    addTearDown(cubit.close);
+
+    await cubit.load();
+    await cubit.changeFilter(LibraryFilter.artists);
+    cubit.changeGenre('rock');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(cubit.state.selectedGenreId, 'rock');
+    expect(repository.lastArtistGenreId, 'rock');
+  });
+
+  test('supported server filters reload tracks with the selected filter', () async {
+    final repository = _PagedLibraryRepository();
+    final cubit = LibraryCubit(
+      FetchLibraryTracks(repository),
+      FetchLibraryAlbums(repository),
+      FetchLibraryArtists(repository),
+      repository,
+    );
+    addTearDown(cubit.close);
+
+    await cubit.load();
+    await Future<void>.delayed(Duration.zero);
+
+    cubit.toggleTrackFilter(TrackFilterOption.favorite);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(cubit.state.trackFilters, contains(TrackFilterOption.favorite));
+    expect(repository.lastTrackFilters, {TrackFilterOption.favorite});
+  });
 }
 
 MusicTrack _track({required String title}) {
   return MusicTrack(
     id: title,
     title: title,
-    artistName: '艺术家',
+    artistName: '歌手',
     albumTitle: '专辑',
     artworkUrl: '',
     duration: const Duration(minutes: 3),
@@ -193,7 +233,7 @@ class _DelayedLibraryRepository implements MusicRepository {
       MusicAlbum(
         id: 'album-1',
         title: '新专辑',
-        artistName: '艺术家',
+        artistName: '歌手',
         artworkUrl: '',
         trackCount: 1,
       ),
@@ -205,14 +245,20 @@ class _DelayedLibraryRepository implements MusicRepository {
 }
 
 class _PagedLibraryRepository
-    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
+    implements
+        MusicRepository,
+        TrackSortingRepository,
+        TrackFilteringRepository,
+        ArtistSortingRepository {
   _PagedLibraryRepository({this.failFirstAppend = false});
 
   final bool failFirstAppend;
   int trackRequests = 0;
   bool _appendFailed = false;
   TrackSortOption? lastSortOption;
+  Set<TrackFilterOption>? lastTrackFilters;
   ArtistSortOption? lastArtistSortOption;
+  String? lastArtistGenreId;
 
   @override
   Future<Set<TrackSortOption>> fetchSupportedTrackSortOptions() async => const {
@@ -236,6 +282,26 @@ class _PagedLibraryRepository
   }
 
   @override
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions() async =>
+      const {TrackFilterOption.favorite};
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    lastTrackFilters = filters;
+    return fetchTracks(
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+    );
+  }
+
+  @override
   Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() async =>
       const {ArtistSortOption.name, ArtistSortOption.dateAdded};
 
@@ -248,8 +314,9 @@ class _PagedLibraryRepository
     String? genreId,
   }) async {
     lastArtistSortOption = sortOption;
+    lastArtistGenreId = genreId;
     return const [
-      MusicArtist(id: 'artist', name: '艺术家', artworkUrl: '', albumCount: 1),
+      MusicArtist(id: 'artist', name: '歌手', artworkUrl: '', albumCount: 1),
     ];
   }
 
@@ -259,9 +326,12 @@ class _PagedLibraryRepository
     int startIndex = 0,
     String? searchQuery,
     String? genreId,
-  }) async => const [
-    MusicArtist(id: 'artist', name: '艺术家', artworkUrl: '', albumCount: 1),
-  ];
+  }) async {
+    lastArtistGenreId = genreId;
+    return const [
+      MusicArtist(id: 'artist', name: '歌手', artworkUrl: '', albumCount: 1),
+    ];
+  }
 
   @override
   Future<List<Genre>> fetchGenres() async => [];

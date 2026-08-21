@@ -46,6 +46,75 @@ void main() {
     expect(pages[1], isEmpty);
     expect(adapter.fetchCount, 1);
   });
+
+  test('收藏歌曲筛选通过 getStarred2 获取并支持搜索与分页', () async {
+    final adapter = _StarredHttpClientAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final client = SubsonicApiClient(dio);
+    const session = AuthSession(
+      serverUrl: 'https://music.example.test',
+      userId: 'user-1',
+      userName: 'user-1',
+      accessToken: 'password',
+    );
+
+    final tracks = await client.fetchFavoriteTracks(
+      session,
+      searchQuery: '日落',
+      limit: 10,
+    );
+
+    expect(adapter.requestOptions?.path, contains('getStarred2'));
+    expect(tracks.map((track) => track.id), ['favorite-1']);
+    expect(tracks.single.isFavorite, isTrue);
+  });
+}
+
+class _StarredHttpClientAdapter implements HttpClientAdapter {
+  RequestOptions? requestOptions;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requestOptions = options;
+    return ResponseBody.fromString(
+      jsonEncode({
+        'subsonic-response': {
+          'status': 'ok',
+          'starred2': {
+            'song': [
+              {
+                'id': 'favorite-1',
+                'title': '日落之后',
+                'artist': '歌手',
+                'album': '专辑',
+                'duration': 180,
+                'starred': '2026-08-21T00:00:00Z',
+              },
+              {
+                'id': 'favorite-2',
+                'title': '晨光',
+                'artist': '歌手',
+                'album': '专辑',
+                'duration': 200,
+                'starred': '2026-08-21T00:00:00Z',
+              },
+            ],
+          },
+        },
+      }),
+      200,
+      headers: const {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 class _PlaylistHttpClientAdapter implements HttpClientAdapter {
@@ -73,14 +142,14 @@ class _PlaylistHttpClientAdapter implements HttpClientAdapter {
               {
                 'id': 'track-0',
                 'title': '歌曲 0',
-                'artist': '艺术家',
+                'artist': '歌手',
                 'album': '专辑',
                 'duration': 180,
               },
               {
                 'id': 'track-1',
                 'title': '歌曲 1',
-                'artist': '艺术家',
+                'artist': '歌手',
                 'album': '专辑',
                 'duration': 200,
               },

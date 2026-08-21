@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 
 /// 后端无关的音乐仓库契约。
 ///
@@ -69,7 +70,7 @@ abstract class MusicRepository {
     AudioQuality quality = AudioQuality.auto,
   });
 
-  /// 设置条目的收藏状态。支持歌曲 / 专辑 / 艺术家 / 歌单。
+  /// 设置条目的收藏状态。支持歌曲 / 专辑 / 歌手 / 歌单。
   Future<void> setFavorite(String itemId, bool value);
 
   /// 拉取某首歌的同步歌词。
@@ -116,7 +117,7 @@ abstract class MusicRepository {
   /// 获取可用的音乐风格列表。
   Future<List<Genre>> fetchGenres();
 
-  /// 跨类型搜索（歌曲 / 专辑 / 艺术家 / 歌单）。
+  /// 跨类型搜索（歌曲 / 专辑 / 歌手 / 歌单）。
   Future<SearchResults> search(String query);
 }
 
@@ -127,6 +128,20 @@ abstract interface class TrackSortingRepository {
 
   Future<PaginatedResult<MusicTrack>> fetchSortedTracks({
     required TrackSortOption sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  });
+}
+
+/// Optional capability implemented only by protocols that support server-side
+/// filtering while listing tracks. Callers must use the advertised options.
+abstract interface class TrackFilteringRepository {
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions();
+
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
     int limit = 100,
     int startIndex = 0,
     String? searchQuery,

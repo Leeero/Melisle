@@ -13,3 +13,4 @@ export 'paginated_result.dart';
 export 'play_history_entry.dart';
 export 'search_results.dart';
 export 'track_sort_option.dart';
+export 'track_filter_option.dart';

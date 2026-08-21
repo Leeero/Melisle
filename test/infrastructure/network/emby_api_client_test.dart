@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/infrastructure/network/emby_api_client.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +82,33 @@ void main() {
     expect(
       adapter.requestOptions?.queryParameters,
       containsPair('StartIndex', 40),
+    );
+  });
+
+  test('歌曲筛选与排序会一并传给 Emby', () async {
+    final adapter = _RecordingHttpClientAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final client = EmbyApiClient(dio);
+    const session = AuthSession(
+      serverUrl: 'https://music.example.test',
+      userId: 'user-1',
+      userName: 'user-1',
+      accessToken: 'token',
+    );
+
+    await client.fetchTracks(
+      session,
+      sortOption: TrackSortOption.dateAdded,
+      filters: {TrackFilterOption.favorite},
+    );
+
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('SortBy', 'DateCreated,SortName'),
+    );
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('Filters', 'IsFavorite'),
     );
   });
 }

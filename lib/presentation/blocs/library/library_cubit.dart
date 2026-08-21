@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/application/usecases/fetch_library_t
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,6 +41,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     );
     unawaited(_loadGenres());
     unawaited(_loadTrackSortOptions());
+    unawaited(_loadTrackFilterOptions());
     unawaited(_loadArtistSortOptions());
     await _loadCurrentFilter(reset: true);
   }
@@ -66,6 +68,31 @@ class LibraryCubit extends Cubit<LibraryState> {
       return;
     }
     emit(state.copyWith(trackSortOption: option));
+    unawaited(_loadCurrentFilter(reset: true));
+  }
+
+  Future<void> _loadTrackFilterOptions() async {
+    final options = await _fetchLibraryTracks.supportedFilterOptions();
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        supportedTrackFilterOptions: options,
+        trackFilters: state.trackFilters.intersection(options),
+      ),
+    );
+  }
+
+  void toggleTrackFilter(TrackFilterOption option) {
+    if (!state.supportedTrackFilterOptions.contains(option)) return;
+    final filters = {...state.trackFilters};
+    if (!filters.add(option)) filters.remove(option);
+    emit(state.copyWith(trackFilters: filters));
+    unawaited(_loadCurrentFilter(reset: true));
+  }
+
+  void clearTrackFilters() {
+    if (state.trackFilters.isEmpty) return;
+    emit(state.copyWith(trackFilters: const {}));
     unawaited(_loadCurrentFilter(reset: true));
   }
 
@@ -102,6 +129,7 @@ class LibraryCubit extends Cubit<LibraryState> {
           ? null
           : state.searchQuery.trim(),
       sortOption: state.trackSortOption,
+      filters: state.trackFilters,
     ).timeout(_requestTimeout);
     return result.items;
   }
@@ -200,6 +228,7 @@ class LibraryCubit extends Cubit<LibraryState> {
             startIndex: startIndex,
             searchQuery: searchQuery,
             sortOption: state.trackSortOption,
+            filters: state.trackFilters,
           ).timeout(_requestTimeout);
           if (!_isCurrentRequest(requestVersion, requestedFilter)) return;
           emit(

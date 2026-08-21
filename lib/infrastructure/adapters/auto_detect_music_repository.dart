@@ -10,10 +10,15 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
 class AutoDetectMusicRepository
-    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
+    implements
+        MusicRepository,
+        TrackSortingRepository,
+        TrackFilteringRepository,
+        ArtistSortingRepository {
   AutoDetectMusicRepository({
     required MusicRepository embyRepository,
     required MusicRepository navidromeRepository,
@@ -130,6 +135,40 @@ class AutoDetectMusicRepository
     final repository = await _requireActiveRepository();
     if (repository is TrackSortingRepository) {
       return (repository as TrackSortingRepository).fetchSortedTracks(
+        sortOption: sortOption,
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
+    return repository.fetchTracks(
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+    );
+  }
+
+  @override
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions() async {
+    final repository = await _requireActiveRepository();
+    return repository is TrackFilteringRepository
+        ? (repository as TrackFilteringRepository)
+              .fetchSupportedTrackFilterOptions()
+        : const {};
+  }
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    final repository = await _requireActiveRepository();
+    if (repository is TrackFilteringRepository) {
+      return (repository as TrackFilteringRepository).fetchFilteredTracks(
+        filters: filters,
         sortOption: sortOption,
         limit: limit,
         startIndex: startIndex,

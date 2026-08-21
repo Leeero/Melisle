@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
@@ -28,6 +29,8 @@ class LibraryState {
     this.appendErrorMessage,
     this.supportedTrackSortOptions = const {},
     this.trackSortOption,
+    this.supportedTrackFilterOptions = const {},
+    this.trackFilters = const {},
     this.supportedArtistSortOptions = const {},
     this.artistSortOption,
   });
@@ -54,6 +57,8 @@ class LibraryState {
   final String? appendErrorMessage;
   final Set<TrackSortOption> supportedTrackSortOptions;
   final TrackSortOption? trackSortOption;
+  final Set<TrackFilterOption> supportedTrackFilterOptions;
+  final Set<TrackFilterOption> trackFilters;
   final Set<ArtistSortOption> supportedArtistSortOptions;
   final ArtistSortOption? artistSortOption;
 
@@ -92,6 +97,8 @@ class LibraryState {
     Object? appendErrorMessage = _sentinel,
     Set<TrackSortOption>? supportedTrackSortOptions,
     Object? trackSortOption = _sentinel,
+    Set<TrackFilterOption>? supportedTrackFilterOptions,
+    Set<TrackFilterOption>? trackFilters,
     Set<ArtistSortOption>? supportedArtistSortOptions,
     Object? artistSortOption = _sentinel,
   }) {
@@ -121,6 +128,9 @@ class LibraryState {
       trackSortOption: identical(trackSortOption, _sentinel)
           ? this.trackSortOption
           : trackSortOption as TrackSortOption?,
+      supportedTrackFilterOptions:
+          supportedTrackFilterOptions ?? this.supportedTrackFilterOptions,
+      trackFilters: trackFilters ?? this.trackFilters,
       supportedArtistSortOptions:
           supportedArtistSortOptions ?? this.supportedArtistSortOptions,
       artistSortOption: identical(artistSortOption, _sentinel)

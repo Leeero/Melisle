@@ -10,13 +10,18 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/infrastructure/network/emby_api_client.dart';
 import 'package:cross_platform_music_player/infrastructure/persistence/auth_session_store.dart';
 
 class EmbyMusicRepository
-    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
+    implements
+        MusicRepository,
+        TrackSortingRepository,
+        TrackFilteringRepository,
+        ArtistSortingRepository {
   EmbyMusicRepository({
     required EmbyApiClient client,
     required AuthSessionStore sessionStore,
@@ -117,6 +122,29 @@ class EmbyMusicRepository
       startIndex: startIndex,
       searchQuery: searchQuery,
       sortOption: sortOption,
+    );
+    return PaginatedResult(items: result.tracks, totalCount: result.totalCount);
+  }
+
+  @override
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions() async =>
+      const {TrackFilterOption.favorite};
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    final result = await _client.fetchTracks(
+      await _requireSession(),
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+      sortOption: sortOption ?? TrackSortOption.title,
+      filters: filters,
     );
     return PaginatedResult(items: result.tracks, totalCount: result.totalCount);
   }

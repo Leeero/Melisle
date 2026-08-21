@@ -186,7 +186,7 @@ class SubsonicApiClient {
     int limit = 60,
     int startIndex = 0,
     String? searchQuery,
-    String? genreId, // Subsonic 不支持按 genre 筛选艺术家，忽略此参数
+    String? genreId, // Subsonic 不支持按 genre 筛选歌手，忽略此参数
   }) async {
     final query = searchQuery?.trim();
     if (query != null && query.isNotEmpty) {
@@ -414,9 +414,18 @@ class SubsonicApiClient {
     AuthSession session, {
     int limit = 100,
     int startIndex = 0,
+    String? searchQuery,
   }) async {
     final payload = await _request(session, 'getStarred2');
-    final songs = _readMaps(_asMap(payload['starred2'])?['song']);
+    final songs = _filterByQuery(
+      _readMaps(_asMap(payload['starred2'])?['song']),
+      searchQuery,
+      labelOf: (song) => [
+        song['title'],
+        song['artist'],
+        song['album'],
+      ].whereType<String>().join(' '),
+    );
     final sliced = _slice(songs, startIndex: startIndex, limit: limit);
     return [
       for (final song in sliced)
@@ -562,7 +571,7 @@ class SubsonicApiClient {
   MusicTrack _toMusicTrack(AuthSession session, Map<String, dynamic> json) {
     final id = (json['id'] as String? ?? '').trim();
     final title = (json['title'] as String? ?? '').trim();
-    final artistName = _primaryArtistName(json) ?? '未知艺术家';
+    final artistName = _primaryArtistName(json) ?? '未知歌手';
     final albumTitle = (json['album'] as String? ?? '').trim();
     final durationSeconds = _readInt(json['duration']);
     final playedAt = _parseDateTime(json['played']);
@@ -590,7 +599,7 @@ class SubsonicApiClient {
     final artistName =
         (json['displayArtist'] as String?)?.trim() ??
         (json['artist'] as String?)?.trim() ??
-        '未知艺术家';
+        '未知歌手';
     return MusicAlbum(
       id: id,
       title: title.isEmpty ? '未知专辑' : title,

@@ -13,10 +13,15 @@ import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 
 class CachedMusicRepository
-    implements MusicRepository, TrackSortingRepository, ArtistSortingRepository {
+    implements
+        MusicRepository,
+        TrackSortingRepository,
+        TrackFilteringRepository,
+        ArtistSortingRepository {
   CachedMusicRepository({
     required MusicRepository delegate,
     MusicRepositoryCachePolicy policy = const MusicRepositoryCachePolicy(),
@@ -146,6 +151,51 @@ class CachedMusicRepository
         'searchQuery': searchQuery,
       },
       loader: () => (delegate as TrackSortingRepository).fetchSortedTracks(
+        sortOption: sortOption,
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      ),
+    );
+  }
+
+  @override
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions() {
+    final delegate = _delegate;
+    return delegate is TrackFilteringRepository
+        ? (delegate as TrackFilteringRepository)
+              .fetchSupportedTrackFilterOptions()
+        : Future.value(const {});
+  }
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    final delegate = _delegate;
+    if (delegate is! TrackFilteringRepository) {
+      return fetchTracks(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
+    return _cached(
+      'filteredTracks',
+      ttl: _policy.listTtl,
+      params: {
+        'filters': filters.map((filter) => filter.name).toList()..sort(),
+        'sortOption': sortOption?.name,
+        'limit': limit,
+        'startIndex': startIndex,
+        'searchQuery': searchQuery,
+      },
+      loader: () => (delegate as TrackFilteringRepository).fetchFilteredTracks(
+        filters: filters,
         sortOption: sortOption,
         limit: limit,
         startIndex: startIndex,

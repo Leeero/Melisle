@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/domain/entities/artist_sort_option.d
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
@@ -231,7 +232,8 @@ class _LibraryViewState extends State<_LibraryView> {
       currentTrackId: currentTrackId,
       desktopToolbarTrailing:
           AppBreakpoints.usesDesktopToolbar(context) &&
-              state.supportedTrackSortOptions.isNotEmpty
+              (state.supportedTrackSortOptions.isNotEmpty ||
+                  state.supportedTrackFilterOptions.isNotEmpty)
           ? _TrackSortMenu(state: state)
           : null,
       onPlayAll: () => _playAllLibraryTracks(context, state),
@@ -388,7 +390,7 @@ class _ArtistAlphabetRail extends StatelessWidget {
         .map((artist) => _artistIndexLabel(artist.name))
         .toSet();
     return Semantics(
-      label: '艺术家字母索引',
+      label: '歌手字母索引',
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -402,7 +404,7 @@ class _ArtistAlphabetRail extends StatelessWidget {
                 return Semantics(
                   button: enabled,
                   enabled: enabled,
-                  label: '$label 开头的艺术家',
+                  label: '$label 开头的歌手',
                   child: MouseRegion(
                     cursor: enabled
                         ? SystemMouseCursors.click
@@ -446,20 +448,20 @@ String _librarySummaryLabel(LibraryState state) {
   final parts = <String>[
     if (trackCount > 0) '$trackCount 首',
     if (state.albums.isNotEmpty) '${state.albums.length} 专辑',
-    if (state.artists.isNotEmpty) '${state.artists.length} 艺术家',
+    if (state.artists.isNotEmpty) '${state.artists.length} 歌手',
     if (state.playlists.isNotEmpty) '${state.playlists.length} 歌单',
   ];
 
   if (state.status == LibraryStatus.loading && parts.isEmpty) {
     return '正在整理你的媒体库。';
   }
-  return parts.isEmpty ? '歌曲、专辑、艺术家和歌单会按音乐源实时展示。' : parts.join(' · ');
+  return parts.isEmpty ? '歌曲、专辑、歌手和歌单会按音乐源实时展示。' : parts.join(' · ');
 }
 
 String _libraryFilterLabel(LibraryFilter filter) => switch (filter) {
   LibraryFilter.tracks => '歌曲',
   LibraryFilter.albums => '专辑',
-  LibraryFilter.artists => '艺术家',
+  LibraryFilter.artists => '歌手',
   LibraryFilter.playlists => '歌单',
 };
 
@@ -688,25 +690,16 @@ class _LibraryHeader extends StatelessWidget {
     final cubit = context.read<LibraryCubit>();
     final tabs = AppScopeTabs<LibraryFilter>(
       semanticLabel: '媒体库分类',
-      variant: isWide
-          ? AppScopeTabsVariant.underline
-          : AppScopeTabsVariant.pill,
+      variant: AppScopeTabsVariant.pill,
       selectedValue: state.currentFilter,
       onChanged: cubit.changeFilter,
-      fillWidth: !isWide,
-      tabGap: isWide ? 34 : null,
-      items: isWide
-          ? const [
-              AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
-              AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
-              AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-            ]
-          : const [
-              AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
-              AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
-              AppScopeTabItem(value: LibraryFilter.artists, label: '艺术家'),
-              AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
-            ],
+      fillWidth: true,
+      items: const [
+        AppScopeTabItem(value: LibraryFilter.tracks, label: '歌曲'),
+        AppScopeTabItem(value: LibraryFilter.albums, label: '专辑'),
+        AppScopeTabItem(value: LibraryFilter.artists, label: '歌手'),
+        AppScopeTabItem(value: LibraryFilter.playlists, label: '歌单'),
+      ],
     );
 
     final search = AppSearchField(
@@ -721,15 +714,10 @@ class _LibraryHeader extends StatelessWidget {
         cubit.search('');
       },
     );
-    final filterButton =
-        state.currentFilter == LibraryFilter.artists && state.genres.isNotEmpty
-        ? _LibraryGenreMenu(state: state)
-        : null;
-    final artistSortButton =
-        isWide &&
-            state.currentFilter == LibraryFilter.artists &&
+    final artistFilterButton =
+        state.currentFilter == LibraryFilter.artists &&
             state.supportedArtistSortOptions.isNotEmpty
-        ? _ArtistSortMenu(state: state)
+        ? _ArtistFilterMenu(state: state)
         : null;
 
     return Column(
@@ -745,62 +733,18 @@ class _LibraryHeader extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (isWide)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final artistControls = [
-                if (filterButton != null) filterButton,
-                if (artistSortButton != null) artistSortButton,
-              ];
-              if (constraints.maxWidth < 760) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: tabs),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 280, child: search),
-                      ],
-                    ),
-                    if (artistControls.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Wrap(
-                          spacing: 8,
-                          children: artistControls,
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(width: 420, child: tabs),
-                      const Spacer(),
-                      SizedBox(width: 280, child: search),
-                    ],
-                  ),
-                  if (artistControls.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Wrap(spacing: 8, children: artistControls),
-                    ),
-                  ],
-                ],
-              );
-            },
-          )
+          if (artistFilterButton != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: artistFilterButton,
+            )
+          else
+            const SizedBox.shrink()
         else ...[
           search,
-          if (filterButton != null) ...[
+          if (artistFilterButton != null) ...[
             const SizedBox(height: 12),
-            Align(alignment: Alignment.centerRight, child: filterButton),
+            Align(alignment: Alignment.centerRight, child: artistFilterButton),
           ],
           const SizedBox(height: 12),
           tabs,
@@ -810,119 +754,410 @@ class _LibraryHeader extends StatelessWidget {
   }
 }
 
-class _TrackSortMenu extends StatelessWidget {
+class _TrackSortMenu extends StatefulWidget {
   const _TrackSortMenu({required this.state});
 
   final LibraryState state;
 
   @override
-  Widget build(BuildContext context) {
+  State<_TrackSortMenu> createState() => _TrackSortMenuState();
+}
+
+class _TrackSortMenuState extends State<_TrackSortMenu> {
+  final GlobalKey _triggerKey = GlobalKey();
+
+  Future<void> _showMenu() async {
+    final triggerContext = _triggerKey.currentContext;
+    if (triggerContext == null) return;
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final trigger = triggerContext.findRenderObject() as RenderBox;
+    final triggerRect = trigger.localToGlobal(Offset.zero, ancestor: overlay) &
+        trigger.size;
+    final menuAnchor = Rect.fromCenter(
+      center: Offset(triggerRect.right, triggerRect.center.dy),
+      width: 1,
+      height: 1,
+    );
+    final action = await showMenu<_TrackMenuAction>(
+      context: context,
+      position: RelativeRect.fromRect(menuAnchor, Offset.zero & overlay.size),
+      constraints: const BoxConstraints.tightFor(width: 200),
+      items: _menuItems(widget.state),
+    );
+    if (!mounted || action == null) return;
+
+    final cubit = context.read<LibraryCubit>();
+    switch (action.type) {
+      case _TrackMenuActionType.sort:
+        cubit.changeTrackSort(action.sortOption!);
+      case _TrackMenuActionType.toggleFilter:
+        cubit.toggleTrackFilter(action.filterOption!);
+      case _TrackMenuActionType.clearFilters:
+        cubit.clearTrackFilters();
+    }
+  }
+
+  List<PopupMenuEntry<_TrackMenuAction>> _menuItems(LibraryState state) {
     final selected = state.trackSortOption ?? TrackSortOption.title;
-    final theme = Theme.of(context);
-    return PopupMenuButton<TrackSortOption>(
-      tooltip: '选择歌曲排序方式',
-      onSelected: context.read<LibraryCubit>().changeTrackSort,
-      itemBuilder: (context) => [
-        for (final option in state.supportedTrackSortOptions)
+    final items = <PopupMenuEntry<_TrackMenuAction>>[];
+
+    if (state.supportedTrackSortOptions.isNotEmpty) {
+      items.add(const _TrackMenuSectionHeader(label: '排序方式'));
+      for (final option in TrackSortOption.values) {
+        if (!state.supportedTrackSortOptions.contains(option)) continue;
+        items.add(
           PopupMenuItem(
-            value: option,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: option == selected
-                      ? Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        )
-                      : null,
-                ),
-                Text(_trackSortLabel(option)),
-              ],
+            value: _TrackMenuAction.sort(option),
+            mouseCursor: SystemMouseCursors.click,
+            child: _TrackMenuRow(
+              label: _trackSortLabel(option),
+              icon: _trackSortIcon(option),
+              selected: option == selected,
             ),
           ),
-      ],
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '按${_trackSortLabel(selected)}排序',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.arrow_drop_down_rounded, size: 20),
-            ],
-          ),
+        );
+      }
+    }
+
+    if (state.supportedTrackFilterOptions.isNotEmpty) {
+      if (items.isNotEmpty) items.add(const PopupMenuDivider());
+      items.add(
+        _TrackMenuSectionHeader(
+          label: '筛选',
+          action: state.trackFilters.isEmpty
+              ? null
+              : const _TrackMenuAction.clearFilters(),
         ),
+      );
+      for (final filter in TrackFilterOption.values) {
+        if (!state.supportedTrackFilterOptions.contains(filter)) continue;
+        items.add(
+          PopupMenuItem(
+            value: _TrackMenuAction.toggleFilter(filter),
+            mouseCursor: SystemMouseCursors.click,
+            child: _TrackFilterMenuRow(
+              label: _trackFilterLabel(filter),
+              icon: _trackFilterIcon(filter),
+              selected: state.trackFilters.contains(filter),
+            ),
+          ),
+        );
+      }
+    }
+    return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final selected = state.trackSortOption ?? TrackSortOption.title;
+    final sortLabel = state.trackSortOption == null
+        ? '筛选'
+        : _trackSortLabel(selected);
+    return Semantics(
+      button: true,
+      label: '排序与筛选，当前$sortLabel',
+      child: TextButton.icon(
+        key: _triggerKey,
+        onPressed: _showMenu,
+        style: AppActionButtonStyle.text(context),
+        icon: Badge(
+          isLabelVisible: state.trackFilters.isNotEmpty,
+          smallSize: 7,
+          child: const Icon(Icons.tune_rounded, size: 18),
+        ),
+        label: Text('排序与筛选 · $sortLabel'),
       ),
     );
   }
 }
 
-class _ArtistSortMenu extends StatelessWidget {
-  const _ArtistSortMenu({required this.state});
+class _TrackMenuSectionHeader extends PopupMenuEntry<_TrackMenuAction> {
+  const _TrackMenuSectionHeader({required this.label, this.action});
+
+  final String label;
+  final _TrackMenuAction? action;
+
+  @override
+  double get height => 36;
+
+  @override
+  bool represents(_TrackMenuAction? value) => false;
+
+  @override
+  State<_TrackMenuSectionHeader> createState() => _TrackMenuSectionHeaderState();
+}
+
+class _TrackMenuSectionHeaderState extends State<_TrackMenuSectionHeader> {
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            widget.label,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
+        if (widget.action != null)
+          TextButton(
+            onPressed: () => Navigator.pop(context, widget.action),
+            child: const Text('清除'),
+          ),
+      ],
+    ),
+  );
+}
+
+class _TrackMenuRow extends StatelessWidget {
+  const _TrackMenuRow({
+    required this.label,
+    required this.icon,
+    required this.selected,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        SizedBox(
+          width: 20,
+          child: Center(
+            child: Icon(icon, size: 20, color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label)),
+        if (selected) Icon(Icons.check_rounded, color: colorScheme.primary),
+      ],
+    );
+  }
+}
+
+class _TrackFilterMenuRow extends StatelessWidget {
+  const _TrackFilterMenuRow({
+    required this.label,
+    required this.icon,
+    required this.selected,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      SizedBox(
+        width: 20,
+        child: Center(
+          child: Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(child: Text(label)),
+      IgnorePointer(child: Checkbox(value: selected, onChanged: (_) {})),
+    ],
+  );
+}
+
+enum _TrackMenuActionType { sort, toggleFilter, clearFilters }
+
+class _TrackMenuAction {
+  const _TrackMenuAction.sort(this.sortOption)
+    : type = _TrackMenuActionType.sort,
+      filterOption = null;
+
+  const _TrackMenuAction.toggleFilter(this.filterOption)
+    : type = _TrackMenuActionType.toggleFilter,
+      sortOption = null;
+
+  const _TrackMenuAction.clearFilters()
+    : type = _TrackMenuActionType.clearFilters,
+      sortOption = null,
+      filterOption = null;
+
+  final _TrackMenuActionType type;
+  final TrackSortOption? sortOption;
+  final TrackFilterOption? filterOption;
+}
+
+class _ArtistFilterMenu extends StatefulWidget {
+  const _ArtistFilterMenu({required this.state});
 
   final LibraryState state;
 
   @override
-  Widget build(BuildContext context) {
-    final selected = state.artistSortOption ?? ArtistSortOption.name;
-    final theme = Theme.of(context);
-    return PopupMenuButton<ArtistSortOption>(
-      tooltip: '选择艺术家排序方式',
-      onSelected: context.read<LibraryCubit>().changeArtistSort,
-      itemBuilder: (context) => [
-        for (final option in state.supportedArtistSortOptions)
-          PopupMenuItem(
-            value: option,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: option == selected
-                      ? Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        )
-                      : null,
-                ),
-                Text(_artistSortLabel(option)),
-              ],
-            ),
-          ),
-      ],
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 132, minHeight: 46),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '按${_artistSortLabel(selected)}排序',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.arrow_drop_down_rounded, size: 20),
-            ],
+  State<_ArtistFilterMenu> createState() => _ArtistFilterMenuState();
+}
+
+class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
+  final GlobalKey _triggerKey = GlobalKey();
+
+  Future<void> _showMenu() async {
+    final triggerContext = _triggerKey.currentContext;
+    if (triggerContext == null) return;
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final trigger = triggerContext.findRenderObject() as RenderBox;
+    final triggerRect = trigger.localToGlobal(Offset.zero, ancestor: overlay) &
+        trigger.size;
+    final anchor = Rect.fromCenter(
+      center: Offset(triggerRect.right, triggerRect.center.dy),
+      width: 1,
+      height: 1,
+    );
+    final action = await showMenu<_ArtistMenuAction>(
+      context: context,
+      position: RelativeRect.fromRect(anchor, Offset.zero & overlay.size),
+      constraints: const BoxConstraints.tightFor(width: 240),
+      items: _menuItems(widget.state),
+    );
+    if (!mounted || action == null) return;
+
+    final cubit = context.read<LibraryCubit>();
+    switch (action.type) {
+      case _ArtistMenuActionType.sort:
+        cubit.changeArtistSort(action.sortOption!);
+      case _ArtistMenuActionType.genre:
+        cubit.changeGenre(action.genreId);
+    }
+  }
+
+  List<PopupMenuEntry<_ArtistMenuAction>> _menuItems(LibraryState state) {
+    final selectedSort = state.artistSortOption ?? ArtistSortOption.name;
+    final items = <PopupMenuEntry<_ArtistMenuAction>>[
+      const PopupMenuItem(
+        enabled: false,
+        height: 36,
+        child: Text('排序方式'),
+      ),
+    ];
+
+    for (final option in ArtistSortOption.values) {
+      if (!state.supportedArtistSortOptions.contains(option)) continue;
+      items.add(
+        PopupMenuItem(
+          value: _ArtistMenuAction.sort(option),
+          mouseCursor: SystemMouseCursors.click,
+          child: _TrackMenuRow(
+            label: _artistSortLabel(option),
+            icon: _artistSortIcon(option),
+            selected: option == selectedSort,
           ),
         ),
+      );
+    }
+
+    if (state.genres.isEmpty) return items;
+
+    items.addAll([
+      const PopupMenuDivider(),
+      const PopupMenuItem(
+        enabled: false,
+        height: 36,
+        child: Text('音乐风格'),
+      ),
+      PopupMenuItem(
+        value: const _ArtistMenuAction.genre(null),
+        mouseCursor: SystemMouseCursors.click,
+        child: _TrackMenuRow(
+          label: '全部风格',
+          icon: Icons.library_music_outlined,
+          selected: state.selectedGenreId == null,
+        ),
+      ),
+      for (final genre in state.genres)
+        PopupMenuItem(
+          value: _ArtistMenuAction.genre(genre.id),
+          mouseCursor: SystemMouseCursors.click,
+          child: _TrackMenuRow(
+            label: genre.name,
+            icon: Icons.music_note_outlined,
+            selected: genre.id == state.selectedGenreId,
+          ),
+        ),
+    ]);
+    return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedGenre = widget.state.genres
+        .where((genre) => genre.id == widget.state.selectedGenreId)
+        .firstOrNull;
+    final selectedGenreName = selectedGenre?.name;
+    final buttonLabel = selectedGenreName == null
+        ? '筛选与排序'
+        : '筛选与排序 · $selectedGenreName';
+    final semanticLabel = selectedGenreName == null
+        ? '歌手筛选与排序，当前未按风格筛选'
+        : '歌手筛选与排序，当前风格$selectedGenreName';
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: TextButton.icon(
+        key: _triggerKey,
+        onPressed: _showMenu,
+        style: AppActionButtonStyle.text(context),
+        icon: Badge(
+          isLabelVisible: selectedGenre != null,
+          smallSize: 7,
+          child: const Icon(Icons.tune_rounded, size: 18),
+        ),
+        label: Text(buttonLabel),
       ),
     );
   }
 }
 
+enum _ArtistMenuActionType { sort, genre }
+
+class _ArtistMenuAction {
+  const _ArtistMenuAction.sort(this.sortOption)
+    : type = _ArtistMenuActionType.sort,
+      genreId = null;
+
+  const _ArtistMenuAction.genre(this.genreId)
+    : type = _ArtistMenuActionType.genre,
+      sortOption = null;
+
+  final _ArtistMenuActionType type;
+  final ArtistSortOption? sortOption;
+  final String? genreId;
+}
+
 String _trackSortLabel(TrackSortOption option) => switch (option) {
   TrackSortOption.title => '标题',
-  TrackSortOption.artist => '艺术家',
+  TrackSortOption.artist => '歌手',
   TrackSortOption.album => '专辑',
   TrackSortOption.dateAdded => '添加时间',
+};
+
+IconData _trackSortIcon(TrackSortOption option) => switch (option) {
+  TrackSortOption.title => Icons.sort_by_alpha_rounded,
+  TrackSortOption.artist => Icons.person_outline_rounded,
+  TrackSortOption.album => Icons.album_outlined,
+  TrackSortOption.dateAdded => Icons.calendar_today_outlined,
+};
+
+String _trackFilterLabel(TrackFilterOption option) => switch (option) {
+  TrackFilterOption.favorite => '仅显示收藏',
+};
+
+IconData _trackFilterIcon(TrackFilterOption option) => switch (option) {
+  TrackFilterOption.favorite => Icons.favorite_border_rounded,
 };
 
 String _artistSortLabel(ArtistSortOption option) => switch (option) {
@@ -930,29 +1165,7 @@ String _artistSortLabel(ArtistSortOption option) => switch (option) {
   ArtistSortOption.dateAdded => '添加时间',
 };
 
-class _LibraryGenreMenu extends StatelessWidget {
-  const _LibraryGenreMenu({required this.state});
-
-  final LibraryState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: '筛选艺术家',
-      initialValue: state.selectedGenreId ?? '',
-      onSelected: (value) => context.read<LibraryCubit>().changeGenre(
-        value.isEmpty ? null : value,
-      ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: '', child: Text('全部类型')),
-        for (final genre in state.genres)
-          PopupMenuItem(value: genre.id, child: Text(genre.name)),
-      ],
-      icon: Badge(
-        isLabelVisible: state.selectedGenreId != null,
-        smallSize: 7,
-        child: const Icon(Icons.tune_rounded),
-      ),
-    );
-  }
-}
+IconData _artistSortIcon(ArtistSortOption option) => switch (option) {
+  ArtistSortOption.name => Icons.sort_by_alpha_rounded,
+  ArtistSortOption.dateAdded => Icons.calendar_today_outlined,
+};

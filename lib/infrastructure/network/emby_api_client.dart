@@ -8,6 +8,7 @@ import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:dio/dio.dart';
@@ -137,6 +138,7 @@ class EmbyApiClient {
     int startIndex = 0,
     String? searchQuery,
     TrackSortOption sortOption = TrackSortOption.title,
+    Set<TrackFilterOption> filters = const {},
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.normalizedServerUrl}/Users/${session.userId}/Items',
@@ -152,6 +154,7 @@ class EmbyApiClient {
           TrackSortOption.album => 'Album,SortName',
           TrackSortOption.dateAdded => 'DateCreated,SortName',
         },
+        filters: filters,
       ),
       options: _authorizedOptions(session, requestLabel: 'library.tracks'),
     );
@@ -789,6 +792,7 @@ class EmbyApiClient {
     required String? searchQuery,
     String sortBy = 'SortName',
     String? sortOrder,
+    Set<TrackFilterOption> filters = const {},
   }) {
     final queryParameters = <String, dynamic>{
       'IncludeItemTypes': includeItemTypes,
@@ -806,6 +810,16 @@ class EmbyApiClient {
     }
     if (sortOrder != null) {
       queryParameters['SortOrder'] = sortOrder;
+    }
+    final embyFilters = filters
+        .map(
+          (filter) => switch (filter) {
+            TrackFilterOption.favorite => 'IsFavorite',
+          },
+        )
+        .join(',');
+    if (embyFilters.isNotEmpty) {
+      queryParameters['Filters'] = embyFilters;
     }
 
     return queryParameters;
@@ -863,7 +877,7 @@ class EmbyApiClient {
   MusicArtist _toMusicArtist(AuthSession session, Map<String, dynamic> item) {
     return MusicArtist(
       id: item['Id'] as String? ?? '',
-      name: item['Name'] as String? ?? '未知艺术家',
+      name: item['Name'] as String? ?? '未知歌手',
       artworkUrl: buildArtworkUrl(session, item['Id'] as String? ?? ''),
       albumCount: _readInt(item['AlbumCount'] ?? item['AlbumItems']),
       trackCount: _readInt(item['ChildCount']),
@@ -963,7 +977,7 @@ class EmbyApiClient {
       }
     }
 
-    return '未知艺术家';
+    return '未知歌手';
   }
 
   String? _resolveArtistId(Map<String, dynamic> item) {

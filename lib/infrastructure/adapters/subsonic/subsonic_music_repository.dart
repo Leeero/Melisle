@@ -10,12 +10,14 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/entities/paginated_result.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
+import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
+import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/infrastructure/network/subsonic_api_client.dart';
 import 'package:cross_platform_music_player/infrastructure/persistence/auth_session_store.dart';
 
-class SubsonicMusicRepository implements MusicRepository {
+class SubsonicMusicRepository implements MusicRepository, TrackFilteringRepository {
   SubsonicMusicRepository({
     required SubsonicApiClient client,
     required AuthSessionStore sessionStore,
@@ -87,6 +89,34 @@ class SubsonicMusicRepository implements MusicRepository {
     String? searchQuery,
   }) async {
     final tracks = await _client.fetchTracks(
+      await _requireSession(),
+      limit: limit,
+      startIndex: startIndex,
+      searchQuery: searchQuery,
+    );
+    return PaginatedResult(items: tracks);
+  }
+
+  @override
+  Future<Set<TrackFilterOption>> fetchSupportedTrackFilterOptions() async =>
+      const {TrackFilterOption.favorite};
+
+  @override
+  Future<PaginatedResult<MusicTrack>> fetchFilteredTracks({
+    required Set<TrackFilterOption> filters,
+    TrackSortOption? sortOption,
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) async {
+    if (!filters.contains(TrackFilterOption.favorite)) {
+      return fetchTracks(
+        limit: limit,
+        startIndex: startIndex,
+        searchQuery: searchQuery,
+      );
+    }
+    final tracks = await _client.fetchFavoriteTracks(
       await _requireSession(),
       limit: limit,
       startIndex: startIndex,
