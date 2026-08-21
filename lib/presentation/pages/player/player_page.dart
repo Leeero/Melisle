@@ -2078,7 +2078,7 @@ class _DesktopMoreActionsDialog extends StatelessWidget {
                   if (track.artistId?.isNotEmpty ?? false)
                     _DesktopPopoverOptionRow(
                       icon: Icons.person_rounded,
-                      title: '查看艺术家',
+                      title: '查看歌手',
                       showChevron: true,
                       onTap: () {
                         Navigator.of(context).pop();

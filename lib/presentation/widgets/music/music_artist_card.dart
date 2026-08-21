@@ -33,7 +33,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
     final compact = widget.compact;
 
     return Semantics(
-      label: '打开艺术家《$displayName》',
+      label: '打开歌手《$displayName》',
       button: true,
       onTap: widget.onTap,
       child: HoverScale(

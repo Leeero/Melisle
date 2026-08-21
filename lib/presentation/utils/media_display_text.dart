@@ -10,7 +10,7 @@ abstract final class MediaDisplayText {
 
   static String albumTitle(String? value) => _clean(value, '未知专辑');
 
-  static String artistName(String? value) => _clean(value, '未知艺术家');
+  static String artistName(String? value) => _clean(value, '未知歌手');
 
   static String playlistName(String? value) => _clean(value, '未命名歌单');
 

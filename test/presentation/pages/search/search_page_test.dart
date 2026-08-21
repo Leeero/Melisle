@@ -45,17 +45,17 @@ void main() {
 
   testWidgets('SearchPage_emptyResults_showsHelpfulMessage', (tester) async {
     await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository()),
+      _buildSearchPage(
+        repository: _FakeMusicRepository(),
+        initialQuery: '不存在',
+      ),
     );
-
-    await tester.enterText(find.byType(TextField), '不存在');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.text('没有找到结果，换个关键词试试。'), findsOneWidget);
   });
 
-  testWidgets('SearchPage_results_useSingleV3SectionFlowWithoutScopeTabs', (
+  testWidgets('SearchPage_results_showQueryAndScopedResultSections', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 900);
@@ -64,23 +64,98 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
     );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppScopeTabs), findsNothing);
-    expect(find.text('全部'), findsNothing);
+    expect(find.text('搜索 “周杰伦”'), findsOneWidget);
+    expect(find.text('综合'), findsOneWidget);
+    expect(find.text('歌曲'), findsOneWidget);
+    expect(find.text('专辑'), findsOneWidget);
+    expect(find.text('歌手'), findsOneWidget);
+    expect(find.text('歌单'), findsOneWidget);
     expect(find.text('最佳匹配'), findsOneWidget);
-    expect(find.text('1 首'), findsWidgets);
+    expect(find.text('1 首'), findsNothing);
     expect(find.text('夜曲'), findsOneWidget);
     expect(find.text('私人雷达'), findsOneWidget);
     expect(find.text('十一月的萧邦'), findsWidgets);
   });
 
-  testWidgets('SearchPage_recentSearchChip_syncsInputAndSearches', (
+  testWidgets('SearchPage_scopeTab_showsOnlyItsExistingResultType', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('专辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('最佳匹配'), findsNothing);
+    expect(find.byType(MusicAlbumGridCard), findsOneWidget);
+    expect(find.byType(MusicArtistGridCard), findsNothing);
+    expect(find.text('夜曲'), findsNothing);
+  });
+
+  testWidgets('SearchPage_songScope_showsPlayAllWithoutSectionTitle', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('歌曲'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.text('1 首'), findsNothing);
+  });
+
+  testWidgets('SearchPage_emptyScope_showsRelatedEmptyMessage', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _buildSearchPage(
+        repository: _FakeMusicRepository(
+          results: SearchResults(tracks: [_track()]),
+        ),
+        initialQuery: '周杰伦',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('专辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂无相关专辑'), findsOneWidget);
+  });
+
+  testWidgets('SearchPage_recentSearchChip_submitsSearch', (
     tester,
   ) async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
@@ -96,29 +171,18 @@ void main() {
     await tester.tap(find.widgetWithText(InputChip, '夜曲'));
     await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.controller?.text, '夜曲');
     expect(repository.queries, contains('夜曲'));
   });
 
-  testWidgets('SearchPage_clearButton_hasTooltipAndTouchTarget', (
+  testWidgets('SearchPage_hasNoInlineSearchField', (
     tester,
   ) async {
     await tester.pumpWidget(
       _buildSearchPage(repository: _FakeMusicRepository()),
     );
 
-    expect(find.byType(TextField), findsOneWidget);
-    final searchField = tester.widget<TextField>(find.byType(TextField));
-    expect(searchField.decoration?.hintText, '搜索歌曲、专辑、艺人');
-
-    await tester.enterText(find.byType(TextField), '夜曲');
-    await tester.pump();
-
-    final clearButton = find.byTooltip('清空搜索');
-    expect(clearButton, findsOneWidget);
-    expect(tester.getSize(clearButton).width, greaterThanOrEqualTo(44));
-    expect(tester.getSize(clearButton).height, greaterThanOrEqualTo(44));
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('搜索'), findsNothing);
   });
 
   testWidgets('SearchPage_loadingState_keepsLightweightFeedback', (
@@ -130,11 +194,9 @@ void main() {
           results: _results(),
           delay: const Duration(seconds: 1),
         ),
+        initialQuery: '周杰伦',
       ),
     );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('正在搜索…'), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
@@ -143,10 +205,9 @@ void main() {
   testWidgets('SearchPage_failureState_showsRetryAction', (tester) async {
     final repository = _FakeMusicRepository(error: Exception('offline'));
 
-    await tester.pumpWidget(_buildSearchPage(repository: repository));
-
-    await tester.enterText(find.byType(TextField), '失败');
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpWidget(
+      _buildSearchPage(repository: repository, initialQuery: '失败'),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('重试'), findsOneWidget);
@@ -165,11 +226,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
     );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(MusicAlbumGridCard), findsOneWidget);
@@ -232,11 +293,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
     );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppScopeTabs), findsNothing);
@@ -260,11 +321,9 @@ void main() {
     await tester.pumpWidget(
       _buildSearchPage(
         repository: _FakeMusicRepository(results: _longArtistResults()),
+        initialQuery: '独立音乐',
       ),
     );
-
-    await tester.enterText(find.byType(TextField), '独立音乐');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(SliverGrid), findsOneWidget);
@@ -280,20 +339,21 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+      _buildSearchPage(
+        repository: _FakeMusicRepository(results: _results()),
+        initialQuery: '周杰伦',
+      ),
     );
-
-    await tester.enterText(find.byType(TextField), '周杰伦');
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppScopeTabs), findsNothing);
     expect(find.text('全部'), findsNothing);
     expect(find.text('最佳匹配'), findsOneWidget);
-    expect(find.text('1 首'), findsWidgets);
+    expect(find.text('1 首'), findsNothing);
     expect(find.text('播放全部'), findsNothing);
     expect(find.text('加入队列'), findsNothing);
-    expect(find.byTooltip('加入队列'), findsOneWidget);
+    expect(find.byTooltip('加入队列'), findsNothing);
+    expect(find.byTooltip('更多操作'), findsOneWidget);
   });
 
   testWidgets('SearchPage_responsiveSmoke_hasNoLayoutExceptions', (
@@ -313,11 +373,11 @@ void main() {
       tester.view.devicePixelRatio = 1;
 
       await tester.pumpWidget(
-        _buildSearchPage(repository: _FakeMusicRepository(results: _results())),
+        _buildSearchPage(
+          repository: _FakeMusicRepository(results: _results()),
+          initialQuery: '周杰伦',
+        ),
       );
-
-      await tester.enterText(find.byType(TextField), '周杰伦');
-      await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -345,11 +405,10 @@ void main() {
           data: MediaQueryData(size: size, textScaler: TextScaler.linear(1.3)),
           child: _buildSearchPage(
             repository: _FakeMusicRepository(results: _results()),
+            initialQuery: '周杰伦',
           ),
         ),
       );
-      await tester.enterText(find.byType(TextField), '周杰伦');
-      await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull, reason: '$size at 1.3x');
@@ -363,6 +422,7 @@ Widget _buildSearchPage({
   required _FakeMusicRepository repository,
   AppDatabase? database,
   ThemeMode themeMode = ThemeMode.light,
+  String? initialQuery,
 }) {
   final mediaSourceResolver = CustomMediaSourceResolver();
   final settingsCubit = AppSettingsCubit(
@@ -385,9 +445,9 @@ Widget _buildSearchPage({
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: themeMode,
-        home: const RepaintBoundary(
+        home: RepaintBoundary(
           key: ValueKey('search-capture'),
-          child: SearchPage(),
+          child: SearchPage(initialQuery: initialQuery),
         ),
       ),
     ),
@@ -442,10 +502,9 @@ void _addScreenshotTests() {
                 _buildSearchPage(
                   repository: _FakeMusicRepository(results: _results()),
                   themeMode: mode,
+                  initialQuery: '周杰伦',
                 ),
               );
-              await tester.enterText(find.byType(TextField), '周杰伦');
-              await tester.pump(const Duration(milliseconds: 400));
               await tester.pumpAndSettle();
               expect(tester.takeException(), isNull);
               final brightness = mode == ThemeMode.light ? 'light' : 'dark';

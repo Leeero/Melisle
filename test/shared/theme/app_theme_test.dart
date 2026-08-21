@@ -10,14 +10,14 @@ void main() {
 
       expect(light.colorScheme.primary, AppColorTokens.lightPrimary);
       expect(dark.colorScheme.primary, AppColorTokens.darkPrimary);
-      expect(light.colorScheme.primaryContainer, const Color(0xFF117E6E));
-      expect(light.colorScheme.onPrimaryContainer, const Color(0xFFCFFFF3));
-      expect(light.colorScheme.onSurface, const Color(0xFF181D1B));
-      expect(light.colorScheme.onSurfaceVariant, const Color(0xFF3E4946));
-      expect(light.colorScheme.outlineVariant, const Color(0xFFBDC9C5));
-      expect(dark.colorScheme.surface, const Color(0xFF141C1E));
-      expect(dark.colorScheme.surfaceContainer, const Color(0xFF1B2325));
-      expect(dark.colorScheme.outline, const Color(0xFF2B3233));
+      expect(light.colorScheme.primaryContainer, const Color(0xFFE8F0FF));
+      expect(light.colorScheme.onPrimaryContainer, const Color(0xFF12346B));
+      expect(light.colorScheme.onSurface, const Color(0xFF1B1E26));
+      expect(light.colorScheme.onSurfaceVariant, const Color(0xFF667085));
+      expect(light.colorScheme.outlineVariant, const Color(0xFFDDE2EA));
+      expect(dark.colorScheme.surface, const Color(0xFF1A1918));
+      expect(dark.colorScheme.surfaceContainer, const Color(0xFF282C33));
+      expect(dark.colorScheme.outline, const Color(0xFF596172));
       expect(light.accentGreen, light.colorScheme.primary);
       expect(dark.accentGreen, dark.colorScheme.primary);
     });
@@ -81,8 +81,8 @@ void main() {
 
     test('keeps the V3-46 desktop shell dimensions', () {
       expect(AppSpacingTokens.desktopSidebarWidth, 220);
-      expect(AppSpacingTokens.desktopToolbarHeight, 54);
-      expect(AppSpacingTokens.desktopMiniPlayerHeight, 72);
+      expect(AppSpacingTokens.desktopToolbarHeight, 72);
+      expect(AppSpacingTokens.desktopMiniPlayerHeight, 92);
     });
 
     test('keeps V3-46 breakpoint edges stable', () {
@@ -146,6 +146,40 @@ void main() {
         side.resolve({WidgetState.focused})?.color,
         light.colorScheme.primary.withValues(alpha: 0.42),
       );
+    });
+
+    test('uses a hand cursor without adding hover surfaces or borders', () {
+      final theme = AppTheme.light();
+      final styles = [
+        theme.filledButtonTheme.style!,
+        theme.outlinedButtonTheme.style!,
+        theme.textButtonTheme.style!,
+        theme.iconButtonTheme.style!,
+        theme.elevatedButtonTheme.style!,
+      ];
+
+      for (final style in styles) {
+        expect(
+          style.mouseCursor?.resolve({WidgetState.hovered}),
+          SystemMouseCursors.click,
+        );
+        expect(
+          style.mouseCursor?.resolve({WidgetState.disabled}),
+          SystemMouseCursors.basic,
+        );
+      }
+
+      final outlined = theme.outlinedButtonTheme.style!;
+      final icon = theme.iconButtonTheme.style!;
+      expect(
+        outlined.backgroundColor?.resolve({WidgetState.hovered}),
+        Colors.transparent,
+      );
+      expect(
+        icon.backgroundColor?.resolve({WidgetState.hovered}),
+        Colors.transparent,
+      );
+      expect(icon.side?.resolve({WidgetState.hovered}), BorderSide.none);
     });
 
     test('uses shared radii in card button input and bottom sheet themes', () {

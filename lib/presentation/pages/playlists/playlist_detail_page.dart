@@ -14,6 +14,7 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sn
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -292,29 +293,12 @@ class _MobilePlaylistHero extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _MobilePlaylistActionButton(
-                  icon: Icons.play_arrow_rounded,
-                  label: '播放',
-                  primary: true,
-                  isLoading: isBusy,
-                  onPressed: hasLoadedTracks && !isBusy ? onPlayAll : null,
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: '随机播放',
-                  child: IconButton(
-                    onPressed: hasLoadedTracks && !isBusy ? onShuffleAll : null,
-                    style: AppActionButtonStyle.icon(
-                      context,
-                      tone: AppActionButtonTone.secondary,
-                    ),
-                    icon: const Icon(Icons.shuffle_rounded),
-                  ),
-                ),
-              ],
+            PlayAllButton(
+              variant: PlayAllButtonVariant.compact,
+              isLoading: isBusy,
+              onPressed: hasLoadedTracks && !isBusy ? onPlayAll : null,
+              onShufflePressed:
+                  hasLoadedTracks && !isBusy ? onShuffleAll : null,
             ),
           ],
         );
@@ -363,55 +347,6 @@ class _MobilePlaylistArtwork extends StatelessWidget {
           size: size,
           borderRadius: AppRadiusTokens.mobileLg - 2,
           semanticLabel: semanticLabel,
-        ),
-      ),
-    );
-  }
-}
-
-class _MobilePlaylistActionButton extends StatelessWidget {
-  const _MobilePlaylistActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.primary = false,
-    this.isLoading = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-  final bool primary;
-  final bool isLoading;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final enabled = onPressed != null && !isLoading;
-
-    return Semantics(
-      label: label,
-      button: true,
-      enabled: enabled,
-      child: TextButton.icon(
-        onPressed: enabled ? onPressed : null,
-        icon: isLoading
-            ? SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: primary ? colorScheme.onPrimary : colorScheme.primary,
-                ),
-              )
-            : Icon(icon, size: 18),
-        label: Text(label),
-        style: AppActionButtonStyle.text(
-          context,
-          tone: primary
-              ? AppActionButtonTone.primary
-              : AppActionButtonTone.neutral,
-          dense: false,
         ),
       ),
     );
@@ -862,53 +797,11 @@ class _PlaylistDesktopActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
-    );
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FilledButton.icon(
-          onPressed: enabled ? onPlayAll : null,
-          icon: isLoading
-              ? SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: colors.onPrimary,
-                  ),
-                )
-              : const Icon(Icons.play_arrow_rounded, size: 20),
-          label: const Text('播放全部'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
-            shape: shape,
-            textStyle: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        OutlinedButton.icon(
-          onPressed: enabled ? onShuffleAll : null,
-          icon: const Icon(Icons.shuffle_rounded, size: 20),
-          label: const Text('随机播放'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.onSurface,
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
-            side: BorderSide(color: colors.outlineVariant),
-            shape: shape,
-            textStyle: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
+    return PlayAllButton(
+      variant: PlayAllButtonVariant.primary,
+      isLoading: isLoading,
+      onPressed: enabled ? onPlayAll : null,
+      onShufflePressed: enabled ? onShuffleAll : null,
     );
   }
 }

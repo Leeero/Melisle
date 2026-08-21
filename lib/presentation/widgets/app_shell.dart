@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/desktop_page_toolbar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
@@ -10,40 +9,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class AppShell extends StatefulWidget {
+class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  State<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends State<AppShell> {
-  bool _sidebarCollapsed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final selectedIndex = widget.navigationShell.currentIndex;
+    final selectedIndex = navigationShell.currentIndex;
     final layout = AppBreakpoints.of(context);
 
     return switch (layout) {
       AppLayoutSize.largeDesktop ||
       AppLayoutSize.desktop => _ExpandedShellScaffold(
-        navigationShell: widget.navigationShell,
-        selectedIndex: selectedIndex,
+        navigationShell: navigationShell,
         onSelected: _go,
-        sidebarCollapsed: _sidebarCollapsed,
-        onToggleSidebar: () =>
-            setState(() => _sidebarCollapsed = !_sidebarCollapsed),
       ),
       AppLayoutSize.medium => _MediumShellScaffold(
-        navigationShell: widget.navigationShell,
-        selectedIndex: selectedIndex,
+        navigationShell: navigationShell,
         onSelected: _go,
       ),
       AppLayoutSize.compact => _CompactShellScaffold(
-        navigationShell: widget.navigationShell,
+        navigationShell: navigationShell,
         selectedIndex: selectedIndex,
         onSelected: _go,
       ),
@@ -51,9 +38,9 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _go(int index) {
-    widget.navigationShell.goBranch(
+    navigationShell.goBranch(
       index,
-      initialLocation: index == widget.navigationShell.currentIndex,
+      initialLocation: index == navigationShell.currentIndex,
     );
   }
 }
@@ -61,17 +48,11 @@ class _AppShellState extends State<AppShell> {
 class _ExpandedShellScaffold extends StatelessWidget {
   const _ExpandedShellScaffold({
     required this.navigationShell,
-    required this.selectedIndex,
     required this.onSelected,
-    required this.sidebarCollapsed,
-    required this.onToggleSidebar,
   });
 
   final StatefulNavigationShell navigationShell;
-  final int selectedIndex;
   final ValueChanged<int> onSelected;
-  final bool sidebarCollapsed;
-  final VoidCallback onToggleSidebar;
 
   @override
   Widget build(BuildContext context) {
@@ -80,25 +61,29 @@ class _ExpandedShellScaffold extends StatelessWidget {
     return Scaffold(
       key: const ValueKey('shell-desktop'),
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Row(
+      body: Column(
         children: [
-          _ShellSidebar(
-            selectedIndex: selectedIndex,
-            onSelected: onSelected,
-            compact: sidebarCollapsed,
-            onToggleCompact: onToggleSidebar,
-          ),
           Expanded(
-            child: _ShellContentSurface(
-              body: Column(
-                children: [
-                  const DesktopPageToolbar(),
-                  Expanded(child: navigationShell),
-                ],
-              ),
-              footer: const MiniPlayerBar(),
+            child: Row(
+              children: [
+                _ShellSidebar(
+                  onSelected: onSelected,
+                  compact: false,
+                ),
+                Expanded(
+                  child: _ShellContentSurface(
+                    body: Column(
+                      children: [
+                        const DesktopPageToolbar(),
+                        Expanded(child: navigationShell),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const MiniPlayerBar(),
         ],
       ),
     );
@@ -109,12 +94,10 @@ class _ExpandedShellScaffold extends StatelessWidget {
 class _MediumShellScaffold extends StatelessWidget {
   const _MediumShellScaffold({
     required this.navigationShell,
-    required this.selectedIndex,
     required this.onSelected,
   });
 
   final StatefulNavigationShell navigationShell;
-  final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   @override
@@ -124,27 +107,29 @@ class _MediumShellScaffold extends StatelessWidget {
     return Scaffold(
       key: const ValueKey('shell-medium'),
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Row(
+      body: Column(
         children: [
-          _ShellSidebar(
-            selectedIndex: selectedIndex,
-            onSelected: onSelected,
-            compact: true,
-          ),
           Expanded(
-            child: _ShellContentSurface(
-              body: Column(
-                children: [
-                  const DesktopPageToolbar(),
-                  Expanded(child: navigationShell),
-                ],
-              ),
-              footer: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
-                child: MiniPlayerBar(),
-              ),
+            child: Row(
+              children: [
+                _ShellSidebar(
+                  onSelected: onSelected,
+                  compact: true,
+                ),
+                Expanded(
+                  child: _ShellContentSurface(
+                    body: Column(
+                      children: [
+                        const DesktopPageToolbar(),
+                        Expanded(child: navigationShell),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const MiniPlayerBar(),
         ],
       ),
     );
@@ -208,58 +193,46 @@ class _ShellBottomDock extends StatelessWidget {
 }
 
 class _ShellContentSurface extends StatelessWidget {
-  const _ShellContentSurface({required this.body, this.footer});
+  const _ShellContentSurface({required this.body});
 
   final Widget body;
-  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[Expanded(child: body)];
-    final footer = this.footer;
-    if (footer != null) {
-      children.add(footer);
-    }
-
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.alphaBlend(
-              Theme.of(context).musicTealSoft.withValues(alpha: 0.18),
-              Theme.of(context).ambientGradientStart,
-            ),
-            Theme.of(context).scaffoldBackgroundColor,
-          ],
-          stops: const [0, 0.46],
-        ),
       ),
-      child: Column(children: children),
+      child: Column(children: [Expanded(child: body)]),
     );
   }
 }
 
-class _ShellSidebar extends StatelessWidget {
+class _ShellSidebar extends StatefulWidget {
   const _ShellSidebar({
-    required this.selectedIndex,
     required this.onSelected,
     this.compact = false,
-    this.onToggleCompact,
   });
 
-  final int selectedIndex;
   final ValueChanged<int> onSelected;
   final bool compact;
-  final VoidCallback? onToggleCompact;
+
+  @override
+  State<_ShellSidebar> createState() => _ShellSidebarState();
+}
+
+class _ShellSidebarState extends State<_ShellSidebar> {
+  bool _libraryExpanded = true;
 
   @override
   Widget build(BuildContext context) {
+    final compact = widget.compact;
+    final onSelected = widget.onSelected;
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final path = GoRouterState.of(context).uri.path;
+    final routeState = GoRouterState.of(context);
+    final path = routeState.uri.path;
+    final libraryTab = routeState.uri.queryParameters['tab'];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -295,33 +268,36 @@ class _ShellSidebar extends StatelessWidget {
                 child: compact
                     ? Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ShellLogo(colorScheme: colorScheme),
-                          if (onToggleCompact != null) ...[
-                            const SizedBox(height: 8),
-                            _SidebarToggleButton(
-                              compact: true,
-                              onPressed: onToggleCompact!,
-                            ),
-                          ],
-                        ],
+                        children: [_ShellLogo(colorScheme: colorScheme)],
                       )
                     : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _ShellLogo(colorScheme: colorScheme),
                           const SizedBox(width: 10),
-                          Text(
-                            AppConstants.appName,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          if (onToggleCompact != null) ...[
-                            const Spacer(),
-                            _SidebarToggleButton(
-                              compact: false,
-                              onPressed: onToggleCompact!,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${AppConstants.appEnglishName} ${AppConstants.appName}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '个人音乐服务器',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    letterSpacing: 0,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ],
                       ),
               ),
@@ -334,14 +310,6 @@ class _ShellSidebar extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               _ShellNavButton(
-                icon: Icons.search_rounded,
-                label: '搜索',
-                compact: compact,
-                selected: path == '/search',
-                onTap: () => onSelected(1),
-              ),
-              const SizedBox(height: 2),
-              _ShellNavButton(
                 icon: Icons.library_music_rounded,
                 label: '媒体库',
                 compact: compact,
@@ -349,9 +317,47 @@ class _ShellSidebar extends StatelessWidget {
                     path == '/library' ||
                     path.startsWith('/album/') ||
                     path.startsWith('/artist/'),
-                onTap: () => onSelected(2),
+                trailing: compact
+                    ? null
+                    : Icon(
+                        _libraryExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 20,
+                      ),
+                onTap: () => setState(
+                  () => _libraryExpanded = !_libraryExpanded,
+                ),
               ),
-              const SizedBox(height: 2),
+              if (!compact && _libraryExpanded) ...[
+                const SizedBox(height: 2),
+                _SidebarSubNavButton(
+                  label: '歌曲',
+                  selected: path == '/library' && libraryTab == null,
+                  onTap: () {
+                    onSelected(2);
+                    context.go('/library');
+                  },
+                ),
+                _SidebarSubNavButton(
+                  label: '专辑',
+                  selected: path.startsWith('/album/') ||
+                      libraryTab == 'albums',
+                  onTap: () {
+                    onSelected(2);
+                    context.go('/library?tab=albums');
+                  },
+                ),
+                _SidebarSubNavButton(
+                  label: '歌手',
+                  selected: path.startsWith('/artist/') ||
+                      libraryTab == 'artists',
+                  onTap: () {
+                    onSelected(2);
+                    context.go('/library?tab=artists');
+                  },
+                ),
+              ],
               _ShellNavButton(
                 icon: Icons.favorite_border_rounded,
                 label: '收藏',
@@ -370,7 +376,7 @@ class _ShellSidebar extends StatelessWidget {
                   context.go('/playlists');
                 },
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 10),
               _ShellNavButton(
                 icon: Icons.download_rounded,
                 label: '下载',
@@ -393,14 +399,6 @@ class _ShellSidebar extends StatelessWidget {
                 },
               ),
               const Spacer(),
-              const SizedBox(height: 2),
-              _ShellNavButton(
-                icon: Icons.settings_rounded,
-                label: '设置',
-                compact: compact,
-                selected: path == '/settings',
-                onTap: () => onSelected(4),
-              ),
             ],
           ),
         ),
@@ -425,31 +423,60 @@ class _ShellLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadiusTokens.iconButton - 4),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
-      child: Image.asset(
-        'assets/icons/logo.png',
-        fit: BoxFit.contain,
-        semanticLabel: '乐岛图标',
+      child: ColorFiltered(
+        colorFilter: ColorFilter.mode(colorScheme.primary, BlendMode.srcIn),
+        child: Image.asset(
+          'assets/icons/logo.png',
+          fit: BoxFit.contain,
+          semanticLabel: '乐岛图标',
+        ),
       ),
     );
   }
 }
 
-class _SidebarToggleButton extends StatelessWidget {
-  const _SidebarToggleButton({required this.compact, required this.onPressed});
+class _SidebarSubNavButton extends StatelessWidget {
+  const _SidebarSubNavButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
-  final bool compact;
-  final VoidCallback onPressed;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: compact ? '展开侧边栏' : '收起侧边栏',
-      style: AppActionButtonStyle.icon(context, iconSize: 18),
-      icon: Icon(
-        compact
-            ? Icons.keyboard_double_arrow_right_rounded
-            : Icons.keyboard_double_arrow_left_rounded,
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      label: label,
+      button: true,
+      selected: selected,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 42),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 36),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: selected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -469,11 +496,7 @@ class _ShellBottomBar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final selectedColor = Color.lerp(
-      colorScheme.primary,
-      theme.musicTeal,
-      0.18,
-    )!;
+    final selectedColor = colorScheme.primary;
 
     return DecoratedBox(
       key: const ValueKey('shell-bottom-bar'),
@@ -482,7 +505,7 @@ class _ShellBottomBar extends StatelessWidget {
         border: Border(
           top: BorderSide(
             color: Color.alphaBlend(
-              theme.musicTeal.withValues(alpha: 0.14),
+              colorScheme.primary.withValues(alpha: 0.14),
               colorScheme.outlineVariant.withValues(alpha: 0.72),
             ),
             width: 0.5,
@@ -644,6 +667,7 @@ class _ShellNavButton extends StatefulWidget {
     required this.selected,
     required this.onTap,
     this.compact = false,
+    this.trailing,
   });
 
   final IconData icon;
@@ -651,6 +675,7 @@ class _ShellNavButton extends StatefulWidget {
   final bool selected;
   final VoidCallback onTap;
   final bool compact;
+  final Widget? trailing;
 
   @override
   State<_ShellNavButton> createState() => _ShellNavButtonState();
@@ -686,13 +711,13 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
     final highlighted = _hovered || _focused;
     final radius = BorderRadius.circular(AppRadiusTokens.sm);
     final hoverBackground = Color.alphaBlend(
-      theme.musicTealSoft.withValues(
+      colorScheme.primaryContainer.withValues(
         alpha: theme.brightness == Brightness.dark ? 0.64 : 0.54,
       ),
       theme.surfaceSidebar,
     );
     final idleBackground = hoverBackground.withValues(alpha: 0);
-    final selectedForeground = colorScheme.onPrimaryContainer;
+    final selectedForeground = colorScheme.primary;
 
     final button = Semantics(
       label: widget.label,
@@ -741,9 +766,7 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                     borderRadius: radius,
                     border: Border.all(
                       color: _focused
-                          ? widget.selected
-                                ? selectedForeground
-                                : colorScheme.primary
+                          ? colorScheme.primary
                           : Colors.transparent,
                       width: AppBorderTokens.focus,
                     ),
@@ -762,19 +785,30 @@ class _ShellNavButtonState extends State<_ShellNavButton> {
                       ),
                       if (!widget.compact) ...[
                         const SizedBox(width: 10),
-                        Text(
-                          widget.label,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: widget.selected
-                                ? selectedForeground
-                                : highlighted
-                                ? colorScheme.onSurface
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: widget.selected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                        Expanded(
+                          child: Text(
+                            widget.label,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: widget.selected
+                                  ? selectedForeground
+                                  : highlighted
+                                  ? colorScheme.onSurface
+                                  : colorScheme.onSurfaceVariant,
+                              fontWeight: widget.selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
                           ),
                         ),
+                        if (widget.trailing != null)
+                          IconTheme(
+                            data: IconThemeData(
+                              color: widget.selected
+                                  ? selectedForeground
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            child: widget.trailing!,
+                          ),
                       ],
                     ],
                   ),

@@ -26,15 +26,18 @@ class PlayAllButton extends StatelessWidget {
     final shuffleEnabled = onShufflePressed != null && !isLoading;
 
     final playButton = switch (variant) {
-      PlayAllButtonVariant.primary => FilledButton.icon(
+      PlayAllButtonVariant.primary => _PlayAllTextButton(
         onPressed: enabled ? onPressed : null,
         icon: _PlayAllButtonIcon(isLoading: isLoading, highContrast: true),
-        label: const Text(_label),
+        label: _label,
+        tone: AppActionButtonTone.primary,
       ),
-      PlayAllButtonVariant.compact => TextButton.icon(
+      PlayAllButtonVariant.compact => _PlayAllTextButton(
         onPressed: enabled ? onPressed : null,
         icon: _PlayAllButtonIcon(isLoading: isLoading),
-        label: const Text(_label),
+        label: _label,
+        tone: AppActionButtonTone.primary,
+        dense: true,
       ),
       PlayAllButtonVariant.iconOnly => Semantics(
         label: _label,
@@ -85,27 +88,21 @@ class _ShuffleAllButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = const Icon(Icons.shuffle_rounded);
+    final icon = const Icon(Icons.shuffle_rounded, size: 20);
 
     return switch (variant) {
-      PlayAllButtonVariant.primary => Tooltip(
-        message: PlayAllButton._shuffleLabel,
-        child: IconButton(
-          onPressed: onPressed,
-          style: AppActionButtonStyle.icon(
-            context,
-            tone: AppActionButtonTone.secondary,
-          ),
-          icon: icon,
-        ),
+      PlayAllButtonVariant.primary => _PlayAllTextButton(
+        onPressed: onPressed,
+        icon: icon,
+        label: PlayAllButton._shuffleLabel,
+        tone: AppActionButtonTone.secondary,
       ),
-      PlayAllButtonVariant.compact => Tooltip(
-        message: PlayAllButton._shuffleLabel,
-        child: IconButton(
-          onPressed: onPressed,
-          style: AppActionButtonStyle.icon(context),
-          icon: icon,
-        ),
+      PlayAllButtonVariant.compact => _PlayAllTextButton(
+        onPressed: onPressed,
+        icon: icon,
+        label: PlayAllButton._shuffleLabel,
+        tone: AppActionButtonTone.secondary,
+        dense: true,
       ),
       PlayAllButtonVariant.iconOnly => Semantics(
         label: PlayAllButton._shuffleLabel,
@@ -131,6 +128,37 @@ class _ShuffleAllButton extends StatelessWidget {
   }
 }
 
+class _PlayAllTextButton extends StatelessWidget {
+  const _PlayAllTextButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.tone,
+    this.dense = false,
+  });
+
+  final VoidCallback? onPressed;
+  final Widget icon;
+  final String label;
+  final AppActionButtonTone tone;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      button: true,
+      enabled: onPressed != null,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: icon,
+        label: Text(label),
+        style: AppActionButtonStyle.text(context, tone: tone, dense: dense),
+      ),
+    );
+  }
+}
+
 class _PlayAllButtonIcon extends StatelessWidget {
   const _PlayAllButtonIcon({this.isLoading = false, this.highContrast = false});
 
@@ -140,7 +168,7 @@ class _PlayAllButtonIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isLoading) {
-      return const Icon(Icons.play_arrow_rounded);
+      return const Icon(Icons.play_arrow_rounded, size: 20);
     }
 
     final colorScheme = Theme.of(context).colorScheme;

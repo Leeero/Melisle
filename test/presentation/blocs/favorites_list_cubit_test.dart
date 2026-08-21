@@ -47,7 +47,7 @@ class _PagedFavoritesRepository implements MusicRepository {
       (index) => MusicTrack(
         id: 'track-${startIndex + index}',
         title: '收藏歌曲 ${startIndex + index}',
-        artistName: '艺术家',
+        artistName: '歌手',
         albumTitle: '专辑',
         artworkUrl: '',
         duration: const Duration(minutes: 3),

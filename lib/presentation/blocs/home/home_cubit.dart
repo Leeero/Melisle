@@ -207,7 +207,7 @@ class HomeCubit extends Cubit<HomeState> {
           MusicTrack(
             id: r.trackId,
             title: r.title,
-            artistName: r.artistName ?? '未知艺术家',
+            artistName: r.artistName ?? '未知歌手',
             albumTitle: r.albumTitle ?? '',
             artworkUrl: r.artworkUrl ?? '',
             albumId: r.albumId,
@@ -234,7 +234,7 @@ class HomeCubit extends Cubit<HomeState> {
           MusicTrack(
             id: r.trackId,
             title: r.title,
-            artistName: r.artistName ?? '未知艺术家',
+            artistName: r.artistName ?? '未知歌手',
             albumTitle: r.albumTitle ?? '',
             artworkUrl: r.artworkUrl ?? '',
             albumId: r.albumId,

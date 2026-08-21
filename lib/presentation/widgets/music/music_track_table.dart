@@ -28,6 +28,8 @@ class MusicTrackTable extends StatelessWidget {
     this.showActionBar = true,
     this.libraryStyle = false,
     this.playlistStyle = false,
+    this.hideHoverPlayControl = false,
+    this.bareMoreAction = false,
     this.actionBarTrailing,
   });
 
@@ -43,6 +45,8 @@ class MusicTrackTable extends StatelessWidget {
   final bool showActionBar;
   final bool libraryStyle;
   final bool playlistStyle;
+  final bool hideHoverPlayControl;
+  final bool bareMoreAction;
   final Widget? actionBarTrailing;
 
   @override
@@ -79,6 +83,8 @@ class MusicTrackTable extends StatelessWidget {
                 trailingBuilder: trailingBuilder,
                 libraryStyle: libraryStyle,
                 playlistStyle: playlistStyle,
+                hideHoverPlayControl: hideHoverPlayControl,
+                bareMoreAction: bareMoreAction,
               ),
           ],
         ),
@@ -206,7 +212,7 @@ class _MusicTrackTableHeader extends StatelessWidget {
               Expanded(flex: 4, child: Text('标题', style: labelStyle)),
               if (libraryStyle) ...[
                 const SizedBox(width: 12),
-                Expanded(flex: 2, child: Text('艺术家', style: labelStyle)),
+                Expanded(flex: 2, child: Text('歌手', style: labelStyle)),
               ],
               if (showAlbum) ...[
                 SizedBox(width: playlistStyle ? 0 : 12),
@@ -250,6 +256,8 @@ class _MusicTrackTableRow extends StatefulWidget {
     this.trailingBuilder,
     required this.libraryStyle,
     required this.playlistStyle,
+    required this.hideHoverPlayControl,
+    required this.bareMoreAction,
   });
 
   final int index;
@@ -260,6 +268,8 @@ class _MusicTrackTableRow extends StatefulWidget {
   final MusicTrackTableTrailingBuilder? trailingBuilder;
   final bool libraryStyle;
   final bool playlistStyle;
+  final bool hideHoverPlayControl;
+  final bool bareMoreAction;
 
   @override
   State<_MusicTrackTableRow> createState() => _MusicTrackTableRowState();
@@ -353,7 +363,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                                       size: 18,
                                       color: colorScheme.primary,
                                     )
-                                  : highlighted
+                                  : highlighted && !widget.hideHoverPlayControl
                                   ? Icon(
                                       Icons.play_arrow_rounded,
                                       size: 20,
@@ -462,6 +472,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                                         icon: Icons.more_horiz_rounded,
                                         tooltip: '更多操作',
                                         onPressed: () => _showMenu(track),
+                                        bare: widget.bareMoreAction,
                                       ),
                                       ],
                                     ),
@@ -593,11 +604,13 @@ class _MusicTrackTableIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.bare = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
+  final bool bare;
 
   @override
   Widget build(BuildContext context) {
@@ -614,6 +627,19 @@ class _MusicTrackTableIconButton extends StatelessWidget {
           context,
           iconSize: 18,
           radius: AppRadiusTokens.desktopSm,
+        ).copyWith(
+          backgroundColor: bare
+              ? const WidgetStatePropertyAll(Colors.transparent)
+              : null,
+          overlayColor: bare
+              ? const WidgetStatePropertyAll(Colors.transparent)
+              : null,
+          side: bare
+              ? const WidgetStatePropertyAll(BorderSide.none)
+              : null,
+          mouseCursor: bare
+              ? const WidgetStatePropertyAll(SystemMouseCursors.click)
+              : null,
         ),
       ),
     );

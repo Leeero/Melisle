@@ -318,7 +318,7 @@ void main() {
           MusicTrack(
             id: 'shell-track',
             title: '夜航星',
-            artistName: '乐岛测试艺术家',
+            artistName: '乐岛测试歌手',
             albumTitle: '响应式壳层',
             artworkUrl: '',
             duration: Duration(minutes: 3, seconds: 42),
@@ -349,7 +349,7 @@ void main() {
     expect(tester.takeException(), isNull, reason: '768');
     expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
-    expect(find.byKey(const ValueKey('shell-toolbar')), findsNothing);
+    expect(find.byKey(const ValueKey('shell-toolbar')), findsOneWidget);
     expect(find.text('历史'), findsOneWidget);
 
     final homeFocus = tester.widget<Focus>(
@@ -378,16 +378,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-desktop')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
-    expect(find.byTooltip('收起侧边栏'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-toolbar-settings')), findsOneWidget);
+    expect(find.byTooltip('收起侧边栏'), findsNothing);
+    expect(find.text('歌曲'), findsOneWidget);
+    final miniPlayerRect = tester.getRect(find.byType(MiniPlayerBar));
+    expect(miniPlayerRect.left, 0);
+    expect(miniPlayerRect.width, 1080);
+    expect(miniPlayerRect.bottom, 900);
     await _captureAppShell(tester, 'app-shell-1080x900-expanded');
     expect(tester.takeException(), isNull, reason: '1080 expanded');
 
-    await tester.tap(find.byTooltip('收起侧边栏'));
+    await tester.tap(find.byKey(const ValueKey('shell-nav-surface-媒体库')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
-    expect(find.byTooltip('展开侧边栏'), findsOneWidget);
-    await _captureAppShell(tester, 'app-shell-1080x900-collapsed');
-    expect(tester.takeException(), isNull, reason: '1080 collapsed');
+    expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
+    expect(find.text('歌曲'), findsNothing);
+    expect(find.text('播放历史'), findsOneWidget);
+    await _captureAppShell(tester, 'app-shell-1080x900-library-collapsed');
+    expect(tester.takeException(), isNull, reason: '1080 library collapsed');
 
     tester.view.physicalSize = const Size(767, 900);
     await tester.pumpAndSettle();
@@ -397,11 +404,11 @@ void main() {
     tester.view.physicalSize = const Size(1080, 900);
     expect(tester.takeException(), isNull, reason: '767');
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
 
     tester.view.physicalSize = const Size(1440, 900);
     await tester.pumpAndSettle();
-    await _captureAppShell(tester, 'app-shell-1440x900-collapsed');
+    await _captureAppShell(tester, 'app-shell-1440x900');
     expect(tester.takeException(), isNull, reason: '1440');
 
     tester.view.physicalSize = const Size(390, 844);
@@ -419,7 +426,7 @@ void main() {
           ? layoutException.toStringDeep()
           : layoutException?.toString(),
     );
-    expect(find.text('搜索歌曲、专辑、艺人、歌单'), findsOneWidget);
+    expect(find.text('搜索歌曲、专辑、歌手、歌单'), findsOneWidget);
 
     await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
@@ -609,8 +616,8 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(MiniPlayerBar)).height, 76);
-    for (final tooltip in const ['收藏', '上一曲', '播放', '下一曲', '当前歌单', '调节音量']) {
+    expect(tester.getSize(find.byType(MiniPlayerBar)).height, 92);
+    for (final tooltip in const ['收藏', '上一曲', '播放', '下一曲', '当前歌单', '静音']) {
       expect(find.byTooltip(tooltip), findsOneWidget);
     }
     expect(find.text('标准音质'), findsOneWidget);
@@ -618,14 +625,25 @@ void main() {
     expect(find.byTooltip('查看歌词'), findsNothing);
     expect(find.byTooltip('展开播放器'), findsNothing);
 
-    await tester.tap(find.byTooltip('调节音量'));
+    final mouse = await tester.createGesture(kind: ui.PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.byTooltip('静音')));
+    await mouse.moveTo(tester.getCenter(find.byTooltip('静音')));
     await tester.pumpAndSettle();
     expect(find.text('100%'), findsOneWidget);
     expect(find.byType(Slider), findsNWidgets(2));
+
+    await tester.tap(find.byTooltip('静音'));
+    await tester.pump();
+    expect(playerCubit.state.volume, 0);
+    expect(find.byTooltip('取消静音'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('取消静音'));
+    await tester.pump();
+    expect(playerCubit.state.volume, 1);
   });
 
   testWidgets(
-    'mini player follows V3 boundary rule and hides without a track',
+    'mini player remains visible without a track',
     (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -646,8 +664,8 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(MiniPlayerBar), findsOneWidget);
-        expect(tester.getSize(find.byType(MiniPlayerBar)).height, 0);
-        expect(find.text('未在播放'), findsNothing);
+        expect(tester.getSize(find.byType(MiniPlayerBar)).height, isNonZero);
+        expect(find.text('未在播放'), findsOneWidget);
       }
     },
   );
@@ -979,7 +997,7 @@ void main() {
       PlayHistoryCompanion.insert(
         trackId: 'history-track-1',
         title: '最近听过的歌',
-        artistName: const Value('测试艺术家'),
+        artistName: const Value('测试歌手'),
         albumTitle: const Value('测试专辑'),
         playedAtMs: DateTime.now().millisecondsSinceEpoch,
       ),
@@ -1083,6 +1101,11 @@ class _MiniPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
   _MiniPlayerCubit(super.initialState);
 
   void update(PlayerViewState state) => emit(state);
+
+  @override
+  Future<void> setVolume(double volume) async {
+    emit(state.copyWith(volume: volume));
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

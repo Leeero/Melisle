@@ -11,12 +11,18 @@ import 'package:go_router/go_router.dart';
 
 /// 弹出一个通用的曲目操作底部表。菜单项：
 ///   - 查看专辑（若有 albumId）
-///   - 查看艺术家（若有 artistId）
+///   - 查看歌手（若有 artistId）
 ///   - 添加到当前队列
 ///   - 收藏 / 取消收藏
-Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
+enum TrackActionsPopoverStyle { standard, recentPlayback }
+
+Future<void> showTrackActionsSheet(
+  BuildContext context,
+  MusicTrack track, {
+  TrackActionsPopoverStyle popoverStyle = TrackActionsPopoverStyle.standard,
+}) {
   if (AppBreakpoints.usesDesktopShell(context)) {
-    return _showTrackActionsPopover(context, track);
+    return _showTrackActionsPopover(context, track, popoverStyle);
   }
 
   final title = MediaDisplayText.trackTitle(track.title);
@@ -48,7 +54,7 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
               ),
             if (track.artistId != null && track.artistId!.isNotEmpty)
               AppOptionTile<_TrackAction>(
-                title: '查看艺术家',
+                title: '查看歌手',
                 icon: Icons.person_rounded,
                 value: _TrackAction.artist,
                 groupValue: _TrackAction.none,
@@ -108,6 +114,7 @@ Future<void> showTrackActionsSheet(BuildContext context, MusicTrack track) {
 Future<void> _showTrackActionsPopover(
   BuildContext context,
   MusicTrack track,
+  TrackActionsPopoverStyle style,
 ) async {
   final title = MediaDisplayText.trackTitle(track.title);
   final isFavorite = context.read<FavoritesCubit>().isFavorite(
@@ -116,50 +123,113 @@ Future<void> _showTrackActionsPopover(
   );
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
   final trigger = context.findRenderObject() as RenderBox?;
-  final triggerPosition = trigger?.localToGlobal(
-    Offset(trigger.size.width, trigger.size.height / 2),
-    ancestor: overlay,
+  final triggerRect = trigger == null
+      ? null
+      : trigger.localToGlobal(Offset.zero, ancestor: overlay) & trigger.size;
+  final usesRecentPlaybackStyle =
+      style == TrackActionsPopoverStyle.recentPlayback;
+  final itemSpacing = usesRecentPlaybackStyle ? 12.0 : 8.0;
+  final fallbackAnchor = Rect.fromCenter(
+    center: overlay.size.center(Offset.zero),
+    width: 1,
+    height: 1,
   );
+  final menuAnchor = triggerRect == null
+      ? fallbackAnchor
+      : usesRecentPlaybackStyle
+      ? Rect.fromLTRB(
+          triggerRect.left,
+          triggerRect.bottom + 4,
+          triggerRect.right,
+          triggerRect.bottom + 4,
+        )
+      : Rect.fromCenter(
+          center: Offset(triggerRect.right, triggerRect.center.dy),
+          width: 1,
+          height: 1,
+        );
   final selected = await showMenu<_TrackAction>(
     context: context,
-    position: RelativeRect.fromRect(
-      triggerPosition == null
-          ? Rect.fromCenter(
-              center: overlay.size.center(Offset.zero),
-              width: 1,
-              height: 1,
-            )
-          : Rect.fromCenter(center: triggerPosition, width: 1, height: 1),
-      Offset.zero & overlay.size,
-    ),
+    position: RelativeRect.fromRect(menuAnchor, Offset.zero & overlay.size),
+    color: usesRecentPlaybackStyle
+        ? Theme.of(context).colorScheme.surface
+        : null,
+    surfaceTintColor: Colors.transparent,
+    elevation: usesRecentPlaybackStyle ? 3 : null,
+    shadowColor: usesRecentPlaybackStyle
+        ? Colors.black.withValues(alpha: 0.12)
+        : null,
+    shape: usesRecentPlaybackStyle
+        ? RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.md),
+            side: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.72),
+            ),
+          )
+        : null,
+    constraints: usesRecentPlaybackStyle
+        ? const BoxConstraints.tightFor(width: 160)
+        : null,
+    menuPadding: usesRecentPlaybackStyle
+        ? const EdgeInsets.symmetric(vertical: 8)
+        : null,
     items: [
-      const PopupMenuItem(
+      PopupMenuItem(
         value: _TrackAction.queue,
+        mouseCursor: SystemMouseCursors.click,
+        height: usesRecentPlaybackStyle ? 42 : kMinInteractiveDimension,
+        padding: usesRecentPlaybackStyle
+            ? const EdgeInsets.symmetric(horizontal: 8)
+            : null,
         child: _TrackActionMenuItem(
           icon: Icons.playlist_add_rounded,
           label: '添加到当前队列',
+          spacing: itemSpacing,
         ),
       ),
       if (track.albumId?.isNotEmpty ?? false)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackAction.album,
-          child: _TrackActionMenuItem(icon: Icons.album_rounded, label: '查看专辑'),
+          mouseCursor: SystemMouseCursors.click,
+          height: usesRecentPlaybackStyle ? 42 : kMinInteractiveDimension,
+          padding: usesRecentPlaybackStyle
+              ? const EdgeInsets.symmetric(horizontal: 8)
+              : null,
+          child: _TrackActionMenuItem(
+            icon: Icons.album_rounded,
+            label: '查看专辑',
+            spacing: itemSpacing,
+          ),
         ),
       if (track.artistId?.isNotEmpty ?? false)
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackAction.artist,
+          mouseCursor: SystemMouseCursors.click,
+          height: usesRecentPlaybackStyle ? 42 : kMinInteractiveDimension,
+          padding: usesRecentPlaybackStyle
+              ? const EdgeInsets.symmetric(horizontal: 8)
+              : null,
           child: _TrackActionMenuItem(
             icon: Icons.person_rounded,
-            label: '查看艺术家',
+            label: '查看歌手',
+            spacing: itemSpacing,
           ),
         ),
       PopupMenuItem(
         value: _TrackAction.favorite,
+        mouseCursor: SystemMouseCursors.click,
+        height: usesRecentPlaybackStyle ? 42 : kMinInteractiveDimension,
+        padding: usesRecentPlaybackStyle
+            ? const EdgeInsets.symmetric(horizontal: 8)
+            : null,
         child: _TrackActionMenuItem(
           icon: isFavorite
               ? Icons.favorite_rounded
               : Icons.favorite_border_rounded,
           label: isFavorite ? '取消收藏' : '收藏',
+          spacing: itemSpacing,
         ),
       ),
     ],
@@ -183,15 +253,24 @@ Future<void> _showTrackActionsPopover(
 }
 
 class _TrackActionMenuItem extends StatelessWidget {
-  const _TrackActionMenuItem({required this.icon, required this.label});
+  const _TrackActionMenuItem({
+    required this.icon,
+    required this.label,
+    this.spacing = 8,
+  });
 
   final IconData icon;
   final String label;
+  final double spacing;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [Icon(icon, size: 20), const SizedBox(width: 8), Text(label)],
+      children: [
+        SizedBox(width: 20, child: Center(child: Icon(icon, size: 20))),
+        SizedBox(width: spacing),
+        Text(label),
+      ],
     );
   }
 }

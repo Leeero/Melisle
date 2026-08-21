@@ -25,5 +25,35 @@ void main() {
       style.textStyle?.resolve(hovered)?.decoration,
       TextDecoration.none,
     );
+    expect(style.mouseCursor?.resolve(hovered), SystemMouseCursors.click);
+    expect(
+      style.mouseCursor?.resolve({WidgetState.disabled}),
+      SystemMouseCursors.basic,
+    );
+  });
+
+  testWidgets('custom action buttons do not add hover surfaces or borders', (
+    tester,
+  ) async {
+    late ButtonStyle textStyle;
+    late ButtonStyle iconStyle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            textStyle = AppActionButtonStyle.text(context);
+            iconStyle = AppActionButtonStyle.icon(context);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    const hovered = <WidgetState>{WidgetState.hovered};
+    expect(textStyle.backgroundColor?.resolve(hovered), Colors.transparent);
+    expect(iconStyle.backgroundColor?.resolve(hovered), Colors.transparent);
+    expect(iconStyle.side?.resolve(hovered), BorderSide.none);
+    expect(iconStyle.mouseCursor?.resolve(hovered), SystemMouseCursors.click);
   });
 }

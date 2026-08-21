@@ -962,8 +962,8 @@ class _DownloadTableRowState extends State<_DownloadTableRow> {
                     const SizedBox(height: 2),
                     Text(
                       widget.fileMissing
-                          ? '文件缺失 · ${widget.record.artistName ?? '未知艺术家'}'
-                          : widget.record.artistName ?? '未知艺术家',
+                          ? '文件缺失 · ${widget.record.artistName ?? '未知歌手'}'
+                          : widget.record.artistName ?? '未知歌手',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(

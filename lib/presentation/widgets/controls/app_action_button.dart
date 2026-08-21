@@ -23,7 +23,7 @@ class AppActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, size: dense ? 18 : 20),
+      icon: Icon(icon, size: 20),
       label: Text(label),
       style: AppActionButtonStyle.text(context, tone: tone, dense: dense),
     );
@@ -32,6 +32,13 @@ class AppActionButton extends StatelessWidget {
 
 /// Refined button styles with consistent tokens and polished interactions.
 abstract final class AppActionButtonStyle {
+  static final WidgetStateProperty<MouseCursor?> _mouseCursor =
+      WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+      );
+
   /// Link-style button (inline text action).
   static ButtonStyle link(
     BuildContext context, {
@@ -50,6 +57,8 @@ abstract final class AppActionButtonStyle {
         borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
       ),
     ).copyWith(
+      alignment: Alignment.center,
+      mouseCursor: _mouseCursor,
       backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -105,15 +114,6 @@ abstract final class AppActionButtonStyle {
       AppActionButtonTone.neutral => Colors.transparent,
       AppActionButtonTone.danger => Colors.transparent,
     };
-    final hoverBackground = switch (tone) {
-      AppActionButtonTone.primary => theme.accentHover,
-      AppActionButtonTone.secondary => colorScheme.secondaryContainer
-          .withValues(alpha: isDark ? 0.52 : 0.82),
-      AppActionButtonTone.neutral => theme.hoverWash,
-      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: isDark ? 0.28 : 0.36,
-      ),
-    };
     final pressedBackground = switch (tone) {
       AppActionButtonTone.primary => theme.accentHover,
       AppActionButtonTone.secondary => colorScheme.secondaryContainer
@@ -155,16 +155,14 @@ abstract final class AppActionButtonStyle {
       ),
       side: BorderSide(color: borderColor),
     ).copyWith(
+      alignment: Alignment.center,
+      mouseCursor: _mouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return colorScheme.onSurface.withValues(alpha: 0.06);
         }
         if (states.contains(WidgetState.pressed)) {
           return pressedBackground;
-        }
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return hoverBackground;
         }
         return background;
       }),
@@ -222,13 +220,6 @@ abstract final class AppActionButtonStyle {
       ),
     };
 
-    final hoverBackground = switch (tone) {
-      AppActionButtonTone.danger => colorScheme.errorContainer.withValues(
-        alpha: isDark ? 0.26 : 0.34,
-      ),
-      _ => selected ? selectedBackground : theme.hoverWash,
-    };
-
     final interactiveForeground = tone == AppActionButtonTone.neutral
         ? (selected ? activeForeground : colorScheme.onSurface)
         : foreground;
@@ -247,13 +238,10 @@ abstract final class AppActionButtonStyle {
         ),
       ),
     ).copyWith(
+      mouseCursor: _mouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return Colors.transparent;
         if (states.contains(WidgetState.pressed)) return pressedBackground;
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return hoverBackground;
-        }
         return selected ? selectedBackground : Colors.transparent;
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -270,17 +258,10 @@ abstract final class AppActionButtonStyle {
       overlayColor: WidgetStateProperty.all(Colors.transparent),
       side: WidgetStateProperty.resolveWith((states) {
         final focused = states.contains(WidgetState.focused);
-        final hovered = states.contains(WidgetState.hovered);
-        final pressed = states.contains(WidgetState.pressed);
-        final visible = hovered || focused || pressed;
-        if (!visible) return BorderSide.none;
+        if (!focused) return BorderSide.none;
         return BorderSide(
-          color: focused
-              ? colorScheme.primary.withValues(alpha: 0.72)
-              : colorScheme.outlineVariant.withValues(
-                  alpha: isDark ? 0.30 : 0.50,
-                ),
-          width: focused ? AppBorderTokens.focus : AppBorderTokens.thin,
+          color: colorScheme.primary.withValues(alpha: 0.72),
+          width: AppBorderTokens.focus,
         );
       }),
     );
@@ -288,7 +269,7 @@ abstract final class AppActionButtonStyle {
 
   static Color _pressedWash(ThemeData theme) {
     return Color.alphaBlend(
-      theme.musicTealSoft.withValues(
+      theme.colorScheme.primaryContainer.withValues(
         alpha: theme.brightness == Brightness.dark ? 0.72 : 0.78,
       ),
       theme.colorScheme.surfaceContainerHighest,

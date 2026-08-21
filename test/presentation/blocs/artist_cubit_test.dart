@@ -33,7 +33,7 @@ void main() {
     await cubit.load('artist-1');
 
     expect(cubit.state.status, ArtistStatus.failure);
-    expect(cubit.state.errorMessage, contains('加载艺术家失败'));
+    expect(cubit.state.errorMessage, contains('加载歌手失败'));
   });
 }
 
@@ -49,7 +49,7 @@ class _FakeMusicRepository implements MusicRepository {
       MusicAlbum(
         id: 'album-1',
         title: '专辑',
-        artistName: '艺术家',
+        artistName: '歌手',
         artworkUrl: '',
         trackCount: 1,
       ),
@@ -66,7 +66,7 @@ class _FakeMusicRepository implements MusicRepository {
       MusicTrack(
         id: 'track-1',
         title: '曲目',
-        artistName: '艺术家',
+        artistName: '歌手',
         albumTitle: '专辑',
         artworkUrl: '',
         duration: Duration(minutes: 3),

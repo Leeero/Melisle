@@ -79,18 +79,21 @@ class _PressScaleState extends State<PressScale> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        duration: widget.duration ?? AppMotion.fast,
-        curve: widget.curve ?? AppMotion.standard,
-        scale: _pressed ? widget.scale : 1.0,
-        child: widget.child,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          duration: widget.duration ?? AppMotion.fast,
+          curve: widget.curve ?? AppMotion.standard,
+          scale: _pressed ? widget.scale : 1.0,
+          child: widget.child,
+        ),
       ),
     );
   }

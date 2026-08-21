@@ -74,7 +74,7 @@ List<MusicTrack> _tracks(int count, {int offset = 0}) {
     return MusicTrack(
       id: 'track_$id',
       title: '歌曲 $id',
-      artistName: '艺术家',
+      artistName: '歌手',
       albumTitle: '专辑',
       artworkUrl: '',
       duration: Duration.zero,

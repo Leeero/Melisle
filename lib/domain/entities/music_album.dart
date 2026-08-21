@@ -17,7 +17,7 @@ class MusicAlbum {
   final int trackCount;
   final int? year;
 
-  /// 主艺术家 ID（用于跳转艺术家页）。
+  /// 主歌手 ID（用于跳转歌手页）。
   final String? artistId;
 
   /// 当前用户是否收藏此专辑。

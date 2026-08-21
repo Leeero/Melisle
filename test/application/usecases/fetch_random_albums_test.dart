@@ -53,7 +53,7 @@ class _FakeMusicRepository implements MusicRepository {
       MusicAlbum(
         id: 'r1',
         title: '随机专辑',
-        artistName: '随机艺术家',
+        artistName: '随机歌手',
         artworkUrl: '',
         trackCount: 10,
       ),

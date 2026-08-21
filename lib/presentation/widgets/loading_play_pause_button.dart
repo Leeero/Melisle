@@ -99,6 +99,7 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
           dimension: tapTargetSize,
           child: Center(
             child: MouseRegion(
+              cursor: SystemMouseCursors.click,
               onEnter: (_) => setState(() => _hovered = true),
               onExit: (_) => setState(() {
                 _hovered = false;

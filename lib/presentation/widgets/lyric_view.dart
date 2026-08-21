@@ -316,13 +316,18 @@ class _LyricLineTile extends StatelessWidget {
       button: onTap != null,
       label: isCurrent ? '当前歌词，${line.text}' : '歌词，${line.text}',
       hint: onTap == null ? null : '双击跳转到此句',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Center(
-          child: Padding(
-            padding: linePadding,
-            child: Align(alignment: alignment, child: content),
+      child: MouseRegion(
+        cursor: onTap == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Center(
+            child: Padding(
+              padding: linePadding,
+              child: Align(alignment: alignment, child: content),
+            ),
           ),
         ),
       ),

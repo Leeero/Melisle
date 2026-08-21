@@ -92,7 +92,7 @@ void main() {
         PlayHistoryCompanion.insert(
           trackId: 'local-track',
           title: '本地播放记录',
-          artistName: const Value('测试艺术家'),
+          artistName: const Value('测试歌手'),
           albumTitle: const Value('测试专辑'),
           playedAtMs: DateTime(2026, 1, 1, 9, 30).millisecondsSinceEpoch,
           durationPlayedMs: Value(duration.inMilliseconds),
@@ -120,7 +120,7 @@ void main() {
           MusicAlbum(
             id: 'a1',
             title: '推荐专辑',
-            artistName: '艺术家',
+            artistName: '歌手',
             artworkUrl: '',
             trackCount: 12,
           ),
@@ -142,7 +142,7 @@ void main() {
           MusicAlbum(
             id: 'a1',
             title: '新推荐',
-            artistName: '艺术家',
+            artistName: '歌手',
             artworkUrl: '',
             trackCount: 5,
           ),
@@ -160,7 +160,7 @@ List<MusicAlbum> _fakeAlbums({int count = 1}) {
     (i) => MusicAlbum(
       id: 'ra_$i',
       title: '随机专辑_$i',
-      artistName: '随机艺术家_$i',
+      artistName: '随机歌手_$i',
       artworkUrl: '',
       trackCount: 8 + i,
     ),
@@ -173,7 +173,7 @@ List<MusicAlbum> _latestAlbums() {
     (i) => MusicAlbum(
       id: 'la_$i',
       title: '最新专辑_$i',
-      artistName: '最新艺术家_$i',
+      artistName: '最新歌手_$i',
       artworkUrl: '',
       trackCount: 10,
     ),
@@ -210,7 +210,7 @@ class _FakeRepo implements MusicRepository {
       MusicTrack(
         id: 't1',
         title: '最近播放曲目',
-        artistName: '艺术家',
+        artistName: '歌手',
         albumTitle: '专辑',
         artworkUrl: '',
         duration: Duration.zero,
@@ -225,7 +225,7 @@ class _FakeRepo implements MusicRepository {
       MusicTrack(
         id: 't2',
         title: '常听曲目',
-        artistName: '艺术家',
+        artistName: '歌手',
         albumTitle: '专辑',
         artworkUrl: '',
         duration: Duration.zero,

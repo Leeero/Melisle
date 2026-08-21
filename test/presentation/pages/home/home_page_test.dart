@@ -179,21 +179,21 @@ const _albums = [
   MusicAlbum(
     id: 'album-1',
     title: '用于验证超长标题在有限宽度内稳定省略且不发生横向溢出的最新专辑',
-    artistName: '未知艺术家',
+    artistName: '未知歌手',
     artworkUrl: '',
     trackCount: 12,
   ),
   MusicAlbum(
     id: 'album-2',
     title: '无封面专辑',
-    artistName: '测试艺术家',
+    artistName: '测试歌手',
     artworkUrl: '',
     trackCount: 8,
   ),
   MusicAlbum(
     id: 'album-3',
     title: '随机专辑',
-    artistName: '测试艺术家',
+    artistName: '测试歌手',
     artworkUrl: '',
     trackCount: 10,
   ),
@@ -203,7 +203,7 @@ const _tracks = [
   MusicTrack(
     id: 'track-1',
     title: '用于验证超长标题在排行榜中稳定省略且不发生横向溢出的歌曲',
-    artistName: '未知艺术家',
+    artistName: '未知歌手',
     albumTitle: '未知专辑',
     artworkUrl: '',
     duration: Duration(minutes: 4),
@@ -212,7 +212,7 @@ const _tracks = [
   MusicTrack(
     id: 'track-2',
     title: '无封面歌曲',
-    artistName: '测试艺术家',
+    artistName: '测试歌手',
     albumTitle: '测试专辑',
     artworkUrl: '',
     duration: Duration(minutes: 3),

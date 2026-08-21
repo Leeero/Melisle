@@ -1,19 +1,48 @@
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class DesktopPageToolbar extends StatelessWidget {
+class DesktopPageToolbar extends StatefulWidget {
   const DesktopPageToolbar({super.key});
+
+  @override
+  State<DesktopPageToolbar> createState() => _DesktopPageToolbarState();
+}
+
+class _DesktopPageToolbarState extends State<DesktopPageToolbar> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _submitSearch(String query) {
+    final normalized = query.trim();
+    final destination = normalized.isEmpty
+        ? '/search'
+        : Uri(path: '/search', queryParameters: {'q': normalized}).toString();
+    if (GoRouterState.of(context).uri.path == '/search') {
+      context.go(destination);
+      return;
+    }
+    context.push(destination);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final state = GoRouterState.of(context);
-    final path = state.uri.path;
-    final showsBack = _showsBackButton(path);
-
-    if (!showsBack) return const SizedBox.shrink();
+    final canGoBack = GoRouter.of(context).canPop();
+    final isSettingsPage = GoRouterState.of(context).uri.path == '/settings';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -28,28 +57,51 @@ class DesktopPageToolbar extends StatelessWidget {
         key: const ValueKey('shell-toolbar'),
         height: AppSpacingTokens.desktopToolbarHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.buttonPaddingH),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacingTokens.buttonPaddingH,
+            vertical: 13,
+          ),
           child: Row(
             children: [
-              if (showsBack) ...[
-                IconButton(
-                  onPressed: () => _goBack(context, path),
-                  tooltip: '返回',
-                  style: AppActionButtonStyle.icon(context, size: 34),
-                  icon: const Icon(Icons.arrow_back_rounded),
+              IconButton(
+                onPressed: canGoBack ? () => context.pop() : null,
+                mouseCursor: canGoBack
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
+                tooltip: canGoBack ? '返回上一页' : '没有可返回的页面',
+                style: _toolbarBackButtonStyle(context),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 420,
+                child: AppSearchField(
+                  controller: _searchController,
+                  hintText: '搜索音乐、歌手、专辑、文件夹',
+                  semanticLabel: '搜索音乐',
+                  dense: true,
+                  showCancelAction: false,
+                  onSubmitted: _submitSearch,
                 ),
-                const SizedBox(width: 8),
-              ],
+              ),
               const Spacer(),
               IconButton(
-                onPressed: () => context.go('/search'),
-                tooltip: '搜索音乐',
+                key: const ValueKey('shell-toolbar-settings'),
+                onPressed: isSettingsPage
+                    ? null
+                    : () => context.go('/settings'),
+                mouseCursor: isSettingsPage
+                    ? SystemMouseCursors.basic
+                    : SystemMouseCursors.click,
+                tooltip: isSettingsPage ? '当前页面：设置' : '设置',
                 style: AppActionButtonStyle.icon(
                   context,
-                  size: 36,
-                  iconSize: 19,
+                  selected: isSettingsPage,
+                  size: 46,
+                  iconSize: 22,
+                  radius: AppRadiusTokens.md,
                 ),
-                icon: const Icon(Icons.search_rounded),
+                icon: const Icon(Icons.settings_rounded),
               ),
             ],
           ),
@@ -59,26 +111,17 @@ class DesktopPageToolbar extends StatelessWidget {
   }
 }
 
-bool _showsBackButton(String path) {
-  return path.startsWith('/album/') ||
-      path.startsWith('/artist/') ||
-      (path.startsWith('/playlists/') && path != '/playlists') ||
-      path == '/settings/media-sources';
-}
-
-void _goBack(BuildContext context, String path) {
-  if (Navigator.of(context).canPop()) {
-    context.pop();
-    return;
-  }
-
-  if (path.startsWith('/playlists/')) {
-    context.go('/playlists');
-    return;
-  }
-  if (path == '/settings/media-sources') {
-    context.go('/settings');
-    return;
-  }
-  context.go('/library');
+ButtonStyle _toolbarBackButtonStyle(BuildContext context) {
+  final colorScheme = Theme.of(context).colorScheme;
+  return AppActionButtonStyle.icon(
+    context,
+    size: 46,
+    iconSize: 22,
+    radius: AppRadiusTokens.md,
+  ).copyWith(
+    backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
+    side: WidgetStatePropertyAll(
+      BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.90)),
+    ),
+  );
 }

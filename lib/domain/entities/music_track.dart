@@ -26,7 +26,7 @@ class MusicTrack {
   /// 所属专辑 ID（用于跳转专辑详情页）。
   final String? albumId;
 
-  /// 主艺术家 ID（用于跳转艺术家页）。
+  /// 主歌手 ID（用于跳转歌手页）。
   final String? artistId;
 
   /// 当前用户是否将此歌曲加入收藏。

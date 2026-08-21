@@ -45,7 +45,7 @@ class ArtistCubit extends Cubit<ArtistState> {
       emit(
         state.copyWith(
           status: ArtistStatus.failure,
-          errorMessage: '加载艺术家失败：$error',
+          errorMessage: '加载歌手失败：$error',
         ),
       );
     }

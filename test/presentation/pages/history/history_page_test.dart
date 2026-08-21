@@ -115,7 +115,7 @@ final _mockTracks = [
   MusicTrack(
     id: '1',
     title: '测试歌曲一',
-    artistName: '测试艺术家',
+    artistName: '测试歌手',
     albumTitle: '测试专辑',
     albumId: 'album-1',
     artistId: 'artist-1',
@@ -126,7 +126,7 @@ final _mockTracks = [
   MusicTrack(
     id: '2',
     title: '测试歌曲二',
-    artistName: '另一位艺术家',
+    artistName: '另一位歌手',
     albumTitle: '另一张专辑',
     albumId: 'album-2',
     artistId: 'artist-2',

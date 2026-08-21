@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
@@ -27,9 +29,14 @@ class MiniPlayerBar extends StatelessWidget {
       buildWhen: (prev, next) => prev.currentTrack?.id != next.currentTrack?.id,
       builder: (context, state) {
         final track = state.currentTrack;
-        if (track == null) return const SizedBox.shrink();
         final width = MediaQuery.sizeOf(context).width;
         final isWide = AppBreakpoints.usesDesktopShellWidth(width);
+        if (track == null) {
+          return _MiniPlayerFrame(
+            isWide: isWide,
+            child: const _IdleMiniPlayer(),
+          );
+        }
         final artworkSourceContext = ArtworkSourceContext.track(track);
         final trackTitle = MediaDisplayText.trackTitle(track.title);
         final artistName = MediaDisplayText.artistName(track.artistName);
@@ -52,6 +59,31 @@ class MiniPlayerBar extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+class _IdleMiniPlayer extends StatelessWidget {
+  const _IdleMiniPlayer();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '迷你播放器：未在播放',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.music_note_rounded, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacingTokens.inlineGap),
+          Text(
+            '未在播放',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -512,12 +544,15 @@ class _MiniFavoriteButton extends StatelessWidget {
             track.id,
             currentValue: isFavorite,
           ),
+          mouseCursor: SystemMouseCursors.click,
           tooltip: isFavorite ? '取消收藏' : '收藏',
           style: AppActionButtonStyle.icon(
             context,
             selected: isFavorite,
             size: 44,
             iconSize: 20,
+          ).copyWith(
+            backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
           ),
           icon: Icon(
             isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
@@ -739,6 +774,41 @@ class _MiniVolumePopoverButton extends StatefulWidget {
 
 class _MiniVolumePopoverButtonState extends State<_MiniVolumePopoverButton> {
   final MenuController _menuController = MenuController();
+  Timer? _closeTimer;
+  double _volumeBeforeMute = 1;
+
+  @override
+  void dispose() {
+    _closeTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showMenu() {
+    _closeTimer?.cancel();
+    if (!_menuController.isOpen) _menuController.open();
+  }
+
+  void _scheduleMenuClose() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 180), () {
+      if (mounted && _menuController.isOpen) _menuController.close();
+    });
+  }
+
+  void _toggleMute(PlayerViewState state) {
+    final player = context.read<PlayerCubit>();
+    if (state.volume > 0.001) {
+      _volumeBeforeMute = state.volume;
+      player.setVolume(0);
+      return;
+    }
+    player.setVolume(_volumeBeforeMute.clamp(0.001, 1));
+  }
+
+  void _setVolume(double volume) {
+    if (volume > 0.001) _volumeBeforeMute = volume;
+    context.read<PlayerCubit>().setVolume(volume);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -757,26 +827,25 @@ class _MiniVolumePopoverButtonState extends State<_MiniVolumePopoverButton> {
           ),
         ),
       ),
-      menuChildren: const [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: _MiniVolumePopoverContent(),
+      menuChildren: [
+        _MiniVolumePopoverContent(
+          onEnter: _showMenu,
+          onExit: _scheduleMenuClose,
+          onVolumeChanged: _setVolume,
         ),
       ],
       builder: (context, controller, child) {
         return BlocBuilder<PlayerCubit, PlayerViewState>(
           buildWhen: (previous, current) => previous.volume != current.volume,
-          builder: (context, state) => _MiniControlButton(
-            icon: _volumeIcon(state.volume),
-            onPressed: () {
-              if (controller.isOpen) {
-                controller.close();
-              } else {
-                controller.open();
-              }
-            },
-            tooltip: '调节音量',
-            selected: controller.isOpen,
+          builder: (context, state) => MouseRegion(
+            onEnter: (_) => _showMenu(),
+            onExit: (_) => _scheduleMenuClose(),
+            child: _MiniControlButton(
+              icon: _volumeIcon(state.volume),
+              onPressed: () => _toggleMute(state),
+              tooltip: state.volume <= 0.001 ? '取消静音' : '静音',
+              selected: controller.isOpen,
+            ),
           ),
         );
       },
@@ -785,40 +854,61 @@ class _MiniVolumePopoverButtonState extends State<_MiniVolumePopoverButton> {
 }
 
 class _MiniVolumePopoverContent extends StatelessWidget {
-  const _MiniVolumePopoverContent();
+  const _MiniVolumePopoverContent({
+    required this.onEnter,
+    required this.onExit,
+    required this.onVolumeChanged,
+  });
+
+  final VoidCallback onEnter;
+  final VoidCallback onExit;
+  final ValueChanged<double> onVolumeChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    return SizedBox(
-      width: 208,
-      child: BlocBuilder<PlayerCubit, PlayerViewState>(
-        buildWhen: (previous, current) => previous.volume != current.volume,
-        builder: (context, state) => Row(
-          children: [
-            Icon(_volumeIcon(state.volume), color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Slider(
-                value: state.volume,
-                semanticFormatterCallback: (value) =>
-                    '音量 ${_volumePercent(value)}%',
-                onChanged: context.read<PlayerCubit>().setVolume,
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 36,
-              child: Text(
-                '${_volumePercent(state.volume)}%',
-                textAlign: TextAlign.end,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => onEnter(),
+      onExit: (_) => onExit(),
+      child: SizedBox(
+        width: 56,
+        height: 164,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+          child: BlocBuilder<PlayerCubit, PlayerViewState>(
+            buildWhen: (previous, current) => previous.volume != current.volume,
+            builder: (context, state) => Column(
+              children: [
+                Icon(
+                  _volumeIcon(state.volume),
+                  size: 20,
+                  color: colorScheme.primary,
                 ),
-              ),
+                const SizedBox(height: 4),
+                Expanded(
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: Slider(
+                      value: state.volume,
+                      semanticFormatterCallback: (value) =>
+                          '音量 ${_volumePercent(value)}%',
+                      onChanged: onVolumeChanged,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_volumePercent(state.volume)}%',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -835,6 +925,7 @@ class _MiniRetryButton extends StatelessWidget {
       child: IconButton(
         tooltip: '重试播放',
         onPressed: context.read<PlayerCubit>().togglePlayback,
+        mouseCursor: SystemMouseCursors.click,
         style: AppActionButtonStyle.icon(
           context,
           tone: AppActionButtonTone.danger,
@@ -894,6 +985,7 @@ class _MiniTimelineState extends State<_MiniTimeline> {
       buildWhen: (prev, next) =>
           prev.position != next.position || prev.duration != next.duration,
       builder: (context, state) {
+        final colors = Theme.of(context).colorScheme;
         final sliderMax = state.duration.inMilliseconds.toDouble();
         final effectiveMax = sliderMax <= 0 ? 1.0 : sliderMax;
         final streamValue = sliderMax == 0
@@ -912,29 +1004,40 @@ class _MiniTimelineState extends State<_MiniTimeline> {
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 3,
+                activeTrackColor: colors.primary,
+                inactiveTrackColor: colors.outlineVariant.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.48
+                      : 0.72,
+                ),
+                thumbColor: colors.primary,
+                overlayColor: colors.primary.withValues(alpha: 0.12),
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 9),
               ),
-              child: Slider(
-                value: sliderValue,
-                max: effectiveMax,
-                semanticFormatterCallback: (value) =>
-                    '播放进度 ${_format(Duration(milliseconds: value.round()))}',
-                onChangeStart: (value) {
-                  setState(() {
-                    _dragging = true;
-                    _dragValue = value;
-                  });
-                },
-                onChanged: (value) {
-                  setState(() => _dragValue = value);
-                },
-                onChangeEnd: (value) {
-                  context.read<PlayerCubit>().seek(
-                    Duration(milliseconds: value.round()),
-                  );
-                  setState(() => _dragging = false);
-                },
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Slider(
+                  value: sliderValue,
+                  max: effectiveMax,
+                  semanticFormatterCallback: (value) =>
+                      '播放进度 ${_format(Duration(milliseconds: value.round()))}',
+                  onChangeStart: (value) {
+                    setState(() {
+                      _dragging = true;
+                      _dragValue = value;
+                    });
+                  },
+                  onChanged: (value) {
+                    setState(() => _dragValue = value);
+                  },
+                  onChangeEnd: (value) {
+                    context.read<PlayerCubit>().seek(
+                      Duration(milliseconds: value.round()),
+                    );
+                    setState(() => _dragging = false);
+                  },
+                ),
               ),
             ),
           ),
@@ -969,6 +1072,9 @@ class _MiniControlButtonState extends State<_MiniControlButton> {
     final size = widget.compact ? 28.0 : 36.0;
     return IconButton(
       onPressed: widget.onPressed,
+      mouseCursor: widget.onPressed == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
       tooltip: widget.tooltip,
       style: AppActionButtonStyle.icon(
         context,

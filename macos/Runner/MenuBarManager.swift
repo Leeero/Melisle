@@ -6,7 +6,7 @@ import FlutterMacOS
 /// 功能：
 /// - 在菜单栏显示当前播放歌曲信息或歌词
 /// - 歌词过长时自动滚动显示
-/// - 歌词为空时显示歌曲标题和艺术家
+/// - 歌词为空时显示歌曲标题和歌手
 class MenuBarManager: NSObject {
     private var statusItem: NSStatusItem?
     private var scrollTimer: Timer?

@@ -145,7 +145,7 @@ class LibraryArtistSliver extends StatelessWidget {
     if (state.artists.isEmpty && state.genres.isEmpty) {
       return const SliverPadding(
         padding: EdgeInsets.only(bottom: 18),
-        sliver: AppSliverStateView.message(message: '当前还没有艺术家。'),
+        sliver: AppSliverStateView.message(message: '当前还没有歌手。'),
       );
     }
     final width = MediaQuery.sizeOf(context).width;
@@ -202,7 +202,7 @@ class _MobileArtistRow extends StatelessWidget {
     final name = MediaDisplayText.artistName(artist.name);
     return Semantics(
       button: true,
-      label: '打开艺术家《$name》',
+      label: '打开歌手《$name》',
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),

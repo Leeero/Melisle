@@ -12,7 +12,7 @@ void main() {
       expect(MediaDisplayText.trackTitle(' \uFEFF '), '未知歌曲');
       expect(MediaDisplayText.trackTitle('\u2062'), '未知歌曲');
       expect(MediaDisplayText.albumTitle(''), '未知专辑');
-      expect(MediaDisplayText.artistName(null), '未知艺术家');
+      expect(MediaDisplayText.artistName(null), '未知歌手');
       expect(MediaDisplayText.playlistName('  '), '未命名歌单');
     });
 
@@ -32,7 +32,7 @@ void main() {
       expect(MediaDisplayText.year(2026), '2026');
     });
 
-    test('艺术家数量优先展示专辑，缺失时回退歌曲数量', () {
+    test('歌手数量优先展示专辑，缺失时回退歌曲数量', () {
       expect(
         MediaDisplayText.artistItemCount(
           const MusicArtist(

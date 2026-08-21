@@ -5,105 +5,105 @@ import 'package:flutter/material.dart';
 // ============================================================================
 
 abstract final class AppColorTokens {
-  static const seed = Color(0xFF117E6E);
+  static const seed = Color(0xFF2F6FED);
 
   // ──────────────────── 深色模式表面 ────────────────────
-  // 参考 Spotify/Tidal 的深色层级，更丰富的表面深度
+  // Tidal Blue 深色表面层级。
 
   /// 最深基底（页面底层）
-  static const darkScaffold = Color(0xFF0A0E10);
+  static const darkScaffold = Color(0xFF121417);
 
   /// 主内容区表面
-  static const darkSurface = Color(0xFF121618);
+  static const darkSurface = Color(0xFF1A1918);
 
   /// 提升表面（卡片、列表项）
-  static const darkSurfaceElevated = Color(0xFF1A1F22);
+  static const darkSurfaceElevated = Color(0xFF202329);
 
   /// 高层级表面（悬停、选中）
-  static const darkSurfaceHigh = Color(0xFF22282C);
+  static const darkSurfaceHigh = Color(0xFF282C33);
 
   /// 最高层级表面（强调容器）
-  static const darkSurfaceHighest = Color(0xFF2A3035);
+  static const darkSurfaceHighest = Color(0xFF303640);
 
   /// 覆盖层表面（弹窗、Sheet）
-  static const darkSurfaceOverlay = Color(0xFF323940);
+  static const darkSurfaceOverlay = Color(0xFF393F49);
 
   /// 侧栏表面
-  static const darkSurfaceSidebar = Color(0xFF0E1214);
+  static const darkSurfaceSidebar = Color(0xFF171A1F);
 
   // ──────────────────── 浅色模式表面 ────────────────────
 
   /// 最浅基底
-  static const lightScaffold = Color(0xFFF8FAFA);
+  static const lightScaffold = Color(0xFFFAFAF8);
 
   /// 主内容区表面（纯白）
   static const lightSurface = Color(0xFFFFFFFF);
 
   /// 低层级表面（侧栏、背景区域）
-  static const lightSurfaceLow = Color(0xFFF2F5F4);
+  static const lightSurfaceLow = Color(0xFFF3F5F8);
 
   /// 中层级表面（卡片悬停）
-  static const lightSurfaceMid = Color(0xFFEBEFEC);
+  static const lightSurfaceMid = Color(0xFFEEF1F5);
 
   /// 高层级表面（输入框、选中）
-  static const lightSurfaceHigh = Color(0xFFE5E9E6);
+  static const lightSurfaceHigh = Color(0xFFE8EDF3);
 
   /// 最高层级表面（强调容器）
-  static const lightSurfaceHighest = Color(0xFFDFE3E1);
+  static const lightSurfaceHighest = Color(0xFFE0E6EE);
 
   /// 侧栏表面
-  static const lightSurfaceSidebar = Color(0xFFF0F5F4);
+  static const lightSurfaceSidebar = Color(0xFFF3F5F8);
 
   /// 播放器底部表面
-  static const lightPlayerFooter = Color(0xFFF6FAF7);
-  static const darkPlayerFooter = Color(0xFF121618);
+  static const lightPlayerFooter = Color(0xFFFAFAF8);
+  static const darkPlayerFooter = Color(0xFF1A1918);
 
   /// 封面前景遮罩
-  static const onArtworkScrim = Color(0xFFF6F8FC);
+  static const onArtworkScrim = Color(0xFFF8FAFF);
 
   // ──────────────────── 主色 ────────────────────
 
-  static const darkPrimary = Color(0xFF46B49E);
-  static const darkPrimaryHover = Color(0xFF5CC5AF);
-  static const darkPrimaryContainer = Color(0xFF062D26);
+  static const darkPrimary = Color(0xFF7AA2FF);
+  static const darkPrimaryHover = Color(0xFF9AB8FF);
+  static const darkPrimaryContainer = Color(0xFF182744);
 
-  static const lightPrimary = Color(0xFF117E6E);
-  static const lightPrimaryRole = Color(0xFF006356);
-  static const lightPrimaryHover = Color(0xFF0E6B5D);
-  static const lightPrimaryContainer = Color(0xFF117E6E);
-  static const lightOnPrimaryContainer = Color(0xFFCFFFF3);
+  static const lightPrimary = Color(0xFF2F6FED);
+  static const lightPrimaryRole = Color(0xFF245DCC);
+  static const lightPrimaryHover = Color(0xFF245DCC);
+  static const lightPrimaryContainer = Color(0xFFE8F0FF);
+  static const lightOnPrimaryContainer = Color(0xFF12346B);
 
   // ──────────────────── 次级色 ────────────────────
 
-  static const darkSecondary = Color(0xFF5FB7A5);
-  static const darkSecondaryContainer = Color(0xFF122C26);
+  static const darkSecondary = Color(0xFFBBCBEE);
+  static const darkSecondaryContainer = Color(0xFF25304A);
 
-  static const lightSecondary = Color(0xFF45A592);
-  static const lightSecondaryContainer = Color(0xFFD9F4ED);
+  static const lightSecondary = Color(0xFF546B9B);
+  static const lightSecondaryContainer = Color(0xFFEAF0FC);
 
   // ──────────────────── 文字色 ────────────────────
 
-  static const darkOnSurface = Color(0xFFE3E9E9);
-  static const darkOnSurfaceVariant = Color(0xFF96A1A1);
-  static const darkMuted = Color(0xFF7D898A);
+  static const darkOnSurface = Color(0xFFF1F3F7);
+  static const darkOnSurfaceVariant = Color(0xFFA8B0BF);
+  static const darkMuted = Color(0xFF818A9A);
 
-  static const lightOnSurface = Color(0xFF181D1B);
-  static const lightOnSurfaceVariant = Color(0xFF3E4946);
-  static const lightMuted = Color(0xFF5F6C68);
+  static const lightOnSurface = Color(0xFF1B1E26);
+  static const lightOnSurfaceVariant = Color(0xFF667085);
+  static const lightMuted = Color(0xFF667085);
 
   // ──────────────────── 边框色 ────────────────────
 
-  static const darkOutline = Color(0xFF2B3233);
-  static const darkOutlineVariant = Color(0xFF222829);
+  static const darkOutline = Color(0xFF596172);
+  static const darkOutlineVariant = Color(0xFF303744);
 
-  static const lightOutline = Color(0xFF6E7A76);
-  static const lightOutlineVariant = Color(0xFFBDC9C5);
-  static const lightSimplifiedBorder = Color(0xFFD1DAD6);
+  static const lightOutline = Color(0xFF778196);
+  static const lightOutlineVariant = Color(0xFFDDE2EA);
+  static const lightSimplifiedBorder = Color(0xFFDDE2EA);
 
   // ──────────────────── 歌词高亮 ────────────────────
 
-  static const darkLyricHighlight = Color(0xFFD6917B);
-  static const lightLyricHighlight = Color(0xFF20373B);
+  static const darkLyricHighlight = Color(0xFF9AB8FF);
+  static const lightLyricHighlight = Color(0xFF245DCC);
 
   // ──────────────────── 音乐氛围色 ────────────────────
 
@@ -134,8 +134,8 @@ abstract final class AppColorTokens {
   static const darkDanger = Color(0xFFF08B8D);
 
   /// 内容区背景渐变 — 左上角色调。
-  static const darkAmbientGradientStart = Color(0xFF0A0E10);
-  static const lightAmbientGradientStart = Color(0xFFF8FAFA);
+  static const darkAmbientGradientStart = Color(0xFF121417);
+  static const lightAmbientGradientStart = Color(0xFFFAFAF8);
 
   // ──────────────────── Overlay & Scrim ────────────────────
 
@@ -160,7 +160,7 @@ abstract final class AppColorTokens {
   // ──────────────────── 玻璃效果 ────────────────────
 
   /// 玻璃效果背景（深色模式）
-  static const darkGlass = Color(0xCC121618); // 80% 不透明度
+  static const darkGlass = Color(0xCC1A1918); // 80% 不透明度
 
   /// 玻璃效果背景（浅色模式）
   static const lightGlass = Color(0xCCFFFFFF); // 80% 不透明度
@@ -168,8 +168,8 @@ abstract final class AppColorTokens {
   // ──────────────────── 收藏色 ────────────────────
 
   /// 收藏/喜欢心形图标颜色（使用主色，保持品牌一致性）。
-  static const lightFavorite = Color(0xFF117E6E); // = lightPrimary
-  static const darkFavorite = Color(0xFF46B49E); // = darkPrimary
+  static const lightFavorite = Color(0xFF2F6FED); // = lightPrimary
+  static const darkFavorite = Color(0xFF7AA2FF); // = darkPrimary
 
   /// 失败态 artwork 去饱和灰色。
   static const desaturatedGrey = Color(0xFF9E9E9E);
@@ -233,7 +233,7 @@ abstract final class AppRadiusTokens {
   /// Bottom Sheet 圆角
   static const double sheet = xxl;
 
-  /// 艺术家头像圆角（圆形）
+  /// 歌手头像圆角（圆形）
   static const double avatar = full;
 
   // ──── 平台适配 ────
@@ -334,7 +334,7 @@ abstract final class AppSpacingTokens {
   // ──── 迷你播放器间距 ────
 
   static const double mobileMiniPlayerHeight = 64; // 60 → 64
-  static const double desktopMiniPlayerHeight = 76; // 72 → 76
+  static const double desktopMiniPlayerHeight = 92; // 76 → 92，给控制区留出呼吸空间
 
   // ──── 其他间距 ────
 
@@ -356,7 +356,7 @@ abstract final class AppSpacingTokens {
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 220;
   static const double mobileTabContentHeight = 54;
-  static const double desktopToolbarHeight = 54;
+  static const double desktopToolbarHeight = 72;
   static const double desktopMainContentPaddingX = 48; // 40 → 48
   static const double desktopMainContentPaddingY = 32; // 28 → 32
   static const double desktopCardGridMinWidth = 160;

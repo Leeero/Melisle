@@ -24,7 +24,7 @@ void main() {
     const track = MusicTrack(
       id: 'track',
       title: '这是一首用于验证超长标题不会破坏媒体库布局的歌曲',
-      artistName: '未知艺术家',
+      artistName: '未知歌手',
       albumTitle: '未知专辑',
       artworkUrl: '',
       duration: Duration(minutes: 3),
@@ -65,7 +65,7 @@ void main() {
             MusicAlbum(
               id: 'album',
               title: '未知专辑',
-              artistName: '未知艺术家',
+              artistName: '未知歌手',
               artworkUrl: '',
               trackCount: 1,
             ),
@@ -89,7 +89,7 @@ void main() {
           artists: [
             MusicArtist(
               id: 'artist',
-              name: '超长艺术家名称用于验证内容边界',
+              name: '超长歌手名称用于验证内容边界',
               artworkUrl: '',
               albumCount: 12,
             ),
@@ -205,7 +205,7 @@ void main() {
                   ),
                   MusicArtist(
                     id: 'b',
-                    name: '用于验证超长艺术家名称不会发生横向溢出',
+                    name: '用于验证超长歌手名称不会发生横向溢出',
                     artworkUrl: '',
                     albumCount: 12,
                   ),

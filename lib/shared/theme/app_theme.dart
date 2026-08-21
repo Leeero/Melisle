@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 
-/// Design-system tokens for the Melisle (乐岛) Stitch Unified V3 design.
+/// Design-system theme for the Melisle (乐岛) Tidal Blue V4 design.
 ///
 /// Colour palette, typography, border-radii, spacing and component themes live
 /// here so the product UI keeps one coherent visual language.
 abstract final class AppTheme {
+  static final WidgetStateProperty<MouseCursor?> _buttonMouseCursor =
+      WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+      );
+
   // ──────────────────── Colour Palette ────────────────────
 
   // — Brand seed
@@ -675,6 +682,7 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.circular(radiusButton),
       ),
     ).copyWith(
+      mouseCursor: _buttonMouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return colorScheme.onSurface.withValues(alpha: 0.08);
@@ -691,8 +699,7 @@ abstract final class AppTheme {
         return colorScheme.onPrimary;
       }),
       overlayColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
+        if (states.contains(WidgetState.focused)) {
           return colorScheme.onPrimary.withValues(alpha: 0.08);
         }
         return Colors.transparent;
@@ -725,6 +732,7 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.circular(radiusButton),
       ),
     ).copyWith(
+      mouseCursor: _buttonMouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return Colors.transparent;
@@ -732,17 +740,12 @@ abstract final class AppTheme {
         if (states.contains(WidgetState.pressed)) {
           return _buttonPressedWash(colorScheme, isDark);
         }
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return _buttonHoverWash(colorScheme, isDark);
-        }
         return Colors.transparent;
       }),
       side: WidgetStateProperty.resolveWith((states) {
         final alpha = states.contains(WidgetState.disabled)
             ? 0.32
-            : states.contains(WidgetState.hovered) ||
-                  states.contains(WidgetState.focused) ||
+            : states.contains(WidgetState.focused) ||
                   states.contains(WidgetState.pressed)
             ? (isDark ? 0.86 : 1.0)
             : (isDark ? 0.56 : 0.78);
@@ -769,13 +772,10 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.circular(radiusButton),
       ),
     ).copyWith(
+      mouseCursor: _buttonMouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.pressed)) {
           return _buttonPressedWash(colorScheme, isDark);
-        }
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return _buttonHoverWash(colorScheme, isDark);
         }
         return Colors.transparent;
       }),
@@ -807,16 +807,13 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.circular(radiusIconButton),
       ),
     ).copyWith(
+      mouseCursor: _buttonMouseCursor,
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return Colors.transparent;
         }
         if (states.contains(WidgetState.pressed)) {
           return _buttonPressedWash(colorScheme, isDark);
-        }
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return _buttonHoverWash(colorScheme, isDark);
         }
         return Colors.transparent;
       }),
@@ -834,15 +831,10 @@ abstract final class AppTheme {
       overlayColor: WidgetStateProperty.all(Colors.transparent),
       side: WidgetStateProperty.resolveWith((states) {
         final focused = states.contains(WidgetState.focused);
-        final hovered = states.contains(WidgetState.hovered);
-        final pressed = states.contains(WidgetState.pressed);
-        final visible = hovered || focused || pressed;
-        if (!visible) return BorderSide.none;
+        if (!focused) return BorderSide.none;
         return BorderSide(
-          color: focused
-              ? colorScheme.primary.withValues(alpha: 0.72)
-              : colorScheme.outlineVariant.withValues(alpha: 0.30),
-          width: focused ? 1.5 : 1.0,
+          color: colorScheme.primary.withValues(alpha: 0.72),
+          width: 1.5,
         );
       }),
     );
@@ -863,6 +855,7 @@ abstract final class AppTheme {
         borderRadius: BorderRadius.circular(radiusButton),
       ),
     ).copyWith(
+      mouseCursor: _buttonMouseCursor,
       elevation: WidgetStateProperty.all(0),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
@@ -873,10 +866,6 @@ abstract final class AppTheme {
             colorScheme.primary.withValues(alpha: isDark ? 0.18 : 0.12),
             colorScheme.surfaceContainerHighest,
           );
-        }
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused)) {
-          return _buttonHoverWash(colorScheme, isDark);
         }
         return colorScheme.surfaceContainerHigh.withValues(
           alpha: isDark ? 0.74 : 0.86,
@@ -890,26 +879,13 @@ abstract final class AppTheme {
       }),
       overlayColor: WidgetStateProperty.all(Colors.transparent),
       side: WidgetStateProperty.resolveWith((states) {
-        final visible =
-            states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.focused) ||
-            states.contains(WidgetState.pressed);
+        final visible = states.contains(WidgetState.focused);
         return BorderSide(
           color: colorScheme.outlineVariant.withValues(
             alpha: visible ? (isDark ? 0.52 : 0.72) : 0,
           ),
         );
       }),
-    );
-  }
-
-  static Color _buttonHoverWash(ColorScheme colorScheme, bool isDark) {
-    final tint = isDark
-        ? AppColorTokens.darkMusicTealSoft
-        : AppColorTokens.lightMusicTealSoft;
-    return Color.alphaBlend(
-      tint.withValues(alpha: isDark ? 0.50 : 0.58),
-      colorScheme.surface,
     );
   }
 
@@ -990,14 +966,14 @@ extension MelisleThemeX on ThemeData {
       : AppColorTokens.lightMusicInk;
 
   Color get hoverWash => Color.alphaBlend(
-    musicTealSoft.withValues(
+    colorScheme.primaryContainer.withValues(
       alpha: brightness == Brightness.dark ? 0.46 : 0.54,
     ),
     colorScheme.surface,
   );
 
   Color get selectedWash => Color.alphaBlend(
-    musicWarmSoft.withValues(
+    colorScheme.primaryContainer.withValues(
       alpha: brightness == Brightness.dark ? 0.60 : 0.64,
     ),
     colorScheme.surface,

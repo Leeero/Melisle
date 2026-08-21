@@ -209,47 +209,14 @@ class _FavoritesDesktopActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = state.tracks.isNotEmpty;
-    final colors = Theme.of(context).colorScheme;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
-    );
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FilledButton.icon(
-          onPressed: enabled ? () => _playAllFavorites(context, state) : null,
-          icon: const Icon(Icons.play_arrow_rounded, size: 18),
-          label: const Text('全部播放'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
-            shape: shape,
-            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        OutlinedButton.icon(
-          onPressed: enabled
-              ? () => _playAllFavorites(context, state, shuffled: true)
-              : null,
-          icon: const Icon(Icons.shuffle_rounded, size: 18),
-          label: const Text('随机播放'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.primary,
-            minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
-            side: BorderSide(color: colors.primary),
-            shape: shape,
-            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
+    return PlayAllButton(
+      variant: PlayAllButtonVariant.primary,
+      onPressed: state.tracks.isEmpty
+          ? null
+          : () => _playAllFavorites(context, state),
+      onShufflePressed: state.tracks.isEmpty
+          ? null
+          : () => _playAllFavorites(context, state, shuffled: true),
     );
   }
 }
@@ -342,7 +309,7 @@ class _FavoritesDesktopTableHeader extends StatelessWidget {
           const SizedBox(width: 56),
           Expanded(flex: 4, child: Text('标题', style: labelStyle)),
           const SizedBox(width: 16),
-          Expanded(flex: 3, child: Text('艺术家', style: labelStyle)),
+          Expanded(flex: 3, child: Text('歌手', style: labelStyle)),
           const SizedBox(width: 16),
           Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
           const SizedBox(width: 16),

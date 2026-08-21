@@ -223,7 +223,7 @@ void main() {
       verify: (_) {
         expect(find.text('歌曲'), findsOneWidget);
         expect(find.text('专辑'), findsOneWidget);
-        expect(find.text('艺术家'), findsOneWidget);
+        expect(find.text('歌手'), findsOneWidget);
         expect(find.text('歌单'), findsOneWidget);
         expect(find.text('当前还没有歌曲。'), findsOneWidget);
       },
@@ -245,7 +245,9 @@ void main() {
     );
   });
 
-  testWidgets('LibraryPage_desktopHidesPlaylistFilter', (tester) async {
+  testWidgets('LibraryPage_desktopUsesSidebarFilterWithoutTabsOrSearch', (
+    tester,
+  ) async {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     tester.view.physicalSize = const Size(1280, 900);
@@ -255,13 +257,13 @@ void main() {
         MusicAlbum(
           id: 'album-1',
           title: '很长的专辑名称用于验证媒体库布局',
-          artistName: '测试艺术家',
+          artistName: '测试歌手',
           artworkUrl: '',
           trackCount: 10,
         ),
       ],
       libraryArtists: const [
-        MusicArtist(id: 'artist-1', name: '很长的艺术家名称用于验证媒体库布局', artworkUrl: ''),
+        MusicArtist(id: 'artist-1', name: '很长的歌手名称用于验证媒体库布局', artworkUrl: ''),
       ],
       libraryPlaylists: const [
         MusicPlaylist(
@@ -277,20 +279,13 @@ void main() {
     await tester.pumpWidget(_wrapLibrary(repository, playerCubit));
     await tester.pumpAndSettle();
 
-    expect(find.text('在歌曲中搜索'), findsOneWidget);
-    expect(find.bySemanticsLabel('在歌曲列表中搜索'), findsNothing);
-
-    await tester.tap(find.text('专辑'));
-    await tester.pumpAndSettle();
-    expect(find.text('在专辑中搜索'), findsOneWidget);
-    expect(find.text('很长的专辑名称用于验证媒体库布局'), findsOneWidget);
-
-    await tester.tap(find.text('艺术家'));
-    await tester.pumpAndSettle();
-    expect(find.text('在艺术家中搜索'), findsOneWidget);
-    expect(find.text('很长的艺术家名称用于验证媒体库布局'), findsOneWidget);
-
+    expect(find.bySemanticsLabel('搜索歌曲'), findsNothing);
+    expect(find.text('歌曲'), findsNothing);
+    expect(find.text('专辑'), findsNothing);
+    expect(find.text('歌手'), findsNothing);
     expect(find.text('歌单'), findsNothing);
+    expect(find.text('很长的专辑名称用于验证媒体库布局'), findsNothing);
+    expect(find.text('很长的歌手名称用于验证媒体库布局'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -776,7 +771,7 @@ List<MusicTrack> _playlistTracks() {
     MusicTrack(
       id: 'track-3',
       title: '很长很长的歌曲标题用于验证移动端歌单详情行内容不会横向溢出',
-      artistName: '很长很长的艺术家名称',
+      artistName: '很长很长的歌手名称',
       albumTitle: '很长很长的专辑名称',
       artworkUrl: '',
       duration: Duration(minutes: 4, seconds: 38),

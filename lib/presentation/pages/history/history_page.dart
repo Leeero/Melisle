@@ -272,7 +272,7 @@ class _HistoryTrackRow extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            subtitle.isEmpty ? '未知艺术家' : subtitle,
+                            subtitle.isEmpty ? '未知歌手' : subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(

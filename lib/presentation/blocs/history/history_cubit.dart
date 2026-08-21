@@ -78,7 +78,7 @@ class HistoryCubit extends Cubit<HistoryState> {
     return MusicTrack(
       id: row.trackId,
       title: row.title,
-      artistName: row.artistName ?? '未知艺术家',
+      artistName: row.artistName ?? '未知歌手',
       albumTitle: row.albumTitle ?? '',
       artworkUrl: row.artworkUrl ?? '',
       albumId: row.albumId,

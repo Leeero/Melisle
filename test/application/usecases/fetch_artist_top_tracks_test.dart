@@ -36,7 +36,7 @@ class _FakeMusicRepository implements MusicRepository {
       MusicTrack(
         id: 'track-1',
         title: '曲目',
-        artistName: '艺术家',
+        artistName: '歌手',
         albumTitle: '专辑',
         artworkUrl: '',
         duration: Duration(minutes: 3),
