@@ -26,12 +26,13 @@ class LyricTimelineEntry {
 }
 
 class LyricTimeline {
-  const LyricTimeline._(this.entries, this.sourceOffset);
+  const LyricTimeline._(this.entries, this.sourceOffset, this.lines);
 
-  static const empty = LyricTimeline._([], Duration.zero);
+  static const empty = LyricTimeline._([], Duration.zero, []);
 
   final List<LyricTimelineEntry> entries;
   final Duration sourceOffset;
+  final List<LyricLine> lines;
 
   bool get isEmpty => entries.isEmpty;
 
@@ -41,9 +42,7 @@ class LyricTimeline {
 
   LyricTimelineEntry operator [](int index) => entries[index];
 
-  List<LyricLine> toLyricLines() {
-    return [for (final entry in entries) entry.toLyricLine()];
-  }
+  List<LyricLine> toLyricLines() => lines;
 
   factory LyricTimeline.fromLines(
     List<LyricLine> lines, {
@@ -117,6 +116,7 @@ class LyricTimeline {
     return LyricTimeline._(
       List.unmodifiable(entries),
       _dominantSourceOffset(coalesced),
+      List.unmodifiable(entries.map((entry) => entry.toLyricLine())),
     );
   }
 

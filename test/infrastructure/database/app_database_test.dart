@@ -41,4 +41,23 @@ void main() {
 
     expect(await database.recentPlays(limit: 10), isEmpty);
   });
+
+  test('clearSessionHistory removes play and search history', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await database.insertPlayHistory(
+      PlayHistoryCompanion.insert(
+        trackId: 'track-1',
+        title: 'Track 1',
+        playedAtMs: 1,
+      ),
+    );
+    await database.touchSearchHistory('previous account query');
+
+    await database.clearSessionHistory();
+
+    expect(await database.recentPlays(limit: 10), isEmpty);
+    expect(await database.recentSearches(limit: 10), isEmpty);
+  });
 }

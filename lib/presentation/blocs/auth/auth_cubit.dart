@@ -16,11 +16,13 @@ class AuthCubit extends Cubit<AuthState> {
     required Logout logout,
     required FetchPlaylists fetchPlaylists,
     AuthDevLoginCredentials? devLoginCredentials,
+    Future<void> Function()? clearSessionData,
   }) : _loginWithEmby = loginWithEmby,
        _restoreSession = restoreSession,
        _logout = logout,
        _fetchPlaylists = fetchPlaylists,
        _devLoginCredentials = devLoginCredentials,
+       _clearSessionData = clearSessionData,
        super(const AuthState.unknown()) {
     restore();
   }
@@ -30,6 +32,7 @@ class AuthCubit extends Cubit<AuthState> {
   final Logout _logout;
   final FetchPlaylists _fetchPlaylists;
   final AuthDevLoginCredentials? _devLoginCredentials;
+  final Future<void> Function()? _clearSessionData;
 
   Future<void> restore() async {
     try {
@@ -79,6 +82,11 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> logout() async {
+    try {
+      await _clearSessionData?.call();
+    } catch (error, stackTrace) {
+      debugPrint('AuthCubit.clearSessionData 失败：$error\n$stackTrace');
+    }
     await _logout();
     emit(const AuthState.unauthenticated());
   }

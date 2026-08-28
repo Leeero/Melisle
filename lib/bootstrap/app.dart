@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
@@ -99,13 +100,10 @@ final class AppBootstrap {
     // 先把设置读出来，让首帧就能用正确的主题 / 默认音质渲染。
     await settingsCubit.load();
 
-    final authCubit = AuthCubit(
-      loginWithEmby: LoginWithEmby(repository),
-      restoreSession: RestoreSession(repository),
-      logout: Logout(repository),
-      fetchPlaylists: FetchPlaylists(repository),
-      devLoginCredentials: DevLoginEnvironment.credentials(),
-    );
+    // 先声明应用播放的是持续性音乐，让系统建立正确的媒体音频会话和输出路由。
+    // 必须早于 AudioPlayer 创建；否则 Darwin 平台可能出现时间轴推进但无声。
+    final audioSession = await AudioSession.instance;
+    await audioSession.configure(const AudioSessionConfiguration.music());
 
     // 初始化 audio_service —— 负责锁屏 / 通知 / NowPlaying / SMTC。
     final audioHandler = await AudioService.init(
@@ -168,6 +166,37 @@ final class AppBootstrap {
     );
     await downloadsCubit.load();
 
+    final authCubit = AuthCubit(
+      loginWithEmby: LoginWithEmby(repository),
+      restoreSession: RestoreSession(repository),
+      logout: Logout(repository),
+      fetchPlaylists: FetchPlaylists(repository),
+      devLoginCredentials: DevLoginEnvironment.credentials(),
+      clearSessionData: () async {
+        Object? firstError;
+        StackTrace? firstStackTrace;
+
+        try {
+          await playerCubit.clearQueue();
+        } catch (error, stackTrace) {
+          firstError = error;
+          firstStackTrace = stackTrace;
+        }
+
+        favoritesCubit.reset();
+        try {
+          await database.clearSessionHistory();
+        } catch (error, stackTrace) {
+          firstError ??= error;
+          firstStackTrace ??= stackTrace;
+        }
+
+        if (firstError case final error?) {
+          Error.throwWithStackTrace(error, firstStackTrace!);
+        }
+      },
+    );
+
     unawaited(desktopIntegration.attach());
 
     runApp(
@@ -194,7 +223,7 @@ final class AppBootstrap {
     await windowManager.ensureInitialized();
     final options = WindowOptions(
       size: const Size(1280, 820),
-      minimumSize: const Size(960, 680),
+      minimumSize: const Size(1080, 680),
       center: true,
       title: AppConstants.appName,
       titleBarStyle: Platform.isMacOS

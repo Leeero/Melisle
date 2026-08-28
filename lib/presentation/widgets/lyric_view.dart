@@ -51,13 +51,13 @@ class LyricView extends StatefulWidget {
 
 class _LyricViewState extends State<LyricView> {
   final _scrollController = ScrollController();
+  final _lineKeys = <int, GlobalKey>{};
   Timer? _autoScrollResumeTimer;
   bool _userScrollLocked = false;
   int? _lastScrolledIndex;
 
   static const Duration _autoScrollResumeDelay = Duration(seconds: 3);
   static const double _verticalPadding = 80;
-  static const double _estimatedLineExtent = 58;
 
   @override
   void initState() {
@@ -69,7 +69,10 @@ class _LyricViewState extends State<LyricView> {
   void didUpdateWidget(covariant LyricView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.lines != oldWidget.lines) {
+      _autoScrollResumeTimer?.cancel();
+      _userScrollLocked = false;
       _lastScrolledIndex = null;
+      _lineKeys.clear();
     }
     if (widget.currentIndex != null &&
         (widget.currentIndex != oldWidget.currentIndex ||
@@ -91,30 +94,27 @@ class _LyricViewState extends State<LyricView> {
       return;
     }
 
-    _lastScrolledIndex = idx;
-    final viewport = _scrollController.position.viewportDimension;
-    // Wrapped lyric lines have variable height. The estimate is deliberately
-    // bounded; the ListView keeps scrolling stable without a second state source.
-    final rawOffset =
-        _verticalPadding + idx * _estimatedLineExtent - viewport / 2;
-    final target = rawOffset
-        .clamp(
-          _scrollController.position.minScrollExtent,
-          _scrollController.position.maxScrollExtent,
-        )
-        .toDouble();
-
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
-    if (disableAnimations) {
-      _scrollController.jumpTo(target);
-    } else {
-      _scrollController.animateTo(
-        target,
-        duration: AppMotion.page,
-        curve: AppMotion.enter,
-      );
+    final lineContext = _lineKeyFor(idx).currentContext;
+    if (lineContext == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToCurrent(force: force);
+      });
+      return;
     }
+
+    Scrollable.ensureVisible(
+      lineContext,
+      alignment: 0.5,
+      duration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : AppMotion.normal,
+      curve: AppMotion.music,
+    );
+    _lastScrolledIndex = idx;
   }
+
+  GlobalKey _lineKeyFor(int index) =>
+      _lineKeys.putIfAbsent(index, GlobalKey.new);
 
   void _lockAutoScrollForUser() {
     _autoScrollResumeTimer?.cancel();
@@ -177,28 +177,31 @@ class _LyricViewState extends State<LyricView> {
       },
       child: NotificationListener<ScrollNotification>(
         onNotification: _handleScrollNotification,
-        child: ListView.builder(
+        child: SingleChildScrollView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(vertical: _verticalPadding),
-          cacheExtent: _estimatedLineExtent * 8,
-          itemCount: widget.lines.length,
-          itemBuilder: (context, index) {
-            return _LyricLineTile(
-              line: widget.lines[index],
-              isCurrent: index == widget.currentIndex,
-              textAlign: widget.textAlign,
-              alignment: widget.alignment,
-              maxTextWidth: widget.maxTextWidth,
-              currentScale: widget.currentScale,
-              currentTextStyle: widget.currentTextStyle,
-              inactiveTextStyle: widget.inactiveTextStyle,
-              linePadding: widget.linePadding,
-              onTap: widget.onLineTap == null
-                  ? null
-                  : () => _handleLineTap(index),
-            );
-          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < widget.lines.length; index++)
+                _LyricLineTile(
+                  key: _lineKeyFor(index),
+                  line: widget.lines[index],
+                  isCurrent: index == widget.currentIndex,
+                  textAlign: widget.textAlign,
+                  alignment: widget.alignment,
+                  maxTextWidth: widget.maxTextWidth,
+                  currentScale: widget.currentScale,
+                  currentTextStyle: widget.currentTextStyle,
+                  inactiveTextStyle: widget.inactiveTextStyle,
+                  linePadding: widget.linePadding,
+                  onTap: widget.onLineTap == null
+                      ? null
+                      : () => _handleLineTap(index),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -237,6 +240,7 @@ class _LyricViewState extends State<LyricView> {
 
 class _LyricLineTile extends StatelessWidget {
   const _LyricLineTile({
+    super.key,
     required this.line,
     required this.isCurrent,
     required this.textAlign,
@@ -287,13 +291,13 @@ class _LyricLineTile extends StatelessWidget {
         (isCurrent ? currentTextStyle : inactiveTextStyle) ?? fallbackStyle;
 
     Widget content = AnimatedScale(
-      duration: AppMotion.lyrics,
-      curve: AppMotion.enter,
+      duration: AppMotion.fast,
+      curve: AppMotion.music,
       scale: isCurrent ? currentScale : 1.0,
       alignment: alignment,
       child: AnimatedDefaultTextStyle(
-        duration: AppMotion.lyrics,
-        curve: AppMotion.enter,
+        duration: AppMotion.fast,
+        curve: AppMotion.music,
         style: style,
         child: Text(
           line.text,

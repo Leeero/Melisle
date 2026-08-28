@@ -1,4 +1,6 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
@@ -13,6 +15,7 @@ import 'package:go_router/go_router.dart';
 ///   - 查看专辑（若有 albumId）
 ///   - 查看歌手（若有 artistId）
 ///   - 添加到当前队列
+///   - 下载 / 显示下载状态
 ///   - 收藏 / 取消收藏
 enum TrackActionsPopoverStyle { standard, recentPlayback }
 
@@ -78,6 +81,42 @@ Future<void> showTrackActionsSheet(
                 }
               },
             ),
+            BlocBuilder<DownloadsCubit, DownloadsState>(
+              buildWhen: (previous, current) =>
+                  previous.completedTrackIds.contains(track.id) !=
+                      current.completedTrackIds.contains(track.id) ||
+                  previous.jobs[track.id]?.status !=
+                      current.jobs[track.id]?.status,
+              builder: (ctx, downloadsState) {
+                final isDownloaded = downloadsState.completedTrackIds.contains(
+                  track.id,
+                );
+                final isDownloading = downloadsState.jobs.containsKey(track.id);
+                return AppOptionTile<_TrackAction>(
+                  title: isDownloaded
+                      ? '已下载'
+                      : isDownloading
+                      ? '下载中'
+                      : '下载',
+                  icon: isDownloaded
+                      ? Icons.download_done_rounded
+                      : isDownloading
+                      ? Icons.downloading_rounded
+                      : Icons.download_rounded,
+                  value: _TrackAction.download,
+                  groupValue: _TrackAction.none,
+                  showRadio: false,
+                  enabled: !isDownloaded && !isDownloading,
+                  onSelected: (_) async {
+                    Navigator.of(sheetCtx).pop();
+                    await context.read<DownloadsCubit>().enqueue(track);
+                    if (context.mounted) {
+                      AppSnackBar.show(context, '已加入下载队列：$title');
+                    }
+                  },
+                );
+              },
+            ),
             BlocBuilder<FavoritesCubit, FavoritesState>(
               buildWhen: (a, b) => a.entries[track.id] != b.entries[track.id],
               builder: (ctx, favState) {
@@ -121,6 +160,9 @@ Future<void> _showTrackActionsPopover(
     track.id,
     fallback: track.isFavorite,
   );
+  final downloadsState = context.read<DownloadsCubit>().state;
+  final isDownloaded = downloadsState.completedTrackIds.contains(track.id);
+  final isDownloading = downloadsState.jobs.containsKey(track.id);
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
   final trigger = context.findRenderObject() as RenderBox?;
   final triggerRect = trigger == null
@@ -189,6 +231,28 @@ Future<void> _showTrackActionsPopover(
           spacing: itemSpacing,
         ),
       ),
+      PopupMenuItem(
+        value: _TrackAction.download,
+        enabled: !isDownloaded && !isDownloading,
+        mouseCursor: SystemMouseCursors.click,
+        height: usesRecentPlaybackStyle ? 42 : kMinInteractiveDimension,
+        padding: usesRecentPlaybackStyle
+            ? const EdgeInsets.symmetric(horizontal: 8)
+            : null,
+        child: _TrackActionMenuItem(
+          icon: isDownloaded
+              ? Icons.download_done_rounded
+              : isDownloading
+              ? Icons.downloading_rounded
+              : Icons.download_rounded,
+          label: isDownloaded
+              ? '已下载'
+              : isDownloading
+              ? '下载中'
+              : '下载',
+          spacing: itemSpacing,
+        ),
+      ),
       if (track.albumId?.isNotEmpty ?? false)
         PopupMenuItem(
           value: _TrackAction.album,
@@ -244,6 +308,9 @@ Future<void> _showTrackActionsPopover(
     case _TrackAction.queue:
       await context.read<PlayerCubit>().addToQueue(track);
       if (context.mounted) AppSnackBar.show(context, '已加入队列：$title');
+    case _TrackAction.download:
+      await context.read<DownloadsCubit>().enqueue(track);
+      if (context.mounted) AppSnackBar.show(context, '已加入下载队列：$title');
     case _TrackAction.favorite:
       context.read<FavoritesCubit>().toggle(track.id, currentValue: isFavorite);
       AppSnackBar.show(context, isFavorite ? '已取消收藏' : '已收藏');
@@ -275,4 +342,4 @@ class _TrackActionMenuItem extends StatelessWidget {
   }
 }
 
-enum _TrackAction { none, album, artist, queue, favorite }
+enum _TrackAction { none, album, artist, queue, download, favorite }

@@ -2,8 +2,17 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/infrastructure/audio/playback_clock.dart';
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
+import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:just_audio/just_audio.dart';
+
+final class PlaybackFailure {
+  const PlaybackFailure({required this.trackId, required this.error});
+
+  final String trackId;
+  final Object error;
+}
 
 /// [AudioPlayerHandler] 是系统级播放能力的唯一入口。
 ///
@@ -22,7 +31,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   AudioPlayerHandler({required CustomMediaSourceResolver mediaSourceResolver})
     : _mediaSourceResolver = mediaSourceResolver,
-      _audioPlayer = AudioPlayer() {
+      _audioPlayer = AudioPlayer(
+        userAgent: AppConstants.httpUserAgent,
+        useProxyForRequestHeaders: false,
+      ) {
     _attachSystemBindings();
   }
 
@@ -39,14 +51,17 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   // ========= 事件流 =========
 
-  Stream<Duration> get positionStream => _audioPlayer.positionStream;
+  Stream<Duration> get positionStream => _positionController.stream;
 
   Stream<Duration?> get durationStream => _audioPlayer.durationStream;
 
   Stream<PlayerState> get playerStateStream => _audioPlayer.playerStateStream;
 
-  /// 自然播放完成事件（每当 processingState 从非 completed 变为 completed 时推送一次）。
-  Stream<void> get trackCompletionStream => _completionController.stream;
+  Stream<PlaybackFailure> get playbackErrorStream =>
+      _playbackErrorController.stream;
+
+  /// 自然播放完成事件。事件携带曲目 ID，避免旧音源的延迟事件推进新队列。
+  Stream<String> get trackCompletionStream => _completionController.stream;
 
   Stream<double> get volumeStream => _audioPlayer.volumeStream;
 
@@ -54,11 +69,24 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   bool get isIdle => _audioPlayer.processingState == ProcessingState.idle;
 
-  Duration get position => _audioPlayer.position;
+  Duration get position => _effectivePosition();
 
-  final StreamController<void> _completionController =
-      StreamController<void>.broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
+  final StreamController<String> _completionController =
+      StreamController<String>.broadcast();
+  final StreamController<PlaybackFailure> _playbackErrorController =
+      StreamController<PlaybackFailure>.broadcast();
   bool _lastWasCompleted = false;
+  int _sourceGeneration = 0;
+  bool _sourceReady = false;
+  String? _activeTrackId;
+  final PlaybackClock _playbackClock = PlaybackClock();
+  Timer? _positionTicker;
+
+  static const Duration _nativeBackwardCorrectionLimit = Duration(
+    milliseconds: 500,
+  );
 
   /// 串行化加载操作，避免并发 load 导致原生层处于中间态。
   Future<void> _pendingLoad = Future<void>.value();
@@ -74,40 +102,45 @@ class AudioPlayerHandler extends BaseAudioHandler
   ///
   /// 因此这里的正确做法是：
   /// 1. 串行化 load；
-  /// 2. 切歌前先 stop 当前源；
-  /// 3. `setAudioSource` 等待加载完成；
+  /// 2. 先暂停当前源，避免破坏性的 stop 归零；
+  /// 3. `setAudioSource` 以指定位置等待加载完成；
   /// 4. `play()` 只触发，不等待其完成。
-  Future<void> loadAndPlay(AudioSource source) {
+  Future<void> loadAndPlay(
+    AudioSource source, {
+    Duration initialPosition = Duration.zero,
+  }) {
     return _queueLoad(() async {
-      try {
-        await _audioPlayer.stop();
-      } catch (_) {
-        // 首次播放 / 已经 idle 时 stop 失败可忽略。
-      }
-      await _audioPlayer.setAudioSource(source);
-      // 等待 ready 后再 play，避免在 loading/idle 中间态调用 play 无效。
-      await _audioPlayer.playerStateStream
-          .firstWhere(
-            (s) =>
-                s.processingState == ProcessingState.ready ||
-                s.processingState == ProcessingState.completed,
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () => _audioPlayer.playerState,
-          );
-      unawaited(_audioPlayer.play());
+      await _loadSource(source, initialPosition: initialPosition);
+      _startPlayback();
     });
   }
 
-  /// 仅加载、不自动播放。
-  Future<void> loadOnly(AudioSource source) {
+  /// 在指定位置加载音源，保持暂停，由上层确认播放意图后再播放。
+  Future<void> loadOnly(
+    AudioSource source, {
+    Duration initialPosition = Duration.zero,
+  }) {
     return _queueLoad(() async {
-      try {
-        await _audioPlayer.stop();
-      } catch (_) {}
-      await _audioPlayer.setAudioSource(source);
+      await _loadSource(source, initialPosition: initialPosition);
     });
+  }
+
+  Future<void> _loadSource(
+    AudioSource source, {
+    required Duration initialPosition,
+  }) async {
+    final track = source is IndexedAudioSource ? source.tag : null;
+    if (track is! MusicTrack) {
+      throw ArgumentError.value(track, 'source.tag', '必须是 MusicTrack');
+    }
+    _sourceReady = false;
+    _activeTrackId = null;
+    _playbackClock.reset(position: initialPosition, duration: track.duration);
+    _sourceGeneration += 1;
+    await _audioPlayer.pause();
+    await _audioPlayer.setAudioSource(source, initialPosition: initialPosition);
+    _activeTrackId = track.id;
+    _sourceReady = true;
   }
 
   Future<void> _queueLoad(Future<void> Function() action) {
@@ -126,22 +159,63 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ========= 普通播放控制 =========
 
   @override
-  Future<void> play() => _audioPlayer.play();
+  Future<void> play() async {
+    _startPlayback();
+  }
+
+  void _startPlayback() {
+    final generation = _sourceGeneration;
+    final trackId = _activeTrackId;
+    if (!_sourceReady || trackId == null) return;
+    _playbackClock.start(speed: _audioPlayer.speed);
+    unawaited(
+      _audioPlayer.play().catchError((Object error, StackTrace _) {
+        if (generation == _sourceGeneration &&
+            trackId == _activeTrackId &&
+            !_playbackErrorController.isClosed) {
+          _playbackErrorController.add(
+            PlaybackFailure(trackId: trackId, error: error),
+          );
+        }
+      }),
+    );
+  }
 
   @override
-  Future<void> pause() => _audioPlayer.pause();
+  Future<void> pause() async {
+    final preservedPosition = position;
+    _playbackClock.pause();
+    await _audioPlayer.pause();
+    if ((_audioPlayer.position - preservedPosition).abs() >
+        const Duration(milliseconds: 500)) {
+      await _audioPlayer.seek(preservedPosition);
+    }
+    _playbackClock.seek(preservedPosition);
+  }
 
   @override
-  Future<void> seek(Duration position) => _audioPlayer.seek(position);
+  Future<void> seek(Duration position) async {
+    _playbackClock.seek(position);
+    await _audioPlayer.seek(position);
+    _emitPosition();
+  }
 
   @override
   Future<void> stop() async {
+    _sourceReady = false;
+    _activeTrackId = null;
+    _playbackClock.reset();
+    _sourceGeneration += 1;
     await _audioPlayer.stop();
     await super.stop();
   }
 
   /// 清空当前加载曲目、重置播放状态。用于"清空队列"。
   Future<void> clearPlayback() async {
+    _sourceReady = false;
+    _activeTrackId = null;
+    _playbackClock.reset();
+    _sourceGeneration += 1;
     try {
       await _audioPlayer.stop();
     } catch (_) {}
@@ -259,32 +333,118 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> dispose() async {
     _fadeTimer?.cancel();
+    _positionTicker?.cancel();
     try {
       await _pendingLoad;
     } catch (_) {}
+    await _positionController.close();
     await _completionController.close();
+    await _playbackErrorController.close();
     await _audioPlayer.dispose();
   }
 
   // ========= 把 just_audio 事件桥接到 audio_service =========
 
   void _attachSystemBindings() {
-    _audioPlayer.playbackEventStream.listen(_broadcastPlaybackState);
+    _audioPlayer.playbackEventStream.listen((event) {
+      _synchronizePlaybackClock(event);
+      _broadcastPlaybackState(event);
+      _emitPosition();
+    });
     _audioPlayer.playerStateStream.listen((state) {
+      _updatePositionTicker(state);
       final completedNow = state.processingState == ProcessingState.completed;
       if (completedNow && !_lastWasCompleted) {
         _lastWasCompleted = true;
-        _completionController.add(null);
+        final trackId = _activeTrackId;
+        if (_sourceReady &&
+            trackId != null &&
+            !_completionController.isClosed) {
+          _completionController.add(trackId);
+        }
       } else if (!completedNow) {
         _lastWasCompleted = false;
       }
     });
     _audioPlayer.durationStream.listen((d) {
+      _playbackClock.setDuration(d ?? mediaItem.valueOrNull?.duration);
       final current = mediaItem.valueOrNull;
       if (current != null && d != null) {
         mediaItem.add(current.copyWith(duration: d));
       }
     });
+  }
+
+  Duration _effectivePosition() => _playbackClock.position;
+
+  void _synchronizePlaybackClock(PlaybackEvent event) {
+    if (!_sourceReady) return;
+    final duration =
+        event.duration ??
+        _audioPlayer.duration ??
+        mediaItem.valueOrNull?.duration;
+    _playbackClock.setDuration(duration);
+
+    switch (event.processingState) {
+      case ProcessingState.ready:
+        final elapsed = _audioPlayer.playing
+            ? DateTime.now().difference(event.updateTime)
+            : Duration.zero;
+        final nativePosition = elapsed.isNegative
+            ? event.updatePosition
+            : event.updatePosition + elapsed * _audioPlayer.speed;
+        _playbackClock.synchronize(
+          nativePosition,
+          allowBackward: true,
+          // Continuous playback only accepts small phase corrections. Large
+          // backward jumps are stale proxy/native samples; explicit seeks and
+          // pauses already re-anchor the clock through their control paths.
+          maxBackwardCorrection: _audioPlayer.playing
+              ? _nativeBackwardCorrectionLimit
+              : null,
+        );
+        if (_audioPlayer.playing) {
+          _playbackClock.start(speed: _audioPlayer.speed);
+        } else {
+          _playbackClock.pause();
+        }
+        break;
+      case ProcessingState.buffering:
+        _playbackClock.synchronize(event.updatePosition, allowBackward: false);
+        // playing 只表示用户仍有播放意图；buffering 期间没有音频产出，时间轴
+        // 必须冻结。否则网络或解码卡顿会被伪装成“进度正常但突然没声音”。
+        _playbackClock.pause();
+        break;
+      case ProcessingState.completed:
+        _playbackClock.complete(nativePosition: event.updatePosition);
+        break;
+      case ProcessingState.idle:
+      case ProcessingState.loading:
+        _playbackClock.pause();
+        break;
+    }
+  }
+
+  void _updatePositionTicker(PlayerState state) {
+    final shouldTick =
+        state.playing && state.processingState == ProcessingState.ready;
+    if (!shouldTick) {
+      _positionTicker?.cancel();
+      _positionTicker = null;
+      _emitPosition();
+      return;
+    }
+    _positionTicker ??= Timer.periodic(
+      const Duration(milliseconds: 100),
+      (_) => _emitPosition(),
+    );
+    _emitPosition();
+  }
+
+  void _emitPosition() {
+    if (!_sourceReady || _positionController.isClosed) return;
+    final currentPosition = _effectivePosition();
+    _positionController.add(currentPosition);
   }
 
   void _broadcastPlaybackState(PlaybackEvent event) {
@@ -304,7 +464,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         androidCompactActionIndices: const [0, 1, 2],
         processingState: _mapProcessingState(event.processingState),
         playing: playing,
-        updatePosition: event.updatePosition,
+        updatePosition: _sourceReady
+            ? _effectivePosition()
+            : event.updatePosition,
         bufferedPosition: event.bufferedPosition,
         speed: _audioPlayer.speed,
         // queueIndex 交给 publishQueue 去维护，这里不覆盖。

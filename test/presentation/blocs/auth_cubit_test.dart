@@ -57,10 +57,33 @@ void main() {
 
       await cubit.close();
     });
+
+    test('clears session data before repository logout', () async {
+      final events = <String>[];
+      final repository = _AuthRepositoryFake(lifecycleEvents: events);
+      final cubit = AuthCubit(
+        loginWithEmby: LoginWithEmby(repository),
+        restoreSession: RestoreSession(repository),
+        logout: Logout(repository),
+        fetchPlaylists: FetchPlaylists(repository),
+        clearSessionData: () async {
+          events.add('clear-session-data');
+        },
+      );
+
+      await cubit.logout();
+
+      expect(events, ['clear-session-data', 'repository-logout']);
+      expect(cubit.state.status, AuthStatus.unauthenticated);
+      await cubit.close();
+    });
   });
 }
 
 class _AuthRepositoryFake implements MusicRepository {
+  _AuthRepositoryFake({this.lifecycleEvents});
+
+  final List<String>? lifecycleEvents;
   AuthSession? session;
   int loginCalls = 0;
   String? lastLoginServerUrl;
@@ -93,6 +116,7 @@ class _AuthRepositoryFake implements MusicRepository {
 
   @override
   Future<void> logout() async {
+    lifecycleEvents?.add('repository-logout');
     session = null;
   }
 

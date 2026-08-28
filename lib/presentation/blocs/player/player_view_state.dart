@@ -102,7 +102,7 @@ class PlayerViewState {
     LoopMode? loopMode,
     bool? shuffleEnabled,
     double? volume,
-    String? errorMessage,
+    Object? errorMessage = _noChange,
     AudioQuality? quality,
     LyricSyncState? lyricSyncState,
     bool? isLyricsLoading,
@@ -122,7 +122,9 @@ class PlayerViewState {
       loopMode: loopMode ?? this.loopMode,
       shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
       volume: volume ?? this.volume,
-      errorMessage: errorMessage,
+      errorMessage: identical(errorMessage, _noChange)
+          ? this.errorMessage
+          : errorMessage as String?,
       quality: quality ?? this.quality,
       lyricSyncState: lyricSyncState ?? this.lyricSyncState,
       isLyricsLoading: isLyricsLoading ?? this.isLyricsLoading,

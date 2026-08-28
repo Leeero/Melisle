@@ -1,27 +1,28 @@
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
+import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
-import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// 播放队列底部表。支持左滑删除、长按拖拽排序。
-class QueueSheet extends StatefulWidget {
+/// 播放队列入口。桌面使用右侧浮层，移动端使用可拖拽底部抽屉。
+class QueueSheet extends StatelessWidget {
   const QueueSheet({super.key});
 
   static Future<void> show(BuildContext context) {
+    final playerCubit = context.read<PlayerCubit>();
     if (AppBreakpoints.usesDesktopShell(context)) {
       return showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
         barrierLabel: '关闭播放队列',
-        barrierColor: Colors.black.withValues(alpha: 0.18),
-        transitionDuration: const Duration(milliseconds: 240),
+        barrierColor: Colors.black.withValues(alpha: 0.16),
+        transitionDuration: AppMotion.normal,
         pageBuilder: (_, _, _) => BlocProvider.value(
-          value: context.read<PlayerCubit>(),
-          child: const _DesktopQueuePanel(),
+          value: playerCubit,
+          child: const _DesktopQueueOverlay(),
         ),
         transitionBuilder: (_, animation, _, child) => SlideTransition(
           position: Tween<Offset>(
@@ -38,87 +39,125 @@ class QueueSheet extends StatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => BlocProvider.value(
-        value: context.read<PlayerCubit>(),
-        child: const QueueSheet(),
-      ),
+      builder: (_) =>
+          BlocProvider.value(value: playerCubit, child: const QueueSheet()),
     );
   }
 
-  @override
-  State<QueueSheet> createState() => _QueueSheetState();
-}
-
-class _QueueSheetState extends State<QueueSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.67,
-      minChildSize: 0.42,
+      initialChildSize: 0.72,
+      minChildSize: 0.46,
       maxChildSize: 0.94,
-      builder: (context, scrollController) {
-        return BlocBuilder<PlayerCubit, PlayerViewState>(
-          buildWhen: (prev, next) => prev.queue.length != next.queue.length,
-          builder: (context, headerState) {
-            return AppSheetScaffold(
-              title: '播放队列',
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _QueueCountLabel(count: headerState.queue.length),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: headerState.queue.isEmpty
-                        ? null
-                        : () => _confirmClear(context),
-                    child: const Text('清空'),
+      builder: (context, scrollController) => Material(
+        color: Theme.of(context).colorScheme.surface,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadiusTokens.mobileXl),
+        ),
+        child: QueuePanel(
+          scrollController: scrollController,
+          showDragHandle: true,
+          closeOnPlay: true,
+        ),
+      ),
+    );
+  }
+}
+
+/// mini 播放器与播放页共用的播放队列内容组件。
+class QueuePanel extends StatefulWidget {
+  const QueuePanel({
+    super.key,
+    this.scrollController,
+    this.showDragHandle = false,
+    this.closeOnPlay = false,
+  });
+
+  final ScrollController? scrollController;
+  final bool showDragHandle;
+  final bool closeOnPlay;
+
+  @override
+  State<QueuePanel> createState() => _QueuePanelState();
+}
+
+class _QueuePanelState extends State<QueuePanel> {
+  late final ScrollController _scrollController;
+  late final bool _ownsScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsScrollController = widget.scrollController == null;
+    _scrollController = widget.scrollController ?? ScrollController();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsScrollController) {
+      _scrollController.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<PlayerCubit, PlayerViewState>(
+      buildWhen: (previous, current) =>
+          previous.queue != current.queue ||
+          previous.currentIndex != current.currentIndex ||
+          previous.isPlaying != current.isPlaying,
+      builder: (context, state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.showDragHandle) const _SheetDragHandle(),
+          _QueueHeader(
+            count: state.queue.length,
+            onClear: state.queue.isEmpty ? null : _confirmClear,
+            onLocateCurrent: state.currentIndex < 0
+                ? null
+                : () => _locateCurrent(state.currentIndex),
+          ),
+          Divider(
+            height: 1,
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withValues(alpha: 0.55),
+          ),
+          const _QueueSectionLabel(),
+          Expanded(
+            child: state.queue.isEmpty
+                ? const _EmptyQueueView()
+                : ReorderableListView.builder(
+                    scrollController: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(10, 2, 10, 20),
+                    itemExtent: 64,
+                    buildDefaultDragHandles: false,
+                    proxyDecorator: _proxyDecorator,
+                    itemCount: state.queue.length,
+                    onReorder: context.read<PlayerCubit>().moveQueueItem,
+                    itemBuilder: (context, index) {
+                      final track = state.queue[index];
+                      return _QueueItem(
+                        key: ValueKey('queue-${track.id}-$index'),
+                        index: index,
+                        track: track,
+                        isCurrent: index == state.currentIndex,
+                        isPlaying: state.isPlaying,
+                        closeOnPlay: widget.closeOnPlay,
+                      );
+                    },
                   ),
-                ],
-              ),
-              child: Expanded(
-                child: BlocBuilder<PlayerCubit, PlayerViewState>(
-                  buildWhen: (prev, next) =>
-                      prev.queue != next.queue ||
-                      prev.currentIndex != next.currentIndex ||
-                      prev.isPlaying != next.isPlaying,
-                  builder: (context, state) {
-                    if (state.queue.isEmpty) {
-                      return const _EmptyQueueView();
-                    }
-
-                    return ReorderableListView.builder(
-                      scrollController: scrollController,
-                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
-                      buildDefaultDragHandles: false,
-                      proxyDecorator: _proxyDecorator,
-                      itemCount: state.queue.length,
-                      onReorder: context.read<PlayerCubit>().moveQueueItem,
-                      itemBuilder: (context, index) {
-                        final track = state.queue[index];
-                        final isCurrent = index == state.currentIndex;
-
-                        return _QueueItem(
-                          key: ValueKey('queue-${track.id}-$index'),
-                          index: index,
-                          track: track,
-                          isCurrent: isCurrent,
-                          isPlaying: state.isPlaying,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
-  Future<void> _confirmClear(BuildContext context) async {
+  Future<void> _confirmClear() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -136,12 +175,24 @@ class _QueueSheetState extends State<QueueSheet> {
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       context.read<PlayerCubit>().clearQueue();
     }
   }
 
-  /// Proxy decorator for the dragged item — adds elevation and scale.
+  void _locateCurrent(int currentIndex) {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final target = (currentIndex * 64.0 - position.viewportDimension / 2 + 32)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    _scrollController.animateTo(
+      target,
+      duration: AppMotion.normal,
+      curve: AppMotion.enter,
+    );
+  }
+
   static Widget _proxyDecorator(
     Widget child,
     int index,
@@ -150,28 +201,14 @@ class _QueueSheetState extends State<QueueSheet> {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
-        final theme = Theme.of(context);
-        final colorScheme = theme.colorScheme;
-        final t = AppMotion.enter.transform(animation.value);
-        return Material(
-          color: colorScheme.surface,
-          shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
-              border: Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.14),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.10 * t),
-                  blurRadius: 22 * t,
-                  offset: Offset(0, 8 * t),
-                ),
-              ],
-            ),
-            child: Transform.scale(scale: 1.0 + 0.012 * t, child: child),
+        final value = AppMotion.enter.transform(animation.value);
+        return Transform.scale(
+          scale: 1 + value * 0.012,
+          child: Material(
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+            elevation: value * 8,
+            child: child,
           ),
         );
       },
@@ -180,111 +217,27 @@ class _QueueSheetState extends State<QueueSheet> {
   }
 }
 
-class _DesktopQueuePanel extends StatefulWidget {
-  const _DesktopQueuePanel();
-
-  @override
-  State<_DesktopQueuePanel> createState() => _DesktopQueuePanelState();
-}
-
-class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
-  late final ScrollController _scrollController;
-  bool _confirmingClear = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final currentIndex = context.read<PlayerCubit>().state.currentIndex;
-    _scrollController = ScrollController(
-      initialScrollOffset: (currentIndex * 66.0 - 132)
-          .clamp(0, double.infinity)
-          .toDouble(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
+class _DesktopQueueOverlay extends StatelessWidget {
+  const _DesktopQueueOverlay();
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Material(
-        color: colorScheme.surface,
-        elevation: 12,
-        child: SafeArea(
-          left: false,
-          child: SizedBox(
-            width: 360,
-            height: double.infinity,
-            child: BlocBuilder<PlayerCubit, PlayerViewState>(
-              builder: (context, state) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '播放队列',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        _QueueCountLabel(count: state.queue.length),
-                        TextButton(
-                          onPressed: state.queue.isEmpty
-                              ? null
-                              : () {
-                                  if (_confirmingClear) {
-                                    context.read<PlayerCubit>().clearQueue();
-                                    setState(() => _confirmingClear = false);
-                                    return;
-                                  }
-                                  setState(() => _confirmingClear = true);
-                                },
-                          child: Text(_confirmingClear ? '确认清空' : '清空'),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          tooltip: '关闭播放队列',
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: colorScheme.outlineVariant),
-                  Expanded(
-                    child: state.queue.isEmpty
-                        ? const _EmptyQueueView()
-                        : ReorderableListView.builder(
-                            scrollController: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                            buildDefaultDragHandles: false,
-                            proxyDecorator: _QueueSheetState._proxyDecorator,
-                            itemCount: state.queue.length,
-                            onReorder: context
-                                .read<PlayerCubit>()
-                                .moveQueueItem,
-                            itemBuilder: (context, index) {
-                              final track = state.queue[index];
-                              return _QueueItem(
-                                key: ValueKey('desktop-queue-${track.id}-$index'),
-                                index: index,
-                                track: track,
-                                isCurrent: index == state.currentIndex,
-                                isPlaying: state.isPlaying,
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Material(
+            color: theme.colorScheme.surface,
+            clipBehavior: Clip.antiAlias,
+            borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
+            elevation: 18,
+            shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.28),
+            child: SizedBox(
+              width: 390,
+              height: double.infinity,
+              child: const QueuePanel(closeOnPlay: true),
             ),
           ),
         ),
@@ -293,211 +246,345 @@ class _DesktopQueuePanelState extends State<_DesktopQueuePanel> {
   }
 }
 
-class _QueueItem extends StatelessWidget {
+class _SheetDragHandle extends StatelessWidget {
+  const _SheetDragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        margin: const EdgeInsets.only(top: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.outlineVariant,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueHeader extends StatelessWidget {
+  const _QueueHeader({
+    required this.count,
+    required this.onClear,
+    required this.onLocateCurrent,
+  });
+
+  final int count;
+  final VoidCallback? onClear;
+  final VoidCallback? onLocateCurrent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 10, 12),
+      child: Row(
+        children: [
+          Text(
+            '播放队列',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            '$count 首歌曲',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.muted),
+          ),
+          const Spacer(),
+          SizedBox(
+            height: 44,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Tooltip(
+                  message: '清空队列',
+                  child: TextButton(
+                    onPressed: onClear,
+                    style: TextButton.styleFrom(
+                      fixedSize: const Size(72, 44),
+                      minimumSize: const Size(72, 44),
+                      maximumSize: const Size(72, 44),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const SizedBox.square(
+                          dimension: 18,
+                          child: Center(
+                            child: Icon(Icons.delete_outline_rounded, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '清空',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            height: 1,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: onLocateCurrent,
+                  tooltip: '定位到当前播放',
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size.square(44),
+                    minimumSize: const Size.square(44),
+                    maximumSize: const Size.square(44),
+                    iconSize: 18,
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.center,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(Icons.my_location_rounded),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QueueSectionLabel extends StatelessWidget {
+  const _QueueSectionLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Text(
+        '接下来播放',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueItem extends StatefulWidget {
   const _QueueItem({
     super.key,
     required this.index,
     required this.track,
     required this.isCurrent,
     required this.isPlaying,
+    required this.closeOnPlay,
   });
 
   final int index;
   final MusicTrack track;
   final bool isCurrent;
   final bool isPlaying;
+  final bool closeOnPlay;
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Dismissible(
-        key: ValueKey('dismiss-${track.id}-$index'),
-        direction: DismissDirection.endToStart,
-        onDismissed: (_) => context.read<PlayerCubit>().removeQueueItem(index),
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: colorScheme.errorContainer.withValues(alpha: 0.72),
-          ),
-          child: Icon(
-            Icons.delete_outline_rounded,
-            color: colorScheme.onErrorContainer,
-          ),
-        ),
-        child: MusicTrackTile.row(
-          title: track.title,
-          subtitle: [
-            track.artistName,
-            track.albumTitle,
-          ].where((s) => s.isNotEmpty).join(' · '),
-          artworkUrl: track.artworkUrl,
-          isCurrent: isCurrent,
-          onTap: () async {
-            await context.read<PlayerCubit>().playIndex(index);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-            }
-          },
-          extraTrailing: _QueueItemActions(
-            index: index,
-            onRemove: () => context.read<PlayerCubit>().removeQueueItem(index),
-          ),
-        ),
-      ),
-    );
-  }
+  State<_QueueItem> createState() => _QueueItemState();
 }
 
-class _QueueCountLabel extends StatelessWidget {
-  const _QueueCountLabel({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 1),
-      child: Text(
-        '$count 首歌曲',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.muted,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _QueueItemActions extends StatelessWidget {
-  const _QueueItemActions({required this.index, required this.onRemove});
-
-  final int index;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _QueueActionButton(
-          icon: Icons.close_rounded,
-          tooltip: '移出队列',
-          tone: _QueueActionTone.danger,
-          onPressed: onRemove,
-        ),
-        const SizedBox(width: 2),
-        _QueueDragHandle(index: index),
-      ],
-    );
-  }
-}
-
-class _QueueDragHandle extends StatelessWidget {
-  const _QueueDragHandle({required this.index});
-
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: '拖拽排序',
-      button: true,
-      child: Tooltip(
-        message: '拖拽排序',
-        child: ReorderableDragStartListener(
-          index: index,
-          child: const _QueueActionChrome(
-            icon: Icons.drag_indicator_rounded,
-            tone: _QueueActionTone.neutral,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-enum _QueueActionTone { neutral, danger }
-
-class _QueueActionButton extends StatelessWidget {
-  const _QueueActionButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-    this.tone = _QueueActionTone.neutral,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-  final _QueueActionTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        label: tooltip,
-        button: true,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(18),
-          mouseCursor: SystemMouseCursors.click,
-          hoverColor: Colors.transparent,
-          focusColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          child: _QueueActionChrome(icon: icon, tone: tone),
-        ),
-      ),
-    );
-  }
-}
-
-class _QueueActionChrome extends StatelessWidget {
-  const _QueueActionChrome({required this.icon, required this.tone});
-
-  final IconData icon;
-  final _QueueActionTone tone;
+class _QueueItemState extends State<_QueueItem> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final danger = tone == _QueueActionTone.danger;
-    final foreground = danger ? colorScheme.error : theme.muted;
-    final background = danger
-        ? colorScheme.errorContainer.withValues(alpha: 0.18)
-        : theme.hoverWash.withValues(alpha: 0.58);
-    final border = danger
-        ? colorScheme.error.withValues(alpha: 0.18)
-        : colorScheme.outlineVariant.withValues(alpha: 0.54);
+    final subtitle = [
+      widget.track.artistName,
+      widget.track.albumTitle,
+    ].where((value) => value.trim().isNotEmpty).join(' · ');
 
-    return SizedBox.square(
-      dimension: 36,
-      child: Center(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: border),
-          ),
-          child: SizedBox.square(
-            dimension: 28,
-            child: Icon(icon, size: 16, color: foreground),
+    return Dismissible(
+      key: ValueKey('dismiss-${widget.track.id}-${widget.index}'),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) =>
+          context.read<PlayerCubit>().removeQueueItem(widget.index),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 22),
+        color: colorScheme.errorContainer,
+        child: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+      ),
+      child: Semantics(
+        button: true,
+        selected: widget.isCurrent,
+        label: widget.isCurrent
+            ? '当前播放：${widget.track.title}'
+            : '播放：${widget.track.title}',
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _play,
+              mouseCursor: SystemMouseCursors.click,
+              borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+              hoverColor: Colors.transparent,
+              focusColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+              splashColor: Colors.transparent,
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              child: AnimatedContainer(
+                duration: AppMotion.micro,
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: widget.isCurrent
+                      ? colorScheme.primaryContainer.withValues(alpha: 0.42)
+                      : _hovered
+                      ? theme.hoverWash
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(
+                    AppRadiusTokens.desktopSm,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CachedArtwork(
+                          imageUrl: widget.track.artworkUrl,
+                          size: 44,
+                          borderRadius: 7,
+                          sourceContext: ArtworkSourceContext.track(
+                            widget.track,
+                          ),
+                          semanticLabel: '《${widget.track.title}》封面',
+                        ),
+                        if (widget.isCurrent)
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.38),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Icon(
+                              widget.isPlaying
+                                  ? Icons.graphic_eq_rounded
+                                  : Icons.pause_rounded,
+                              size: 19,
+                              color: Colors.white,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.track.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: widget.isCurrent
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface,
+                              fontWeight: widget.isCurrent
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 40,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AnimatedOpacity(
+                            duration: AppMotion.micro,
+                            opacity: _hovered ? 0 : 1,
+                            child: Text(
+                              _formatDuration(widget.track.duration),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.muted,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                          IgnorePointer(
+                            ignoring: !_hovered,
+                            child: AnimatedOpacity(
+                              duration: AppMotion.micro,
+                              opacity: _hovered ? 1 : 0,
+                              child: IconButton(
+                                onPressed: () => context
+                                    .read<PlayerCubit>()
+                                    .removeQueueItem(widget.index),
+                                tooltip: '移出队列',
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Tooltip(
+                      message: '拖拽排序',
+                      child: ReorderableDragStartListener(
+                        index: widget.index,
+                        child: Semantics(
+                          button: true,
+                          label: '拖拽调整《${widget.track.title}》的顺序',
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.drag_indicator_rounded,
+                              size: 18,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _play() async {
+    await context.read<PlayerCubit>().playIndex(widget.index);
+    if (widget.closeOnPlay && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 }
 
@@ -507,32 +594,41 @@ class _EmptyQueueView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.queue_music_rounded,
-            size: 56,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '当前播放队列为空',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.queue_music_rounded,
+              size: 52,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.42),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '从音乐库中选择歌曲开始播放',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            const SizedBox(height: 14),
+            Text(
+              '当前播放队列为空',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              '从音乐库选择歌曲后，会显示在这里',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+String _formatDuration(Duration duration) {
+  final minutes = duration.inMinutes;
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
 }

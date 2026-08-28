@@ -37,6 +37,7 @@ dependencies:
   go_router: ^16.2.0
   just_audio: ^0.10.5
   audio_service: ^0.18.18
+  audio_session: ^0.2.3
   dio: ^5.9.0
   drift: ^2.28.2
   sqlite3_flutter_libs: ^0.5.39

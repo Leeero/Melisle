@@ -45,9 +45,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
       _controller.playerStateStream.listen(_onPlayerStateChanged),
     );
     _subscriptions.add(
-      _controller.trackCompletionStream.listen((_) {
-        _onTrackCompleted();
-      }),
+      _controller.playbackErrorStream.listen(_onPlaybackError),
+    );
+    _subscriptions.add(
+      _controller.trackCompletionStream.listen(_onTrackCompleted),
     );
     _subscriptions.add(_controller.volumeStream.listen(_onVolumeChanged));
 
@@ -65,9 +66,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   final SleepTimer _sleepTimer = SleepTimer();
   Timer? _sleepTicker;
   Timer? _reportProgressTimer;
-  final LyricSyncEngine _lyricSyncEngine = const LyricSyncEngine(
-    boundaryTolerance: Duration(milliseconds: 220),
-  );
+  final LyricSyncEngine _lyricSyncEngine = const LyricSyncEngine();
 
   static const _uuid = Uuid();
 
@@ -106,6 +105,8 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   /// 正在等待 gap 结束的定时器。下一次任何操作（play / skip / stop）都应取消它。
   Timer? _gapTimer;
+
+  bool _loadCommandPending = false;
 
   /// 外部（AppSettingsCubit）通知切换间隔时长；立即生效，不需要重建队列。
   void setGapBetweenTracks(Duration gap) {
@@ -160,6 +161,8 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     return _enqueueSerial(() async {
       if (tracks.isEmpty) return;
 
+      _reportStoppedIfNeeded(position: state.position);
+
       final effectiveTracks = tracks.length > _maxQueueSize
           ? tracks.sublist(0, _maxQueueSize)
           : tracks;
@@ -183,7 +186,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           errorMessage: null,
           lyricSyncState: const LyricSyncState(),
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
         ),
       );
 
@@ -203,6 +206,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
             currentIndex: 0,
             isLoading: true,
             errorMessage: null,
+            position: Duration.zero,
+            duration: track.duration,
+            lyricSyncState: const LyricSyncState(),
           ),
         );
         await _playCurrentTrack();
@@ -264,6 +270,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   Future<void> playIndex(int index) {
     return _enqueueSerial(() async {
       if (index < 0 || index >= _queue.tracks.length) return;
+      _reportStoppedIfNeeded(position: state.position);
       _queue = _queue.moveTo(index);
       _publishQueueToSystem();
       emit(
@@ -272,7 +279,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           isLoading: true,
           errorMessage: null,
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
           lyricSyncState: const LyricSyncState(),
         ),
       );
@@ -287,6 +294,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         // 没有下一曲（顺序模式 + 最后一首），不做任何事。
         return;
       }
+      _reportStoppedIfNeeded(position: state.position);
       _queue = _queue.moveTo(nextIdx);
       _publishQueueToSystem();
       emit(
@@ -295,7 +303,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           isLoading: true,
           errorMessage: null,
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
           lyricSyncState: const LyricSyncState(),
         ),
       );
@@ -310,6 +318,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         // 没有上一曲（顺序模式 + 第一首）—— 不做任何事，保持当前播放状态。
         return;
       }
+      _reportStoppedIfNeeded(position: state.position);
       _queue = _queue.moveTo(prevIdx);
       _publishQueueToSystem();
       emit(
@@ -318,7 +327,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           isLoading: true,
           errorMessage: null,
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
           lyricSyncState: const LyricSyncState(),
         ),
       );
@@ -328,10 +337,15 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   Future<void> togglePlayback() async {
     _cancelGap();
-    if (state.isPlaying) {
+    if (state.isPlaying || _loadCommandPending) {
+      _playToken++;
+      _loadCommandPending = false;
       _pausingGuard = true;
-      await _controller.pause();
-      _pausingGuard = false;
+      try {
+        await _controller.pause();
+      } finally {
+        _pausingGuard = false;
+      }
       return;
     }
     // 空队列，无事可做。
@@ -349,9 +363,11 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     // 此时直接 play() 无效，需要重新走 loadAndPlay 流程。
     final handlerIsIdle = !_controller.isPlaying && _controller.isIdle;
     if (hasReachedEnd || state.currentTrack == null || handlerIsIdle) {
+      _reportStoppedIfNeeded(position: state.position);
       await _enqueueSerial(() async => _playCurrentTrack());
       return;
     }
+    emit(state.copyWith(errorMessage: null));
     await _controller.play();
   }
 
@@ -394,6 +410,9 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   Future<void> removeQueueItem(int index) async {
     if (index < 0 || index >= _queue.tracks.length) return;
     final removingCurrent = index == _queue.currentIndex;
+    if (removingCurrent) {
+      _reportStoppedIfNeeded(position: state.position);
+    }
     _queue = _queue.removeAt(index);
     _publishQueueToSystem();
 
@@ -409,7 +428,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           queue: _queue.tracks,
           currentIndex: _queue.currentIndex,
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
           lyricSyncState: const LyricSyncState(),
         ),
       );
@@ -429,13 +448,13 @@ class PlayerCubit extends Cubit<PlayerViewState> {
 
   Future<void> clearQueue() async {
     _cancelGap();
+    _reportStoppedIfNeeded(position: state.position);
     _playToken++; // 让任何正在解析的 _playAt 作废
+    _loadCommandPending = false;
     _playbackRevision++;
     _queue = const PlayQueue.empty();
     await _controller.clearPlayback();
     _stopProgressReporting();
-    _playSessionId = null;
-    _reportedStartTrackId = null;
     _prefetchToken++;
     _prefetchKey = null;
     _resetActiveMetrics();
@@ -580,6 +599,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _lastSeekPosition = null;
 
     final myToken = ++_playToken;
+    _loadCommandPending = true;
     try {
       final quality = _effectivePlaybackQuality();
       if (quality != state.quality) {
@@ -595,23 +615,34 @@ class PlayerCubit extends Cubit<PlayerViewState> {
         return;
       }
       final loadWatch = Stopwatch()..start();
-      await _controller.loadAndPlay(source);
+      await _controller.loadOnly(source);
       loadWatch.stop();
       if (myToken != _playToken || isClosed) {
         _resetActiveMetrics();
         return;
       }
+      await _controller.play();
       _finishPlaybackMetrics(track, quality, loadWatch.elapsed);
       // 只有"本次请求仍然有效"时才更新状态，避免旧请求覆盖新状态。
       emit(state.copyWith(isLoading: false, errorMessage: null));
       _loadLyricsForCurrent();
-      _reportStoppedIfNeeded();
       _reportStartForCurrent();
       _scheduleNextPrefetch();
     } catch (error) {
       if (myToken != _playToken || isClosed) return;
+      _debugPlaybackFailure('load', error);
       _resetActiveMetrics();
-      emit(state.copyWith(isLoading: false, errorMessage: '播放失败：$error'));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          isPlaying: false,
+          errorMessage: '播放失败，请检查网络或音频格式。',
+        ),
+      );
+    } finally {
+      if (myToken == _playToken) {
+        _loadCommandPending = false;
+      }
     }
   }
 
@@ -811,7 +842,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   }
 
   void _onDurationChanged(Duration? duration) {
-    final resolvedDuration = duration ?? Duration.zero;
+    final metadataDuration = _queue.currentTrack?.duration ?? Duration.zero;
+    final resolvedDuration = duration == null || duration <= Duration.zero
+        ? metadataDuration
+        : duration;
     final effectiveDuration = _maxDuration(resolvedDuration, state.position);
     emit(
       state.copyWith(
@@ -845,9 +879,10 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   }
 
   void _onPlayerStateChanged(PlayerState playerState) {
-    final nowPlaying = playerState.playing;
-    final wasPlaying = state.isPlaying;
     final processingState = playerState.processingState;
+    final nowPlaying =
+        playerState.playing && processingState != ProcessingState.completed;
+    final wasPlaying = state.isPlaying;
 
     if (_activePlaybackStartedAt != null &&
         processingState == ProcessingState.buffering &&
@@ -857,9 +892,12 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     }
     _lastProcessingState = processingState;
 
-    final isBusy =
+    final isProcessing =
         processingState == ProcessingState.loading ||
         processingState == ProcessingState.buffering;
+    // playing 与 processingState 是正交状态。用户在缓冲时点击暂停后，底层可能
+    // 仍暂留 buffering；此时应呈现“已暂停”，不能继续显示加载动画。
+    final isBusy = isProcessing && (nowPlaying || _loadCommandPending);
 
     emit(state.copyWith(isLoading: isBusy, isPlaying: nowPlaying));
 
@@ -868,6 +906,31 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     } else if (!nowPlaying && wasPlaying) {
       _stopProgressReporting();
     }
+  }
+
+  void _onPlaybackError(PlaybackFailure failure) {
+    if (isClosed) return;
+    if (_queue.currentTrack?.id != failure.trackId) return;
+    _debugPlaybackFailure('play', failure.error);
+    _reportStoppedIfNeeded(position: state.position);
+    _playToken++;
+    _loadCommandPending = false;
+    _stopProgressReporting();
+    emit(
+      state.copyWith(
+        isLoading: false,
+        isPlaying: false,
+        errorMessage: '播放失败，请检查网络或音频格式。',
+      ),
+    );
+  }
+
+  void _debugPlaybackFailure(String phase, Object error) {
+    if (!kDebugMode) return;
+    final details = error is PlayerException
+        ? 'code=${error.code} message=${error.message}'
+        : 'type=${error.runtimeType}';
+    debugPrint('[PLAYER] playback failed phase=$phase $details');
   }
 
   void _updateActiveBufferingMetrics() {
@@ -887,8 +950,13 @@ class PlayerCubit extends Cubit<PlayerViewState> {
   }
 
   /// 自然播完（来自 [AudioPlayerHandler.trackCompletionStream]）。
-  void _onTrackCompleted() {
+  void _onTrackCompleted(String completedTrackId) {
     if (isClosed) return;
+    if (_queue.currentTrack?.id != completedTrackId) return;
+
+    _reportStoppedIfNeeded(
+      position: _maxDuration(state.position, _controller.position),
+    );
 
     // "本曲结束"睡眠 → 不进入下一曲，先触发睡眠回调再 return。
     if (state.sleepEndOfTrack) {
@@ -925,7 +993,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
           isLoading: true,
           errorMessage: null,
           position: Duration.zero,
-          duration: Duration.zero,
+          duration: _queue.currentTrack?.duration ?? Duration.zero,
           lyricSyncState: const LyricSyncState(),
         ),
       );
@@ -1155,9 +1223,14 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _sleepTicker?.cancel();
     _sleepTicker = null;
     emit(state.copyWith(sleepRemaining: null, sleepEndOfTrack: false));
+    _playToken++;
+    _loadCommandPending = false;
     _pausingGuard = true;
-    await _controller.pause();
-    _pausingGuard = false;
+    try {
+      await _controller.pause();
+    } finally {
+      _pausingGuard = false;
+    }
   }
 
   // ========= 播放上报 =========
@@ -1207,12 +1280,16 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _recordLocalHistoryStart(track);
   }
 
-  void _reportStoppedIfNeeded() {
+  void _reportStoppedIfNeeded({Duration? position}) {
     final previousTrackId = _reportedStartTrackId;
     final sessionId = _playSessionId;
     if (previousTrackId == null || sessionId == null) return;
     _repository
-        .reportPlaybackStopped(previousTrackId, sessionId, state.position)
+        .reportPlaybackStopped(
+          previousTrackId,
+          sessionId,
+          position ?? state.position,
+        )
         .catchError((_) {});
     _finalizeLocalHistoryEntry();
     _reportedStartTrackId = null;
@@ -1278,7 +1355,7 @@ class PlayerCubit extends Cubit<PlayerViewState> {
     _reportProgressTimer?.cancel();
     _sleepTicker?.cancel();
     _sleepTimer.cancel();
-    _reportStoppedIfNeeded();
+    _reportStoppedIfNeeded(position: state.position);
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }

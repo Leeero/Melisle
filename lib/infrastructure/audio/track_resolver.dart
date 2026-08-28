@@ -35,12 +35,22 @@ final class TrackResolver {
       track.id,
       quality: quality,
     );
-    return AudioSource.uri(
-      Uri.parse(streamUrl),
-      // Emby / Subsonic 的鉴权信息已经内嵌在 URL 中，额外 headers 只会让
-      // just_audio 走本地代理链路，提升 HTTPS / 重定向场景下的握手失败概率。
-      tag: track,
-    );
+    return _remoteSource(Uri.parse(streamUrl), track);
+  }
+
+  AudioSource _remoteSource(Uri uri, MusicTrack track) {
+    // User-Agent 由 AudioPlayer 全局设置并交给原生播放器直传。不要在音源上附加
+    // headers，否则 just_audio 默认会引入本地 HTTP 代理，长时间播放时多一层
+    // 容易中断的连接，并可能出现音频停止但播放意图仍为 true。
+    final duration = track.duration > Duration.zero ? track.duration : null;
+    final path = uri.path.toLowerCase();
+    if (path.endsWith('.m3u8')) {
+      return HlsAudioSource(uri, tag: track, duration: duration);
+    }
+    if (path.endsWith('.mpd')) {
+      return DashAudioSource(uri, tag: track, duration: duration);
+    }
+    return ProgressiveAudioSource(uri, tag: track, duration: duration);
   }
 
   /// Lightly warms the source for a future track without touching just_audio.

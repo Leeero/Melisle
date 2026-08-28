@@ -40,6 +40,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> clearSessionHistory() async {
+    await transaction(() async {
+      await delete(playHistory).go();
+      await delete(searchHistory).go();
+    });
+  }
+
   Stream<List<PlayHistoryData>> watchRecentPlays({int limit = 40}) {
     return (select(playHistory)
           ..orderBy([(t) => OrderingTerm.desc(t.playedAtMs)])

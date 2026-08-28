@@ -21,6 +21,17 @@ void main() {
       expect(state.activeIndex, isNull);
     });
 
+    test('keeps one stable lyric list for the same timeline', () {
+      final timeline = engine.buildTimeline(const [
+        LyricLine(start: Duration(seconds: 10), text: '第一句'),
+      ]);
+
+      expect(
+        identical(timeline.toLyricLines(), timeline.toLyricLines()),
+        isTrue,
+      );
+    });
+
     test('activates a line at its start after boundary tolerance', () {
       final timeline = engine.buildTimeline(const [
         LyricLine(start: Duration(seconds: 10), text: '现在我只想 要逃离'),

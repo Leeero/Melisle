@@ -67,7 +67,7 @@ class QualityPickerSheet extends StatelessWidget {
 
 String _qualityDescription(AudioQuality quality) {
   return switch (quality) {
-    AudioQuality.auto => '自动选择当前服务可用的合适音质。',
+    AudioQuality.auto => '直接播放源文件，不转码。',
     AudioQuality.lossless => '尽量保留源文件质量。',
     AudioQuality.high => '优先使用较高码率。',
     AudioQuality.medium => '平衡流量与听感。',

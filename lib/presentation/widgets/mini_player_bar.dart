@@ -467,62 +467,63 @@ class _WideMiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 1,
-          child: Row(
-            children: [
-              Expanded(
-                child: _MiniTrackButton(
-                  trackTitle: trackTitle,
-                  artistName: artistName,
-                  artworkUrl: artworkUrl,
-                  sourceContext: sourceContext,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sectionGap =
+            constraints.maxWidth <
+                AppSpacingTokens.miniPlayerSectionGapCompactWidth
+            ? AppSpacingTokens.miniPlayerSectionGapCompact
+            : AppSpacingTokens.miniPlayerSectionGap;
+        return Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _MiniTrackButton(
+                      trackTitle: trackTitle,
+                      artistName: artistName,
+                      artworkUrl: artworkUrl,
+                      sourceContext: sourceContext,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const _MiniFavoriteButton(),
+                ],
               ),
-              const SizedBox(width: 8),
-              const _MiniFavoriteButton(),
-            ],
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _MiniTransportControls(),
-                SizedBox(height: 2),
-                _MiniTimelineBlock(showElapsedLabels: true),
-              ],
             ),
-          ),
-        ),
-        Expanded(
-          flex: 1,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compactControls = constraints.maxWidth < 270;
-              return Row(
+            SizedBox(width: sectionGap),
+            const Expanded(
+              flex: 2,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MiniTransportControls(),
+                  SizedBox(height: 2),
+                  _MiniTimelineBlock(showElapsedLabels: true),
+                ],
+              ),
+            ),
+            SizedBox(width: sectionGap),
+            Expanded(
+              flex: 1,
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (!compactControls) ...[
-                    _MiniQualityBadge(label: qualityLabel),
-                    const SizedBox(width: 8),
-                  ],
+                  _MiniQualityBadge(label: qualityLabel),
+                  const SizedBox(width: 8),
                   _MiniControlButton(
                     icon: Icons.queue_music_rounded,
                     onPressed: () => _showMiniQueueSheet(context),
                     tooltip: '当前歌单',
                   ),
                 ],
-              );
-            },
-          ),
-        ),
-      ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -57,7 +57,7 @@ void main() {
 
     expect(find.byTooltip('定位到当前歌词'), findsNothing);
 
-    await tester.drag(find.byType(ListView), const Offset(0, -80));
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -80));
     await tester.pump();
 
     expect(find.byTooltip('定位到当前歌词'), findsOneWidget);
@@ -89,6 +89,81 @@ void main() {
     final longHeight = tester.getRect(find.text(_wrappedLyrics[1].text)).height;
 
     expect(longHeight, greaterThan(shortHeight));
+  });
+
+  testWidgets('keeps the active wrapped lyric line in view', (tester) async {
+    final lyrics = List<LyricLine>.generate(
+      20,
+      (index) => LyricLine(
+        start: Duration(seconds: index * 4),
+        text: '第 $index 句很长很长的歌词，用于验证变高行不会让当前播放歌词离开可视区域。',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 240,
+            height: 240,
+            child: LyricView(
+              lines: lyrics,
+              currentIndex: 16,
+              maxTextWidth: 180,
+              showCurrentLineButton: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final viewport = tester.getRect(find.byType(SingleChildScrollView));
+    final activeLine = tester.getRect(find.text(lyrics[16].text));
+    expect(activeLine.top, greaterThanOrEqualTo(viewport.top));
+    expect(activeLine.bottom, lessThanOrEqualTo(viewport.bottom));
+  });
+
+  testWidgets('scrolls after lyrics and current index update together', (
+    tester,
+  ) async {
+    var lines = List<LyricLine>.of(_longLyrics);
+    var currentIndex = 1;
+    late StateSetter updateHost;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            height: 220,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                updateHost = setState;
+                return LyricView(
+                  lines: lines,
+                  currentIndex: currentIndex,
+                  showCurrentLineButton: false,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    updateHost(() {
+      lines = List<LyricLine>.of(_longLyrics);
+      currentIndex = 14;
+    });
+    await tester.pumpAndSettle();
+
+    final viewport = tester.getRect(find.byType(SingleChildScrollView));
+    final activeLine = tester.getRect(find.text(_longLyrics[14].text));
+    expect(activeLine.top, greaterThanOrEqualTo(viewport.top));
+    expect(activeLine.bottom, lessThanOrEqualTo(viewport.bottom));
   });
 }
 

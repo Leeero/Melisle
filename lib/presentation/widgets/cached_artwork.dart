@@ -17,6 +17,7 @@ class CachedArtwork extends StatelessWidget {
     this.borderRadius = 20,
     this.semanticLabel,
     this.sourceContext,
+    this.placeholderBuilder,
   });
 
   final String imageUrl;
@@ -24,6 +25,7 @@ class CachedArtwork extends StatelessWidget {
   final double borderRadius;
   final String? semanticLabel;
   final ArtworkSourceContext? sourceContext;
+  final WidgetBuilder? placeholderBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -39,15 +41,17 @@ class CachedArtwork extends StatelessWidget {
               context: sourceContext,
               size: size.round(),
             );
-        final placeholder = _ArtworkPlaceholder(
-          seed: resolution.hasPrimary
-              ? resolution.primaryUrl
-              : (resolution.fallbackUrl.isEmpty
-                    ? imageUrl
-                    : resolution.fallbackUrl),
-          size: size,
-          borderRadius: borderRadius,
-        );
+        final placeholder =
+            placeholderBuilder?.call(context) ??
+            _ArtworkPlaceholder(
+              seed: resolution.hasPrimary
+                  ? resolution.primaryUrl
+                  : (resolution.fallbackUrl.isEmpty
+                        ? imageUrl
+                        : resolution.fallbackUrl),
+              size: size,
+              borderRadius: borderRadius,
+            );
 
         Widget artwork;
         if (!resolution.hasPrimary) {
