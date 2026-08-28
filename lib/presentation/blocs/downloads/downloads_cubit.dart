@@ -36,12 +36,16 @@ class DownloadsCubit extends Cubit<DownloadsState> {
   bool _running = false;
 
   static const _kDownloadDirectoryPath = 'download_directory_path';
+  static const _kDownloadQuality = 'download_quality';
 
   /// 初始化：从数据库加载已有下载。
   Future<void> load() async {
     try {
       final customDirectoryPath = _normalizeDirectoryPath(
         await _database.readSetting(_kDownloadDirectoryPath),
+      );
+      final downloadQuality = AudioQuality.fromStorageKey(
+        await _database.readSetting(_kDownloadQuality),
       );
       _cacheManager.setCustomDirectoryPath(customDirectoryPath);
       final effectiveDirectory = await _resolveCurrentDirectory();
@@ -51,6 +55,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
         state.copyWith(
           downloadDirectoryPath: effectiveDirectory.path,
           customDownloadDirectoryPath: customDirectoryPath ?? '',
+          downloadQuality: downloadQuality,
           cachedBytes: cleanup.cachedBytes,
           removedStaleRecords: cleanup.removedStaleRecords,
           removedPartialFiles: removedPartialFiles,
@@ -110,6 +115,18 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     final jobs = Map<String, DownloadJob>.from(state.jobs)..remove(trackId);
     emit(state.copyWith(jobs: jobs));
     await enqueue(job.track);
+  }
+
+  Future<void> setDownloadQuality(AudioQuality quality) async {
+    if (quality == state.downloadQuality) return;
+    final previous = state.downloadQuality;
+    emit(state.copyWith(downloadQuality: quality));
+    try {
+      await _database.writeSetting(_kDownloadQuality, quality.storageKey);
+    } catch (_) {
+      emit(state.copyWith(downloadQuality: previous));
+      rethrow;
+    }
   }
 
   Future<void> remove(String trackId) async {
@@ -246,7 +263,7 @@ class DownloadsCubit extends Cubit<DownloadsState> {
     try {
       final url = await _repository.getStreamUrl(
         track.id,
-        quality: AudioQuality.auto,
+        quality: state.downloadQuality,
       );
 
       final container = (track.container ?? '').isNotEmpty

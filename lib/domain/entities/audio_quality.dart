@@ -16,15 +16,15 @@ enum AudioQuality {
   String get label {
     switch (this) {
       case AudioQuality.auto:
-        return '自动';
+        return '原始音质';
       case AudioQuality.lossless:
         return '无损';
       case AudioQuality.high:
-        return '高品质 (320K)';
+        return '高品质 (320 kbps)';
       case AudioQuality.medium:
-        return '标准 (192K)';
+        return '标准 (192 kbps)';
       case AudioQuality.low:
-        return '省流 (128K)';
+        return '省流 (128 kbps)';
     }
   }
 

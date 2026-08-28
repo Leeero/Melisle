@@ -1,3 +1,4 @@
+import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 
 /// 一个下载任务的实时状态。
@@ -48,6 +49,7 @@ class DownloadsState {
     this.missingTrackIds = const {},
     this.downloadDirectoryPath = '',
     this.customDownloadDirectoryPath = '',
+    this.downloadQuality = AudioQuality.auto,
     this.cachedBytes = 0,
     this.removedStaleRecords = 0,
     this.removedPartialFiles = 0,
@@ -70,6 +72,9 @@ class DownloadsState {
   /// 用户自定义下载目录。为空表示使用默认目录。
   final String customDownloadDirectoryPath;
 
+  /// 后续离线下载请求使用的音质。
+  final AudioQuality downloadQuality;
+
   /// 已核验下载目录内的实际文件占用。
   final int cachedBytes;
 
@@ -90,6 +95,7 @@ class DownloadsState {
     Set<String>? missingTrackIds,
     String? downloadDirectoryPath,
     String? customDownloadDirectoryPath,
+    AudioQuality? downloadQuality,
     int? cachedBytes,
     int? removedStaleRecords,
     int? removedPartialFiles,
@@ -104,6 +110,7 @@ class DownloadsState {
           downloadDirectoryPath ?? this.downloadDirectoryPath,
       customDownloadDirectoryPath:
           customDownloadDirectoryPath ?? this.customDownloadDirectoryPath,
+      downloadQuality: downloadQuality ?? this.downloadQuality,
       cachedBytes: cachedBytes ?? this.cachedBytes,
       removedStaleRecords: removedStaleRecords ?? this.removedStaleRecords,
       removedPartialFiles: removedPartialFiles ?? this.removedPartialFiles,

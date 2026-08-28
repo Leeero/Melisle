@@ -92,6 +92,34 @@ void main() {
       expect(cubit.state.directoryValidationMessage, '目录不存在');
     },
   );
+
+  test('download quality is persisted and restored', () async {
+    final tempDir = await Directory.systemTemp.createTemp('melisle-downloads-');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final cacheManager = AudioCacheManager(
+      defaultDirectory: () async => tempDir,
+    );
+    final cubit = DownloadsCubit(
+      repository: _FakeMusicRepository(),
+      database: database,
+      cacheManager: cacheManager,
+    );
+
+    await cubit.setDownloadQuality(AudioQuality.lossless);
+    await cubit.close();
+
+    final restored = DownloadsCubit(
+      repository: _FakeMusicRepository(),
+      database: database,
+      cacheManager: cacheManager,
+    );
+    addTearDown(restored.close);
+    await restored.load();
+
+    expect(restored.state.downloadQuality, AudioQuality.lossless);
+  });
 }
 
 class _FakeMusicRepository extends Fake implements MusicRepository {

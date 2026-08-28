@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_state.dart';
@@ -8,6 +9,7 @@ import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_text_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +24,7 @@ class DownloadsPage extends StatefulWidget {
 
 class _DownloadsPageState extends State<DownloadsPage> {
   Future<List<Download>>? _future;
-  int _activeTab = 0;
+  _DownloadView _activeView = _DownloadView.completed;
 
   @override
   void initState() {
@@ -43,7 +45,6 @@ class _DownloadsPageState extends State<DownloadsPage> {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
     return AppContentPage(
-      header: const _DownloadsHeader(),
       body: BlocListener<DownloadsCubit, DownloadsState>(
         listenWhen: (prev, curr) =>
             prev.completedTrackIds.length != curr.completedTrackIds.length ||
@@ -66,41 +67,33 @@ class _DownloadsPageState extends State<DownloadsPage> {
             final rows = snapshot.data ?? const <Download>[];
             return BlocBuilder<DownloadsCubit, DownloadsState>(
               builder: (context, state) {
-                final activeJobs = state.jobs.values
-                    .where((job) => job.status != DownloadJobStatus.failed)
-                    .toList();
-                final failedJobs = state.jobs.values
-                    .where((job) => job.status == DownloadJobStatus.failed)
-                    .toList();
+                final jobs = state.jobs.values.toList();
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    AppPageLayout.compactTopInset,
+                    AppPageLayout.contentTopInset(context),
                     horizontalPadding,
                     AppPageLayout.contentBottomInset,
                   ),
                   children: [
-                    _DownloadStorageGroup(
-                      rows: rows,
-                      pendingJobs: activeJobs,
-                      state: state,
-                    ),
-                    const SizedBox(height: 24),
-                    _DownloadStatusTabs(
-                      activeIndex: _activeTab,
-                      activeCount: activeJobs.length,
+                    _DownloadToolbar(
+                      activeView: _activeView,
                       completedCount: rows.length,
-                      failedCount: failedJobs.length,
-                      onChanged: (index) => setState(() => _activeTab = index),
+                      activityCount: jobs.length,
+                      state: state,
+                      onViewChanged: (view) =>
+                          setState(() => _activeView = view),
                     ),
-                    const SizedBox(height: 16),
-                    if (_activeTab == 0 && activeJobs.isNotEmpty)
+                    const SizedBox(height: AppSpacingTokens.contentGap),
+                    _DownloadOverview(rows: rows, activityCount: jobs.length),
+                    const SizedBox(height: AppSpacingTokens.sectionGap),
+                    if (_activeView == _DownloadView.activity &&
+                        jobs.isNotEmpty)
                       _DownloadSectionBody(
-                        children: [
-                          for (final job in activeJobs) _JobRow(job: job),
-                        ],
+                        children: [for (final job in jobs) _JobRow(job: job)],
                       ),
-                    if (_activeTab == 1 && rows.isNotEmpty)
+                    if (_activeView == _DownloadView.completed &&
+                        rows.isNotEmpty)
                       AppBreakpoints.isCompact(context)
                           ? _DownloadSectionBody(
                               children: [
@@ -129,28 +122,16 @@ class _DownloadsPageState extends State<DownloadsPage> {
                                 _reload();
                               },
                             ),
-                    if (_activeTab == 2 && failedJobs.isNotEmpty)
-                      _DownloadSectionBody(
-                        children: [
-                          for (final job in failedJobs) _JobRow(job: job),
-                        ],
-                      ),
-                    if (rows.isEmpty &&
-                        activeJobs.isEmpty &&
-                        failedJobs.isEmpty)
+                    if (rows.isEmpty && jobs.isEmpty)
                       const _DownloadsEmptyState(),
-                    if (_activeTab == 0 &&
-                        activeJobs.isEmpty &&
-                        rows.isNotEmpty)
-                      const _DownloadsTabEmptyState(message: '没有正在下载的任务'),
-                    if (_activeTab == 1 &&
+                    if (_activeView == _DownloadView.completed &&
                         rows.isEmpty &&
-                        activeJobs.isNotEmpty)
+                        jobs.isNotEmpty)
                       const _DownloadsTabEmptyState(message: '还没有完成的下载'),
-                    if (_activeTab == 2 &&
-                        failedJobs.isEmpty &&
-                        activeJobs.isNotEmpty)
-                      const _DownloadsTabEmptyState(message: '没有下载失败的任务'),
+                    if (_activeView == _DownloadView.activity &&
+                        jobs.isEmpty &&
+                        rows.isNotEmpty)
+                      const _DownloadsTabEmptyState(message: '没有下载任务'),
                   ],
                 );
               },
@@ -162,220 +143,630 @@ class _DownloadsPageState extends State<DownloadsPage> {
   }
 }
 
-class _DownloadsHeader extends StatelessWidget {
-  const _DownloadsHeader();
+enum _DownloadView { completed, activity }
 
-  @override
-  Widget build(BuildContext context) {
-    return const AppPageHeader(title: '下载管理');
-  }
-}
-
-class _DownloadStatusTabs extends StatelessWidget {
-  const _DownloadStatusTabs({
-    required this.activeIndex,
-    required this.activeCount,
+class _DownloadToolbar extends StatelessWidget {
+  const _DownloadToolbar({
+    required this.activeView,
     required this.completedCount,
-    required this.failedCount,
-    required this.onChanged,
+    required this.activityCount,
+    required this.state,
+    required this.onViewChanged,
   });
 
-  final int activeIndex;
-  final int activeCount;
+  final _DownloadView activeView;
   final int completedCount;
-  final int failedCount;
-  final ValueChanged<int> onChanged;
+  final int activityCount;
+  final DownloadsState state;
+  final ValueChanged<_DownloadView> onViewChanged;
 
   @override
   Widget build(BuildContext context) {
-    final labels = [
-      '正在下载 ($activeCount)',
-      '已下载 ($completedCount)',
-      '下载失败 ($failedCount)',
-    ];
-    return Semantics(
+    final compact = AppBreakpoints.isCompact(context);
+    final tabs = Semantics(
       label: '下载状态筛选',
-      child: SizedBox(
-        height: 48,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: labels.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 24),
-          itemBuilder: (context, index) => TextButton(
-            onPressed: () => onChanged(index),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(44, 44),
-              foregroundColor: index == activeIndex
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurface,
-              textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: index == activeIndex
-                    ? FontWeight.w700
-                    : FontWeight.w600,
-              ),
-            ),
-            child: Text(labels[index]),
+      child: AppTextTabs<_DownloadView>(
+        items: [
+          AppTextTabItem(
+            value: _DownloadView.completed,
+            label: '已下载',
+            count: completedCount,
           ),
-        ),
+          AppTextTabItem(
+            value: _DownloadView.activity,
+            label: '下载中',
+            count: activityCount,
+          ),
+        ],
+        selectedValue: activeView,
+        onChanged: onViewChanged,
       ),
     );
-  }
-}
+    final actions = _DownloadDirectoryActions(state: state);
 
-class _DownloadStorageGroup extends StatelessWidget {
-  const _DownloadStorageGroup({
-    required this.rows,
-    required this.pendingJobs,
-    required this.state,
-  });
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          tabs,
+          const SizedBox(height: AppSpacingTokens.compactGap),
+          Align(alignment: Alignment.centerRight, child: actions),
+        ],
+      );
+    }
 
-  final List<Download> rows;
-  final List<DownloadJob> pendingJobs;
-  final DownloadsState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final fallbackBytes = rows.fold<int>(0, (sum, row) => sum + row.fileSize);
-    final totalBytes = state.cachedBytes > 0
-        ? state.cachedBytes
-        : fallbackBytes;
-
-    return _DownloadInfoGroup(
-      title: '存储',
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _DownloadInfoRow(
-          title: '下载音质',
-          description: '离线请求使用当前服务可用音质。',
-          value: '自动',
-        ),
-        _DownloadInfoDivider(colorScheme: colorScheme),
-        _DownloadInfoRow(
-          title: '本地存储',
-          description: _storageDescription(rows.length, pendingJobs.length),
-          value: _formatBytes(totalBytes),
-        ),
-        _DownloadInfoDivider(colorScheme: colorScheme),
-        _DownloadDirectoryRow(state: state),
+        Expanded(child: tabs),
+        const SizedBox(width: AppSpacingTokens.contentGap),
+        actions,
       ],
     );
   }
 }
 
-class _DownloadInfoGroup extends StatelessWidget {
-  const _DownloadInfoGroup({required this.title, required this.children});
+class _DownloadDirectoryActions extends StatefulWidget {
+  const _DownloadDirectoryActions({required this.state});
 
-  final String title;
-  final List<Widget> children;
+  final DownloadsState state;
+
+  @override
+  State<_DownloadDirectoryActions> createState() =>
+      _DownloadDirectoryActionsState();
+}
+
+class _DownloadDirectoryActionsState extends State<_DownloadDirectoryActions> {
+  final MenuController _menuController = MenuController();
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = AppBreakpoints.isCompact(context);
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton.icon(
+          onPressed: widget.state.downloadDirectoryPath.isEmpty
+              ? null
+              : () => unawaited(
+                  _openDownloadDirectory(
+                    context,
+                    widget.state.downloadDirectoryPath,
+                  ),
+                ),
+          icon: const Icon(Icons.folder_open_rounded, size: 18),
+          label: Text(compact ? '打开目录' : '打开下载目录'),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(44, 40),
+            textStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacingTokens.compactGap),
+        if (compact)
+          IconButton(
+            onPressed: () => _showDownloadDirectorySheet(context),
+            icon: const Icon(Icons.tune_rounded, size: 19),
+            tooltip: '修改下载目录',
+            style: AppActionButtonStyle.icon(context, iconSize: 19),
+          )
+        else
+          MenuAnchor(
+            controller: _menuController,
+            alignmentOffset: const Offset(-356, 8),
+            style: MenuStyle(
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              backgroundColor: WidgetStatePropertyAll(
+                Theme.of(context).colorScheme.surfaceContainerHigh,
+              ),
+              elevation: const WidgetStatePropertyAll(10),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                ),
+              ),
+            ),
+            menuChildren: [
+              _DownloadDirectoryPopover(
+                state: widget.state,
+                onSaved: _menuController.close,
+              ),
+            ],
+            builder: (context, controller, child) => IconButton(
+              onPressed: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              icon: const Icon(Icons.tune_rounded, size: 19),
+              tooltip: '修改下载目录',
+              style: AppActionButtonStyle.icon(context, iconSize: 19),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DownloadDirectoryPopover extends StatefulWidget {
+  const _DownloadDirectoryPopover({required this.state, required this.onSaved});
+
+  final DownloadsState state;
+  final VoidCallback onSaved;
+
+  @override
+  State<_DownloadDirectoryPopover> createState() =>
+      _DownloadDirectoryPopoverState();
+}
+
+class _DownloadDirectoryPopoverState extends State<_DownloadDirectoryPopover> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+  bool _choosing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.state.customDownloadDirectoryPath,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final compact = AppBreakpoints.isCompact(context);
+    final path = widget.state.downloadDirectoryPath.isEmpty
+        ? '正在读取下载目录'
+        : widget.state.downloadDirectoryPath;
+    final isBusy = _saving || _choosing;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(
-        compact ? AppRadiusTokens.mobileLg + 2 : AppRadiusTokens.desktopLg + 4,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: compact ? 0.96 : 0.72),
-          borderRadius: BorderRadius.circular(
-            compact
-                ? AppRadiusTokens.mobileLg + 2
-                : AppRadiusTokens.desktopLg + 4,
-          ),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: compact ? 0.70 : 0.56,
-            ),
-            width: compact ? 0.75 : 1,
-          ),
-        ),
+    return SizedBox(
+      width: 412,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacingTokens.contentGap),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, compact ? 13 : 16, 20, 8),
-              child: Text(
-                title,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: compact ? 0 : 0.32,
+            Row(
+              children: [
+                Icon(
+                  Icons.folder_rounded,
+                  color: colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: AppSpacingTokens.inlineGap),
+                Text(
+                  '下载目录',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  widget.state.usesDefaultDownloadDirectory ? '默认位置' : '自定义',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacingTokens.inlineGap),
+            Text(
+              '后续下载的离线文件将保存至此位置。',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.muted),
+            ),
+            const SizedBox(height: AppSpacingTokens.contentGap),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacingTokens.inlineGap),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.56,
+                ),
+                borderRadius: BorderRadius.circular(AppRadiusTokens.input),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.55),
                 ),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '当前保存位置',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.muted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    path,
+                    maxLines: 2,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            ...children,
+            const SizedBox(height: AppSpacingTokens.contentGap),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '新保存位置',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: isBusy ? null : () => _chooseFolder(context),
+                  icon: _choosing
+                      ? const SizedBox.square(
+                          dimension: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.folder_open_rounded, size: 17),
+                  label: Text(_choosing ? '正在选择' : '选择文件夹'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacingTokens.inlineGap,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              enabled: !isBusy,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _save(context),
+              decoration: InputDecoration(
+                hintText: '粘贴绝对路径',
+                prefixIcon: const Icon(
+                  Icons.drive_folder_upload_rounded,
+                  size: 18,
+                ),
+                filled: true,
+                fillColor: colorScheme.surface.withValues(alpha: 0.52),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+            ),
+            if (widget.state.directoryValidation ==
+                    DownloadDirectoryValidation.invalid &&
+                widget.state.directoryValidationMessage != null) ...[
+              const SizedBox(height: 6),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  widget.state.directoryValidationMessage!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacingTokens.contentGap),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: isBusy ? null : () => _resetToDefault(context),
+                  child: const Text('使用默认'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: isBusy ? null : () => _save(context),
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('保存更改'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+
+  Future<void> _chooseFolder(BuildContext context) async {
+    if (!_supportsDirectoryPicker) {
+      AppSnackBar.show(context, '当前平台暂不支持选择文件夹');
+      return;
+    }
+
+    setState(() => _choosing = true);
+    try {
+      final path = await _pickDownloadDirectory();
+      if (!context.mounted) return;
+      setState(() => _choosing = false);
+      if (path != null && path.trim().isNotEmpty) _controller.text = path;
+    } catch (_) {
+      if (!context.mounted) return;
+      setState(() => _choosing = false);
+      AppSnackBar.show(context, '无法打开文件夹选择器');
+    }
+  }
+
+  Future<void> _resetToDefault(BuildContext context) async {
+    _controller.clear();
+    await _save(context);
+  }
+
+  Future<void> _save(BuildContext context) async {
+    setState(() => _saving = true);
+    try {
+      await context.read<DownloadsCubit>().setDownloadDirectoryPath(
+        _controller.text,
+      );
+      if (!context.mounted) return;
+      setState(() => _saving = false);
+      AppSnackBar.show(context, '下载存储位置已更新');
+      widget.onSaved();
+    } catch (error) {
+      if (!context.mounted) return;
+      setState(() => _saving = false);
+      AppSnackBar.show(context, _formatDirectoryError(error));
+    }
+  }
 }
 
-class _DownloadInfoRow extends StatelessWidget {
-  const _DownloadInfoRow({
-    required this.title,
-    required this.description,
-    required this.value,
+class _DownloadOverview extends StatelessWidget {
+  const _DownloadOverview({required this.rows, required this.activityCount});
+
+  final List<Download> rows;
+  final int activityCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final state = context.watch<DownloadsCubit>().state;
+    final fallbackBytes = rows.fold<int>(0, (sum, row) => sum + row.fileSize);
+    final totalBytes = state.cachedBytes > 0
+        ? state.cachedBytes
+        : fallbackBytes;
+
+    return Wrap(
+      spacing: AppSpacingTokens.sectionGap,
+      runSpacing: AppSpacingTokens.compactGap,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: '本地占用  '),
+              TextSpan(
+                text: _formatBytes(totalBytes),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(
+                text: '  ·  ${_storageDescription(rows.length, activityCount)}',
+              ),
+            ],
+          ),
+          style: theme.textTheme.bodyMedium?.copyWith(color: theme.muted),
+        ),
+        const _DownloadQualityMenu(),
+      ],
+    );
+  }
+}
+
+class _DownloadQualityMenu extends StatelessWidget {
+  const _DownloadQualityMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DownloadsCubit, DownloadsState>(
+      buildWhen: (previous, current) =>
+          previous.downloadQuality != current.downloadQuality,
+      builder: (context, state) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return MenuAnchor(
+          style: MenuStyle(
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(vertical: AppSpacingTokens.compactGap),
+            ),
+            backgroundColor: WidgetStatePropertyAll(
+              colorScheme.surfaceContainerHigh,
+            ),
+            elevation: const WidgetStatePropertyAll(8),
+            shadowColor: WidgetStatePropertyAll(
+              colorScheme.shadow.withValues(alpha: 0.18),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+                side: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
+          ),
+          menuChildren: [
+            for (final quality in AudioQuality.values)
+              _DownloadQualityMenuItem(
+                quality: quality,
+                selected: quality == state.downloadQuality,
+                onSelected: () {
+                  unawaited(_updateDownloadQuality(context, quality));
+                },
+              ),
+          ],
+          builder: (context, controller, child) => Semantics(
+            button: true,
+            label: '选择下载音质，当前为${state.downloadQuality.label}',
+            child: OutlinedButton(
+              key: const ValueKey('download-quality-menu'),
+              onPressed: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 38),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacingTokens.contentGap,
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Transform.translate(
+                    offset: const Offset(0, -1),
+                    child: Text('下载音质  ${state.downloadQuality.label}'),
+                  ),
+                  const SizedBox(width: AppSpacingTokens.inlineGapCompact),
+                  Icon(
+                    controller.isOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DownloadQualityMenuItem extends StatelessWidget {
+  const _DownloadQualityMenuItem({
+    required this.quality,
+    required this.selected,
+    required this.onSelected,
   });
 
-  final String title;
-  final String description;
-  final String value;
+  final AudioQuality quality;
+  final bool selected;
+  final VoidCallback onSelected;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final compact = AppBreakpoints.isCompact(context);
-
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 16 : 20,
-        vertical: compact ? 11 : 12,
+    return MenuItemButton(
+      onPressed: onSelected,
+      leadingIcon: Icon(
+        selected ? Icons.check_rounded : Icons.graphic_eq_rounded,
+        size: 18,
+        color: selected ? colorScheme.primary : theme.muted,
       ),
-      child: Row(
+      style: ButtonStyle(
+        minimumSize: const WidgetStatePropertyAll(Size(244, 56)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(
+            horizontal: AppSpacingTokens.contentGap,
+            vertical: AppSpacingTokens.compactGap,
+          ),
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (selected) return colorScheme.primaryContainer;
+          if (states.contains(WidgetState.hovered)) {
+            return colorScheme.surfaceContainerHighest;
+          }
+          return Colors.transparent;
+        }),
+        foregroundColor: WidgetStatePropertyAll(
+          selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontSize: compact ? 15 : 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.muted,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+          Text(
+            _downloadQualityTitle(quality),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 2),
           Text(
-            value,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.muted,
-              fontWeight: FontWeight.w600,
+            _downloadQualityDescription(quality),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: selected
+                  ? colorScheme.onPrimaryContainer.withValues(alpha: 0.78)
+                  : theme.muted,
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+String _downloadQualityTitle(AudioQuality quality) {
+  switch (quality) {
+    case AudioQuality.auto:
+      return '自动选择';
+    case AudioQuality.lossless:
+      return '无损';
+    case AudioQuality.high:
+      return '高品质';
+    case AudioQuality.medium:
+      return '标准';
+    case AudioQuality.low:
+      return '省流';
+  }
+}
+
+String _downloadQualityDescription(AudioQuality quality) {
+  switch (quality) {
+    case AudioQuality.auto:
+      return '按网络与可用音源选择';
+    case AudioQuality.lossless:
+      return '原始无损格式（如音源支持）';
+    case AudioQuality.high:
+      return '320 kbps · 兼顾细节与空间';
+    case AudioQuality.medium:
+      return '192 kbps · 日常聆听';
+    case AudioQuality.low:
+      return '128 kbps · 节省流量与空间';
   }
 }
 
@@ -492,7 +883,9 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
             label: const Text('修改'),
             style: TextButton.styleFrom(
               minimumSize: const Size(72, 36),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.inlineGapCompact),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.inlineGapCompact,
+              ),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
@@ -540,7 +933,9 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
             label: Text(_choosing ? '正在选择' : '选择文件夹'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(108, 36),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.contentGap),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.contentGap,
+              ),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
@@ -694,22 +1089,6 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
   }
 }
 
-class _DownloadInfoDivider extends StatelessWidget {
-  const _DownloadInfoDivider({required this.colorScheme});
-
-  final ColorScheme colorScheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Divider(
-      height: 1,
-      thickness: 0.75,
-      indent: AppBreakpoints.isCompact(context) ? 16 : 20,
-      color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-    );
-  }
-}
-
 class _JobRow extends StatelessWidget {
   const _JobRow({required this.job});
   final DownloadJob job;
@@ -840,12 +1219,11 @@ class _DownloadTable extends StatelessWidget {
       child: Column(
         children: [
           const _DownloadTableHeader(),
-          for (var i = 0; i < rows.length; i++)
+          for (final row in rows)
             _DownloadTableRow(
-              index: i,
-              record: rows[i],
-              fileMissing: missingTrackIds.contains(rows[i].trackId),
-              onDelete: () => onDelete(rows[i]),
+              record: row,
+              fileMissing: missingTrackIds.contains(row.trackId),
+              onDelete: () => onDelete(row),
             ),
         ],
       ),
@@ -862,7 +1240,7 @@ class _DownloadTableHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Row(
         children: [
-          const SizedBox(width: 34),
+          const SizedBox(width: 56),
           Expanded(child: _DownloadTableHeaderText('标题')),
           SizedBox(width: 190, child: _DownloadTableHeaderText('专辑')),
           SizedBox(width: 92, child: _DownloadTableHeaderText('大小')),
@@ -894,13 +1272,11 @@ class _DownloadTableHeaderText extends StatelessWidget {
 
 class _DownloadTableRow extends StatefulWidget {
   const _DownloadTableRow({
-    required this.index,
     required this.record,
     required this.fileMissing,
     required this.onDelete,
   });
 
-  final int index;
   final Download record;
   final bool fileMissing;
   final Future<void> Function() onDelete;
@@ -920,9 +1296,7 @@ class _DownloadTableRowState extends State<_DownloadTableRow> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: AppMotion.micro,
-        curve: AppMotion.standard,
+      child: Container(
         margin: const EdgeInsets.symmetric(vertical: 1),
         decoration: BoxDecoration(
           color: _hovered
@@ -934,16 +1308,13 @@ class _DownloadTableRowState extends State<_DownloadTableRow> {
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           child: Row(
             children: [
-              SizedBox(
-                width: 34,
-                child: Text(
-                  '${widget.index + 1}',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              CachedArtwork(
+                imageUrl: widget.record.artworkUrl ?? '',
+                size: 44,
+                borderRadius: AppRadiusTokens.desktopSm,
+                semanticLabel: '《${widget.record.title}》封面',
               ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1054,9 +1425,7 @@ class _DownloadListRowState extends State<_DownloadListRow> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: AppMotion.micro,
-          curve: AppMotion.enter,
+        child: Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
             color: _hovered
@@ -1200,6 +1569,53 @@ Future<void> _confirmDeleteDownload(
   AppSnackBar.show(context, '已删除下载：${record.title}');
 }
 
+Future<void> _showDownloadDirectorySheet(BuildContext context) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => AppSheetScaffold(
+      title: '下载目录',
+      description: '打开当前目录，或更改后续离线文件的保存位置。',
+      child: BlocBuilder<DownloadsCubit, DownloadsState>(
+        builder: (context, state) => _DownloadDirectoryRow(state: state),
+      ),
+    ),
+  );
+}
+
+Future<void> _updateDownloadQuality(
+  BuildContext context,
+  AudioQuality quality,
+) async {
+  try {
+    await context.read<DownloadsCubit>().setDownloadQuality(quality);
+  } on Object {
+    if (!context.mounted) return;
+    AppSnackBar.show(context, '下载音质保存失败，请稍后重试');
+  }
+}
+
+Future<void> _openDownloadDirectory(BuildContext context, String path) async {
+  if (!_supportsOpenDownloadDirectory) {
+    AppSnackBar.show(context, '当前平台暂不支持打开下载目录');
+    return;
+  }
+
+  try {
+    final result = Platform.isMacOS
+        ? await Process.run('open', [path])
+        : await Process.run('explorer.exe', [path]);
+    if (result.exitCode != 0) {
+      throw FileSystemException('无法打开下载目录', path);
+    }
+  } on Object {
+    if (!context.mounted) return;
+    AppSnackBar.show(context, '无法打开下载目录，请确认路径可访问');
+  }
+}
+
 String _storageDescription(int completedCount, int pendingCount) {
   final completed = '$completedCount 首已下载';
   if (pendingCount <= 0) return completed;
@@ -1214,6 +1630,9 @@ String _formatDirectoryError(Object error) {
 }
 
 bool get _supportsDirectoryPicker => Platform.isMacOS || Platform.isWindows;
+
+bool get _supportsOpenDownloadDirectory =>
+    Platform.isMacOS || Platform.isWindows;
 
 Future<String?> _pickDownloadDirectory() async {
   if (Platform.isMacOS) {
