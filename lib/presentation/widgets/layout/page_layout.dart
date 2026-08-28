@@ -13,6 +13,7 @@ class AppPageHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.description,
+    this.titleBadge,
     this.center,
     this.trailing,
     this.leading,
@@ -25,6 +26,7 @@ class AppPageHeader extends StatelessWidget {
 
   final String title;
   final String? description;
+  final Widget? titleBadge;
   final Widget? center;
   final Widget? trailing;
   final Widget? leading;
@@ -72,6 +74,7 @@ class AppPageHeader extends StatelessWidget {
                 child: AppPageTitleRow(
                   title: title,
                   description: description,
+                  titleBadge: titleBadge,
                   padding: EdgeInsets.zero,
                 ),
               ),
@@ -106,6 +109,7 @@ class AppPageHeader extends StatelessWidget {
                       child: AppPageTitleRow(
                         title: title,
                         description: description,
+                        titleBadge: titleBadge,
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -132,6 +136,7 @@ class AppPageHeader extends StatelessWidget {
                 child: AppPageTitleRow(
                   title: title,
                   description: description,
+                  titleBadge: titleBadge,
                   padding: EdgeInsets.zero,
                 ),
               ),
@@ -450,6 +455,7 @@ class AppPageTitleRow extends StatelessWidget {
     super.key,
     required this.title,
     this.description,
+    this.titleBadge,
     this.badge,
     this.action,
     this.padding = const EdgeInsets.symmetric(vertical: 4),
@@ -457,6 +463,7 @@ class AppPageTitleRow extends StatelessWidget {
 
   final String title;
   final String? description;
+  final Widget? titleBadge;
   final Widget? badge;
   final Widget? action;
   final EdgeInsetsGeometry padding;
@@ -475,6 +482,13 @@ class AppPageTitleRow extends StatelessWidget {
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(title, style: Theme.of(context).textTheme.titleLarge),
+                if (titleBadge != null) ...[
+                  const SizedBox(width: 4),
+                  Transform.translate(
+                    offset: const Offset(0, -7),
+                    child: titleBadge!,
+                  ),
+                ],
                 if (description != null) ...[
                   const SizedBox(width: 10),
                   Flexible(

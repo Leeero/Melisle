@@ -31,6 +31,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_vie
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/player/player_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -341,7 +342,7 @@ void main() {
       tester.element(find.byKey(const ValueKey('shell-compact'))),
     ).go('/history');
     await tester.pumpAndSettle();
-    expect(find.text('播放历史'), findsOneWidget);
+    expect(find.text('播放历史'), findsNothing);
 
     tester.view.physicalSize = const Size(768, 900);
     await tester.pumpAndSettle();
@@ -378,9 +379,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-desktop')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
-    expect(find.byKey(const ValueKey('shell-toolbar-settings')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('shell-toolbar-settings')),
+      findsOneWidget,
+    );
     expect(find.byTooltip('收起侧边栏'), findsNothing);
     expect(find.text('歌曲'), findsOneWidget);
+    final songSubNavFinder = find.byKey(const ValueKey('shell-sub-nav-歌曲'));
+    final songSubNav = tester.widget<InkWell>(songSubNavFinder);
+    expect(songSubNav.mouseCursor, SystemMouseCursors.click);
+    final subNavMouse = await tester.createGesture(
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await subNavMouse.addPointer(location: tester.getCenter(songSubNavFinder));
+    expect(
+      RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+      SystemMouseCursors.click,
+    );
+    await subNavMouse.removePointer();
     final miniPlayerRect = tester.getRect(find.byType(MiniPlayerBar));
     expect(miniPlayerRect.left, 0);
     expect(miniPlayerRect.width, 1080);
@@ -392,14 +408,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
     expect(find.text('歌曲'), findsNothing);
-    expect(find.text('播放历史'), findsOneWidget);
+    expect(find.text('播放历史'), findsNothing);
     await _captureAppShell(tester, 'app-shell-1080x900-library-collapsed');
     expect(tester.takeException(), isNull, reason: '1080 library collapsed');
 
     tester.view.physicalSize = const Size(767, 900);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-compact')), findsOneWidget);
-    expect(find.text('播放历史'), findsOneWidget);
+    expect(find.text('播放历史'), findsNothing);
 
     tester.view.physicalSize = const Size(1080, 900);
     expect(tester.takeException(), isNull, reason: '767');
@@ -430,7 +446,7 @@ void main() {
 
     await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
-    expect(find.text('播放历史'), findsOneWidget);
+    expect(find.text('播放历史'), findsNothing);
   });
 
   testWidgets('mobile mini player follows V3 transport and touch targets', (
@@ -643,32 +659,165 @@ void main() {
   });
 
   testWidgets(
-    'mini player remains visible without a track',
+    'desktop player footer shows current track metadata on the left',
     (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final playerCubit = _MiniPlayerCubit(const PlayerViewState());
-      addTearDown(playerCubit.close);
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
 
-      for (final size in const [Size(390, 844), Size(1280, 900)]) {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1;
-        await tester.pumpWidget(
-          BlocProvider<PlayerCubit>.value(
-            value: playerCubit,
+      const track = MusicTrack(
+        id: 'footer-track',
+        title: '底栏当前歌曲',
+        artistName: '底栏歌手',
+        albumTitle: '底栏专辑',
+        artworkUrl: '',
+        duration: Duration(minutes: 4),
+        codec: 'flac',
+      );
+      final repository = _FakeMusicRepository();
+      final playerCubit = _MiniPlayerCubit(
+        const PlayerViewState(queue: [track], currentIndex: 0),
+      );
+      final favoritesCubit = FavoritesCubit(repository);
+      final mediaSourceResolver = CustomMediaSourceResolver();
+      final settingsCubit = AppSettingsCubit(
+        _FakeSettingsRepository(),
+        mediaSourceResolver,
+      );
+      await settingsCubit.load();
+      addTearDown(playerCubit.close);
+      addTearDown(favoritesCubit.close);
+      addTearDown(settingsCubit.close);
+
+      await tester.pumpWidget(
+        RepositoryProvider<CustomMediaSourceResolver>.value(
+          value: mediaSourceResolver,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PlayerCubit>.value(value: playerCubit),
+              BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+              BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+            ],
+            child: const MaterialApp(home: PlayerPage()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final summary = find.bySemanticsLabel('当前播放：底栏当前歌曲，歌手：底栏歌手');
+      expect(summary, findsOneWidget);
+      expect(
+        find.descendant(of: summary, matching: find.text('底栏当前歌曲')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: summary, matching: find.text('底栏歌手')),
+        findsOneWidget,
+      );
+      expect(find.text('FLAC'), findsOneWidget);
+      expect(tester.getCenter(summary).dx, lessThan(360));
+      expect(tester.getCenter(find.byTooltip('播放')).dx, closeTo(720, 1));
+      expect(tester.takeException(), isNull);
+
+      tester.view.physicalSize = const Size(1080, 900);
+      await tester.pump();
+      expect(tester.getCenter(find.byTooltip('播放')).dx, closeTo(540, 1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'desktop mini player keeps all controls at the desktop breakpoint',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(1080, 900);
+      tester.view.devicePixelRatio = 1;
+
+      final repository = _FakeMusicRepository();
+      final track = MusicTrack(
+        id: 'desktop-breakpoint-track',
+        title: '夜曲',
+        artistName: '周杰伦',
+        albumTitle: '十一月的萧邦',
+        artworkUrl: '',
+        duration: const Duration(minutes: 3, seconds: 46),
+      );
+      final playerCubit = _MiniPlayerCubit(
+        PlayerViewState(queue: [track], currentIndex: 0),
+      );
+      final favoritesCubit = FavoritesCubit(repository);
+      final mediaSourceResolver = CustomMediaSourceResolver();
+      final settingsCubit = AppSettingsCubit(
+        _FakeSettingsRepository(),
+        mediaSourceResolver,
+      );
+      await settingsCubit.load();
+      addTearDown(playerCubit.close);
+      addTearDown(favoritesCubit.close);
+      addTearDown(settingsCubit.close);
+
+      await tester.pumpWidget(
+        MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<CustomMediaSourceResolver>.value(
+              value: mediaSourceResolver,
+            ),
+          ],
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<PlayerCubit>.value(value: playerCubit),
+              BlocProvider<FavoritesCubit>.value(value: favoritesCubit),
+              BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+            ],
             child: const MaterialApp(
               home: Scaffold(bottomNavigationBar: MiniPlayerBar()),
             ),
           ),
-        );
+        ),
+      );
 
-        expect(tester.takeException(), isNull);
-        expect(find.byType(MiniPlayerBar), findsOneWidget);
-        expect(tester.getSize(find.byType(MiniPlayerBar)).height, isNonZero);
-        expect(find.text('未在播放'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(find.text('标准音质'), findsOneWidget);
+      for (final tooltip in const ['收藏', '上一曲', '播放', '下一曲', '当前歌单', '静音']) {
+        expect(find.byTooltip(tooltip), findsOneWidget);
       }
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SizedBox &&
+              widget.width == AppSpacingTokens.miniPlayerSectionGapCompact,
+        ),
+        findsNWidgets(2),
+      );
     },
   );
+
+  testWidgets('mini player remains visible without a track', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final playerCubit = _MiniPlayerCubit(const PlayerViewState());
+    addTearDown(playerCubit.close);
+
+    for (final size in const [Size(390, 844), Size(1280, 900)]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        BlocProvider<PlayerCubit>.value(
+          value: playerCubit,
+          child: const MaterialApp(
+            home: Scaffold(bottomNavigationBar: MiniPlayerBar()),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MiniPlayerBar), findsOneWidget);
+      expect(tester.getSize(find.byType(MiniPlayerBar)).height, isNonZero);
+      expect(find.text('未在播放'), findsOneWidget);
+    }
+  });
 
   testWidgets(
     'mobile queue sheet supports row actions and clear confirmation',
@@ -732,6 +881,15 @@ void main() {
       expect(find.text('清空'), findsOneWidget);
       expect(find.byTooltip('移出队列'), findsNWidgets(2));
       expect(find.byTooltip('拖拽排序'), findsNWidgets(2));
+      final clearIcon = find.byIcon(Icons.delete_outline_rounded);
+      final locateIcon = find.byIcon(Icons.my_location_rounded);
+      expect(clearIcon, findsOneWidget);
+      expect(locateIcon, findsOneWidget);
+      expect(
+        tester.getCenter(clearIcon).dy,
+        closeTo(tester.getCenter(locateIcon).dy, 0.01),
+      );
+      expect(tester.getSize(clearIcon), tester.getSize(locateIcon));
 
       await tester.tap(find.text('清空'));
       await tester.pumpAndSettle();
@@ -926,6 +1084,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('收藏'), findsWidgets);
+    expect(find.text('0'), findsOneWidget);
     expect(find.text('还没有收藏歌曲'), findsOneWidget);
     expect(find.text('在媒体库或播放页点亮爱心后，歌曲会集中显示在这里。'), findsOneWidget);
     expect(find.byTooltip('返回'), findsNothing);
@@ -969,7 +1128,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('历史'), findsWidgets);
+    expect(find.text('历史'), findsNothing);
     expect(find.text('还没有播放历史'), findsOneWidget);
     expect(find.text('开始播放后，最近听过的歌曲会自动记录在这里。'), findsOneWidget);
     expect(find.byTooltip('返回'), findsNothing);
@@ -1038,11 +1197,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 320));
 
     expect(tester.takeException(), isNull);
-    expect(find.byTooltip('返回'), findsOneWidget);
-    expect(find.text('播放全部'), findsNothing);
-    expect(find.text('播放历史'), findsWidgets);
+    expect(find.byTooltip('返回'), findsNothing);
+    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.text('随机播放'), findsOneWidget);
+    expect(find.text('播放历史'), findsNothing);
     expect(find.text('最近听过的歌'), findsOneWidget);
-    expect(find.text('今天'), findsOneWidget);
+    expect(find.text('标题'), findsOneWidget);
     expect(find.text('清空'), findsNothing);
   });
 }

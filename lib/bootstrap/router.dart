@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/domain/entities/music_playlist.dart'
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
+import 'package:cross_platform_music_player/presentation/navigation/popup_route_coordinator.dart';
 import 'package:cross_platform_music_player/presentation/pages/album/album_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/artist/artist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/downloads/downloads_page.dart';
@@ -25,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 GoRouter createRouter(AuthCubit authCubit) {
+  final popupRouteCoordinator = PopupRouteCoordinator();
   return GoRouter(
     initialLocation: '/home',
     refreshListenable: GoRouterRefreshStream(authCubit.stream),
@@ -50,28 +52,33 @@ GoRouter createRouter(AuthCubit authCubit) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            AppShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) => AppShell(
+          navigationShell: navigationShell,
+          popupRouteCoordinator: popupRouteCoordinator,
+        ),
         branches: [
           StatefulShellBranch(
+            observers: [popupRouteCoordinator.createObserver()],
             routes: [
               GoRoute(
                 path: '/home',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const HomePage()),
+                    _shellPage(authCubit, state, const HomePage()),
               ),
               GoRoute(
                 path: '/history',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const HistoryPage()),
+                    _shellPage(authCubit, state, const HistoryPage()),
               ),
             ],
           ),
           StatefulShellBranch(
+            observers: [popupRouteCoordinator.createObserver()],
             routes: [
               GoRoute(
                 path: '/search',
                 pageBuilder: (context, state) => _shellPage(
+                  authCubit,
                   state,
                   SearchPage(initialQuery: state.uri.queryParameters['q']),
                 ),
@@ -79,10 +86,12 @@ GoRouter createRouter(AuthCubit authCubit) {
             ],
           ),
           StatefulShellBranch(
+            observers: [popupRouteCoordinator.createObserver()],
             routes: [
               GoRoute(
                 path: '/library',
                 pageBuilder: (context, state) => _shellPage(
+                  authCubit,
                   state,
                   LibraryPage(
                     initialFilter: _libraryFilterFromQuery(
@@ -94,6 +103,7 @@ GoRouter createRouter(AuthCubit authCubit) {
               GoRoute(
                 path: '/album/:albumId',
                 pageBuilder: (context, state) => _shellPage(
+                  authCubit,
                   state,
                   AlbumDetailPage(
                     albumId: state.pathParameters['albumId']!,
@@ -104,6 +114,7 @@ GoRouter createRouter(AuthCubit authCubit) {
               GoRoute(
                 path: '/artist/:artistId',
                 pageBuilder: (context, state) => _shellPage(
+                  authCubit,
                   state,
                   ArtistDetailPage(
                     artistId: state.pathParameters['artistId']!,
@@ -114,11 +125,12 @@ GoRouter createRouter(AuthCubit authCubit) {
               GoRoute(
                 path: '/playlists',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const PlaylistsPage()),
+                    _shellPage(authCubit, state, const PlaylistsPage()),
               ),
               GoRoute(
                 path: '/playlists/:playlistId',
                 pageBuilder: (context, state) => _shellPage(
+                  authCubit,
                   state,
                   PlaylistDetailPage(
                     playlistId: state.pathParameters['playlistId']!,
@@ -129,30 +141,35 @@ GoRouter createRouter(AuthCubit authCubit) {
             ],
           ),
           StatefulShellBranch(
+            observers: [popupRouteCoordinator.createObserver()],
             routes: [
               GoRoute(
                 path: '/favorites',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const FavoritesPage()),
+                    _shellPage(authCubit, state, const FavoritesPage()),
               ),
             ],
           ),
           StatefulShellBranch(
+            observers: [popupRouteCoordinator.createObserver()],
             routes: [
               GoRoute(
                 path: '/settings',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const SettingsPage()),
+                    _shellPage(authCubit, state, const SettingsPage()),
               ),
               GoRoute(
                 path: '/settings/media-sources',
-                pageBuilder: (context, state) =>
-                    _shellPage(state, const CustomMediaSourcesPage()),
+                pageBuilder: (context, state) => _shellPage(
+                  authCubit,
+                  state,
+                  const CustomMediaSourcesPage(),
+                ),
               ),
               GoRoute(
                 path: '/downloads',
                 pageBuilder: (context, state) =>
-                    _shellPage(state, const DownloadsPage()),
+                    _shellPage(authCubit, state, const DownloadsPage()),
               ),
             ],
           ),
@@ -207,8 +224,16 @@ GoRouter createRouter(AuthCubit authCubit) {
   );
 }
 
-NoTransitionPage<void> _shellPage(GoRouterState state, Widget child) {
-  return NoTransitionPage<void>(key: state.pageKey, child: child);
+NoTransitionPage<void> _shellPage(
+  AuthCubit authCubit,
+  GoRouterState state,
+  Widget child,
+) {
+  final sessionIdentity = identityHashCode(authCubit.state.session);
+  return NoTransitionPage<void>(
+    key: ValueKey('${state.uri}#$sessionIdentity'),
+    child: child,
+  );
 }
 
 LibraryFilter _libraryFilterFromQuery(String? tab) {

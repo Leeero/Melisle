@@ -73,10 +73,9 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
               slivers: [
                 if (!isWide)
                   SliverPadding(
-                    padding: AppPageLayout.sectionPadding(
+                    padding: AppPageLayout.pagePadding(
                       context,
-                      top: 2,
-                      bottom: 0,
+                      bottom: AppSpacingTokens.inlineGap,
                     ),
                     sliver: SliverToBoxAdapter(
                       child: AppDetailBackNav(
@@ -85,11 +84,15 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                     ),
                   ),
                 SliverPadding(
-                  padding: AppPageLayout.sectionPadding(
-                    context,
-                    top: isWide ? 24 : 8,
-                    bottom: 24,
-                  ),
+                  padding: isWide
+                      ? AppPageLayout.pagePadding(
+                          context,
+                          bottom: AppPageLayout.sectionGap,
+                        )
+                      : AppPageLayout.sectionPadding(
+                          context,
+                          bottom: AppPageLayout.sectionGap,
+                        ),
                   sliver: SliverToBoxAdapter(
                     child: _ArtistHero(
                       artist: artist,
@@ -383,7 +386,9 @@ class _ArtistAvatarPlaceholder extends StatelessWidget {
 }
 
 double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
-  if (AppBreakpoints.usesWideContent(context)) return 28;
+  if (AppBreakpoints.usesWideContent(context)) {
+    return AppPageLayout.contentBottomInset;
+  }
   return hasMiniPlayer ? 168 : 96;
 }
 

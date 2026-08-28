@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
+import 'package:cross_platform_music_player/presentation/navigation/popup_route_coordinator.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/desktop_page_toolbar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -10,9 +11,14 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.navigationShell});
+  const AppShell({
+    super.key,
+    required this.navigationShell,
+    required this.popupRouteCoordinator,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final PopupRouteCoordinator popupRouteCoordinator;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +44,7 @@ class AppShell extends StatelessWidget {
   }
 
   void _go(int index) {
+    popupRouteCoordinator.dismissPopups();
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -459,7 +466,9 @@ class _SidebarSubNavButton extends StatelessWidget {
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: InkWell(
+            key: ValueKey('shell-sub-nav-$label'),
             onTap: onTap,
+            mouseCursor: SystemMouseCursors.click,
             borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
             child: Container(
               constraints: const BoxConstraints(minHeight: 36),

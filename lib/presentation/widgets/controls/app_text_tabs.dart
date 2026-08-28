@@ -2,10 +2,11 @@ import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 class AppTextTabItem<T> {
-  const AppTextTabItem({required this.value, required this.label});
+  const AppTextTabItem({required this.value, required this.label, this.count});
 
   final T value;
   final String label;
+  final int? count;
 }
 
 /// Underlined text tabs used for switching between peer content scopes.
@@ -47,16 +48,27 @@ class AppTextTabs<T> extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      item.label,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: selectedValue == item.value
-                            ? colors.onSurface
-                            : colors.onSurfaceVariant,
-                        fontWeight: selectedValue == item.value
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Text(
+                          item.label,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: selectedValue == item.value
+                                ? colors.onSurface
+                                : colors.onSurfaceVariant,
+                            fontWeight: selectedValue == item.value
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        if (item.count != null)
+                          Positioned(
+                            top: -8,
+                            right: -16,
+                            child: _TabCountBadge(count: item.count!),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 7),
                     AnimatedContainer(
@@ -76,6 +88,39 @@ class AppTextTabs<T> extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _TabCountBadge extends StatelessWidget {
+  const _TabCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '$count 项',
+      child: ExcludeSemantics(
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            '$count',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.primary,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -18,6 +18,7 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sn
 import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/fade_slide_transition.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -96,10 +97,27 @@ class _LibraryViewState extends State<_LibraryView> {
             ),
           );
         }
+        final desktopTrackActions =
+            state.currentFilter == LibraryFilter.tracks &&
+                state.tracks.isNotEmpty &&
+                AppBreakpoints.usesWideContent(context)
+            ? MusicTrackTableActions(
+                onPlayAll: () => _playAllLibraryTracks(context, state),
+                onShuffleAll: () =>
+                    _playAllLibraryTracks(context, state, shuffled: true),
+                trailing:
+                    AppBreakpoints.usesDesktopToolbar(context) &&
+                        (state.supportedTrackSortOptions.isNotEmpty ||
+                            state.supportedTrackFilterOptions.isNotEmpty)
+                    ? _TrackSortMenu(state: state)
+                    : null,
+              )
+            : null;
         return AppContentPage(
           header: _LibraryHeader(
             state: state,
             searchController: _searchController,
+            desktopTrackActions: desktopTrackActions,
           ),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
@@ -230,14 +248,6 @@ class _LibraryViewState extends State<_LibraryView> {
       state: state,
       horizontalPadding: horizontalPadding,
       currentTrackId: currentTrackId,
-      desktopToolbarTrailing:
-          AppBreakpoints.usesDesktopToolbar(context) &&
-              (state.supportedTrackSortOptions.isNotEmpty ||
-                  state.supportedTrackFilterOptions.isNotEmpty)
-          ? _TrackSortMenu(state: state)
-          : null,
-      onPlayAll: () => _playAllLibraryTracks(context, state),
-      onShuffleAll: () => _playAllLibraryTracks(context, state, shuffled: true),
       onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
         context,
         tracks: state.tracks,
@@ -465,6 +475,34 @@ String _libraryFilterLabel(LibraryFilter filter) => switch (filter) {
   LibraryFilter.playlists => '歌单',
 };
 
+String _libraryFilterCountLabel(LibraryState state) {
+  if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
+    return '正在加载';
+  }
+  return switch (state.currentFilter) {
+    LibraryFilter.tracks => _trackResultCountLabel(state),
+    LibraryFilter.albums => '已显示 ${state.albums.length} 张',
+    LibraryFilter.artists => '已显示 ${state.artists.length} 位',
+    LibraryFilter.playlists => '已显示 ${state.playlists.length} 个',
+  };
+}
+
+String _trackResultCountLabel(LibraryState state) {
+  final count = _formatCount(state.totalTrackCount ?? state.tracks.length);
+  if (state.trackFilters.isEmpty) return '共 $count 首';
+  return '$count 首 · ${state.trackFilters.map(_trackFilterLabel).join('、')}';
+}
+
+String _formatCount(int value) {
+  final digits = value.toString();
+  final buffer = StringBuffer();
+  for (var index = 0; index < digits.length; index++) {
+    if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
+    buffer.write(digits[index]);
+  }
+  return buffer.toString();
+}
+
 String _formatTrackDuration(Duration duration) {
   final minutes = duration.inMinutes;
   final seconds = duration.inSeconds % 60;
@@ -595,7 +633,9 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacingTokens.compactGap,
+                ),
                 child: Row(
                   children: [
                     SizedBox(
@@ -679,10 +719,15 @@ class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
 }
 
 class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({required this.state, required this.searchController});
+  const _LibraryHeader({
+    required this.state,
+    required this.searchController,
+    this.desktopTrackActions,
+  });
 
   final LibraryState state;
   final TextEditingController searchController;
+  final Widget? desktopTrackActions;
 
   @override
   Widget build(BuildContext context) {
@@ -719,6 +764,9 @@ class _LibraryHeader extends StatelessWidget {
             state.supportedArtistSortOptions.isNotEmpty
         ? _ArtistFilterMenu(state: state)
         : null;
+    final headerTrailing = state.currentFilter == LibraryFilter.tracks
+        ? desktopTrackActions
+        : artistFilterButton;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,13 +781,12 @@ class _LibraryHeader extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (isWide)
-          if (artistFilterButton != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: artistFilterButton,
-            )
-          else
-            const SizedBox.shrink()
+          AppPageHeader(
+            title: _libraryFilterLabel(state.currentFilter),
+            description: _libraryFilterCountLabel(state),
+            trailing: headerTrailing,
+            automaticImplyLeading: false,
+          )
         else ...[
           search,
           if (artistFilterButton != null) ...[
@@ -852,12 +899,13 @@ class _TrackSortMenuState extends State<_TrackSortMenu> {
   Widget build(BuildContext context) {
     final state = widget.state;
     final selected = state.trackSortOption ?? TrackSortOption.title;
-    final sortLabel = state.trackSortOption == null
-        ? '筛选'
-        : _trackSortLabel(selected);
+    final sortLabel = _trackSortLabel(selected);
+    final filterSuffix = state.trackFilters.isEmpty
+        ? ''
+        : ' · 筛选（${state.trackFilters.length}）';
     return Semantics(
       button: true,
-      label: '排序与筛选，当前$sortLabel',
+      label: '排序：$sortLabel$filterSuffix',
       child: TextButton.icon(
         key: _triggerKey,
         onPressed: _showMenu,
@@ -867,7 +915,7 @@ class _TrackSortMenuState extends State<_TrackSortMenu> {
           smallSize: 7,
           child: const Icon(Icons.tune_rounded, size: 18),
         ),
-        label: Text('排序与筛选 · $sortLabel'),
+        label: Text('排序：$sortLabel$filterSuffix'),
       ),
     );
   }

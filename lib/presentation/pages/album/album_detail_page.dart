@@ -63,10 +63,9 @@ class _AlbumDetailView extends StatelessWidget {
                   slivers: [
                     if (!isWide)
                       SliverPadding(
-                        padding: AppPageLayout.sectionPadding(
+                        padding: AppPageLayout.pagePadding(
                           context,
-                          top: 0,
-                          bottom: 0,
+                          bottom: AppSpacingTokens.inlineGap,
                         ),
                         sliver: SliverToBoxAdapter(
                           child: _AlbumMobileToolbar(
@@ -75,11 +74,15 @@ class _AlbumDetailView extends StatelessWidget {
                         ),
                       ),
                     SliverPadding(
-                      padding: AppPageLayout.sectionPadding(
-                        context,
-                        top: isWide ? 4 : 2,
-                        bottom: isWide ? 18 : 10,
-                      ),
+                      padding: isWide
+                          ? AppPageLayout.pagePadding(
+                              context,
+                              bottom: AppPageLayout.sectionGap,
+                            )
+                          : AppPageLayout.sectionPadding(
+                              context,
+                              bottom: AppPageLayout.sectionGap,
+                            ),
                       sliver: SliverToBoxAdapter(
                         child: _AlbumHero(
                           album: album,
@@ -360,7 +363,7 @@ int _trackCountLabel(MusicAlbum? album, int tracksCount) {
 
 double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
   if (AppBreakpoints.usesWideContent(context)) {
-    return 28;
+    return AppPageLayout.contentBottomInset;
   }
 
   return hasMiniPlayer ? 168 : 96;
@@ -457,7 +460,7 @@ class _AlbumMobileTrackRow extends StatelessWidget {
           onTap: onPlay,
           onLongPress: () => showTrackActionsSheet(context, track),
           child: SizedBox(
-            height: 56,
+            height: 52,
             child: Row(
               children: [
                 SizedBox(
@@ -477,13 +480,18 @@ class _AlbumMobileTrackRow extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isCurrent ? colors.primary : colors.onSurface,
-                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                  child: Tooltip(
+                    message: title,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isCurrent ? colors.primary : colors.onSurface,
+                        fontWeight: isCurrent
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),

@@ -61,4 +61,22 @@ void main() {
     expect(cubit.state.tracks.map((track) => track.id), ['same-track']);
     expect(cubit.state.hasMore, isFalse);
   });
+
+  test('fetchAllTracks returns the complete unique history for playback', () async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (var index = 0; index < 31; index++) {
+      await database.insertPlayHistory(
+        PlayHistoryCompanion.insert(
+          trackId: index == 30 ? 'track-0' : 'track-$index',
+          title: '曲目 $index',
+          playedAtMs: now - index,
+        ),
+      );
+    }
+
+    final tracks = await cubit.fetchAllTracks();
+
+    expect(tracks, hasLength(30));
+    expect(tracks.first.id, 'track-0');
+  });
 }

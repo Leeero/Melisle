@@ -1,14 +1,12 @@
-import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/infrastructure/database/app_database.dart';
 import 'package:cross_platform_music_player/presentation/blocs/history/history_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/history/history_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
-import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
-import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
-import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
-import 'package:cross_platform_music_player/shared/theme/theme.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
+import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -36,7 +34,7 @@ class _HistoryView extends StatelessWidget {
     return BlocBuilder<HistoryCubit, HistoryState>(
       builder: (context, state) {
         return AppContentPage(
-          header: const _HistoryHeader(),
+          header: _HistoryHeader(state: state),
           body: _buildBody(context, state, currentTrackId),
         );
       },
@@ -80,7 +78,7 @@ class _HistoryView extends StatelessWidget {
         }
         return false;
       },
-      child: _HistoryGroups(
+      child: _HistoryTrackList(
         state: state,
         currentTrackId: currentTrackId,
       ),
@@ -89,238 +87,56 @@ class _HistoryView extends StatelessWidget {
 }
 
 class _HistoryHeader extends StatelessWidget {
-  const _HistoryHeader();
+  const _HistoryHeader({required this.state});
+
+  final HistoryState state;
 
   @override
   Widget build(BuildContext context) {
-    final compact = AppBreakpoints.isCompact(context);
-    final canPop = Navigator.of(context).canPop();
-    if (compact) {
-      return _MobileHistoryHeader(canPop: canPop);
-    }
-
-    return const AppPageHeader(title: '历史');
-  }
-}
-
-class _MobileHistoryHeader extends StatelessWidget {
-  const _MobileHistoryHeader({required this.canPop});
-
-  final bool canPop;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (canPop) ...[
-          Row(
-            children: [
-              AppBackButton(onPressed: () => Navigator.of(context).maybePop()),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
-        Text(
-          '播放历史',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.headlineLarge?.copyWith(
-            fontSize: 31,
-            height: 1.12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
+    return Align(
+      alignment: Alignment.centerRight,
+      child: PlayAllButton(
+        onPressed: state.tracks.isEmpty
+            ? null
+            : () => _playAllHistory(context, state),
+        onShufflePressed: state.tracks.isEmpty
+            ? null
+            : () => _playAllHistory(context, state, shuffled: true),
+      ),
     );
   }
 }
 
-class _HistoryGroups extends StatelessWidget {
-  const _HistoryGroups({required this.state, required this.currentTrackId});
+class _HistoryTrackList extends StatelessWidget {
+  const _HistoryTrackList({required this.state, required this.currentTrackId});
 
   final HistoryState state;
   final String? currentTrackId;
 
   @override
   Widget build(BuildContext context) {
-    final compact = AppBreakpoints.isCompact(context);
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
-    final groups = _groupHistory(state.tracks);
-    final children = <Widget>[
-      if (compact)
-        Padding(
-          padding: EdgeInsets.only(bottom: AppPageLayout.sectionTitleBottomGap),
-          child: AppSectionTitleRow(
-            title: '最近播放',
-            badge: MetaPill(
-              label: '${state.tracks.length} 条',
-              size: MetaPillSize.compact,
-            ),
-          ),
-        ),
-      for (final group in groups) ...[
-        _HistoryGroupHeader(label: group.label),
-        const SizedBox(height: 8),
-        for (final item in group.items)
-          _HistoryTrackRow(
-            track: item.track,
-            currentTrackId: currentTrackId,
-            compact: compact,
-            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-              context,
-              tracks: state.tracks,
-              startIndex: item.index,
-            ),
-          ),
-        const SizedBox(height: AppPageLayout.sectionGap),
-      ],
-      _HistoryLoadFooter(state: state),
-    ];
-
     return ListView(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-      children: children,
-    );
-  }
-}
-
-class _HistoryGroupHeader extends StatelessWidget {
-  const _HistoryGroupHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
+      children: [
+        MusicTrackTable(
+          tracks: state.tracks,
+          currentTrackId: currentTrackId,
+          showActionBar: false,
+          libraryStyle: true,
+          onTrackTap: (index, _) => PlayerNavigation.playTracksAndOpenPlayer(
+            context,
+            tracks: state.tracks,
+            startIndex: index,
           ),
         ),
-      ),
-      child: Text(label, style: theme.textTheme.titleMedium),
-    );
-  }
-}
-
-class _HistoryTrackRow extends StatelessWidget {
-  const _HistoryTrackRow({
-    required this.track,
-    required this.currentTrackId,
-    required this.onTap,
-    required this.compact,
-  });
-
-  final MusicTrack track;
-  final String? currentTrackId;
-  final Future<void> Function() onTap;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isCurrent = track.id == currentTrackId;
-    final subtitle = [track.artistName, track.albumTitle]
-        .where((item) => item.isNotEmpty)
-        .join(' · ');
-    return Semantics(
-      label: '播放《${track.title}》',
-      selected: isCurrent,
-      button: true,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: Material(
-          color: isCurrent ? theme.selectedWash : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
-          child: InkWell(
-            onTap: onTap,
-            onLongPress: () => showTrackActionsSheet(context, track),
-            mouseCursor: SystemMouseCursors.click,
-            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
-            child: SizedBox(
-              height: compact ? 60 : 56,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 12),
-                child: Row(
-                  children: [
-                    _HistoryArtwork(track: track),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            track.title.isEmpty ? '未知曲目' : track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isCurrent
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle.isEmpty ? '未知歌手' : subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      compact
-                          ? _formatLastPlayed(track.lastPlayedAt)
-                          : _formatDuration(track.duration),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Tooltip(
-                      message: '更多操作',
-                      child: IconButton(
-                        onPressed: () => showTrackActionsSheet(context, track),
-                        icon: const Icon(Icons.more_vert_rounded),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryArtwork extends StatelessWidget {
-  const _HistoryArtwork({required this.track});
-
-  final MusicTrack track;
-
-  @override
-  Widget build(BuildContext context) {
-    return CachedArtwork(
-      imageUrl: track.artworkUrl,
-      size: 40,
-      borderRadius: AppRadiusTokens.desktopSm,
-      semanticLabel: track.artworkUrl.isEmpty ? '无封面' : '《${track.title}》封面',
+        _HistoryLoadFooter(state: state),
+      ],
     );
   }
 }
@@ -333,9 +149,14 @@ class _HistoryLoadFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.isLoadingMore) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(AppSpacingTokens.sectionPadding),
-        child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       );
     }
     if (state.status == HistoryStatus.failure) {
@@ -364,54 +185,24 @@ class _HistoryLoadFooter extends StatelessWidget {
   }
 }
 
-class _HistoryGroup {
-  const _HistoryGroup(this.label, this.items);
-
-  final String label;
-  final List<_HistoryItem> items;
-}
-
-class _HistoryItem {
-  const _HistoryItem(this.track, this.index);
-
-  final MusicTrack track;
-  final int index;
-}
-
-List<_HistoryGroup> _groupHistory(List<MusicTrack> tracks, {DateTime? now}) {
-  final reference = now ?? DateTime.now();
-  final today = DateTime(reference.year, reference.month, reference.day);
-  final yesterday = today.subtract(const Duration(days: 1));
-  final groups = <String, List<_HistoryItem>>{};
-  for (var index = 0; index < tracks.length; index++) {
-    final playedAt = tracks[index].lastPlayedAt;
-    final day = playedAt == null
-        ? null
-        : DateTime(playedAt.year, playedAt.month, playedAt.day);
-    final label = day == today
-        ? '今天'
-        : day == yesterday
-        ? '昨天'
-        : '更早';
-    groups.putIfAbsent(label, () => []).add(_HistoryItem(tracks[index], index));
+Future<void> _playAllHistory(
+  BuildContext context,
+  HistoryState state, {
+  bool shuffled = false,
+}) {
+  if (shuffled) {
+    return PlayerNavigation.shuffleAllAndOpenPlayer(
+      context,
+      loadedTracks: state.tracks,
+      allLoaded: !state.hasMore,
+      fetchAll: () => context.read<HistoryCubit>().fetchAllTracks(),
+    );
   }
-  return [
-    for (final label in const ['今天', '昨天', '更早'])
-      if (groups[label] case final items?) _HistoryGroup(label, items),
-  ];
-}
 
-String _formatLastPlayed(DateTime? value) {
-  if (value == null) return '播放时间未知';
-  final month = value.month.toString().padLeft(2, '0');
-  final day = value.day.toString().padLeft(2, '0');
-  final hour = value.hour.toString().padLeft(2, '0');
-  final minute = value.minute.toString().padLeft(2, '0');
-  return '$month-$day $hour:$minute';
-}
-
-String _formatDuration(Duration value) {
-  final minutes = value.inMinutes;
-  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return '$minutes:$seconds';
+  return PlayerNavigation.playAllAndOpenPlayer(
+    context,
+    loadedTracks: state.tracks,
+    allLoaded: !state.hasMore,
+    fetchAll: () => context.read<HistoryCubit>().fetchAllTracks(),
+  );
 }

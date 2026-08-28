@@ -26,23 +26,17 @@ class LibraryTrackSliver extends StatelessWidget {
     required this.state,
     required this.horizontalPadding,
     required this.currentTrackId,
-    required this.onPlayAll,
-    required this.onShuffleAll,
     required this.onTrackTap,
     required this.desktopTrailingBuilder,
     required this.mobileItemBuilder,
-    this.desktopToolbarTrailing,
   });
 
   final LibraryState state;
   final double horizontalPadding;
   final String? currentTrackId;
-  final VoidCallback onPlayAll;
-  final VoidCallback onShuffleAll;
   final ValueChanged<int> onTrackTap;
   final MusicTrackTableTrailingBuilder desktopTrailingBuilder;
   final LibraryTrackItemBuilder mobileItemBuilder;
-  final Widget? desktopToolbarTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +45,12 @@ class LibraryTrackSliver extends StatelessWidget {
     }
     final wide = AppBreakpoints.usesWideContent(context);
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
       sliver: SliverMainAxisGroup(
         slivers: [
           if (wide)
@@ -59,15 +58,10 @@ class LibraryTrackSliver extends StatelessWidget {
               child: MusicTrackTable(
                 tracks: state.tracks,
                 currentTrackId: currentTrackId,
-                showActionBar: true,
+                showActionBar: false,
                 libraryStyle: true,
-                trackCountLabel:
-                    '${state.totalTrackCount ?? state.tracks.length} 首',
                 onTrackTap: (index, _) => onTrackTap(index),
-                onPlayAll: onPlayAll,
-                onShuffleAll: onShuffleAll,
                 trailingBuilder: desktopTrailingBuilder,
-                actionBarTrailing: desktopToolbarTrailing,
               ),
             )
           else ...[
@@ -112,7 +106,9 @@ class LibraryAlbumSliver extends StatelessWidget {
         crossAxisCount: libraryGridCount(width),
         mainAxisSpacing: compact ? 14 : 18,
         crossAxisSpacing: compact ? 12 : 18,
-        childAspectRatio: compact ? 0.80 : 0.72,
+        // Two text lines below a square artwork need extra vertical room on
+        // desktop as well; otherwise fractional text metrics can overflow.
+        childAspectRatio: compact ? 0.75 : 0.69,
       ),
       childCount: state.albums.length,
       itemBuilder: (context, index) {
@@ -144,7 +140,7 @@ class LibraryArtistSliver extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.artists.isEmpty && state.genres.isEmpty) {
       return const SliverPadding(
-        padding: EdgeInsets.only(bottom: 18),
+        padding: EdgeInsets.only(bottom: AppPageLayout.contentBottomInset),
         sliver: AppSliverStateView.message(message: '当前还没有歌手。'),
       );
     }
@@ -153,7 +149,12 @@ class LibraryArtistSliver extends StatelessWidget {
     final desktop = AppBreakpoints.usesDesktopToolbar(context);
     final artists = sortLibraryArtists(state.artists);
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
       sliver: compact
           ? SliverList.builder(
               itemCount: state.artists.length,
@@ -178,17 +179,18 @@ class LibraryArtistSliver extends StatelessWidget {
               },
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: libraryGridCount(width),
-                mainAxisSpacing: desktop ? 56 : 24,
-                crossAxisSpacing: desktop ? 48 : 32,
-                mainAxisExtent: desktop ? 288 : 206,
+                mainAxisSpacing: desktop ? 32 : 24,
+                crossAxisSpacing: desktop ? 24 : 32,
+                mainAxisExtent: desktop ? 212 : 206,
               ),
             ),
     );
   }
 }
 
-List<MusicArtist> sortLibraryArtists(List<MusicArtist> artists) => [...artists]
-  ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+List<MusicArtist> sortLibraryArtists(List<MusicArtist> artists) =>
+    [...artists]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
 class _MobileArtistRow extends StatelessWidget {
   const _MobileArtistRow({required this.artist, required this.onTap});
@@ -209,7 +211,9 @@ class _MobileArtistRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 80),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacingTokens.listTileVPadding,
+            ),
             child: Row(
               children: [
                 CachedArtwork(
@@ -312,7 +316,12 @@ class _LibraryGridSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 18),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
       sliver: SliverMainAxisGroup(
         slivers: [
           SliverGrid(

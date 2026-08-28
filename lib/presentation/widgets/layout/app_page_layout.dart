@@ -14,6 +14,12 @@ final class AppPageLayout {
   static const double sectionTitleBottomGap =
       AppSpacingTokens.sectionTitleBottomGap;
 
+  static double contentTopInset(BuildContext context) {
+    return AppBreakpoints.isCompact(context)
+        ? compactTopInset
+        : topInset;
+  }
+
   static double horizontalPadding(BuildContext context) {
     return switch (AppBreakpoints.of(context)) {
       AppLayoutSize.compact => AppSpacingTokens.pageHorizontalCompact,
@@ -25,20 +31,30 @@ final class AppPageLayout {
 
   static EdgeInsets pagePadding(
     BuildContext context, {
-    double top = topInset,
+    double? top,
     double bottom = contentBottomInset,
   }) {
     final horizontal = horizontalPadding(context);
-    return EdgeInsets.fromLTRB(horizontal, top, horizontal, bottom);
+    return EdgeInsets.fromLTRB(
+      horizontal,
+      top ?? contentTopInset(context),
+      horizontal,
+      bottom,
+    );
   }
 
   static EdgeInsets headerPadding(
     BuildContext context, {
-    double top = topInset,
+    double? top,
     double bottom = headerBottomGap,
   }) {
     final horizontal = horizontalPadding(context);
-    return EdgeInsets.fromLTRB(horizontal, top, horizontal, bottom);
+    return EdgeInsets.fromLTRB(
+      horizontal,
+      top ?? contentTopInset(context),
+      horizontal,
+      bottom,
+    );
   }
 
   static EdgeInsets sectionPadding(

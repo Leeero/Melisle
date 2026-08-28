@@ -123,6 +123,36 @@ class _MusicTrackTableActionBar extends StatelessWidget {
           MetaPill(label: countLabel, size: MetaPillSize.compact),
         ],
         const Spacer(),
+        MusicTrackTableActions(
+          onPlayAll: onPlayAll,
+          onShuffleAll: onShuffleAll,
+          onAddAllToQueue: onAddAllToQueue,
+          trailing: trailing,
+        ),
+      ],
+    );
+  }
+}
+
+class MusicTrackTableActions extends StatelessWidget {
+  const MusicTrackTableActions({
+    super.key,
+    this.onPlayAll,
+    this.onShuffleAll,
+    this.onAddAllToQueue,
+    this.trailing,
+  });
+
+  final VoidCallback? onPlayAll;
+  final VoidCallback? onShuffleAll;
+  final VoidCallback? onAddAllToQueue;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         AppActionButton(
           icon: Icons.play_arrow_rounded,
           label: '播放全部',
@@ -172,14 +202,14 @@ class _MusicTrackTableHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final showAlbum = constraints.maxWidth >= (playlistStyle ? 680 : 620);
-        final showQuality = libraryStyle && constraints.maxWidth >= 760;
+        final showQuality = libraryStyle && constraints.maxWidth >= 1120;
         final horizontalPadding = libraryStyle
             ? 20.0
             : playlistStyle
             ? 16.0
             : 12.0;
         final verticalPadding = libraryStyle
-            ? 10.0
+            ? 6.0
             : playlistStyle
             ? 8.0
             : 4.0;
@@ -189,7 +219,7 @@ class _MusicTrackTableHeader extends StatelessWidget {
             horizontalPadding,
             verticalPadding,
             horizontalPadding,
-            libraryStyle ? 10 : playlistStyle ? 8 : 8,
+            libraryStyle ? 6 : playlistStyle ? 8 : 8,
           ),
           decoration: BoxDecoration(
             border: Border(
@@ -209,21 +239,27 @@ class _MusicTrackTableHeader extends StatelessWidget {
                 ),
               ),
               SizedBox(width: playlistStyle ? 0 : 12),
-              Expanded(flex: 4, child: Text('标题', style: labelStyle)),
+              Expanded(
+                flex: libraryStyle ? 5 : 4,
+                child: Text('标题', style: labelStyle),
+              ),
               if (libraryStyle) ...[
                 const SizedBox(width: 12),
-                Expanded(flex: 2, child: Text('歌手', style: labelStyle)),
+                Expanded(flex: 3, child: Text('歌手', style: labelStyle)),
               ],
               if (showAlbum) ...[
                 SizedBox(width: playlistStyle ? 0 : 12),
                 if (playlistStyle)
                   SizedBox(width: 192, child: Text('专辑', style: labelStyle))
                 else
-                  Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
+                  Expanded(
+                    flex: libraryStyle ? 2 : 3,
+                    child: Text('专辑', style: labelStyle),
+                  ),
               ],
               if (showQuality) ...[
                 const SizedBox(width: 12),
-                SizedBox(width: 64, child: Text('质量', style: labelStyle)),
+                SizedBox(width: 56, child: Text('质量', style: labelStyle)),
               ],
               SizedBox(width: playlistStyle ? 0 : 12),
               SizedBox(
@@ -331,13 +367,11 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                   final showAlbum = constraints.maxWidth >=
                       (widget.playlistStyle ? 680 : 620);
                   final showQuality =
-                      widget.libraryStyle && constraints.maxWidth >= 760;
+                      widget.libraryStyle && constraints.maxWidth >= 1120;
 
                   return ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: widget.libraryStyle || widget.playlistStyle
-                          ? 56
-                          : 0,
+                      minHeight: 44,
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -347,10 +381,10 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                             ? 16
                             : 12,
                         vertical: widget.libraryStyle
-                            ? 6
+                            ? 2
                             : widget.playlistStyle
-                            ? 0
-                            : 8,
+                            ? 2
+                            : 4,
                       ),
                       child: Row(
                         children: [
@@ -383,7 +417,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           ),
                           SizedBox(width: widget.playlistStyle ? 0 : 12),
                           Expanded(
-                            flex: 4,
+                            flex: widget.libraryStyle ? 5 : 4,
                             child: _MusicTrackTitleCell(
                               track: track,
                               isCurrent: widget.isCurrent,
@@ -394,7 +428,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           if (widget.libraryStyle) ...[
                             const SizedBox(width: 12),
                             Expanded(
-                              flex: 2,
+                              flex: 3,
                               child: _MusicTrackTableText(
                                 MediaDisplayText.artistName(track.artistName),
                                 highlighted: widget.isCurrent,
@@ -413,7 +447,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                               )
                             else
                               Expanded(
-                                flex: 3,
+                                flex: widget.libraryStyle ? 2 : 3,
                                 child: _MusicTrackTableText(
                                   MediaDisplayText.albumTitle(track.albumTitle),
                                   highlighted: widget.isCurrent,
@@ -423,7 +457,7 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                           if (showQuality) ...[
                             const SizedBox(width: 12),
                             SizedBox(
-                              width: 64,
+                              width: 56,
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: MetaPill(
@@ -520,15 +554,18 @@ class _MusicTrackTitleCell extends StatelessWidget {
         Row(
           children: [
             Flexible(
-              child: Text(
-                displayTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: isCurrent
-                      ? colorScheme.primary
-                      : colorScheme.onSurface,
-                  fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
+              child: Tooltip(
+                message: displayTitle,
+                child: Text(
+                  displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: isCurrent
+                        ? colorScheme.primary
+                        : colorScheme.onSurface,
+                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -540,13 +577,16 @@ class _MusicTrackTitleCell extends StatelessWidget {
         ),
         if (showSubtitle) ...[
           const SizedBox(height: 2),
-          Text(
-            displayArtist,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.muted,
-              fontSize: 12,
+          Tooltip(
+            message: displayArtist,
+            child: Text(
+              displayArtist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.muted,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -585,15 +625,18 @@ class _MusicTrackTableText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: highlighted
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurfaceVariant,
-        fontSize: 13,
+    return Tooltip(
+      message: text,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: highlighted
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 13,
+        ),
       ),
     );
   }

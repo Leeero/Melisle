@@ -11,6 +11,7 @@ import 'package:cross_platform_music_player/presentation/blocs/settings/app_sett
 import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/pages/library/library_filter_views.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -54,7 +55,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders the albums view', (tester) async {
+  testWidgets('renders the compact albums view without overflow', (
+    tester,
+  ) async {
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+
     await _pumpSliver(
       tester,
       LibraryAlbumSliver(
@@ -74,9 +80,43 @@ void main() {
         ),
         horizontalPadding: 20,
       ),
+      size: const Size(375, 812),
     );
 
     expect(find.text('未知专辑'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders desktop albums with long metadata without overflow', (
+    tester,
+  ) async {
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+
+    await _pumpSliver(
+      tester,
+      LibraryAlbumSliver(
+        state: const LibraryState(
+          status: LibraryStatus.success,
+          currentFilter: LibraryFilter.albums,
+          albums: [
+            MusicAlbum(
+              id: 'album',
+              title: '用于验证桌面端专辑卡片高度不会发生渲染溢出的超长专辑名称',
+              artistName: '用于验证元数据会安全截断的超长歌手名称',
+              artworkUrl: '',
+              trackCount: 100,
+              year: 2026,
+            ),
+          ],
+          hasMore: false,
+        ),
+        horizontalPadding: 48,
+      ),
+      size: const Size(1440, 900),
+    );
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders the compact artists view as rows', (tester) async {
@@ -105,7 +145,7 @@ void main() {
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
 
-  testWidgets('renders the desktop artist directory in the V3 layout', (
+  testWidgets('renders the desktop artist directory as a compact avatar grid', (
     tester,
   ) async {
     await _pumpSliver(
@@ -144,6 +184,22 @@ void main() {
     expect(find.text('#'), findsNothing);
     expect(find.text('(1982) 郑绪岚'), findsOneWidget);
     expect(find.text('暂无统计'), findsNWidgets(3));
+    expect(find.byIcon(Icons.person_outline_rounded), findsNWidgets(3));
+    final firstArtistCard = find.byType(MusicArtistGridCard).first;
+    final hoverContainerFinder = find
+        .descendant(
+          of: firstArtistCard,
+          matching: find.byType(AnimatedContainer),
+        )
+        .first;
+    final hoverContainer = tester.widget<AnimatedContainer>(
+      hoverContainerFinder,
+    );
+    final idleHoverColor = (hoverContainer.decoration! as BoxDecoration).color!;
+    final hoverColor = Theme.of(tester.element(firstArtistCard)).hoverWash;
+    expect(idleHoverColor.a, 0);
+    expect(idleHoverColor.withValues(alpha: 1), hoverColor);
+    expect(tester.getSize(hoverContainerFinder).height, lessThan(212));
     final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
     expect(
       (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
@@ -153,7 +209,7 @@ void main() {
     expect(
       tester
           .widgetList<CachedArtwork>(find.byType(CachedArtwork))
-          .every((artwork) => artwork.size == 150),
+          .every((artwork) => artwork.size == 112),
       isTrue,
     );
     expect(tester.takeException(), isNull);

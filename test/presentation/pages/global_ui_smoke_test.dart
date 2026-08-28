@@ -31,8 +31,11 @@ import 'package:cross_platform_music_player/presentation/pages/player/player_pag
 import 'package:cross_platform_music_player/presentation/pages/playlists/playlist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -85,24 +88,31 @@ void main() {
       build: () => harness.wrapRouter(router),
       verify: () {
         expect(find.text('设置'), findsWidgets);
-        expect(find.text('自定义歌词与封面'), findsOneWidget);
+        expect(find.text('歌词与封面'), findsOneWidget);
         expect(find.text('歌曲封面来源'), findsNothing);
         expect(find.text('歌词来源'), findsNothing);
       },
     );
 
-    await tester.tap(find.text('自定义歌词与封面'));
+    await tester.tap(find.text('歌词与封面'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
     await tester.pump(const Duration(milliseconds: 320));
 
     expect(tester.takeException(), isNull);
-    expect(find.byTooltip('返回'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
     expect(find.text('歌词与封面'), findsWidgets);
     expect(find.text('自定义媒体来源'), findsOneWidget);
     expect(find.text('歌曲封面来源'), findsOneWidget);
     expect(find.text('歌词来源'), findsOneWidget);
     expect(find.text('自定义地址'), findsNothing);
+    expect(tester.getTopLeft(find.text('歌词与封面').last).dx, closeTo(24, 0.1));
+
+    final contentList = tester.widget<ListView>(find.byType(ListView));
+    expect(
+      contentList.padding,
+      const EdgeInsets.fromLTRB(24, 0, 24, AppPageLayout.contentBottomInset),
+    );
 
     await tester.tap(find.bySemanticsLabel('开启 歌曲封面来源'));
     await tester.pump();
@@ -121,7 +131,9 @@ void main() {
     expect(find.text('请输入合法的 http/https URL。'), findsWidgets);
   });
 
-  testWidgets('CustomMediaSourcesPage_desktopExposesSaveAll', (tester) async {
+  testWidgets('CustomMediaSourcesPage_desktopExposesCenteredSave', (
+    tester,
+  ) async {
     final harness = await _SettingsHarness.create();
     addTearDown(harness.dispose);
     addTearDown(tester.view.resetPhysicalSize);
@@ -138,7 +150,23 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('测试连接'), findsOneWidget);
-    expect(find.text('保存全部'), findsOneWidget);
+    expect(find.text('保存全部'), findsNothing);
+    expect(find.text('保存'), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
+
+    final saveButton = find.widgetWithText(FilledButton, '保存');
+    final saveIcon = find.descendant(
+      of: saveButton,
+      matching: find.byIcon(Icons.save_rounded),
+    );
+    final saveLabel = find.descendant(
+      of: saveButton,
+      matching: find.text('保存'),
+    );
+    expect(
+      tester.getCenter(saveIcon).dy,
+      closeTo(tester.getCenter(saveLabel).dy, 1),
+    );
   });
 
   testWidgets('DownloadsPage_responsiveSmoke_hasNoLayoutExceptions', (
@@ -152,10 +180,15 @@ void main() {
       build: () => harness.wrap(const DownloadsPage()),
       verify: (_) {
         expect(find.byType(AppContentPage), findsOneWidget);
-        expect(find.text('下载管理'), findsOneWidget);
+        expect(find.text('下载管理'), findsNothing);
         expect(find.text('管理离线缓存、下载任务和本地存储。'), findsNothing);
-        expect(find.text('存储位置'), findsOneWidget);
-        expect(find.text('修改'), findsOneWidget);
+        expect(find.text('已下载'), findsOneWidget);
+        expect(find.text('下载中'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('download-quality-menu')),
+          findsOneWidget,
+        );
+        expect(find.byTooltip('修改下载目录'), findsOneWidget);
         expect(find.text('还没有下载内容'), findsOneWidget);
       },
     );
@@ -174,13 +207,36 @@ void main() {
     await tester.pumpWidget(harness.wrap(const DownloadsPage()));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
-    await tester.tap(find.text('修改'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
+    await tester.tap(find.byTooltip('修改下载目录'));
+    await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.text('选择文件夹'), findsOneWidget);
-    expect(find.byTooltip('应用路径'), findsOneWidget);
+    expect(find.text('保存更改'), findsOneWidget);
+    expect(find.text('当前保存位置'), findsOneWidget);
+    expect(find.byType(AppSheetScaffold), findsNothing);
+  });
+
+  testWidgets('DownloadsPage_qualityMenu_updatesDefaultQuality', (
+    tester,
+  ) async {
+    final harness = _DownloadsHarness.create();
+    addTearDown(harness.dispose);
+
+    await tester.pumpWidget(harness.wrap(const DownloadsPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('download-quality-menu')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('自动选择'), findsOneWidget);
+    expect(find.text('按网络与可用音源选择'), findsOneWidget);
+    expect(find.text('320 kbps · 兼顾细节与空间'), findsOneWidget);
+
+    await tester.tap(find.text('无损').last);
+    await tester.pumpAndSettle();
+
+    expect(harness.downloadsCubit.state.downloadQuality, AudioQuality.lossless);
+    expect(find.text('下载音质  无损'), findsOneWidget);
   });
 
   testWidgets('LibraryPage_mobileLoadingState_hidesEmptyState', (tester) async {
@@ -280,7 +336,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.bySemanticsLabel('搜索歌曲'), findsNothing);
-    expect(find.text('歌曲'), findsNothing);
+    expect(find.text('歌曲'), findsOneWidget);
     expect(find.text('专辑'), findsNothing);
     expect(find.text('歌手'), findsNothing);
     expect(find.text('歌单'), findsNothing);
@@ -369,13 +425,26 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('正在播放'), findsOneWidget);
       expect(find.text('夜曲'), findsWidgets);
-      expect(find.textContaining('播放队列'), findsOneWidget);
-      expect(find.text('红豆'), findsOneWidget);
+      expect(find.text('红豆'), findsNothing);
       expect(find.text('HI-RES'), findsOneWidget);
       expect(find.text('FLAC'), findsOneWidget);
       expect(find.byTooltip('收起播放页'), findsOneWidget);
       expect(find.byTooltip('更多操作'), findsOneWidget);
       expect(find.byTooltip('播放队列'), findsWidgets);
+
+      await tester.tap(find.byTooltip('播放队列').first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+
+      expect(find.text('红豆'), findsOneWidget);
+      expect(find.byTooltip('定位到当前播放'), findsOneWidget);
+      expect(find.byTooltip('关闭播放队列'), findsNothing);
+
+      await tester.tapAt(const Offset(24, 420));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+
+      expect(find.text('红豆'), findsNothing);
 
       await tester.tap(find.byTooltip('更多操作'));
       await tester.pump();
@@ -385,7 +454,6 @@ void main() {
       expect(find.text('添加到当前队列'), findsOneWidget);
       expect(find.text('播放音质'), findsOneWidget);
       expect(find.text('睡眠定时'), findsOneWidget);
-      expect(find.byTooltip('清空队列'), findsOneWidget);
     },
   );
 
@@ -510,10 +578,15 @@ void main() {
 
     final coverRect = tester.getRect(find.byType(CachedArtwork).first);
     final titleRect = tester.getRect(find.text('深夜独处'));
+    final actionsRect = tester.getRect(find.byType(PlayAllButton));
 
     expect(titleRect.left, greaterThan(coverRect.right));
     expect(titleRect.top, lessThan(coverRect.bottom));
     expect(titleRect.bottom, greaterThan(coverRect.top));
+    expect(
+      actionsRect.bottom,
+      closeTo(coverRect.bottom + AppSpacingTokens.compactGap, 0.1),
+    );
   });
 }
 

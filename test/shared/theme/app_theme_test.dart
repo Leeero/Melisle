@@ -10,14 +10,14 @@ void main() {
 
       expect(light.colorScheme.primary, AppColorTokens.lightPrimary);
       expect(dark.colorScheme.primary, AppColorTokens.darkPrimary);
-      expect(light.colorScheme.primaryContainer, const Color(0xFFE8F0FF));
-      expect(light.colorScheme.onPrimaryContainer, const Color(0xFF12346B));
-      expect(light.colorScheme.onSurface, const Color(0xFF1B1E26));
-      expect(light.colorScheme.onSurfaceVariant, const Color(0xFF667085));
-      expect(light.colorScheme.outlineVariant, const Color(0xFFDDE2EA));
-      expect(dark.colorScheme.surface, const Color(0xFF1A1918));
-      expect(dark.colorScheme.surfaceContainer, const Color(0xFF282C33));
-      expect(dark.colorScheme.outline, const Color(0xFF596172));
+      expect(light.colorScheme.primaryContainer, const Color(0xFFDDF5EC));
+      expect(light.colorScheme.onPrimaryContainer, const Color(0xFF06392D));
+      expect(light.colorScheme.onSurface, const Color(0xFF142028));
+      expect(light.colorScheme.onSurfaceVariant, const Color(0xFF566875));
+      expect(light.colorScheme.outlineVariant, const Color(0xFFD5E1E3));
+      expect(dark.colorScheme.surface, const Color(0xFF121B24));
+      expect(dark.colorScheme.surfaceContainer, const Color(0xFF1A2631));
+      expect(dark.colorScheme.outline, const Color(0xFF5A6B78));
       expect(light.accentGreen, light.colorScheme.primary);
       expect(dark.accentGreen, dark.colorScheme.primary);
     });
@@ -74,9 +74,17 @@ void main() {
     });
 
     test('keeps the canonical mobile spacing and MiniPlayer height', () {
-      expect(AppSpacingTokens.pageHorizontalCompact, 20);
-      expect(AppSpacingTokens.mobilePageX, 20);
-      expect(AppSpacingTokens.mobileMiniPlayerHeight, 60);
+      expect(AppSpacingTokens.pageTopCompact, 24);
+      expect(AppSpacingTokens.pageHorizontalCompact, 24);
+      expect(AppSpacingTokens.mobilePageX, 24);
+      expect(AppSpacingTokens.mobileMiniPlayerHeight, 64);
+    });
+
+    test('keeps the canonical medium and wide page spacing', () {
+      expect(AppSpacingTokens.pageTop, 32);
+      expect(AppSpacingTokens.pageHorizontalMedium, 32);
+      expect(AppSpacingTokens.pageHorizontalExpanded, 48);
+      expect(AppSpacingTokens.contentBottom, 24);
     });
 
     test('keeps the V3-46 desktop shell dimensions', () {

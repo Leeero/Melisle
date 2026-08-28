@@ -77,6 +77,8 @@ void main() {
   testWidgets('library table renders quality and hover actions', (
     tester,
   ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
     await tester.pumpWidget(
       _buildWidget(
         MusicTrackTable(
@@ -112,6 +114,46 @@ void main() {
     expect(find.byTooltip('更多操作'), findsOneWidget);
     await gesture.removePointer();
   });
+
+  testWidgets('library table prioritizes title and artist on narrow desktop', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1000, 900));
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          libraryStyle: true,
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    expect(find.text('标题'), findsOneWidget);
+    expect(find.text('歌手'), findsOneWidget);
+    expect(find.text('质量'), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('track-row-play-track-1'))).height,
+      44,
+    );
+  });
+
+  testWidgets('current track uses a distinct playing indicator', (tester) async {
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          currentTrackId: _track.id,
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.graphic_eq_rounded), findsOneWidget);
+    expect(find.text('1'), findsNothing);
+  });
+
 }
 
 Widget _buildWidget(Widget child) {

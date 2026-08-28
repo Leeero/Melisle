@@ -33,6 +33,11 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
     final album = widget.album;
     final displayTitle = MediaDisplayText.albumTitle(album.title);
     final displayArtist = MediaDisplayText.artistName(album.artistName);
+    final metadata = [
+      displayArtist,
+      if (album.year != null) '${album.year}',
+      '${album.trackCount} 首',
+    ].join(' · ');
     final textTheme = theme.textTheme;
     final compact = widget.compact;
     final contentPadding = compact
@@ -102,6 +107,10 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                               size: constraints.maxWidth,
                               borderRadius: 0,
                               semanticLabel: '《$displayTitle》专辑封面',
+                              placeholderBuilder: (_) =>
+                                  _AlbumArtworkPlaceholder(
+                                    size: constraints.maxWidth,
+                                  ),
                             );
                           },
                         ),
@@ -118,28 +127,71 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
             ),
             Padding(
               padding: contentPadding,
-              child: Text(
-                displayTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: titleStyle,
+              child: Tooltip(
+                message: displayTitle,
+                child: Text(
+                  displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                ),
               ),
             ),
             SizedBox(height: compact ? 1 : 2),
             Padding(
               padding: contentPadding,
-              child: Text(
-                [
-                  displayArtist,
-                  if (album.year != null) '${album.year}',
-                  '${album.trackCount} 首',
-                ].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: subtitleStyle,
+              child: Tooltip(
+                message: metadata,
+                child: Text(
+                  metadata,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: subtitleStyle,
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AlbumArtworkPlaceholder extends StatelessWidget {
+  const _AlbumArtworkPlaceholder({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final compact = size < 140;
+
+    return ExcludeSemantics(
+      child: ColoredBox(
+        color: colorScheme.surfaceContainerHigh,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.album_outlined,
+                size: compact ? 28 : 40,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.62),
+              ),
+              if (!compact) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '无封面',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.78,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

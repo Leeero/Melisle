@@ -39,53 +39,96 @@ class SettingsPage extends StatelessWidget {
             );
           }
 
-          final horizontalPadding = AppPageLayout.horizontalPadding(context);
-          final colorScheme = Theme.of(context).colorScheme;
-
           return AppContentPage(
-          header: const AppPageHeader(
-            title: '设置',
-            automaticImplyLeading: false,
-          ),
-          body: ListView(
-            padding: EdgeInsets.only(
-              left: horizontalPadding,
-              right: horizontalPadding,
-              top: 0,
-              bottom: AppPageLayout.contentBottomInset,
+            header: const AppPageHeader(
+              title: '设置',
+              description: '让乐岛更适合你的聆听习惯',
+              titleMaxWidth: 300,
+              automaticImplyLeading: false,
             ),
-            children: [
-              const _SettingsSection(title: '服务器', child: _ServerCard()),
-              const SizedBox(height: AppPageLayout.sectionGap),
-              const _SettingsSection(title: '播放', child: _PlaybackCard()),
-              const SizedBox(height: AppPageLayout.sectionGap),
-              _SettingsSection(
-                title: '外观',
-                child: Column(
-                  children: [
-                    const _AppearanceCard(),
-                    const SizedBox(height: 14),
-                    AppBreakpoints.isCompact(context)
-                        ? const _CustomMediaSourcesEntryCard()
-                        : const _CustomMediaSourcesCard(),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppPageLayout.sectionGap),
-              _SettingsSection(
-                title: '下载',
-                child: _DownloadsSettingsCard(colorScheme: colorScheme),
-              ),
-              const SizedBox(height: AppPageLayout.sectionGap),
-              _SettingsSection(
-                title: '关于',
-                child: _AboutCard(colorScheme: colorScheme),
-              ),
-            ],
-          ),
-        );
+            body: const _SettingsOverview(),
+          );
         },
       ),
+    );
+  }
+}
+
+class _SettingsOverview extends StatelessWidget {
+  const _SettingsOverview();
+
+  @override
+  Widget build(BuildContext context) {
+    final horizontalPadding = AppPageLayout.horizontalPadding(context);
+    final desktop = AppBreakpoints.usesDesktopShell(context);
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: desktop ? 820 : 1120),
+          child: desktop
+              ? const _DesktopSettingsLayout()
+              : const _CompactSettingsLayout(),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactSettingsLayout extends StatelessWidget {
+  const _CompactSettingsLayout();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      key: ValueKey('settings-compact-layout'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SettingsSection(title: '当前服务器', child: _CompactServerStatus()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '常用偏好', child: _CommonPreferencesCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '媒体与设备', child: _SecondarySettingsCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '存储', child: _StorageCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '关于', child: _AboutCard()),
+        SizedBox(height: 14),
+        _LogoutCard(),
+      ],
+    );
+  }
+}
+
+class _DesktopSettingsLayout extends StatelessWidget {
+  const _DesktopSettingsLayout();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      key: ValueKey('settings-desktop-layout'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SettingsSection(title: '当前服务器', child: _ServerCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '常用偏好', child: _CommonPreferencesCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(
+          title: '媒体与设备',
+          child: _SecondarySettingsCard(desktop: true),
+        ),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '存储', child: _StorageCard()),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(title: '关于', child: _AboutCard()),
+      ],
     );
   }
 }
@@ -102,58 +145,52 @@ class CustomMediaSourcesPage extends StatelessWidget {
         if (feedback != null) AppSnackBar.show(context, feedback.message);
       },
       child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-      buildWhen: (a, b) => a.isLoading != b.isLoading,
-      builder: (context, state) {
-        if (state.isLoading) {
-          return const AppContentPage(
-            header: AppPageHeader(title: '歌词与封面'),
-            body: AppBodyStateView.loading(),
-          );
-        }
+        buildWhen: (a, b) => a.isLoading != b.isLoading,
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const AppContentPage(
+              header: AppPageHeader(
+                title: '歌词与封面',
+                automaticImplyLeading: false,
+              ),
+              body: AppBodyStateView.loading(),
+            );
+          }
 
-        final horizontalPadding = AppPageLayout.horizontalPadding(context);
-        final compact = AppBreakpoints.isCompact(context);
+          final compact = AppBreakpoints.isCompact(context);
 
-        return AppContentPage(
-          header: AppPageHeader(
-            title: '歌词与封面',
-            description: compact ? null : '配置自定义媒体来源地址。',
-            titleMaxWidth: compact ? 220 : 300,
-            trailing: compact
-                ? null
-                : FilledButton.icon(
-                    onPressed: context
-                        .read<AppSettingsCubit>()
-                        .saveCustomMediaSources,
-                    icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('保存全部'),
-                  ),
-            leading: compact
-                ? AppBackButton(
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).maybePop();
-                        return;
-                      }
-                      context.go('/settings');
-                    },
-                  )
-                : null,
-          ),
-          body: ListView(
-            padding: EdgeInsets.only(
-              left: horizontalPadding,
-              right: horizontalPadding,
-              bottom: AppPageLayout.contentBottomInset,
+          return AppContentPage(
+            header: AppPageHeader(
+              title: '歌词与封面',
+              description: compact ? null : '配置自定义媒体来源地址。',
+              titleMaxWidth: compact ? 220 : 300,
+              automaticImplyLeading: false,
+              trailing: compact
+                  ? null
+                  : FilledButton.icon(
+                      onPressed: context
+                          .read<AppSettingsCubit>()
+                          .saveCustomMediaSources,
+                      style: FilledButton.styleFrom(
+                        alignment: Alignment.center,
+                      ),
+                      icon: const Icon(Icons.save_rounded, size: 18),
+                      label: const Text('保存', style: TextStyle(height: 1)),
+                    ),
             ),
-            children: [
-              const _CustomMediaSourcesOverviewCard(),
-              const SizedBox(height: 14),
-              const _CustomMediaSourcesCard(showIntro: false),
-            ],
-          ),
-        );
-      },
+            body: ListView(
+              padding: AppPageLayout.sectionPadding(
+                context,
+                bottom: AppPageLayout.contentBottomInset,
+              ),
+              children: [
+                const _CustomMediaSourcesOverviewCard(),
+                const SizedBox(height: 14),
+                const _CustomMediaSourcesCard(showIntro: false),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -163,13 +200,13 @@ Future<void> _showLogoutConfirmation(BuildContext context) async {
   final confirmed = await showAppConfirmationDialog(
     context: context,
     title: '退出登录',
-    message: '退出后会清除当前设备上的登录态，需要重新输入服务器信息。',
+    message: '退出后会清除登录态、播放队列及当前账号的本地历史，需要重新输入服务器信息。',
     confirmLabel: '退出',
     icon: Icons.logout_rounded,
     tone: AppModalTone.danger,
   );
   if (confirmed && context.mounted) {
-    context.read<AuthCubit>().logout();
+    await context.read<AuthCubit>().logout();
   }
 }
 
@@ -204,8 +241,22 @@ class _ServerCard extends StatelessWidget {
           child: Column(
             children: [
               _HoverableListTile(
-                title: const Text('服务器地址'),
-                subtitle: Text(session?.normalizedServerUrl ?? '尚未连接服务器'),
+                leading: const _SettingRowIcon(icon: Icons.person_rounded),
+                title: Text(session?.userName ?? '尚未登录'),
+                subtitle: const Text('当前账号'),
+              ),
+              _SettingsDivider(colorScheme: colorScheme),
+              _HoverableListTile(
+                leading: const _SettingRowIcon(icon: Icons.link_rounded),
+                title: Text(session?.normalizedServerUrl ?? '尚未连接服务器'),
+                subtitle: const Text('服务器地址'),
+              ),
+              _SettingsDivider(colorScheme: colorScheme),
+              _HoverableListTile(
+                leading: _ConnectionIndicator(connected: connected),
+                title: Text(
+                  session == null ? '待连接' : _backendApiLabel(session),
+                ),
                 trailing: _SettingValue(
                   label: connected ? '已连接' : '未连接',
                   emphasized: connected,
@@ -213,19 +264,11 @@ class _ServerCard extends StatelessWidget {
               ),
               _SettingsDivider(colorScheme: colorScheme),
               _HoverableListTile(
-                title: const Text('服务类型'),
-                subtitle: Text(
-                  session == null ? '登录后显示当前后端服务' : '当前账号：${session.userName}',
+                leading: const _SettingRowIcon(
+                  icon: Icons.logout_rounded,
+                  danger: true,
                 ),
-                trailing: _SettingValue(
-                  label: session == null ? '待连接' : _backendApiLabel(session),
-                ),
-              ),
-              _SettingsDivider(colorScheme: colorScheme),
-              _HoverableListTile(
-                title: const Text('退出登录'),
-                subtitle: const Text('回到登录页后重新连接服务器。'),
-                trailing: const _SettingValue(label: '重新登录', chevron: true),
+                title: Text('退出登录', style: TextStyle(color: colorScheme.error)),
                 onTap: () => _showLogoutConfirmation(context),
               ),
             ],
@@ -236,57 +279,148 @@ class _ServerCard extends StatelessWidget {
   }
 }
 
-class _DownloadsSettingsCard extends StatelessWidget {
-  const _DownloadsSettingsCard({required this.colorScheme});
+class _CompactServerStatus extends StatelessWidget {
+  const _CompactServerStatus();
 
-  final ColorScheme colorScheme;
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthCubit, AuthState>(
+      buildWhen: (a, b) => a.status != b.status || a.session != b.session,
+      builder: (context, state) {
+        final session = state.session;
+        final connected = session != null;
+        return _SettingsGroupSurface(
+          child: _HoverableListTile(
+            leading: _ConnectionIndicator(connected: connected),
+            title: Text(
+              session == null ? '尚未连接' : '${_backendApiLabel(session)} · 已连接',
+            ),
+            subtitle: Text(session?.normalizedServerUrl ?? '请重新登录连接服务器'),
+            trailing: _SettingValue(label: session?.userName ?? '未登录'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StorageCard extends StatelessWidget {
+  const _StorageCard();
 
   @override
   Widget build(BuildContext context) {
     return _SettingsGroupSurface(
-      child: Column(
-        children: [
-          _HoverableListTile(
-            title: const Text('下载管理'),
-            subtitle: const Text('查看进行中与已下载的离线曲目。'),
-            trailing: const _SettingValue(label: '打开', chevron: true),
-            onTap: () => context.push('/downloads'),
-          ),
-          _SettingsDivider(colorScheme: colorScheme),
-          _HoverableListTile(
-            title: const Text('清理缓存'),
-            subtitle: const Text('清除临时数据，已下载离线曲目不会受到影响。'),
-            trailing: const _SettingValue(label: '清理', chevron: true),
-            onTap: () => _showClearCacheConfirmation(context),
-          ),
-        ],
+      child: _HoverableListTile(
+        leading: const _SettingRowIcon(icon: Icons.delete_outline_rounded),
+        title: const Text('清理缓存'),
+        subtitle: const Text('不会影响已下载的离线曲目。'),
+        trailing: const _SettingValue(label: '清理', chevron: true),
+        onTap: () => _showClearCacheConfirmation(context),
       ),
     );
   }
 }
 
 class _AboutCard extends StatelessWidget {
-  const _AboutCard({required this.colorScheme});
-
-  final ColorScheme colorScheme;
+  const _AboutCard();
 
   @override
   Widget build(BuildContext context) {
+    return const _SettingsGroupSurface(
+      child: _HoverableListTile(
+        leading: _SettingRowIcon(icon: Icons.info_outline_rounded),
+        title: Text('${AppConstants.appEnglishName} ${AppConstants.appName}'),
+        subtitle: Text(AppConstants.appSlogan),
+        trailing: _SettingValue(label: '1.0.0'),
+      ),
+    );
+  }
+}
+
+class _LogoutCard extends StatelessWidget {
+  const _LogoutCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return _SettingsGroupSurface(
-      child: Column(
-        children: [
-          const _HoverableListTile(
-            title: Text('应用'),
-            subtitle: Text(AppConstants.appSlogan),
-            trailing: _SettingValue(label: AppConstants.appEnglishName),
+      child: _HoverableListTile(
+        leading: const _SettingRowIcon(
+          icon: Icons.logout_rounded,
+          danger: true,
+        ),
+        title: Text('退出登录', style: TextStyle(color: colorScheme.error)),
+        onTap: () => _showLogoutConfirmation(context),
+      ),
+    );
+  }
+}
+
+class _SettingRowIcon extends StatelessWidget {
+  const _SettingRowIcon({
+    required this.icon,
+    this.emphasized = false,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final bool emphasized;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = danger
+        ? colorScheme.error
+        : emphasized
+        ? colorScheme.primary
+        : theme.muted;
+    final background = emphasized
+        ? theme.selectedWash.withValues(alpha: 0.72)
+        : theme.hoverWash.withValues(alpha: 0.34);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+      ),
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Icon(icon, size: 20, color: foreground),
+      ),
+    );
+  }
+}
+
+class _ConnectionIndicator extends StatelessWidget {
+  const _ConnectionIndicator({required this.connected});
+
+  final bool connected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: connected ? theme.success : theme.muted,
+            shape: BoxShape.circle,
+            boxShadow: connected
+                ? [
+                    BoxShadow(
+                      color: theme.success.withValues(alpha: 0.22),
+                      blurRadius: 10,
+                    ),
+                  ]
+                : null,
           ),
-          _SettingsDivider(colorScheme: colorScheme),
-          const _HoverableListTile(
-            title: Text('当前版本'),
-            subtitle: Text('跨平台自托管音乐播放器'),
-            trailing: _SettingValue(label: '1.0.0'),
-          ),
-        ],
+          child: const SizedBox(width: 12, height: 12),
+        ),
       ),
     );
   }
@@ -297,11 +431,13 @@ class _SettingValue extends StatelessWidget {
     required this.label,
     this.chevron = false,
     this.emphasized = false,
+    this.expanded,
   });
 
   final String label;
   final bool chevron;
   final bool emphasized;
+  final bool? expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -324,6 +460,15 @@ class _SettingValue extends StatelessWidget {
         if (chevron) ...[
           const SizedBox(width: 4),
           Icon(Icons.chevron_right_rounded, size: 17, color: foreground),
+        ] else if (expanded != null) ...[
+          const SizedBox(width: 4),
+          Icon(
+            expanded!
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 18,
+            color: foreground,
+          ),
         ],
       ],
     );
@@ -407,23 +552,112 @@ class _SettingsGroupSurface extends StatelessWidget {
   }
 }
 
-class _AppearanceCard extends StatelessWidget {
-  const _AppearanceCard();
+class _CommonPreferencesCard extends StatelessWidget {
+  const _CommonPreferencesCard();
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AppSettingsCubit, AppSettingsState>(
-      buildWhen: (a, b) => a.themeMode != b.themeMode,
+      buildWhen: (a, b) =>
+          a.defaultQuality != b.defaultQuality ||
+          a.gapBetweenTracks != b.gapBetweenTracks ||
+          a.themeMode != b.themeMode,
       builder: (context, state) {
+        final cubit = context.read<AppSettingsCubit>();
+        final colorScheme = Theme.of(context).colorScheme;
+        final desktop = AppBreakpoints.usesDesktopShell(context);
         return _SettingsGroupSurface(
-          child: _HoverableListTile(
-            title: const Text('主题'),
-            subtitle: const Text('浅色 / 深色 / 跟随系统。'),
-            trailing: _SettingValue(
-              label: _themeModeLabel(state.themeMode),
-              chevron: true,
-            ),
-            onTap: () => _pickTheme(context, state.themeMode),
+          child: Column(
+            children: [
+              _PreferencePickerTile<AudioQuality>(
+                menuKey: const ValueKey('quality-preference-menu'),
+                triggerSurfaceKey: const ValueKey(
+                  'quality-preference-trigger-surface',
+                ),
+                desktop: desktop,
+                leading: const _SettingRowIcon(
+                  icon: Icons.graphic_eq_rounded,
+                  emphasized: true,
+                ),
+                title: '在线音质',
+                subtitle: '新建播放队列时使用，当前播放队列不受影响。',
+                valueLabel: state.defaultQuality.label,
+                currentValue: state.defaultQuality,
+                options: [
+                  for (final quality in AudioQuality.values)
+                    _PreferenceMenuOption(
+                      value: quality,
+                      label: quality.label,
+                      description: _qualityDescription(quality),
+                    ),
+                ],
+                onMobileTap: () => _pickQuality(context, state, cubit),
+                onSelected: cubit.setDefaultQuality,
+              ),
+              _SettingsDivider(colorScheme: colorScheme),
+              _PreferencePickerTile<int>(
+                menuKey: const ValueKey('gap-preference-menu'),
+                desktop: desktop,
+                leading: const _SettingRowIcon(
+                  icon: Icons.schedule_rounded,
+                  emphasized: true,
+                ),
+                title: '曲间间隔',
+                subtitle: state.gapBetweenTracks == Duration.zero
+                    ? '无额外间隔（默认）'
+                    : '每首结束后等待 ${state.gapBetweenTracks.inSeconds} 秒',
+                valueLabel: _gapLabel(state.gapBetweenTracks),
+                currentValue: state.gapBetweenTracks.inSeconds,
+                options: [
+                  const _PreferenceMenuOption(
+                    value: 0,
+                    label: '无间隔',
+                    icon: Icons.skip_next_rounded,
+                  ),
+                  for (final seconds in [2, 4, 6, 10])
+                    _PreferenceMenuOption(
+                      value: seconds,
+                      label: '$seconds 秒',
+                      icon: Icons.space_bar_rounded,
+                    ),
+                ],
+                onMobileTap: () => _pickGap(context, state, cubit),
+                onSelected: (seconds) =>
+                    cubit.setGapBetweenTracks(Duration(seconds: seconds)),
+              ),
+              _SettingsDivider(colorScheme: colorScheme),
+              _PreferencePickerTile<ThemeMode>(
+                menuKey: const ValueKey('theme-preference-menu'),
+                desktop: desktop,
+                leading: const _SettingRowIcon(
+                  icon: Icons.palette_outlined,
+                  emphasized: true,
+                ),
+                title: '主题',
+                subtitle: '浅色 / 深色 / 跟随系统。',
+                valueLabel: _themeModeLabel(state.themeMode),
+                currentValue: state.themeMode,
+                options: const [
+                  _PreferenceMenuOption(
+                    value: ThemeMode.system,
+                    label: '跟随系统',
+                    icon: Icons.brightness_auto_rounded,
+                  ),
+                  _PreferenceMenuOption(
+                    value: ThemeMode.light,
+                    label: '浅色',
+                    icon: Icons.light_mode_rounded,
+                  ),
+                  _PreferenceMenuOption(
+                    value: ThemeMode.dark,
+                    label: '深色',
+                    icon: Icons.dark_mode_rounded,
+                  ),
+                ],
+                onMobileTap: () => _pickTheme(context, state.themeMode),
+                onSelected: cubit.setThemeMode,
+              ),
+            ],
           ),
         );
       },
@@ -477,76 +711,7 @@ class _AppearanceCard extends StatelessWidget {
         ),
       ),
     );
-    if (result != null) {
-      await cubit.setThemeMode(result);
-    }
-  }
-}
-
-class _PlaybackCard extends StatelessWidget {
-  const _PlaybackCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
-      buildWhen: (a, b) =>
-          a.defaultQuality != b.defaultQuality ||
-          a.gapBetweenTracks != b.gapBetweenTracks ||
-          a.menuBarLyricsEnabled != b.menuBarLyricsEnabled,
-      builder: (context, state) {
-        final cubit = context.read<AppSettingsCubit>();
-        final colorScheme = Theme.of(context).colorScheme;
-        final supportsMenuBarLyrics =
-            !kIsWeb &&
-            (defaultTargetPlatform == TargetPlatform.macOS ||
-                defaultTargetPlatform == TargetPlatform.windows);
-        return _SettingsGroupSurface(
-          child: Column(
-            children: [
-              _HoverableListTile(
-                title: const Text('在线音质'),
-                subtitle: const Text('新建播放队列时使用，当前播放队列不受影响。'),
-                trailing: _SettingValue(
-                  label: state.defaultQuality.label,
-                  chevron: true,
-                ),
-                onTap: () => _pickQuality(context, state, cubit),
-              ),
-              _SettingsDivider(colorScheme: colorScheme),
-              _HoverableListTile(
-                title: const Text('曲间间隔'),
-                subtitle: Text(
-                  state.gapBetweenTracks == Duration.zero
-                      ? '无额外间隔（默认）'
-                      : '每首结束后等待 ${state.gapBetweenTracks.inSeconds} 秒',
-                ),
-                trailing: _SettingValue(
-                  label: _gapLabel(state.gapBetweenTracks),
-                  chevron: true,
-                ),
-                onTap: () => _pickGap(context, state, cubit),
-              ),
-              if (supportsMenuBarLyrics) ...[
-                _SettingsDivider(colorScheme: colorScheme),
-                _HoverableListTile(
-                  title: const Text('菜单栏歌词'),
-                  subtitle: const Text('播放时在系统菜单栏或托盘提示中显示当前歌词。'),
-                  trailing: _SourceToggle(
-                    value: state.menuBarLyricsEnabled,
-                    semanticLabel:
-                        '${state.menuBarLyricsEnabled ? '关闭' : '开启'} 菜单栏歌词',
-                    onChanged: cubit.setMenuBarLyricsEnabled,
-                  ),
-                  onTap: () => cubit.setMenuBarLyricsEnabled(
-                    !state.menuBarLyricsEnabled,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
+    if (result != null) await cubit.setThemeMode(result);
   }
 
   Future<void> _pickQuality(
@@ -633,9 +798,235 @@ class _PlaybackCard extends StatelessWidget {
   }
 }
 
+class _PreferenceMenuOption<T> {
+  const _PreferenceMenuOption({
+    required this.value,
+    required this.label,
+    this.description,
+    this.icon,
+  });
+
+  final T value;
+  final String label;
+  final String? description;
+  final IconData? icon;
+}
+
+class _PreferencePickerTile<T> extends StatefulWidget {
+  const _PreferencePickerTile({
+    required this.menuKey,
+    this.triggerSurfaceKey,
+    required this.desktop,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.valueLabel,
+    required this.currentValue,
+    required this.options,
+    required this.onMobileTap,
+    required this.onSelected,
+  });
+
+  final Key menuKey;
+  final Key? triggerSurfaceKey;
+  final bool desktop;
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final String valueLabel;
+  final T currentValue;
+  final List<_PreferenceMenuOption<T>> options;
+  final VoidCallback onMobileTap;
+  final Future<void> Function(T value) onSelected;
+
+  @override
+  State<_PreferencePickerTile<T>> createState() =>
+      _PreferencePickerTileState<T>();
+}
+
+class _PreferencePickerTileState<T> extends State<_PreferencePickerTile<T>> {
+  late final FocusNode _triggerFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _triggerFocusNode = FocusNode(
+      debugLabel: '${widget.title} preference menu trigger',
+    );
+  }
+
+  @override
+  void dispose() {
+    _triggerFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.desktop) {
+      return _HoverableListTile(
+        focusIndicatorKey: widget.triggerSurfaceKey,
+        leading: widget.leading,
+        title: Text(widget.title),
+        subtitle: Text(widget.subtitle),
+        trailing: _SettingValue(label: widget.valueLabel, chevron: true),
+        semanticLabel: '${widget.title}，当前${widget.valueLabel}',
+        onTap: widget.onMobileTap,
+      );
+    }
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, _) => MenuAnchor(
+        key: widget.menuKey,
+        childFocusNode: _triggerFocusNode,
+        alignmentOffset: const Offset(0, 6),
+        style: MenuStyle(
+          alignment: AlignmentDirectional.bottomEnd,
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(vertical: AppSpacingTokens.compactGap),
+          ),
+          fixedSize: const WidgetStatePropertyAll(Size.fromWidth(320)),
+          backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: WidgetStatePropertyAll(
+            theme.brightness == Brightness.dark ? 0 : 2,
+          ),
+          shadowColor: WidgetStatePropertyAll(
+            colorScheme.shadow.withValues(alpha: 0.08),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadiusTokens.card),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+              ),
+            ),
+          ),
+        ),
+        menuChildren: [
+          for (final option in widget.options)
+            Semantics(
+              checked: option.value == widget.currentValue,
+              inMutuallyExclusiveGroup: true,
+              child: MenuItemButton(
+                onPressed: () async => widget.onSelected(option.value),
+                style: ButtonStyle(
+                  minimumSize: WidgetStatePropertyAll(
+                    Size(304, option.description == null ? 44 : 56),
+                  ),
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(
+                      horizontal: AppSpacingTokens.inlineGap,
+                      vertical: AppSpacingTokens.compactGap,
+                    ),
+                  ),
+                  alignment: Alignment.centerLeft,
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppRadiusTokens.desktopMd,
+                      ),
+                    ),
+                  ),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (option.value == widget.currentValue) {
+                      return theme.selectedWash;
+                    }
+                    if (states.contains(WidgetState.hovered) ||
+                        states.contains(WidgetState.focused) ||
+                        states.contains(WidgetState.pressed)) {
+                      return theme.hoverWash;
+                    }
+                    return Colors.transparent;
+                  }),
+                  overlayColor: const WidgetStatePropertyAll(
+                    Colors.transparent,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    if (option.icon != null) ...[
+                      Icon(
+                        option.icon,
+                        size: 19,
+                        color: option.value == widget.currentValue
+                            ? colorScheme.primary
+                            : theme.muted,
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            option.label,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: option.value == widget.currentValue
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (option.description != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              option.description!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (option.value == widget.currentValue) ...[
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+        builder: (context, controller, child) => _HoverableListTile(
+          focusIndicatorKey: widget.triggerSurfaceKey,
+          focusNode: _triggerFocusNode,
+          leading: widget.leading,
+          title: Text(widget.title),
+          subtitle: Text(widget.subtitle),
+          trailing: _SettingValue(
+            label: widget.valueLabel,
+            expanded: controller.isOpen,
+          ),
+          semanticLabel: '${widget.title}，当前${widget.valueLabel}',
+          expanded: controller.isOpen,
+          onTap: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
 String _qualityDescription(AudioQuality quality) {
   return switch (quality) {
-    AudioQuality.auto => '自动选择当前服务可用的合适音质。',
+    AudioQuality.auto => '直接播放源文件，不转码。',
     AudioQuality.low => '较低带宽占用，适合移动网络。',
     AudioQuality.medium => '平衡流量与听感。',
     AudioQuality.high => '优先使用较高码率。',
@@ -656,8 +1047,10 @@ String _gapLabel(Duration gap) {
   return '${gap.inSeconds} 秒';
 }
 
-class _CustomMediaSourcesEntryCard extends StatelessWidget {
-  const _CustomMediaSourcesEntryCard();
+class _SecondarySettingsCard extends StatelessWidget {
+  const _SecondarySettingsCard({this.desktop = false});
+
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -666,19 +1059,58 @@ class _CustomMediaSourcesEntryCard extends StatelessWidget {
           a.customArtworkSourceEnabled != b.customArtworkSourceEnabled ||
           a.customArtworkSourceUrl != b.customArtworkSourceUrl ||
           a.customLyricsSourceEnabled != b.customLyricsSourceEnabled ||
-          a.customLyricsSourceUrl != b.customLyricsSourceUrl,
+          a.customLyricsSourceUrl != b.customLyricsSourceUrl ||
+          a.menuBarLyricsEnabled != b.menuBarLyricsEnabled,
       builder: (context, state) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final cubit = context.read<AppSettingsCubit>();
         final enabledCount = _customMediaSourcesEnabledCount(state);
+        final supportsMenuBarLyrics =
+            desktop &&
+            !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.macOS ||
+                defaultTargetPlatform == TargetPlatform.windows);
+
         return _SettingsGroupSurface(
-          child: _HoverableListTile(
-            title: const Text('自定义歌词与封面'),
-            subtitle: const Text('配置封面代理、歌词服务或自建接口。'),
-            trailing: _SettingValue(
-              label: _customMediaSourcesSummaryLabel(state),
-              chevron: true,
-              emphasized: enabledCount > 0,
-            ),
-            onTap: () => context.push('/settings/media-sources'),
+          child: Column(
+            children: [
+              _HoverableListTile(
+                leading: const _SettingRowIcon(icon: Icons.lyrics_rounded),
+                title: const Text('歌词与封面'),
+                subtitle: const Text('配置封面代理、歌词服务或自建接口。'),
+                trailing: _SettingValue(
+                  label: _customMediaSourcesSummaryLabel(state),
+                  chevron: true,
+                  emphasized: enabledCount > 0,
+                ),
+                onTap: () => context.push('/settings/media-sources'),
+              ),
+              if (supportsMenuBarLyrics) ...[
+                _SettingsDivider(colorScheme: colorScheme),
+                _HoverableListTile(
+                  leading: const _SettingRowIcon(icon: Icons.subtitles_rounded),
+                  title: const Text('菜单栏歌词'),
+                  subtitle: const Text('播放时在菜单栏或托盘中显示当前歌词。'),
+                  trailing: _SourceToggle(
+                    value: state.menuBarLyricsEnabled,
+                    semanticLabel:
+                        '${state.menuBarLyricsEnabled ? '关闭' : '开启'} 菜单栏歌词',
+                    onChanged: cubit.setMenuBarLyricsEnabled,
+                  ),
+                  onTap: () => cubit.setMenuBarLyricsEnabled(
+                    !state.menuBarLyricsEnabled,
+                  ),
+                ),
+              ],
+              _SettingsDivider(colorScheme: colorScheme),
+              _HoverableListTile(
+                leading: const _SettingRowIcon(icon: Icons.download_rounded),
+                title: const Text('下载管理'),
+                subtitle: const Text('查看进行中与已下载的离线曲目。'),
+                trailing: const _SettingValue(chevron: true, label: ''),
+                onTap: () => context.push('/downloads'),
+              ),
+            ],
           ),
         );
       },
@@ -1419,15 +1851,25 @@ class _SourceHelperText extends StatelessWidget {
 
 class _HoverableListTile extends StatefulWidget {
   const _HoverableListTile({
+    this.focusIndicatorKey,
+    this.focusNode,
+    this.leading,
     this.title,
     this.subtitle,
     this.trailing,
+    this.semanticLabel,
+    this.expanded,
     this.onTap,
   });
 
+  final FocusNode? focusNode;
+  final Key? focusIndicatorKey;
+  final Widget? leading;
   final Widget? title;
   final Widget? subtitle;
   final Widget? trailing;
+  final String? semanticLabel;
+  final bool? expanded;
   final VoidCallback? onTap;
 
   @override
@@ -1436,6 +1878,8 @@ class _HoverableListTile extends StatefulWidget {
 
 class _HoverableListTileState extends State<_HoverableListTile> {
   bool _hovered = false;
+  bool _focused = false;
+  bool _focusFromPointer = false;
   bool _pressed = false;
 
   @override
@@ -1447,91 +1891,138 @@ class _HoverableListTileState extends State<_HoverableListTile> {
     final hoverBackground = theme.hoverWash.withValues(alpha: 0.56);
     final pressedBackground = theme.hoverWash.withValues(alpha: 0.74);
     final idleBackground = hoverBackground.withValues(alpha: 0);
+    final showKeyboardFocus =
+        _focused && !_focusFromPointer && enabled && widget.expanded != true;
     final backgroundColor = _pressed && enabled
         ? pressedBackground
-        : _hovered && enabled
+        : (_hovered || showKeyboardFocus) && enabled
         ? hoverBackground
         : idleBackground;
+    final radius = BorderRadius.circular(
+      compact ? AppRadiusTokens.mobileMd : AppRadiusTokens.desktopMd,
+    );
 
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) {
-        if (enabled) setState(() => _hovered = true);
-      },
-      onExit: (_) {
-        if (enabled) {
-          setState(() {
-            _hovered = false;
-            _pressed = false;
-          });
-        }
-      },
-      child: AnimatedScale(
-        duration: AppMotion.micro,
-        curve: AppMotion.standard,
-        scale: _pressed && enabled ? 0.997 : 1,
-        child: AnimatedContainer(
+    return Semantics(
+      label: widget.semanticLabel,
+      button: enabled,
+      enabled: enabled ? true : null,
+      expanded: widget.expanded,
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onEnter: (_) {
+          if (enabled) setState(() => _hovered = true);
+        },
+        onExit: (_) {
+          if (enabled) {
+            setState(() {
+              _hovered = false;
+              _pressed = false;
+            });
+          }
+        },
+        child: AnimatedScale(
           duration: AppMotion.micro,
           curve: AppMotion.standard,
-          constraints: BoxConstraints(minHeight: compact ? 46 : 48),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(
-              compact ? AppRadiusTokens.mobileMd : AppRadiusTokens.desktopMd,
-            ),
-          ),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
-            onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-            onTapCancel: enabled
-                ? () => setState(() => _pressed = false)
-                : null,
-            onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 16 : 20,
-                vertical: compact ? 11 : 12,
+          scale: _pressed && enabled ? 0.997 : 1,
+          child: AnimatedContainer(
+            key: widget.focusIndicatorKey,
+            duration: AppMotion.micro,
+            curve: AppMotion.standard,
+            constraints: BoxConstraints(minHeight: compact ? 46 : 48),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: radius,
+              border: Border.all(
+                color: showKeyboardFocus
+                    ? colorScheme.primary.withValues(alpha: 0.62)
+                    : Colors.transparent,
+                width: 2,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: enabled
+                    ? (_) => setState(() => _focusFromPointer = true)
+                    : null,
+                child: InkWell(
+                  focusNode: widget.focusNode,
+                  canRequestFocus: enabled,
+                  borderRadius: radius,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  splashColor: colorScheme.primary.withValues(alpha: 0.06),
+                  onFocusChange: enabled
+                      ? (focused) {
+                          setState(() {
+                            _focused = focused;
+                            if (!focused) _focusFromPointer = false;
+                          });
+                        }
+                      : null,
+                  onHighlightChanged: enabled
+                      ? (pressed) => setState(() => _pressed = pressed)
+                      : null,
+                  onTap: widget.onTap,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 16 : 20,
+                      vertical: compact ? 11 : 12,
+                    ),
+                    child: Row(
                       children: [
-                        DefaultTextStyle.merge(
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontSize: compact ? 15 : 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          child: widget.title ?? const SizedBox.shrink(),
-                        ),
-                        if (widget.subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          DefaultTextStyle.merge(
-                            style: theme.textTheme.bodySmall?.copyWith(
+                        if (widget.leading != null) ...[
+                          IconTheme.merge(
+                            data: IconThemeData(
+                              size: compact ? 22 : 20,
                               color: theme.muted,
-                              fontSize: 12,
                             ),
-                            child: widget.subtitle!,
+                            child: widget.leading!,
+                          ),
+                          SizedBox(width: compact ? 14 : 16),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              DefaultTextStyle.merge(
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: colorScheme.onSurface,
+                                  fontSize: compact ? 15 : 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                child: widget.title ?? const SizedBox.shrink(),
+                              ),
+                              if (widget.subtitle != null) ...[
+                                const SizedBox(height: 4),
+                                DefaultTextStyle.merge(
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.muted,
+                                    fontSize: 12,
+                                  ),
+                                  child: widget.subtitle!,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (widget.trailing != null) ...[
+                          const SizedBox(width: 12),
+                          IconTheme.merge(
+                            data: IconThemeData(
+                              size: compact ? 20 : 18,
+                              color: theme.muted,
+                            ),
+                            child: widget.trailing!,
                           ),
                         ],
                       ],
                     ),
                   ),
-                  if (widget.trailing != null) ...[
-                    const SizedBox(width: 12),
-                    IconTheme.merge(
-                      data: IconThemeData(
-                        size: compact ? 20 : 18,
-                        color: theme.muted,
-                      ),
-                      child: widget.trailing!,
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),

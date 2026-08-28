@@ -34,6 +34,27 @@ class HistoryCubit extends Cubit<HistoryState> {
     await _loadPage(replace: false);
   }
 
+  Future<List<MusicTrack>> fetchAllTracks({int limit = 500}) async {
+    final tracks = <MusicTrack>[];
+    final seenTrackIds = <String>{};
+    var offset = 0;
+
+    while (tracks.length < limit) {
+      final remaining = limit - tracks.length;
+      final rows = await _database.recentPlays(
+        limit: remaining < _pageSize ? remaining : _pageSize,
+        offset: offset,
+      );
+      offset += rows.length;
+      for (final row in rows) {
+        if (seenTrackIds.add(row.trackId)) tracks.add(_toTrack(row));
+      }
+      if (rows.length < _pageSize) break;
+    }
+
+    return tracks;
+  }
+
   Future<void> _loadPage({required bool replace}) async {
     final previousTracks = replace ? const <MusicTrack>[] : state.tracks;
 

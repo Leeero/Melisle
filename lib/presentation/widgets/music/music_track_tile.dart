@@ -109,7 +109,7 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         : (isCard ? 14.0 : 12.0);
     final verticalPadding = isFavorite
         ? AppSpacingTokens.favoriteTrackPadding
-        : (isCard ? 12.0 : 8.0);
+        : (isCard ? 12.0 : 4.0);
     final contentGap = isFavorite
         ? AppSpacingTokens.favoriteTrackContentGap
         : 14.0;
@@ -284,7 +284,9 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacingTokens.compactGap,
+                ),
                 child: Row(
                   children: [
                     CachedArtwork(

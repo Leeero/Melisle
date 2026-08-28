@@ -1482,19 +1482,15 @@ class _SearchStateScrollView extends StatelessWidget {
 }
 
 double _homeContentHorizontalPadding(BuildContext context) {
-  return AppBreakpoints.isCompact(context)
-      ? AppSpacingTokens.pageHorizontalCompact
-      : AppSpacingTokens.pageHorizontalExpanded;
+  return AppPageLayout.horizontalPadding(context);
 }
 
 double _homeContentTopPadding(BuildContext context) {
-  return AppBreakpoints.isCompact(context)
-      ? AppSpacingTokens.pageHorizontalCompact
-      : AppSpacingTokens.sectionGap;
+  return AppPageLayout.contentTopInset(context);
 }
 
 double _homeContentBottomPadding(BuildContext context) {
-  return AppBreakpoints.isCompact(context) ? 40 : 48;
+  return AppPageLayout.contentBottomInset;
 }
 
 class _SearchMessagePanel extends StatelessWidget {

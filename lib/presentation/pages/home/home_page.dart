@@ -113,22 +113,15 @@ class _HomeLoadingView extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         if (AppBreakpoints.isCompact(context))
-          const SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacingTokens.pageHorizontalCompact,
-              AppSpacingTokens.pageHorizontalCompact,
-              AppSpacingTokens.pageHorizontalCompact,
-              AppSpacingTokens.cardPadding,
+          SliverPadding(
+            padding: AppPageLayout.pagePadding(
+              context,
+              bottom: AppSpacingTokens.cardPadding,
             ),
             sliver: SliverToBoxAdapter(child: _MobileHomeTitle()),
           ),
         SliverPadding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppBreakpoints.isCompact(context)
-                ? AppSpacingTokens.pageHorizontalCompact
-                : AppSpacingTokens.pageHorizontalExpanded,
-            vertical: AppSpacingTokens.sectionGap,
-          ),
+          padding: AppPageLayout.pagePadding(context),
           sliver: SliverToBoxAdapter(
             child: Column(
               key: const ValueKey('home-loading-sections'),
@@ -158,12 +151,7 @@ class _DesktopHomeContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: context.read<HomeCubit>().load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacingTokens.pageHorizontalExpanded,
-          AppSpacingTokens.sectionGap,
-          AppSpacingTokens.pageHorizontalExpanded,
-          48,
-        ),
+        padding: AppPageLayout.pagePadding(context),
         children: [
           if (state.errorMessage != null) ...[
             _HomeInlineError(message: state.errorMessage!),
@@ -201,12 +189,7 @@ class _MobileHomeContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: context.read<HomeCubit>().load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacingTokens.pageHorizontalCompact,
-          AppSpacingTokens.pageHorizontalCompact,
-          AppSpacingTokens.pageHorizontalCompact,
-          40,
-        ),
+        padding: AppPageLayout.pagePadding(context),
         children: [
           const _MobileHomeTitle(),
           const SizedBox(height: 24),
@@ -515,7 +498,7 @@ class _DesktopRecentTrackRow extends StatelessWidget {
       mouseCursor: SystemMouseCursors.click,
       hoverColor: Colors.transparent,
       child: SizedBox(
-        height: 53,
+        height: 52,
         child: Row(
           children: [
             CachedArtwork(

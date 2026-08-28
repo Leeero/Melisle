@@ -101,7 +101,7 @@ abstract final class AppTheme {
 
     // --- ColorScheme ---
     final baseScheme = ColorScheme.fromSeed(
-      seedColor: _seedColor,
+      seedColor: isDark ? _darkPrimary : _seedColor,
       brightness: brightness,
     );
 
@@ -117,7 +117,7 @@ abstract final class AppTheme {
             onSecondaryContainer: _darkOnSurface,
             error: AppColorTokens.darkDanger,
             onError: _darkScaffold,
-            errorContainer: const Color(0xFF4A171B),
+            errorContainer: const Color(0xFF48241F),
             onErrorContainer: const Color(0xFFFFDAD9),
             surface: _darkSurface,
             surfaceDim: _darkScaffold,
@@ -140,17 +140,17 @@ abstract final class AppTheme {
           )
         : baseScheme.copyWith(
             primary: _lightPrimary,
-            onPrimary: const Color(0xFFF9FAFF),
+            onPrimary: Colors.white,
             primaryContainer: _lightPrimaryContainer,
             onPrimaryContainer: _lightOnPrimaryContainer,
             secondary: _lightSecondary,
-            onSecondary: const Color(0xFFF8FCFC),
+            onSecondary: Colors.white,
             secondaryContainer: _lightSecondaryContainer,
             onSecondaryContainer: _lightOnSurface,
-            error: const Color(0xFFBA1A1A),
-            onError: const Color(0xFFFFFAF8),
-            errorContainer: const Color(0xFFFFDAD6),
-            onErrorContainer: const Color(0xFF410006),
+            error: AppColorTokens.lightDanger,
+            onError: Colors.white,
+            errorContainer: const Color(0xFFFFE7E2),
+            onErrorContainer: const Color(0xFF501E18),
             surface: _lightSurface,
             surfaceDim: _lightSurfaceLow,
             surfaceBright: _lightSurface,
@@ -163,7 +163,7 @@ abstract final class AppTheme {
             onSurfaceVariant: _lightOnSurfaceVariant,
             outline: _lightOutline,
             outlineVariant: _lightOutlineVariant,
-            inverseSurface: const Color(0xFF253033),
+            inverseSurface: const Color(0xFF1C2A31),
             onInverseSurface: const Color(0xFFF1F6F6),
             inversePrimary: _darkPrimary,
             surfaceTint: Colors.transparent,
@@ -314,13 +314,9 @@ abstract final class AppTheme {
       // ─── Card ───
       cardTheme: CardThemeData(
         clipBehavior: Clip.antiAlias,
-        color: isDark
-            ? colorScheme.surfaceContainerLow
-            : colorScheme.surface,
+        color: isDark ? colorScheme.surfaceContainerLow : colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: isDark
-            ? Colors.transparent
-            : AppShadowTokens.sm.color,
+        shadowColor: isDark ? Colors.transparent : AppShadowTokens.sm.color,
         elevation: isDark ? 0 : AppShadowTokens.sm.blurRadius / 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -912,10 +908,15 @@ extension MelisleThemeX on ThemeData {
   /// Brand accent for CTA buttons and active progress segments.
   Color get accentGreen => colorScheme.primary;
 
-  /// Lyric highlight tuned for Melisle's deep-blue / purple palette.
+  /// Lyric highlight follows the playback accent in the night-sailing palette.
   Color get lyricHighlight => brightness == Brightness.dark
       ? AppTheme.darkLyricHighlight
       : AppTheme.lightLyricHighlight;
+
+  /// Secondary lyric text stays legible without competing with the active line.
+  Color get lyricInactive => brightness == Brightness.dark
+      ? AppColorTokens.darkLyricInactive
+      : AppColorTokens.lightLyricInactive;
 
   Color get surfaceSidebar => brightness == Brightness.dark
       ? AppTheme._darkSurfaceSidebar
