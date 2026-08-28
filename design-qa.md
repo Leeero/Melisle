@@ -1,44 +1,67 @@
-**Findings**
+# Settings Page Design QA
 
-- [P1] 无法获取运行中的 Flutter 界面
-  Location: 媒体库 / 歌曲 / 排序与筛选。
-  Evidence: 本机环境未提供 `flutter` 命令，无法捕获已实现界面并与方案 1 的参考图进行同视口比较。
-  Impact: 无法确认菜单锚点、弹层尺寸、键盘导航与交互态的视觉一致性。
-  Fix: 在具备 Flutter SDK 的环境执行 `flutter test test/presentation/blocs/library_cubit_test.dart`、`flutter analyze`，启动桌面应用后于歌曲页打开“排序与筛选”菜单，再重新截图比较。
+## Comparison Target
 
-**Open Questions**
+- Mobile source visual truth: `/Users/lero/.codex/generated_images/01a04122-f574-7500-afce-5dd24af5daae/exec-70a326c4-de4a-463d-a90f-195d1078cbdd.png`
+- Desktop source visual truth: `/Users/lero/.codex/generated_images/01a04122-f574-7500-afce-5dd24af5daae/exec-605cb9ab-f922-4050-a8cc-9444bde54529.png`, overridden by the user's explicit request to replace its two-column content layout with a single column.
+- Mobile implementation screenshot: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/settings-390x844-dark-scale-1.0.png`
+- Desktop implementation screenshot: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/settings-1440x1024-dark-scale-1.0.png`
+- Desktop preference-menu screenshot: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/settings-desktop-quality-menu-dark.png`
+- Mobile combined evidence: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/diff/settings-mobile-source-vs-actual.png`
+- Desktop combined evidence: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/diff/settings-desktop-content-source-vs-actual.png`
 
-- 参考图中的“已下载”和“音质”筛选尚未纳入实现，因为当前协议能力层未声明它们可由服务端过滤；Emby 与 Navidrome 都明确接入“仅显示收藏”。
+## Normalization
 
-**Implementation Checklist**
+- Mobile source: 853 x 1844 px, normalized to 390 x 844 px.
+- Mobile implementation: 390 x 844 CSS px at DPR 1.0.
+- Desktop source: 1487 x 1058 px, normalized to 1440 x 1024 px. The 236 px shell sidebar was cropped so the comparison covers the app-owned settings content.
+- Desktop implementation: 1440 x 1024 CSS px at DPR 1.0. The page was rendered standalone by the widget harness; the production shell continues to own the sidebar and bottom player.
+- State: authenticated Emby session, dark theme, default quality `auto`, zero track gap, custom media sources disabled, menu-bar lyrics enabled on desktop.
 
-1. 以可选 `TrackFilteringRepository` 声明并获取当前协议支持的筛选项。
-2. Emby 将收藏筛选编码为 `Filters=IsFavorite`，并与服务端排序一起请求。
-3. Navidrome 通过 Subsonic 的 `getStarred2` 获取收藏歌曲，并在客户端对该服务端结果应用搜索和分页。
-4. 缓存与自动检测仓库透传活动协议的能力与请求；其他协议返回空能力集合。
-5. 菜单仅渲染当前协议返回的排序和筛选项。
+## Full-view Comparison Evidence
 
-**Follow-up Polish**
+- Mobile keeps the selected single-column treatment while following the revised order: current server, common preferences, media and devices, storage, then about; logout remains a separate danger action.
+- Desktop intentionally replaces the reference's two-column content area with one 820 px left-aligned column. The section order is current server, common preferences, media and devices, storage, then about; grouped rows and restrained outlines remain aligned with the source.
+- Responsive tests cover 375 x 812, 390 x 844, 768 x 900, 1080 x 900, 1440 x 900, and 1440 x 1024 in light/dark themes at 1.0 and 1.3 text scale.
 
-- [P3] 获得桌面截图后，可微调弹层最小宽度、菜单行高和激活筛选徽标的位置。
+## Required Fidelity Surfaces
 
-## Comparison evidence
+- Fonts and typography: production continues to use the shared platform-font theme and existing type scale. The Flutter screenshot runner cannot resolve Chinese system glyphs, so its PNGs show tofu boxes; widget-tree copy assertions and 1.0/1.3 text-scale layout tests verify content, wrapping constraints, and hierarchy. This is a screenshot-harness limitation, not a production font change.
+- Spacing and layout rhythm: mobile and desktop margins, section gaps, the 820 px desktop content measure, grouped row heights, icon spacing, radii, and dividers match the selected direction with no overflow.
+- Colors and visual tokens: implementation uses the existing Melisle theme tokens for ink surfaces, mint primary, muted text, outlines, success, and danger. No page-private palette was added.
+- Image quality and asset fidelity: the target contains no raster content required by the settings page. Existing Material icons are used consistently; no placeholder or handcrafted image assets were introduced.
+- Copy and content: all visible rows map to implemented capabilities. No subscription, equalizer, cache-size estimate, download-path editor, account editor, or other fake entry was added.
 
-- Source visual truth: `/Users/lero/.codex/generated_images/01a0236e-353c-7e70-b361-9e426733cd7f/exec-745dda7a-b976-4783-b9c7-7aaec146708e.png`
-- Intended viewport: 2560 × 1640, desktop light theme, songs page with the anchored menu open.
-- Implementation screenshot: unavailable; Flutter SDK is not installed or on `PATH` in this workspace environment.
-- Focused region comparison: blocked because no implementation capture exists.
+## Focused Region Comparison
 
-## Required fidelity surfaces
+- Common preferences: three rows, mint icon emphasis, current values, chevrons, separators, and the same neutral surface as other groups were checked in both mobile and desktop captures.
+- Desktop preference interaction: each row opens a compact 280 px anchored menu below its current-value area, with icons and a mint selected check. The menu remains visually attached to the invoking row and avoids mobile-style full-width sheet motion.
+- Server/account: user, server URL, backend type, connected status, and logout were checked against the authenticated source state.
+- Secondary settings: custom lyrics/artwork, desktop menu-bar lyrics, downloads, cache clearing, about, and version placement were checked independently.
 
-- Fonts and typography: blocked pending rendered capture.
-- Spacing and layout rhythm: blocked pending rendered capture.
-- Colors and visual tokens: implemented with existing `ThemeData` and Tidal Blue tokens; visual verification blocked.
-- Image quality and asset fidelity: no new raster assets are required for this menu; visual verification blocked.
-- Copy and content: menu copy uses “排序与筛选”、“排序方式”、“筛选”、“清除” and only capability-backed choices.
+## Findings
 
-## Comparison history
+- No actionable P0, P1, or P2 visual differences remain.
+- P3: the standalone Flutter screenshot harness does not render Chinese system glyphs. Production uses the unchanged platform font stack; a future golden harness can bundle a test-only CJK font for more readable PNG evidence.
 
-- No visual comparison iteration was possible. `flutter test` could not run because the `flutter` command is unavailable.
+## Comparison History
 
-final result: blocked
+1. Pre-comparison responsive validation found a P2 mobile header overflow caused by a 420 px title constraint. It was reduced to 300 px, then re-rendered at 390 x 844 with no overflow.
+2. Post-fix mobile and desktop combined comparisons found no remaining P0/P1/P2 issues.
+3. The desktop layout was changed from a 6:5 two-column grid to one 820 px column per user feedback. The 1440 x 1024 screenshot confirms the sections remain aligned, readable, and free of horizontal overflow.
+4. The common-preferences accent wash was removed, and both responsive layouts were reordered to current server, common preferences, media and devices, storage, then about. Fresh 390 x 844 and 1440 x 1024 captures confirm the groups use a consistent neutral surface.
+5. Desktop common-preference controls were changed from bottom sheets to anchored menus. The first pass was too tall with two-line option descriptions; the final 280 px single-line menu fits below the row without viewport overflow. Mobile bottom sheets remain unchanged.
+
+## Primary Interactions Tested
+
+- Online-quality picker opens from the common-preferences surface.
+- Desktop online quality, track gap, and theme use anchored menus; mobile continues to use bottom sheets.
+- Cache-clear confirmation opens after scrolling on mobile.
+- Theme, gap, media-source, downloads, menu-bar lyrics, and logout retain their existing handlers and routes.
+
+## Console and Runtime Errors
+
+- No Flutter exceptions were reported across the final 27 settings-page tests.
+- Targeted static analysis for the settings page and its test reports no issues.
+
+final result: passed
