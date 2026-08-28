@@ -7,6 +7,7 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_state.dart';
 import 'package:cross_platform_music_player/presentation/pages/playlists/playlists_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,6 +24,7 @@ void main() {
               await _setViewport(tester, size, textScale: scale);
               await _pumpPlaylists(tester, _successState, themeMode: mode);
               expect(tester.takeException(), isNull);
+              expect(find.byType(AppPageHeader), findsNothing);
               final brightness = mode == ThemeMode.light ? 'light' : 'dark';
               await _capture(
                 tester,

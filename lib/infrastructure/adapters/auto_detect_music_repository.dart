@@ -18,7 +18,8 @@ class AutoDetectMusicRepository
         MusicRepository,
         TrackSortingRepository,
         TrackFilteringRepository,
-        ArtistSortingRepository {
+        ArtistSortingRepository,
+        PlaylistFavoritesRepository {
   AutoDetectMusicRepository({
     required MusicRepository embyRepository,
     required MusicRepository navidromeRepository,
@@ -262,6 +263,49 @@ class AutoDetectMusicRepository
       startIndex: startIndex,
       searchQuery: searchQuery,
     );
+  }
+
+  @override
+  Future<bool> supportsPlaylistFavorites() async {
+    final repository = await _requireActiveRepository();
+    if (repository is! PlaylistFavoritesRepository) return false;
+    final playlistFavoritesRepository =
+        repository as PlaylistFavoritesRepository;
+    return playlistFavoritesRepository.supportsPlaylistFavorites();
+  }
+
+  @override
+  Future<List<MusicPlaylist>> fetchFavoritePlaylists({
+    int limit = 60,
+    int startIndex = 0,
+  }) async {
+    final repository = await _requireActiveRepository();
+    if (repository is! PlaylistFavoritesRepository) {
+      throw UnsupportedError('当前服务器不支持收藏歌单。');
+    }
+    final playlistFavoritesRepository =
+        repository as PlaylistFavoritesRepository;
+    if (!await playlistFavoritesRepository.supportsPlaylistFavorites()) {
+      throw UnsupportedError('当前服务器不支持收藏歌单。');
+    }
+    return playlistFavoritesRepository.fetchFavoritePlaylists(
+      limit: limit,
+      startIndex: startIndex,
+    );
+  }
+
+  @override
+  Future<void> setPlaylistFavorite(String playlistId, bool value) async {
+    final repository = await _requireActiveRepository();
+    if (repository is! PlaylistFavoritesRepository) {
+      throw UnsupportedError('当前服务器不支持收藏歌单。');
+    }
+    final playlistFavoritesRepository =
+        repository as PlaylistFavoritesRepository;
+    if (!await playlistFavoritesRepository.supportsPlaylistFavorites()) {
+      throw UnsupportedError('当前服务器不支持收藏歌单。');
+    }
+    await playlistFavoritesRepository.setPlaylistFavorite(playlistId, value);
   }
 
   @override

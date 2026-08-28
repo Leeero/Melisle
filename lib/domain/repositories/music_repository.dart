@@ -70,7 +70,7 @@ abstract class MusicRepository {
     AudioQuality quality = AudioQuality.auto,
   });
 
-  /// 设置条目的收藏状态。支持歌曲 / 专辑 / 歌手 / 歌单。
+  /// 设置条目的收藏状态。支持歌曲 / 专辑 / 歌手，具体以协议能力为准。
   Future<void> setFavorite(String itemId, bool value);
 
   /// 拉取某首歌的同步歌词。
@@ -119,6 +119,20 @@ abstract class MusicRepository {
 
   /// 跨类型搜索（歌曲 / 专辑 / 歌手 / 歌单）。
   Future<SearchResults> search(String query);
+}
+
+/// Optional capability for protocols that support synchronized playlist
+/// favorites. It is intentionally separate from [MusicRepository] because
+/// Subsonic-compatible servers do not standardize playlist favorites.
+abstract interface class PlaylistFavoritesRepository {
+  Future<bool> supportsPlaylistFavorites();
+
+  Future<List<MusicPlaylist>> fetchFavoritePlaylists({
+    int limit = 60,
+    int startIndex = 0,
+  });
+
+  Future<void> setPlaylistFavorite(String playlistId, bool value);
 }
 
 /// Optional capability implemented only by protocols that support server-side

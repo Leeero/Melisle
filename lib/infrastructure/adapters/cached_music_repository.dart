@@ -21,7 +21,8 @@ class CachedMusicRepository
         MusicRepository,
         TrackSortingRepository,
         TrackFilteringRepository,
-        ArtistSortingRepository {
+        ArtistSortingRepository,
+        PlaylistFavoritesRepository {
   CachedMusicRepository({
     required MusicRepository delegate,
     MusicRepositoryCachePolicy policy = const MusicRepositoryCachePolicy(),
@@ -328,6 +329,49 @@ class CachedMusicRepository
         searchQuery: searchQuery,
       ),
     );
+  }
+
+  @override
+  Future<bool> supportsPlaylistFavorites() {
+    final delegate = _delegate;
+    if (delegate is! PlaylistFavoritesRepository) return Future.value(false);
+    final playlistFavoritesDelegate =
+        delegate as PlaylistFavoritesRepository;
+    return playlistFavoritesDelegate.supportsPlaylistFavorites();
+  }
+
+  @override
+  Future<List<MusicPlaylist>> fetchFavoritePlaylists({
+    int limit = 60,
+    int startIndex = 0,
+  }) {
+    final delegate = _delegate;
+    if (delegate is! PlaylistFavoritesRepository) {
+      return Future.error(UnsupportedError('当前服务器不支持收藏歌单。'));
+    }
+    final playlistFavoritesDelegate =
+        delegate as PlaylistFavoritesRepository;
+    return _cached(
+      'favoritePlaylists',
+      ttl: _policy.listTtl,
+      params: {'limit': limit, 'startIndex': startIndex},
+      loader: () => playlistFavoritesDelegate.fetchFavoritePlaylists(
+        limit: limit,
+        startIndex: startIndex,
+      ),
+    );
+  }
+
+  @override
+  Future<void> setPlaylistFavorite(String playlistId, bool value) async {
+    final delegate = _delegate;
+    if (delegate is! PlaylistFavoritesRepository) {
+      throw UnsupportedError('当前服务器不支持收藏歌单。');
+    }
+    final playlistFavoritesDelegate =
+        delegate as PlaylistFavoritesRepository;
+    await playlistFavoritesDelegate.setPlaylistFavorite(playlistId, value);
+    _clearCache();
   }
 
   @override

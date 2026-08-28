@@ -1,17 +1,22 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_favorite_tracks.dart';
+import 'package:cross_platform_music_player/application/usecases/fetch_favorite_playlists.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_list_state.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorite_playlists_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/favorites/favorite_playlists_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/app_text_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_playlist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/tracks/app_track_collection_view.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
@@ -25,18 +30,119 @@ class FavoritesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
+    final repository = context.read<MusicRepository>();
+    if (repository is! PlaylistFavoritesRepository) {
+      return _trackFavoritesProvider(context);
+    }
+    final playlistFavoritesRepository =
+        repository as PlaylistFavoritesRepository;
+    return FutureBuilder<bool>(
+      future: playlistFavoritesRepository.supportsPlaylistFavorites(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AppContentPage(body: AppBodyStateView.loading());
+        }
+        if (snapshot.data != true) return _trackFavoritesProvider(context);
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (context) => FavoritesListCubit(
+                FetchFavoriteTracks(repository),
+                context.read<FavoritesCubit>(),
+              )..load(),
+            ),
+            BlocProvider(
+              create: (context) => FavoritePlaylistsCubit(
+                FetchFavoritePlaylists(playlistFavoritesRepository),
+              )..load(),
+            ),
+          ],
+          child: const _TabbedFavoritesView(),
+        );
+      },
+    );
+  }
+
+  Widget _trackFavoritesProvider(BuildContext context) => BlocProvider(
       create: (context) => FavoritesListCubit(
         FetchFavoriteTracks(context.read<MusicRepository>()),
         context.read<FavoritesCubit>(),
       )..load(),
       child: const _FavoritesView(),
     );
+}
+
+enum _FavoritesTab { tracks, playlists }
+
+class _TabbedFavoritesView extends StatefulWidget {
+  const _TabbedFavoritesView();
+
+  @override
+  State<_TabbedFavoritesView> createState() => _TabbedFavoritesViewState();
+}
+
+class _TabbedFavoritesViewState extends State<_TabbedFavoritesView> {
+  _FavoritesTab _selectedTab = _FavoritesTab.tracks;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<FavoritesCubit, FavoritesState>(
+      listenWhen: (previous, current) =>
+          previous.playlistFavoritesRevision !=
+          current.playlistFavoritesRevision,
+      listener: (context, state) {
+        context.read<FavoritePlaylistsCubit>().load();
+      },
+      child: AppContentPage(
+        header: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BlocBuilder<FavoritesListCubit, FavoritesListState>(
+              builder: (context, tracksState) {
+                return BlocBuilder<
+                  FavoritePlaylistsCubit,
+                  FavoritePlaylistsState
+                >(
+                  builder: (context, playlistsState) => Align(
+                    alignment: Alignment.centerLeft,
+                    child: AppTextTabs<_FavoritesTab>(
+                      selectedValue: _selectedTab,
+                      onChanged: (tab) => setState(() => _selectedTab = tab),
+                      items: [
+                        AppTextTabItem<_FavoritesTab>(
+                          value: _FavoritesTab.tracks,
+                          label: '歌曲',
+                          count: tracksState.tracks.length,
+                        ),
+                        AppTextTabItem<_FavoritesTab>(
+                          value: _FavoritesTab.playlists,
+                          label: '歌单',
+                          count: playlistsState.playlists.length,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: IndexedStack(
+          index: _selectedTab.index,
+          children: const [
+            _FavoritesView(showHeader: false),
+            _FavoritePlaylistsView(),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 class _FavoritesView extends StatefulWidget {
-  const _FavoritesView();
+  const _FavoritesView({this.showHeader = true});
+
+  final bool showHeader;
 
   @override
   State<_FavoritesView> createState() => _FavoritesViewState();
@@ -77,7 +183,9 @@ class _FavoritesViewState extends State<_FavoritesView> {
     return BlocBuilder<FavoritesListCubit, FavoritesListState>(
       builder: (context, state) {
         return AppContentPage(
-          header: _FavoritesHeader(state: state),
+          header: widget.showHeader && AppBreakpoints.usesDesktopToolbar(context)
+              ? _FavoritesHeader(state: state)
+              : null,
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
@@ -177,6 +285,124 @@ class _FavoritesViewState extends State<_FavoritesView> {
   }
 }
 
+class _FavoritePlaylistsView extends StatefulWidget {
+  const _FavoritePlaylistsView();
+
+  @override
+  State<_FavoritePlaylistsView> createState() => _FavoritePlaylistsViewState();
+}
+
+class _FavoritePlaylistsViewState extends State<_FavoritePlaylistsView> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.extentAfter < 320) {
+      context.read<FavoritePlaylistsCubit>().loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<FavoritePlaylistsCubit, FavoritePlaylistsState>(
+      builder: (context, state) {
+        if (state.status == FavoritePlaylistsStatus.loading &&
+            state.playlists.isEmpty) {
+          return const AppBodyStateView.loading();
+        }
+        if (state.status == FavoritePlaylistsStatus.failure &&
+            state.playlists.isEmpty) {
+          return AppBodyStateView.message(
+            message: '收藏歌单加载失败',
+            description: state.errorMessage,
+            icon: Icons.error_outline_rounded,
+            action: FilledButton.icon(
+              onPressed: () => context.read<FavoritePlaylistsCubit>().load(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('重试'),
+            ),
+          );
+        }
+        if (state.playlists.isEmpty) {
+          return AppBodyStateView.message(
+            message: '还没有收藏歌单',
+            description: '在支持的歌单详情页点亮爱心后，会集中显示在这里。',
+            icon: Icons.favorite_border_rounded,
+            action: FilledButton.icon(
+              onPressed: () => context.go('/playlists'),
+              icon: const Icon(Icons.queue_music_rounded),
+              label: const Text('去歌单看看'),
+            ),
+          );
+        }
+
+        final isWide = AppBreakpoints.usesWideContent(context);
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverPadding(
+              padding: AppPageLayout.sectionPadding(
+                context,
+                bottom: AppPageLayout.contentBottomInset,
+              ),
+              sliver: SliverMainAxisGroup(
+                slivers: [
+                  SliverGrid(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final playlist = state.playlists[index];
+                      return MusicPlaylistGridCard(
+                        playlist: playlist,
+                        onTap: () => context.push(
+                          '/playlists/${playlist.id}',
+                          extra: playlist,
+                        ),
+                        artworkRadius: isWide
+                            ? AppRadiusTokens.coverGrid
+                            : AppRadiusTokens.mobileMd,
+                        compact: !isWide,
+                        scaleOnHover: isWide ? 1.006 : 1.012,
+                      );
+                    }, childCount: state.playlists.length),
+                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: isWide ? 176 : 174,
+                      crossAxisSpacing: isWide ? 18 : 14,
+                      mainAxisSpacing: 24,
+                      childAspectRatio: isWide ? 0.72 : 0.78,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: AppPaginationFooter(
+                      status: state.isLoadingMore
+                          ? AppPaginationStatus.loading
+                          : state.hasMore
+                          ? AppPaginationStatus.idle
+                          : AppPaginationStatus.complete,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _FavoritesHeader extends StatelessWidget {
   const _FavoritesHeader({required this.state});
 
@@ -185,20 +411,12 @@ class _FavoritesHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (AppBreakpoints.usesDesktopToolbar(context)) {
-      return AppPageHeader(
-        title: '收藏',
-        automaticImplyLeading: false,
-        trailing: _FavoritesDesktopActions(state: state),
+      return Align(
+        alignment: Alignment.centerRight,
+        child: _FavoritesDesktopActions(state: state),
       );
     }
-
-    return AppPageHeader(
-      title: '收藏',
-      description: state.tracks.isEmpty
-          ? '你标记喜欢的歌曲'
-          : '${state.tracks.length} 首收藏歌曲',
-      automaticImplyLeading: false,
-    );
+    return const SizedBox.shrink();
   }
 }
 
@@ -267,7 +485,12 @@ class _FavoritesDesktopTrackList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       controller: scrollController,
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        AppPageLayout.contentBottomInset,
+      ),
       children: [
         const _FavoritesDesktopTableHeader(),
         for (var index = 0; index < tracks.length; index++)
@@ -307,11 +530,11 @@ class _FavoritesDesktopTableHeader extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 56),
-          Expanded(flex: 4, child: Text('标题', style: labelStyle)),
+          Expanded(flex: 5, child: Text('标题', style: labelStyle)),
           const SizedBox(width: 16),
           Expanded(flex: 3, child: Text('歌手', style: labelStyle)),
           const SizedBox(width: 16),
-          Expanded(flex: 3, child: Text('专辑', style: labelStyle)),
+          Expanded(flex: 2, child: Text('专辑', style: labelStyle)),
           const SizedBox(width: 16),
           SizedBox(
             width: 100,
@@ -378,7 +601,7 @@ class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
             highlightColor: Colors.transparent,
             mouseCursor: SystemMouseCursors.click,
             child: SizedBox(
-              height: 64,
+              height: 52,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacingTokens.cardPadding),
                 child: Row(
@@ -391,14 +614,17 @@ class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      flex: 4,
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: primaryTextColor,
-                          fontWeight: FontWeight.w500,
+                      flex: 5,
+                      child: Tooltip(
+                        message: title,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: primaryTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -412,7 +638,7 @@ class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: _FavoritesDesktopCellText(
                         MediaDisplayText.albumTitle(widget.track.albumTitle),
                         color: secondaryTextColor,
@@ -425,7 +651,7 @@ class _FavoritesDesktopTrackRowState extends State<_FavoritesDesktopTrackRow> {
                         alignment: Alignment.centerRight,
                         children: [
                           AnimatedOpacity(
-                            opacity: highlighted ? 0 : 1,
+                            opacity: highlighted || widget.isCurrent ? 0 : 1,
                             duration: AppMotion.micro,
                             child: Text(
                               _formatFavoriteDuration(widget.track.duration),
@@ -470,11 +696,14 @@ class _FavoritesDesktopCellText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      value,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+    return Tooltip(
+      message: value,
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+      ),
     );
   }
 }

@@ -1,46 +1,35 @@
+import 'dart:async';
+
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('FavoritesCubit', () {
-    test('切换成功时保留乐观收藏状态并返回 true', () async {
+  test(
+    'reset prevents an old session toggle from restoring favorite state',
+    () async {
       final repository = _FavoritesRepository();
       final cubit = FavoritesCubit(repository);
+      addTearDown(cubit.close);
 
-      final result = await cubit.toggle('track-1', currentValue: true);
+      final toggle = cubit.toggle('old-track', currentValue: false);
+      expect(cubit.state.pending, contains('old-track'));
 
-      expect(result, isTrue);
-      expect(repository.requests, [('track-1', false)]);
-      expect(cubit.isFavorite('track-1'), isFalse);
+      cubit.reset();
+      repository.pendingRequest.complete();
+
+      expect(await toggle, isFalse);
+      expect(cubit.state.entries, isEmpty);
       expect(cubit.state.pending, isEmpty);
-    });
-
-    test('切换失败时回滚状态并返回 false', () async {
-      final cubit = FavoritesCubit(_FavoritesRepository(shouldFail: true));
-      cubit.seed('track-1', true);
-
-      final result = await cubit.toggle('track-1', currentValue: true);
-
-      expect(result, isFalse);
-      expect(cubit.isFavorite('track-1'), isTrue);
-      expect(cubit.state.pending, isEmpty);
-    });
-  });
+    },
+  );
 }
 
-class _FavoritesRepository implements MusicRepository {
-  _FavoritesRepository({this.shouldFail = false});
-
-  final bool shouldFail;
-  final List<(String, bool)> requests = [];
+class _FavoritesRepository extends Fake implements MusicRepository {
+  final pendingRequest = Completer<void>();
 
   @override
-  Future<void> setFavorite(String itemId, bool value) async {
-    requests.add((itemId, value));
-    if (shouldFail) throw Exception('network failure');
+  Future<void> setFavorite(String itemId, bool isFavorite) {
+    return pendingRequest.future;
   }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

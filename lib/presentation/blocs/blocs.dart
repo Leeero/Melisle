@@ -6,6 +6,8 @@ export 'artist/artist_state.dart';
 export 'downloads/downloads_cubit.dart';
 export 'downloads/downloads_state.dart';
 export 'favorites/favorites_cubit.dart';
+export 'favorites/favorite_playlists_cubit.dart';
+export 'favorites/favorite_playlists_state.dart';
 export 'favorites/favorites_list_cubit.dart';
 export 'favorites/favorites_list_state.dart';
 export 'history/history_cubit.dart';

@@ -10,6 +10,7 @@ import 'package:cross_platform_music_player/presentation/utils/media_display_tex
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
+import 'package:cross_platform_music_player/presentation/widgets/controls/favorite_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
@@ -92,7 +93,10 @@ class _PlaylistDetailView extends StatelessWidget {
   ) {
     return [
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 10, bottom: 24),
+        padding: AppPageLayout.pagePadding(
+          context,
+          bottom: AppPageLayout.sectionGap,
+        ),
         sliver: SliverToBoxAdapter(
           child: _PlaylistHero(
             playlist: playlist,
@@ -117,7 +121,9 @@ class _PlaylistDetailView extends StatelessWidget {
               : SliverPadding(
                   padding: AppPageLayout.sectionPadding(
                     context,
-                    bottom: state.isLoadingMore ? 12 : 28,
+                    bottom: state.isLoadingMore
+                        ? AppSpacingTokens.contentGap
+                        : AppPageLayout.contentBottomInset,
                   ),
                   sliver: SliverToBoxAdapter(
                     child: MusicTrackTable(
@@ -132,12 +138,13 @@ class _PlaylistDetailView extends StatelessWidget {
                 ),
       },
       if (state.status == PlaylistDetailStatus.success && state.isLoadingMore)
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(
-              top: AppSpacingTokens.compactGap,
-              bottom: AppSpacingTokens.pageTop,
-            ),
+        SliverPadding(
+          padding: AppPageLayout.sectionPadding(
+            context,
+            top: AppSpacingTokens.compactGap,
+            bottom: AppPageLayout.contentBottomInset,
+          ),
+          sliver: const SliverToBoxAdapter(
             child: Center(child: CircularProgressIndicator()),
           ),
         ),
@@ -155,13 +162,19 @@ class _PlaylistDetailView extends StatelessWidget {
 
     return [
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 2, bottom: 0),
+        padding: AppPageLayout.pagePadding(
+          context,
+          bottom: AppSpacingTokens.inlineGap,
+        ),
         sliver: SliverToBoxAdapter(
           child: AppDetailBackNav(onPressed: () => _goBackToPlaylists(context)),
         ),
       ),
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, top: 8, bottom: 14),
+        padding: AppPageLayout.sectionPadding(
+          context,
+          bottom: AppPageLayout.sectionGap,
+        ),
         sliver: SliverToBoxAdapter(
           child: _MobilePlaylistHero(
             playlist: playlist,
@@ -190,12 +203,13 @@ class _PlaylistDetailView extends StatelessWidget {
                 ),
       },
       if (state.status == PlaylistDetailStatus.success && state.isLoadingMore)
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(
-              top: AppSpacingTokens.compactGap,
-              bottom: AppSpacingTokens.pageTop,
-            ),
+        SliverPadding(
+          padding: AppPageLayout.sectionPadding(
+            context,
+            top: AppSpacingTokens.compactGap,
+            bottom: AppPageLayout.contentBottomInset,
+          ),
+          sliver: const SliverToBoxAdapter(
             child: Center(child: CircularProgressIndicator()),
           ),
         ),
@@ -300,6 +314,10 @@ class _MobilePlaylistHero extends StatelessWidget {
               onShufflePressed:
                   hasLoadedTracks && !isBusy ? onShuffleAll : null,
             ),
+            if (playlist != null) ...[
+              const SizedBox(height: AppSpacingTokens.inlineGap),
+              _PlaylistFavoriteButton(playlist: playlist!),
+            ],
           ],
         );
       },
@@ -374,11 +392,9 @@ class _MobilePlaylistTrackSliver extends StatelessWidget {
     );
 
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacingTokens.mobilePageX,
-        0,
-        AppSpacingTokens.mobilePageX,
-        isLoadingMore ? 12 : bottomInset,
+      padding: AppPageLayout.sectionPadding(
+        context,
+        bottom: isLoadingMore ? AppSpacingTokens.contentGap : bottomInset,
       ),
       sliver: SliverMainAxisGroup(
         slivers: [
@@ -486,7 +502,7 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
         child: AnimatedContainer(
           duration: AppMotion.micro,
           curve: AppMotion.enter,
-          constraints: const BoxConstraints(minHeight: 54),
+          constraints: const BoxConstraints(minHeight: 52),
           decoration: BoxDecoration(
             color: selected
                 ? theme.selectedWash
@@ -511,7 +527,9 @@ class _MobilePlaylistTrackRowState extends State<_MobilePlaylistTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.listTileVPadding),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacingTokens.compactGap,
+                ),
                 child: Row(
                   children: [
                     SizedBox(
@@ -708,6 +726,7 @@ class _PlaylistHero extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final coverSize = constraints.maxWidth < 980 ? 200.0 : 256.0;
+        final heroHeight = coverSize + AppSpacingTokens.compactGap * 2;
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -718,14 +737,10 @@ class _PlaylistHero extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacingTokens.sectionGap),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: AppSpacingTokens.inlineGapCompact,
-                  bottom: AppSpacingTokens.compactGap,
-                ),
+              child: SizedBox(
+                height: heroHeight,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'PLAYLIST',
@@ -746,8 +761,8 @@ class _PlaylistHero extends StatelessWidget {
                       textAlign: TextAlign.start,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: colorScheme.onSurface,
-                        fontSize: 48,
-                        height: 1.12,
+                        fontSize: 36,
+                        height: 1.16,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
@@ -764,12 +779,20 @@ class _PlaylistHero extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _PlaylistDesktopActions(
-                      enabled: tracksCount > 0 && !isLoading,
-                      isLoading: isLoading,
-                      onPlayAll: onPlayAll,
-                      onShuffleAll: onShuffleAll,
+                    const Spacer(),
+                    Row(
+                      children: [
+                        _PlaylistDesktopActions(
+                          enabled: tracksCount > 0 && !isLoading,
+                          isLoading: isLoading,
+                          onPlayAll: onPlayAll,
+                          onShuffleAll: onShuffleAll,
+                        ),
+                        if (playlist != null) ...[
+                          const SizedBox(width: AppSpacingTokens.inlineGap),
+                          _PlaylistFavoriteButton(playlist: playlist!),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -802,6 +825,57 @@ class _PlaylistDesktopActions extends StatelessWidget {
       isLoading: isLoading,
       onPressed: enabled ? onPlayAll : null,
       onShufflePressed: enabled ? onShuffleAll : null,
+    );
+  }
+}
+
+class _PlaylistFavoriteButton extends StatelessWidget {
+  const _PlaylistFavoriteButton({required this.playlist});
+
+  final MusicPlaylist playlist;
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = context.read<MusicRepository>();
+    if (repository is! PlaylistFavoritesRepository) {
+      return const SizedBox.shrink();
+    }
+    final playlistFavoritesRepository =
+        repository as PlaylistFavoritesRepository;
+
+    return FutureBuilder<bool>(
+      future: playlistFavoritesRepository.supportsPlaylistFavorites(),
+      builder: (context, capability) {
+        if (capability.data != true) return const SizedBox.shrink();
+        return BlocBuilder<FavoritesCubit, FavoritesState>(
+          buildWhen: (previous, next) =>
+              previous.entries[playlist.id] != next.entries[playlist.id] ||
+              previous.pending.contains(playlist.id) !=
+                  next.pending.contains(playlist.id),
+          builder: (context, state) {
+            final isFavorite =
+                state.entries[playlist.id] ?? playlist.isFavorite;
+            final isPending = state.pending.contains(playlist.id);
+            return IconButton(
+              tooltip: isFavorite ? '取消收藏歌单' : '收藏歌单',
+              onPressed: isPending
+                  ? null
+                  : () async {
+                      final updated = await context
+                          .read<FavoritesCubit>()
+                          .togglePlaylist(
+                            playlist.id,
+                            currentValue: isFavorite,
+                          );
+                      if (!updated && context.mounted) {
+                        AppSnackBar.show(context, '更新歌单收藏失败');
+                      }
+                    },
+              icon: FavoriteIcon(isFavorite: isFavorite, size: 24),
+            );
+          },
+        );
+      },
     );
   }
 }

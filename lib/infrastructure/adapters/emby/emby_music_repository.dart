@@ -21,7 +21,8 @@ class EmbyMusicRepository
         MusicRepository,
         TrackSortingRepository,
         TrackFilteringRepository,
-        ArtistSortingRepository {
+        ArtistSortingRepository,
+        PlaylistFavoritesRepository {
   EmbyMusicRepository({
     required EmbyApiClient client,
     required AuthSessionStore sessionStore,
@@ -218,6 +219,26 @@ class EmbyMusicRepository
       startIndex: startIndex,
       searchQuery: searchQuery,
     );
+  }
+
+  @override
+  Future<bool> supportsPlaylistFavorites() async => true;
+
+  @override
+  Future<List<MusicPlaylist>> fetchFavoritePlaylists({
+    int limit = 60,
+    int startIndex = 0,
+  }) async {
+    return _client.fetchFavoritePlaylists(
+      await _requireSession(),
+      limit: limit,
+      startIndex: startIndex,
+    );
+  }
+
+  @override
+  Future<void> setPlaylistFavorite(String playlistId, bool value) async {
+    await _client.setFavorite(await _requireSession(), playlistId, value);
   }
 
   @override

@@ -37,16 +37,39 @@ void main() {
       }
     }
   });
+
+  testWidgets('当前播放的收藏歌曲只显示取消收藏按钮', (tester) async {
+    await _setViewport(tester, const ui.Size(1080, 900));
+    await _pumpFavorites(
+      tester,
+      _successState,
+      currentTrack: _mockTracks.first,
+    );
+
+    final durationOpacity = tester.widget<AnimatedOpacity>(
+      find.ancestor(
+        of: find.text('3:30'),
+        matching: find.byType(AnimatedOpacity),
+      ),
+    );
+
+    expect(durationOpacity.opacity, 0);
+    expect(find.byTooltip('取消收藏'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpFavorites(
   WidgetTester tester,
   FavoritesListState state, {
   ThemeMode themeMode = ThemeMode.light,
+  MusicTrack? currentTrack,
 }) async {
   final favoritesCubit = _MockFavoritesCubit();
   final favoritesListCubit = _MockFavoritesListCubit()..show(state);
   final playerCubit = _MockPlayerCubit();
+  if (currentTrack != null) {
+    playerCubit.showCurrentTrack(currentTrack);
+  }
   addTearDown(() {
     favoritesCubit.close();
     favoritesListCubit.close();
@@ -249,6 +272,10 @@ class _MockPlayerCubit extends PlayerCubit {
 
   @override
   Future<void> cycleRepeatMode() async {}
+
+  void showCurrentTrack(MusicTrack track) {
+    emit(PlayerViewState(queue: [track]));
+  }
 }
 
 // Minimal mocks for dependencies

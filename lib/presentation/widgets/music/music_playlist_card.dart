@@ -26,6 +26,8 @@ class MusicPlaylistGridCard extends StatefulWidget {
 }
 
 class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
+  bool _isFocused = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -76,6 +78,8 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                         widget.artworkRadius,
                       ),
                       onTap: widget.onTap,
+                      onFocusChange: (isFocused) =>
+                          setState(() => _isFocused = isFocused),
                       mouseCursor: SystemMouseCursors.click,
                       child: Container(
                         decoration: BoxDecoration(
@@ -83,12 +87,14 @@ class _MusicPlaylistGridCardState extends State<MusicPlaylistGridCard> {
                             widget.artworkRadius,
                           ),
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: theme.brightness == Brightness.dark
-                                  ? 0.30
-                                  : 0.50,
-                            ),
-                            width: 1.0,
+                            color: _isFocused
+                                ? colorScheme.primary
+                                : colorScheme.outlineVariant.withValues(
+                                    alpha: theme.brightness == Brightness.dark
+                                        ? 0.30
+                                        : 0.50,
+                                  ),
+                            width: _isFocused ? 2.0 : 1.0,
                           ),
                           boxShadow: theme.brightness == Brightness.dark
                               ? <BoxShadow>[]

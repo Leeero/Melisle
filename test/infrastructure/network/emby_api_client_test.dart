@@ -111,9 +111,78 @@ void main() {
       containsPair('Filters', 'IsFavorite'),
     );
   });
+
+  test('顶层时长缺失时使用 MediaSources 时长', () async {
+    final adapter = _RecordingHttpClientAdapter(
+      responseData: {
+        'Items': [
+          {
+            'Id': 'track-1',
+            'Name': 'Track 1',
+            'RunTimeTicks': 0,
+            'MediaSources': [
+              {'RunTimeTicks': 2320000000},
+            ],
+          },
+        ],
+        'TotalRecordCount': 1,
+      },
+    );
+    final dio = Dio()..httpClientAdapter = adapter;
+    final client = EmbyApiClient(dio);
+    const session = AuthSession(
+      serverUrl: 'https://music.example.test',
+      userId: 'user-1',
+      userName: 'user-1',
+      accessToken: 'token',
+    );
+
+    final result = await client.fetchTracks(session);
+
+    expect(result.tracks.single.duration, const Duration(seconds: 232));
+  });
+
+  test('收藏歌单使用收藏过滤并携带用户数据', () async {
+    final adapter = _RecordingHttpClientAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final client = EmbyApiClient(dio);
+    const session = AuthSession(
+      serverUrl: 'https://music.example.test',
+      userId: 'user-1',
+      userName: 'user-1',
+      accessToken: 'token',
+    );
+
+    await client.fetchFavoritePlaylists(session, limit: 20, startIndex: 40);
+
+    expect(
+      adapter.requestOptions?.path,
+      'https://music.example.test/Users/user-1/Items',
+    );
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('IncludeItemTypes', 'Playlist'),
+    );
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('Filters', 'IsFavorite'),
+    );
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('EnableUserData', true),
+    );
+    expect(adapter.requestOptions?.queryParameters, containsPair('Limit', 20));
+    expect(
+      adapter.requestOptions?.queryParameters,
+      containsPair('StartIndex', 40),
+    );
+  });
 }
 
 class _RecordingHttpClientAdapter implements HttpClientAdapter {
+  _RecordingHttpClientAdapter({this.responseData});
+
+  final Map<String, Object?>? responseData;
   RequestOptions? requestOptions;
 
   @override
@@ -124,7 +193,7 @@ class _RecordingHttpClientAdapter implements HttpClientAdapter {
   ) async {
     requestOptions = options;
     return ResponseBody.fromString(
-      jsonEncode({'Items': <Object>[]}),
+      jsonEncode(responseData ?? {'Items': <Object>[]}),
       200,
       headers: const {
         Headers.contentTypeHeader: ['application/json'],

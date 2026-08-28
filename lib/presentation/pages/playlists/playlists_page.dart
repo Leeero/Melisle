@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlists_cubit.dart';
@@ -59,24 +57,14 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
 
   @override
   Widget build(BuildContext context) {
-    final horizontalPadding = AppPageLayout.horizontalPadding(context);
-
     return BlocBuilder<PlaylistsCubit, PlaylistsState>(
       builder: (context, state) => AppContentPage(
-        header: const AppPageHeader(
-          title: '歌单',
-          automaticImplyLeading: false,
-        ),
-        body: _buildBody(context, state, horizontalPadding),
+        body: _buildBody(context, state),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    PlaylistsState state,
-    double horizontalPadding,
-  ) {
+  Widget _buildBody(BuildContext context, PlaylistsState state) {
     if (state.status == PlaylistsStatus.loading && state.allPlaylists.isEmpty) {
       return const AppBodyStateView.loading();
     }
@@ -112,55 +100,43 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = AppBreakpoints.usesWideContentWidth(
-          constraints.maxWidth,
-        );
+    final isWide = AppBreakpoints.usesWideContent(context);
 
-        return CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            SliverLayoutBuilder(
-              builder: (context, constraints) {
-                final sidePadding = _playlistGridSidePadding(
-                  constraints.crossAxisExtent,
-                  horizontalPadding,
-                  isWide,
-                );
-
-                return SliverPadding(
-                  padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 24),
-                  sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final playlist = state.playlists[index];
-                      return MusicPlaylistGridCard(
-                        playlist: playlist,
-                        onTap: () => context.push(
-                          '/playlists/${playlist.id}',
-                          extra: playlist,
-                        ),
-                        artworkRadius: isWide
-                            ? AppRadiusTokens.coverGrid
-                            : AppRadiusTokens.mobileMd,
-                        compact: !isWide,
-                        scaleOnHover: isWide ? 1.006 : 1.012,
-                      );
-                    }, childCount: state.playlists.length),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: isWide ? 176 : 174,
-                      crossAxisSpacing: isWide ? 18 : 14,
-                      mainAxisSpacing: isWide ? 24 : 24,
-                      childAspectRatio: isWide ? 0.72 : 0.78,
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        SliverPadding(
+          padding: AppPageLayout.pagePadding(context),
+          sliver: SliverMainAxisGroup(
+            slivers: [
+              SliverGrid(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final playlist = state.playlists[index];
+                  return MusicPlaylistGridCard(
+                    playlist: playlist,
+                    onTap: () => context.push(
+                      '/playlists/${playlist.id}',
+                      extra: playlist,
                     ),
-                  ),
-                );
-              },
-            ),
-            SliverToBoxAdapter(child: _buildFooter(state)),
-          ],
-        );
-      },
+                    artworkRadius: isWide
+                        ? AppRadiusTokens.coverGrid
+                        : AppRadiusTokens.mobileMd,
+                    compact: !isWide,
+                    scaleOnHover: isWide ? 1.006 : 1.012,
+                  );
+                }, childCount: state.playlists.length),
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: isWide ? 176 : 174,
+                  crossAxisSpacing: isWide ? 18 : 14,
+                  mainAxisSpacing: 24,
+                  childAspectRatio: isWide ? 0.72 : 0.78,
+                ),
+              ),
+              SliverToBoxAdapter(child: _buildFooter(state)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -183,18 +159,4 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
           : null,
     );
   }
-}
-
-const _playlistDesktopMaxWidth = 1040.0;
-
-double _playlistGridSidePadding(
-  double crossAxisExtent,
-  double horizontalPadding,
-  bool isWide,
-) {
-  if (!isWide) return horizontalPadding;
-
-  final availableWidth = math.max(0, crossAxisExtent - horizontalPadding * 2);
-  final extraWidth = math.max(0, availableWidth - _playlistDesktopMaxWidth);
-  return horizontalPadding + extraWidth / 2;
 }

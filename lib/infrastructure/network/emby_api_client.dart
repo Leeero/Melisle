@@ -286,6 +286,32 @@ class EmbyApiClient {
         .toList();
   }
 
+  /// 收藏的歌单。
+  Future<List<MusicPlaylist>> fetchFavoritePlaylists(
+    AuthSession session, {
+    int limit = 60,
+    int startIndex = 0,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${session.normalizedServerUrl}/Users/${session.userId}/Items',
+      queryParameters: {
+        ..._buildPlaylistQueryParameters(
+          limit: limit,
+          startIndex: startIndex,
+          searchQuery: null,
+        ),
+        'Filters': 'IsFavorite',
+        'EnableUserData': true,
+      },
+      options: _authorizedOptions(session, requestLabel: 'playlists.favorites'),
+    );
+
+    return _readItems(response.data)
+        .map((item) => _toMusicPlaylist(session, item))
+        .where((playlist) => playlist.id.isNotEmpty)
+        .toList();
+  }
+
   Future<List<MusicTrack>> fetchAlbumTracks(
     AuthSession session,
     String albumId,
@@ -837,7 +863,7 @@ class EmbyApiClient {
       'Fields': _playlistFields,
       'Limit': limit,
       'StartIndex': startIndex,
-      'EnableUserData': false,
+      'EnableUserData': true,
       'EnableImages': false,
       'ImageTypeLimit': 0,
       'EnableTotalRecordCount': false,
@@ -888,11 +914,16 @@ class EmbyApiClient {
     AuthSession session,
     Map<String, dynamic> item,
   ) {
+    final userData = item['UserData'];
+    final favorite = userData is Map<String, dynamic>
+        ? userData['IsFavorite'] == true
+        : false;
     return MusicPlaylist(
       id: item['Id'] as String? ?? '',
       name: item['Name'] as String? ?? '未命名歌单',
       artworkUrl: buildArtworkUrl(session, item['Id'] as String? ?? ''),
       trackCount: _readInt(item['ChildCount']),
+      isFavorite: favorite,
     );
   }
 
@@ -911,10 +942,12 @@ class EmbyApiClient {
     int? bitRate;
     String? codec;
     String? container;
+    Object? mediaSourceRunTimeTicks;
     final mediaSources = item['MediaSources'];
     if (mediaSources is List && mediaSources.isNotEmpty) {
       final first = mediaSources.first;
       if (first is Map<String, dynamic>) {
+        mediaSourceRunTimeTicks = first['RunTimeTicks'];
         bitRate = _readNullableInt(first['Bitrate']);
         container = (first['Container'] as String?)?.toLowerCase();
         final streams = first['MediaStreams'];
@@ -931,13 +964,18 @@ class EmbyApiClient {
       }
     }
 
+    final itemRunTimeTicks = _readInt(item['RunTimeTicks']);
+    final runTimeTicks = itemRunTimeTicks > 0
+        ? itemRunTimeTicks
+        : mediaSourceRunTimeTicks;
+
     return MusicTrack(
       id: item['Id'] as String? ?? '',
       title: item['Name'] as String? ?? '未知歌曲',
       artistName: _resolveArtistName(item),
       albumTitle: item['Album'] as String? ?? '未知专辑',
       artworkUrl: buildArtworkUrl(session, item['Id'] as String? ?? ''),
-      duration: _durationFromTicks(item['RunTimeTicks']),
+      duration: _durationFromTicks(runTimeTicks),
       albumId: item['AlbumId'] as String?,
       artistId: _resolveArtistId(item),
       isFavorite: favorite,
