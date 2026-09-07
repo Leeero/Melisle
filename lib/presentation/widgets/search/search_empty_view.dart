@@ -1,10 +1,13 @@
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
+enum SearchDiscoveryDestination { history, favorites, albums, artists }
+
 class SearchEmptyView extends StatelessWidget {
   const SearchEmptyView({
     super.key,
     required this.onQuerySelected,
+    required this.onDestinationSelected,
     this.recentQueries = const [],
     this.onClearRecent,
     this.onQueryRemoved,
@@ -12,6 +15,7 @@ class SearchEmptyView extends StatelessWidget {
 
   final List<String> recentQueries;
   final ValueChanged<String> onQuerySelected;
+  final ValueChanged<SearchDiscoveryDestination> onDestinationSelected;
   final VoidCallback? onClearRecent;
   final ValueChanged<String>? onQueryRemoved;
 
@@ -43,6 +47,60 @@ class SearchEmptyView extends StatelessWidget {
             ],
           ),
         );
+        final discoveryPanel = _SearchDiscoveryPanel(
+          title: '开始探索',
+          icon: Icons.explore_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '不输入关键词，也可以从这里开始聆听。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 14),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: constraints.maxWidth >= 720 ? 4 : 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: constraints.maxWidth >= 720 ? 2.7 : 2.3,
+                children: [
+                  _SearchDiscoveryShortcut(
+                    icon: Icons.history_rounded,
+                    label: '最近播放',
+                    onPressed: () => onDestinationSelected(
+                      SearchDiscoveryDestination.history,
+                    ),
+                  ),
+                  _SearchDiscoveryShortcut(
+                    icon: Icons.favorite_border_rounded,
+                    label: '我的收藏',
+                    onPressed: () => onDestinationSelected(
+                      SearchDiscoveryDestination.favorites,
+                    ),
+                  ),
+                  _SearchDiscoveryShortcut(
+                    icon: Icons.album_outlined,
+                    label: '浏览专辑',
+                    onPressed: () => onDestinationSelected(
+                      SearchDiscoveryDestination.albums,
+                    ),
+                  ),
+                  _SearchDiscoveryShortcut(
+                    icon: Icons.person_outline_rounded,
+                    label: '浏览艺术家',
+                    onPressed: () => onDestinationSelected(
+                      SearchDiscoveryDestination.artists,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
         return Align(
           alignment: Alignment.topLeft,
           child: ConstrainedBox(
@@ -50,24 +108,74 @@ class SearchEmptyView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (hasRecent)
-                  recentPanel
-                else
-                  _SearchDiscoveryPanel(
-                    title: '搜索音乐库',
-                    icon: Icons.search_rounded,
-                    child: Text(
-                      '输入歌曲、专辑、歌手或歌单名称。',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                if (hasRecent) ...[
+                  recentPanel,
+                  const SizedBox(height: AppSpacingTokens.sectionGap),
+                ],
+                discoveryPanel,
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _SearchDiscoveryShortcut extends StatelessWidget {
+  const _SearchDiscoveryShortcut({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+        child: InkWell(
+          onTap: onPressed,
+          mouseCursor: SystemMouseCursors.click,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
+          hoverColor: theme.hoverWash,
+          focusColor: colorScheme.primary.withValues(alpha: 0.10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

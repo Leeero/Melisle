@@ -63,9 +63,9 @@ abstract final class AppColorTokens {
 
   // ──────────────────── 主色 ────────────────────
 
-  static const darkPrimary = Color(0xFF28D7A1);
-  static const darkPrimaryHover = Color(0xFF5BE3B7);
-  static const darkPrimaryContainer = Color(0xFF0C3D30);
+  static const darkPrimary = Color(0xFF63D6A5);
+  static const darkPrimaryHover = Color(0xFF86E2BE);
+  static const darkPrimaryContainer = Color(0xFF12382E);
 
   static const lightPrimary = Color(0xFF087A5B);
   static const lightPrimaryRole = Color(0xFF066B50);
@@ -83,9 +83,9 @@ abstract final class AppColorTokens {
 
   // ──────────────────── 文字色 ────────────────────
 
-  static const darkOnSurface = Color(0xFFF2F7FA);
-  static const darkOnSurfaceVariant = Color(0xFF9AAAB7);
-  static const darkMuted = Color(0xFF7F909D);
+  static const darkOnSurface = Color(0xFFF1F5F3);
+  static const darkOnSurfaceVariant = Color(0xFFA8B2B8);
+  static const darkMuted = Color(0xFF7B8A93);
 
   static const lightOnSurface = Color(0xFF142028);
   static const lightOnSurfaceVariant = Color(0xFF566875);
@@ -94,7 +94,7 @@ abstract final class AppColorTokens {
   // ──────────────────── 边框色 ────────────────────
 
   static const darkOutline = Color(0xFF5A6B78);
-  static const darkOutlineVariant = Color(0xFF2A3A47);
+  static const darkOutlineVariant = Color(0xFF26343F);
 
   static const lightOutline = Color(0xFF72858B);
   static const lightOutlineVariant = Color(0xFFD5E1E3);
@@ -102,7 +102,7 @@ abstract final class AppColorTokens {
 
   // ──────────────────── 歌词高亮 ────────────────────
 
-  static const darkLyricHighlight = Color(0xFF28D7A1);
+  static const darkLyricHighlight = Color(0xFF63D6A5);
   static const lightLyricHighlight = Color(0xFF087A5B);
   static const darkLyricInactive = Color(0xFF9AAAB7);
   static const lightLyricInactive = Color(0xFF5D727C);
@@ -131,7 +131,7 @@ abstract final class AppColorTokens {
   static const lightWarn = Color(0xFFA56108);
   static const lightDanger = Color(0xFFB34D3C);
 
-  static const darkSuccess = Color(0xFF63D6A5);
+  static const darkSuccess = Color(0xFF4FCB8C);
   static const darkWarn = Color(0xFFE7BD63);
   static const darkDanger = Color(0xFFFF9D9D);
 
@@ -360,7 +360,7 @@ abstract final class AppSpacingTokens {
   static const double shellGap = 0;
   static const double shellBottomInset = 0;
   static const double macOsTrafficLightInset = 28;
-  static const double desktopSidebarWidth = 220;
+  static const double desktopSidebarWidth = 224;
   static const double mobileTabContentHeight = 54;
   static const double desktopToolbarHeight = 72;
   static const double desktopMainContentPaddingX = 48; // 40 → 48

@@ -175,9 +175,10 @@ class AppBackButton extends StatelessWidget {
 }
 
 class AppDetailBackNav extends StatelessWidget {
-  const AppDetailBackNav({super.key, required this.onPressed});
+  const AppDetailBackNav({super.key, required this.onPressed, this.label = '返回'});
 
   final VoidCallback onPressed;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +189,7 @@ class AppDetailBackNav extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onPressed,
         icon: const Icon(Icons.chevron_left_rounded, size: 22),
-        label: const Text('返回'),
+        label: Text(label),
         style:
             AppActionButtonStyle.link(
               context,

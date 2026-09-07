@@ -13,6 +13,8 @@ typedef MusicTrackTableAction = void Function(MusicTrack track);
 typedef MusicTrackTableTrailingBuilder =
     Widget? Function(BuildContext context, MusicTrack track, bool hovered);
 
+enum MusicTrackTableDensity { compact, comfortable }
+
 class MusicTrackTable extends StatelessWidget {
   const MusicTrackTable({
     super.key,
@@ -31,6 +33,7 @@ class MusicTrackTable extends StatelessWidget {
     this.hideHoverPlayControl = false,
     this.bareMoreAction = false,
     this.actionBarTrailing,
+    this.density = MusicTrackTableDensity.comfortable,
   });
 
   final List<MusicTrack> tracks;
@@ -48,6 +51,7 @@ class MusicTrackTable extends StatelessWidget {
   final bool hideHoverPlayControl;
   final bool bareMoreAction;
   final Widget? actionBarTrailing;
+  final MusicTrackTableDensity density;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +89,7 @@ class MusicTrackTable extends StatelessWidget {
                 playlistStyle: playlistStyle,
                 hideHoverPlayControl: hideHoverPlayControl,
                 bareMoreAction: bareMoreAction,
+                density: density,
               ),
           ],
         ),
@@ -219,7 +224,11 @@ class _MusicTrackTableHeader extends StatelessWidget {
             horizontalPadding,
             verticalPadding,
             horizontalPadding,
-            libraryStyle ? 6 : playlistStyle ? 8 : 8,
+            libraryStyle
+                ? 6
+                : playlistStyle
+                ? 8
+                : 8,
           ),
           decoration: BoxDecoration(
             border: Border(
@@ -230,22 +239,35 @@ class _MusicTrackTableHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
-              SizedBox(
-                width: playlistStyle ? 48 : 36,
-                child: Text(
-                  '#',
-                  style: labelStyle,
-                  textAlign: TextAlign.center,
+              if (libraryStyle)
+                Expanded(
+                  flex: 5,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        child: Text(
+                          '#',
+                          style: labelStyle,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text('歌曲 / 艺术家', style: labelStyle)),
+                    ],
+                  ),
+                )
+              else ...[
+                SizedBox(
+                  width: playlistStyle ? 48 : 36,
+                  child: Text(
+                    '#',
+                    style: labelStyle,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              SizedBox(width: playlistStyle ? 0 : 12),
-              Expanded(
-                flex: libraryStyle ? 5 : 4,
-                child: Text('标题', style: labelStyle),
-              ),
-              if (libraryStyle) ...[
-                const SizedBox(width: 12),
-                Expanded(flex: 3, child: Text('歌手', style: labelStyle)),
+                SizedBox(width: playlistStyle ? 0 : 12),
+                Expanded(flex: 4, child: Text('标题', style: labelStyle)),
               ],
               if (showAlbum) ...[
                 SizedBox(width: playlistStyle ? 0 : 12),
@@ -272,7 +294,27 @@ class _MusicTrackTableHeader extends StatelessWidget {
               ),
               if (!playlistStyle) ...[
                 const SizedBox(width: 8),
-                const SizedBox(width: 88),
+                SizedBox(
+                  width: libraryStyle ? 96 : 88,
+                  child: libraryStyle
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(
+                              Icons.favorite_border_rounded,
+                              size: 18,
+                              color: theme.muted,
+                            ),
+                            const SizedBox(width: 28),
+                            Icon(
+                              Icons.more_horiz_rounded,
+                              size: 18,
+                              color: theme.muted,
+                            ),
+                          ],
+                        )
+                      : null,
+                ),
               ],
             ],
           ),
@@ -294,6 +336,7 @@ class _MusicTrackTableRow extends StatefulWidget {
     required this.playlistStyle,
     required this.hideHoverPlayControl,
     required this.bareMoreAction,
+    required this.density,
   });
 
   final int index;
@@ -306,6 +349,7 @@ class _MusicTrackTableRow extends StatefulWidget {
   final bool playlistStyle;
   final bool hideHoverPlayControl;
   final bool bareMoreAction;
+  final MusicTrackTableDensity density;
 
   @override
   State<_MusicTrackTableRow> createState() => _MusicTrackTableRowState();
@@ -313,6 +357,7 @@ class _MusicTrackTableRow extends StatefulWidget {
 
 class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
   bool _hovered = false;
+  bool _playHovered = false;
   bool _focused = false;
   bool _menuOpen = false;
 
@@ -333,10 +378,15 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
         ? '${widget.index + 1}'
         : (widget.index + 1).toString().padLeft(2, '0');
     final trailing = widget.trailingBuilder?.call(context, track, _hovered);
+    final rowHeight = switch (widget.density) {
+      MusicTrackTableDensity.compact => 52.0,
+      MusicTrackTableDensity.comfortable => 68.0,
+    };
 
     return Semantics(
-      label: '播放《$displayTitle》',
-      button: true,
+      container: true,
+      label: widget.libraryStyle ? null : '播放《$displayTitle》',
+      button: !widget.libraryStyle,
       selected: widget.isCurrent,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
@@ -353,26 +403,29 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
             borderRadius: BorderRadius.circular(AppRadiusTokens.desktopSm),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              key: ValueKey('track-row-play-${track.id}'),
+              key: widget.libraryStyle
+                  ? null
+                  : ValueKey('track-row-play-${track.id}'),
               focusColor: colorScheme.primary.withValues(alpha: 0.08),
               hoverColor: Colors.transparent,
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
-              mouseCursor: SystemMouseCursors.click,
+              mouseCursor: widget.libraryStyle
+                  ? SystemMouseCursors.basic
+                  : SystemMouseCursors.click,
               onFocusChange: (value) => setState(() => _focused = value),
-              onTap: widget.onTap,
+              onTap: widget.libraryStyle ? null : widget.onTap,
               onSecondaryTap: () => _showMenu(track),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final showAlbum = constraints.maxWidth >=
+                  final showAlbum =
+                      constraints.maxWidth >=
                       (widget.playlistStyle ? 680 : 620);
                   final showQuality =
                       widget.libraryStyle && constraints.maxWidth >= 1120;
 
                   return ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: 44,
-                    ),
+                    constraints: BoxConstraints(minHeight: rowHeight),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: widget.libraryStyle
@@ -381,57 +434,134 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                             ? 16
                             : 12,
                         vertical: widget.libraryStyle
-                            ? 2
+                            ? 4
                             : widget.playlistStyle
                             ? 2
                             : 4,
                       ),
                       child: Row(
                         children: [
-                          SizedBox(
-                            width: widget.playlistStyle ? 48 : 36,
-                            child: Center(
-                              child: widget.isCurrent
-                                  ? Icon(
-                                      Icons.graphic_eq_rounded,
-                                      size: 18,
-                                      color: colorScheme.primary,
-                                    )
-                                  : highlighted && !widget.hideHoverPlayControl
-                                  ? Icon(
-                                      Icons.play_arrow_rounded,
-                                      size: 20,
-                                      color: colorScheme.primary,
-                                    )
-                                  : Text(
-                                      indexLabel,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                            fontFeatures: const [
-                                              FontFeature.tabularFigures(),
-                                            ],
-                                          ),
-                                    ),
-                            ),
-                          ),
-                          SizedBox(width: widget.playlistStyle ? 0 : 12),
-                          Expanded(
-                            flex: widget.libraryStyle ? 5 : 4,
-                            child: _MusicTrackTitleCell(
-                              track: track,
-                              isCurrent: widget.isCurrent,
-                              showSubtitle: !widget.libraryStyle,
-                              showArtwork: false,
-                            ),
-                          ),
-                          if (widget.libraryStyle) ...[
-                            const SizedBox(width: 12),
+                          if (widget.libraryStyle)
                             Expanded(
-                              flex: 3,
-                              child: _MusicTrackTableText(
-                                MediaDisplayText.artistName(track.artistName),
-                                highlighted: widget.isCurrent,
+                              flex: 5,
+                              child: Semantics(
+                                label: '播放《$displayTitle》',
+                                button: true,
+                                selected: widget.isCurrent,
+                                child: MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  onEnter: (_) =>
+                                      setState(() => _playHovered = true),
+                                  onExit: (_) =>
+                                      setState(() => _playHovered = false),
+                                  child: InkWell(
+                                    key: ValueKey('track-row-play-${track.id}'),
+                                    onTap: widget.onTap,
+                                    hoverColor: Colors.transparent,
+                                    splashColor: colorScheme.primary.withValues(
+                                      alpha: 0.06,
+                                    ),
+                                    highlightColor: Colors.transparent,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight: rowHeight - 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 36,
+                                            child: Center(
+                                              child: widget.isCurrent
+                                                  ? Icon(
+                                                      Icons.graphic_eq_rounded,
+                                                      size: 18,
+                                                      color:
+                                                          colorScheme.primary,
+                                                    )
+                                                  : _playHovered &&
+                                                        !widget
+                                                            .hideHoverPlayControl
+                                                  ? Icon(
+                                                      Icons.play_arrow_rounded,
+                                                      size: 22,
+                                                      color:
+                                                          colorScheme.onSurface,
+                                                    )
+                                                  : Text(
+                                                      indexLabel,
+                                                      style: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: colorScheme
+                                                                .onSurfaceVariant,
+                                                            fontFeatures: const [
+                                                              FontFeature.tabularFigures(),
+                                                            ],
+                                                          ),
+                                                    ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _MusicTrackTitleCell(
+                                              track: track,
+                                              isCurrent: widget.isCurrent,
+                                              showSubtitle: true,
+                                              showArtwork: true,
+                                              showCodecBadge: false,
+                                              artworkSize:
+                                                  widget.density ==
+                                                      MusicTrackTableDensity
+                                                          .comfortable
+                                                  ? 48
+                                                  : 40,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            SizedBox(
+                              width: widget.playlistStyle ? 48 : 36,
+                              child: Center(
+                                child: widget.isCurrent
+                                    ? Icon(
+                                        Icons.graphic_eq_rounded,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      )
+                                    : highlighted &&
+                                          !widget.hideHoverPlayControl
+                                    ? Icon(
+                                        Icons.play_arrow_rounded,
+                                        size: 20,
+                                        color: colorScheme.primary,
+                                      )
+                                    : Text(
+                                        indexLabel,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                      ),
+                              ),
+                            ),
+                            SizedBox(width: widget.playlistStyle ? 0 : 12),
+                            Expanded(
+                              flex: 4,
+                              child: _MusicTrackTitleCell(
+                                track: track,
+                                isCurrent: widget.isCurrent,
+                                showSubtitle: true,
                               ),
                             ),
                           ],
@@ -488,26 +618,31 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
                             AnimatedOpacity(
                               duration: AppMotion.micro,
                               curve: AppMotion.enter,
-                              opacity: highlighted || widget.isCurrent ? 1 : 0,
+                              opacity:
+                                  widget.libraryStyle ||
+                                      highlighted ||
+                                      widget.isCurrent
+                                  ? 1
+                                  : 0,
                               child: SizedBox(
-                                width: 88,
-                                child: trailing ??
+                                width: widget.libraryStyle ? 96 : 88,
+                                child:
+                                    trailing ??
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                      if (widget.onAddToQueue != null)
+                                        if (widget.onAddToQueue != null)
+                                          _MusicTrackTableIconButton(
+                                            icon: Icons.playlist_add_rounded,
+                                            tooltip: '加入队列',
+                                            onPressed: widget.onAddToQueue!,
+                                          ),
                                         _MusicTrackTableIconButton(
-                                          icon: Icons.playlist_add_rounded,
-                                          tooltip: '加入队列',
-                                          onPressed: widget.onAddToQueue!,
+                                          icon: Icons.more_horiz_rounded,
+                                          tooltip: '更多操作',
+                                          onPressed: () => _showMenu(track),
+                                          bare: widget.bareMoreAction,
                                         ),
-                                      _MusicTrackTableIconButton(
-                                        icon: Icons.more_horiz_rounded,
-                                        tooltip: '更多操作',
-                                        onPressed: () => _showMenu(track),
-                                        bare: widget.bareMoreAction,
-                                      ),
                                       ],
                                     ),
                               ),
@@ -533,12 +668,16 @@ class _MusicTrackTitleCell extends StatelessWidget {
     required this.isCurrent,
     required this.showSubtitle,
     this.showArtwork = false,
+    this.artworkSize = 40,
+    this.showCodecBadge = true,
   });
 
   final MusicTrack track;
   final bool isCurrent;
   final bool showSubtitle;
   final bool showArtwork;
+  final double artworkSize;
+  final bool showCodecBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -569,7 +708,9 @@ class _MusicTrackTitleCell extends StatelessWidget {
                 ),
               ),
             ),
-            if (showSubtitle && track.codec?.toLowerCase() == 'flac') ...[
+            if (showSubtitle &&
+                showCodecBadge &&
+                track.codec?.toLowerCase() == 'flac') ...[
               const SizedBox(width: 8),
               const MetaPill(label: 'FLAC', size: MetaPillSize.compact),
             ],
@@ -597,7 +738,7 @@ class _MusicTrackTitleCell extends StatelessWidget {
       children: [
         CachedArtwork(
           imageUrl: track.artworkUrl,
-          size: 40,
+          size: artworkSize,
           borderRadius: AppRadiusTokens.desktopSm,
           semanticLabel: '$displayTitle 封面',
         ),
@@ -666,24 +807,23 @@ class _MusicTrackTableIconButton extends StatelessWidget {
         constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.standard,
-        style: AppActionButtonStyle.icon(
-          context,
-          iconSize: 18,
-          radius: AppRadiusTokens.desktopSm,
-        ).copyWith(
-          backgroundColor: bare
-              ? const WidgetStatePropertyAll(Colors.transparent)
-              : null,
-          overlayColor: bare
-              ? const WidgetStatePropertyAll(Colors.transparent)
-              : null,
-          side: bare
-              ? const WidgetStatePropertyAll(BorderSide.none)
-              : null,
-          mouseCursor: bare
-              ? const WidgetStatePropertyAll(SystemMouseCursors.click)
-              : null,
-        ),
+        style:
+            AppActionButtonStyle.icon(
+              context,
+              iconSize: 18,
+              radius: AppRadiusTokens.desktopSm,
+            ).copyWith(
+              backgroundColor: bare
+                  ? const WidgetStatePropertyAll(Colors.transparent)
+                  : null,
+              overlayColor: bare
+                  ? const WidgetStatePropertyAll(Colors.transparent)
+                  : null,
+              side: bare ? const WidgetStatePropertyAll(BorderSide.none) : null,
+              mouseCursor: bare
+                  ? const WidgetStatePropertyAll(SystemMouseCursors.click)
+                  : null,
+            ),
       ),
     );
   }

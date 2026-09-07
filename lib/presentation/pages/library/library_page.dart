@@ -55,6 +55,8 @@ class _LibraryView extends StatefulWidget {
 class _LibraryViewState extends State<_LibraryView> {
   late final ScrollController _scrollController;
   late final TextEditingController _searchController;
+  MusicTrackTableDensity _trackDensity = MusicTrackTableDensity.comfortable;
+  LibraryAlbumGridDensity _albumDensity = LibraryAlbumGridDensity.comfortable;
 
   @override
   void initState() {
@@ -101,16 +103,10 @@ class _LibraryViewState extends State<_LibraryView> {
             state.currentFilter == LibraryFilter.tracks &&
                 state.tracks.isNotEmpty &&
                 AppBreakpoints.usesWideContent(context)
-            ? MusicTrackTableActions(
+            ? _LibraryTrackPlaybackActions(
                 onPlayAll: () => _playAllLibraryTracks(context, state),
                 onShuffleAll: () =>
                     _playAllLibraryTracks(context, state, shuffled: true),
-                trailing:
-                    AppBreakpoints.usesDesktopToolbar(context) &&
-                        (state.supportedTrackSortOptions.isNotEmpty ||
-                            state.supportedTrackFilterOptions.isNotEmpty)
-                    ? _TrackSortMenu(state: state)
-                    : null,
               )
             : null;
         return AppContentPage(
@@ -118,6 +114,14 @@ class _LibraryViewState extends State<_LibraryView> {
             state: state,
             searchController: _searchController,
             desktopTrackActions: desktopTrackActions,
+            trackDensity: _trackDensity,
+            onTrackDensityChanged: (density) {
+              setState(() => _trackDensity = density);
+            },
+            albumDensity: _albumDensity,
+            onAlbumDensityChanged: (density) {
+              setState(() => _albumDensity = density);
+            },
           ),
           body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
@@ -132,7 +136,8 @@ class _LibraryViewState extends State<_LibraryView> {
     String? currentTrackId,
   ) {
     if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
-      return Padding(
+      return SingleChildScrollView(
+        key: const ValueKey('library-loading-scroll-view'),
         padding: AppPageLayout.pagePadding(context),
         child: Semantics(
           label: '正在加载${_libraryFilterLabel(state.currentFilter)}',
@@ -189,7 +194,9 @@ class _LibraryViewState extends State<_LibraryView> {
         ? Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.only(right: AppSpacingTokens.sectionPadding),
+                padding: const EdgeInsets.only(
+                  right: AppSpacingTokens.sectionPadding,
+                ),
                 child: scrollView,
               ),
               Positioned(
@@ -198,20 +205,15 @@ class _LibraryViewState extends State<_LibraryView> {
                 bottom: 20,
                 child: _ArtistAlphabetRail(
                   artists: sortLibraryArtists(state.artists),
-                  onSelected: (label) => _scrollToArtistLabel(
-                    label,
-                    state.artists,
-                  ),
+                  onSelected: (label) =>
+                      _scrollToArtistLabel(label, state.artists),
                 ),
               ),
             ],
           )
         : scrollView;
 
-    return AnimatedSwitcher(
-      duration: AppMotion.micro,
-      child: body,
-    );
+    return AnimatedSwitcher(duration: AppMotion.micro, child: body);
   }
 
   void _scrollToArtistLabel(String label, List<MusicArtist> artists) {
@@ -223,10 +225,16 @@ class _LibraryViewState extends State<_LibraryView> {
     );
     if (targetIndex < 0) return;
 
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = libraryGridCount(width);
+    final viewportWidth =
+        context.size?.width ?? MediaQuery.sizeOf(context).width;
+    final horizontalPadding = AppPageLayout.horizontalPadding(context);
+    final availableGridWidth =
+        viewportWidth - AppSpacingTokens.sectionPadding - horizontalPadding * 2;
+    if (availableGridWidth <= 0) return;
+    final crossAxisCount = libraryArtistGridCount(availableGridWidth);
     final row = targetIndex ~/ crossAxisCount;
-    final rowExtent = AppBreakpoints.usesDesktopToolbar(context) ? 344.0 : 230.0;
+    const rowExtent =
+        libraryArtistGridMainAxisExtent + libraryArtistGridMainAxisSpacing;
     final offset = (row * rowExtent)
         .toDouble()
         .clamp(0.0, _scrollController.position.maxScrollExtent)
@@ -248,15 +256,14 @@ class _LibraryViewState extends State<_LibraryView> {
       state: state,
       horizontalPadding: horizontalPadding,
       currentTrackId: currentTrackId,
+      density: _trackDensity,
       onTrackTap: (index) => PlayerNavigation.playTracksAndOpenPlayer(
         context,
         tracks: state.tracks,
         startIndex: index,
       ),
       desktopTrailingBuilder: (context, track, hovered) =>
-          !hovered && track.isFavorite
-          ? _LibraryTrackFavoriteButton(track: track)
-          : null,
+          _LibraryTrackActions(track: track),
       mobileItemBuilder: (context, track, index, isCurrent) =>
           StaggeredFadeSlide(
             index: index,
@@ -306,6 +313,7 @@ class _LibraryViewState extends State<_LibraryView> {
     return LibraryAlbumSliver(
       state: state,
       horizontalPadding: horizontalPadding,
+      density: _albumDensity,
     );
   }
 
@@ -562,6 +570,64 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
   }
 }
 
+class _LibraryTrackPlaybackActions extends StatelessWidget {
+  const _LibraryTrackPlaybackActions({
+    required this.onPlayAll,
+    required this.onShuffleAll,
+  });
+
+  final VoidCallback onPlayAll;
+  final VoidCallback onShuffleAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppActionButton(
+          icon: Icons.shuffle_rounded,
+          label: '随机播放',
+          onPressed: onShuffleAll,
+        ),
+        const SizedBox(width: 10),
+        AppActionButton(
+          icon: Icons.play_arrow_rounded,
+          label: '播放全部',
+          tone: AppActionButtonTone.primary,
+          onPressed: onPlayAll,
+        ),
+      ],
+    );
+  }
+}
+
+class _LibraryTrackActions extends StatelessWidget {
+  const _LibraryTrackActions({required this.track});
+
+  final MusicTrack track;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        _LibraryTrackFavoriteButton(track: track),
+        SizedBox.square(
+          dimension: 44,
+          child: IconButton(
+            onPressed: () => showTrackActionsSheet(context, track),
+            icon: const Icon(Icons.more_horiz_rounded, size: 20),
+            tooltip: '更多操作',
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            style: AppActionButtonStyle.icon(context, size: 44),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MobileLibraryTrackRow extends StatefulWidget {
   const _MobileLibraryTrackRow({
     required this.track,
@@ -723,11 +789,19 @@ class _LibraryHeader extends StatelessWidget {
     required this.state,
     required this.searchController,
     this.desktopTrackActions,
+    required this.trackDensity,
+    required this.onTrackDensityChanged,
+    required this.albumDensity,
+    required this.onAlbumDensityChanged,
   });
 
   final LibraryState state;
   final TextEditingController searchController;
   final Widget? desktopTrackActions;
+  final MusicTrackTableDensity trackDensity;
+  final ValueChanged<MusicTrackTableDensity> onTrackDensityChanged;
+  final LibraryAlbumGridDensity albumDensity;
+  final ValueChanged<LibraryAlbumGridDensity> onAlbumDensityChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -766,7 +840,7 @@ class _LibraryHeader extends StatelessWidget {
         : null;
     final headerTrailing = state.currentFilter == LibraryFilter.tracks
         ? desktopTrackActions
-        : artistFilterButton;
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,14 +854,33 @@ class _LibraryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 14),
         ],
-        if (isWide)
+        if (isWide) ...[
           AppPageHeader(
             title: _libraryFilterLabel(state.currentFilter),
             description: _libraryFilterCountLabel(state),
             trailing: headerTrailing,
             automaticImplyLeading: false,
-          )
-        else ...[
+          ),
+          if (state.currentFilter == LibraryFilter.tracks) ...[
+            const SizedBox(height: 24),
+            _DesktopTrackToolbar(
+              state: state,
+              search: search,
+              density: trackDensity,
+              onDensityChanged: onTrackDensityChanged,
+            ),
+          ] else if (state.currentFilter == LibraryFilter.albums) ...[
+            const SizedBox(height: 24),
+            _DesktopAlbumToolbar(
+              search: search,
+              density: albumDensity,
+              onDensityChanged: onAlbumDensityChanged,
+            ),
+          ] else if (state.currentFilter == LibraryFilter.artists) ...[
+            const SizedBox(height: 24),
+            _DesktopArtistToolbar(state: state, search: search),
+          ],
+        ] else ...[
           search,
           if (artistFilterButton != null) ...[
             const SizedBox(height: 12),
@@ -801,162 +894,420 @@ class _LibraryHeader extends StatelessWidget {
   }
 }
 
-class _TrackSortMenu extends StatefulWidget {
-  const _TrackSortMenu({required this.state});
+class _DesktopArtistToolbar extends StatelessWidget {
+  const _DesktopArtistToolbar({required this.state, required this.search});
 
   final LibraryState state;
-
-  @override
-  State<_TrackSortMenu> createState() => _TrackSortMenuState();
-}
-
-class _TrackSortMenuState extends State<_TrackSortMenu> {
-  final GlobalKey _triggerKey = GlobalKey();
-
-  Future<void> _showMenu() async {
-    final triggerContext = _triggerKey.currentContext;
-    if (triggerContext == null) return;
-
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final trigger = triggerContext.findRenderObject() as RenderBox;
-    final triggerRect = trigger.localToGlobal(Offset.zero, ancestor: overlay) &
-        trigger.size;
-    final menuAnchor = Rect.fromCenter(
-      center: Offset(triggerRect.right, triggerRect.center.dy),
-      width: 1,
-      height: 1,
-    );
-    final action = await showMenu<_TrackMenuAction>(
-      context: context,
-      position: RelativeRect.fromRect(menuAnchor, Offset.zero & overlay.size),
-      constraints: const BoxConstraints.tightFor(width: 200),
-      items: _menuItems(widget.state),
-    );
-    if (!mounted || action == null) return;
-
-    final cubit = context.read<LibraryCubit>();
-    switch (action.type) {
-      case _TrackMenuActionType.sort:
-        cubit.changeTrackSort(action.sortOption!);
-      case _TrackMenuActionType.toggleFilter:
-        cubit.toggleTrackFilter(action.filterOption!);
-      case _TrackMenuActionType.clearFilters:
-        cubit.clearTrackFilters();
-    }
-  }
-
-  List<PopupMenuEntry<_TrackMenuAction>> _menuItems(LibraryState state) {
-    final selected = state.trackSortOption ?? TrackSortOption.title;
-    final items = <PopupMenuEntry<_TrackMenuAction>>[];
-
-    if (state.supportedTrackSortOptions.isNotEmpty) {
-      items.add(const _TrackMenuSectionHeader(label: '排序方式'));
-      for (final option in TrackSortOption.values) {
-        if (!state.supportedTrackSortOptions.contains(option)) continue;
-        items.add(
-          PopupMenuItem(
-            value: _TrackMenuAction.sort(option),
-            mouseCursor: SystemMouseCursors.click,
-            child: _TrackMenuRow(
-              label: _trackSortLabel(option),
-              icon: _trackSortIcon(option),
-              selected: option == selected,
-            ),
-          ),
-        );
-      }
-    }
-
-    if (state.supportedTrackFilterOptions.isNotEmpty) {
-      if (items.isNotEmpty) items.add(const PopupMenuDivider());
-      items.add(
-        _TrackMenuSectionHeader(
-          label: '筛选',
-          action: state.trackFilters.isEmpty
-              ? null
-              : const _TrackMenuAction.clearFilters(),
-        ),
-      );
-      for (final filter in TrackFilterOption.values) {
-        if (!state.supportedTrackFilterOptions.contains(filter)) continue;
-        items.add(
-          PopupMenuItem(
-            value: _TrackMenuAction.toggleFilter(filter),
-            mouseCursor: SystemMouseCursors.click,
-            child: _TrackFilterMenuRow(
-              label: _trackFilterLabel(filter),
-              icon: _trackFilterIcon(filter),
-              selected: state.trackFilters.contains(filter),
-            ),
-          ),
-        );
-      }
-    }
-    return items;
-  }
+  final Widget search;
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
-    final selected = state.trackSortOption ?? TrackSortOption.title;
-    final sortLabel = _trackSortLabel(selected);
-    final filterSuffix = state.trackFilters.isEmpty
-        ? ''
-        : ' · 筛选（${state.trackFilters.length}）';
-    return Semantics(
-      button: true,
-      label: '排序：$sortLabel$filterSuffix',
-      child: TextButton.icon(
-        key: _triggerKey,
-        onPressed: _showMenu,
-        style: AppActionButtonStyle.text(context),
-        icon: Badge(
-          isLabelVisible: state.trackFilters.isNotEmpty,
-          smallSize: 7,
-          child: const Icon(Icons.tune_rounded, size: 18),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
         ),
-        label: Text('排序：$sortLabel$filterSuffix'),
+      ),
+      child: Row(
+        children: [
+          Expanded(flex: 5, child: search),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: _ArtistSortDropdown(state: state)),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: _ArtistGenreDropdown(state: state)),
+        ],
       ),
     );
   }
 }
 
-class _TrackMenuSectionHeader extends PopupMenuEntry<_TrackMenuAction> {
-  const _TrackMenuSectionHeader({required this.label, this.action});
+class _ArtistSortDropdown extends StatelessWidget {
+  const _ArtistSortDropdown({required this.state});
 
-  final String label;
-  final _TrackMenuAction? action;
-
-  @override
-  double get height => 36;
+  final LibraryState state;
 
   @override
-  bool represents(_TrackMenuAction? value) => false;
-
-  @override
-  State<_TrackMenuSectionHeader> createState() => _TrackMenuSectionHeaderState();
-}
-
-class _TrackMenuSectionHeaderState extends State<_TrackMenuSectionHeader> {
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            widget.label,
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-        ),
-        if (widget.action != null)
-          TextButton(
-            onPressed: () => Navigator.pop(context, widget.action),
-            child: const Text('清除'),
+  Widget build(BuildContext context) {
+    final options = ArtistSortOption.values
+        .where(state.supportedArtistSortOptions.contains)
+        .toList(growable: false);
+    final selected = state.artistSortOption;
+    return PopupMenuButton<ArtistSortOption>(
+      tooltip: '选择歌手排序方式',
+      enabled: options.isNotEmpty,
+      onSelected: context.read<LibraryCubit>().changeArtistSort,
+      itemBuilder: (context) => [
+        for (final option in options)
+          PopupMenuItem(
+            value: option,
+            child: _TrackMenuRow(
+              label: option == ArtistSortOption.name
+                  ? '默认顺序'
+                  : _artistSortLabel(option),
+              icon: _artistSortIcon(option),
+              selected: option == selected,
+            ),
           ),
       ],
-    ),
-  );
+      child: _ToolbarDropdown(
+        icon: Icons.sort_by_alpha_rounded,
+        label: selected == null || selected == ArtistSortOption.name
+            ? '默认顺序'
+            : _artistSortLabel(selected),
+      ),
+    );
+  }
+}
+
+class _ArtistGenreDropdown extends StatelessWidget {
+  const _ArtistGenreDropdown({required this.state});
+
+  final LibraryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedGenre = state.genres
+        .where((genre) => genre.id == state.selectedGenreId)
+        .firstOrNull;
+    return PopupMenuButton<_ArtistGenreSelection>(
+      tooltip: '按音乐风格筛选歌手',
+      enabled: state.genres.isNotEmpty,
+      onSelected: (selection) =>
+          context.read<LibraryCubit>().changeGenre(selection.genreId),
+      itemBuilder: (context) => [
+        _ArtistGenrePopupItem(
+          value: const _ArtistGenreSelection(null),
+          label: '全部风格',
+          icon: Icons.library_music_outlined,
+          selected: state.selectedGenreId == null,
+        ),
+        for (final genre in state.genres)
+          _ArtistGenrePopupItem(
+            value: _ArtistGenreSelection(genre.id),
+            label: genre.name,
+            icon: Icons.music_note_outlined,
+            selected: genre.id == state.selectedGenreId,
+          ),
+      ],
+      child: _ToolbarDropdown(
+        icon: Icons.tune_rounded,
+        label: selectedGenre?.name ?? '全部风格',
+      ),
+    );
+  }
+}
+
+class _ArtistGenreSelection {
+  const _ArtistGenreSelection(this.genreId);
+
+  final String? genreId;
+}
+
+class _ArtistGenrePopupItem extends PopupMenuItem<_ArtistGenreSelection> {
+  _ArtistGenrePopupItem({
+    required super.value,
+    required String label,
+    required IconData icon,
+    required bool selected,
+  }) : super(
+         child: _TrackMenuRow(label: label, icon: icon, selected: selected),
+       );
+}
+
+class _DesktopAlbumToolbar extends StatelessWidget {
+  const _DesktopAlbumToolbar({
+    required this.search,
+    required this.density,
+    required this.onDensityChanged,
+  });
+
+  final Widget search;
+  final LibraryAlbumGridDensity density;
+  final ValueChanged<LibraryAlbumGridDensity> onDensityChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: search),
+          const SizedBox(width: 16),
+          _AlbumDensityMenu(value: density, onChanged: onDensityChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlbumDensityMenu extends StatelessWidget {
+  const _AlbumDensityMenu({required this.value, required this.onChanged});
+
+  final LibraryAlbumGridDensity value;
+  final ValueChanged<LibraryAlbumGridDensity> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<LibraryAlbumGridDensity>(
+      tooltip: '调整专辑封面尺寸',
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        for (final density in LibraryAlbumGridDensity.values)
+          PopupMenuItem(
+            value: density,
+            child: _TrackMenuRow(
+              label: density == LibraryAlbumGridDensity.comfortable
+                  ? '大封面'
+                  : '紧凑网格',
+              icon: density == LibraryAlbumGridDensity.comfortable
+                  ? Icons.grid_view_rounded
+                  : Icons.apps_rounded,
+              selected: density == value,
+            ),
+          ),
+      ],
+      child: SizedBox(
+        width: 166,
+        child: _ToolbarDropdown(
+          icon: value == LibraryAlbumGridDensity.comfortable
+              ? Icons.grid_view_rounded
+              : Icons.apps_rounded,
+          label: value == LibraryAlbumGridDensity.comfortable ? '大封面' : '紧凑网格',
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopTrackToolbar extends StatelessWidget {
+  const _DesktopTrackToolbar({
+    required this.state,
+    required this.search,
+    required this.density,
+    required this.onDensityChanged,
+  });
+
+  final LibraryState state;
+  final Widget search;
+  final MusicTrackTableDensity density;
+  final ValueChanged<MusicTrackTableDensity> onDensityChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(flex: 5, child: search),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: _TrackFilterMenu(state: state)),
+          const SizedBox(width: 16),
+          Expanded(flex: 3, child: _TrackSortMenu(state: state)),
+          const SizedBox(width: 16),
+          _TrackDensityMenu(value: density, onChanged: onDensityChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrackSortMenu extends StatelessWidget {
+  const _TrackSortMenu({required this.state});
+
+  final LibraryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = state.trackSortOption ?? TrackSortOption.title;
+    final options = TrackSortOption.values
+        .where(state.supportedTrackSortOptions.contains)
+        .toList(growable: false);
+    return PopupMenuButton<TrackSortOption>(
+      tooltip: '选择排序方式',
+      enabled: options.isNotEmpty,
+      onSelected: context.read<LibraryCubit>().changeTrackSort,
+      itemBuilder: (context) => [
+        for (final option in options)
+          PopupMenuItem(
+            value: option,
+            child: _TrackMenuRow(
+              label: option == TrackSortOption.title
+                  ? '默认顺序'
+                  : _trackSortLabel(option),
+              icon: _trackSortIcon(option),
+              selected: option == selected,
+            ),
+          ),
+      ],
+      child: _ToolbarDropdown(
+        icon: Icons.swap_vert_rounded,
+        label: selected == TrackSortOption.title
+            ? '默认顺序'
+            : _trackSortLabel(selected),
+      ),
+    );
+  }
+}
+
+enum _TrackFilterSelection { all, favorite }
+
+class _TrackFilterMenu extends StatelessWidget {
+  const _TrackFilterMenu({required this.state});
+
+  final LibraryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final favoriteSelected = state.trackFilters.contains(
+      TrackFilterOption.favorite,
+    );
+    final favoriteSupported = state.supportedTrackFilterOptions.contains(
+      TrackFilterOption.favorite,
+    );
+    return PopupMenuButton<_TrackFilterSelection>(
+      tooltip: '筛选歌曲',
+      onSelected: (selection) {
+        final cubit = context.read<LibraryCubit>();
+        if (selection == _TrackFilterSelection.all) {
+          cubit.clearTrackFilters();
+        } else {
+          cubit.toggleTrackFilter(TrackFilterOption.favorite);
+        }
+      },
+      itemBuilder: (context) => [
+        _TrackFilterPopupItem(
+          value: _TrackFilterSelection.all,
+          label: '全部歌曲',
+          icon: Icons.library_music_outlined,
+          selected: !favoriteSelected,
+        ),
+        if (favoriteSupported)
+          _TrackFilterPopupItem(
+            value: _TrackFilterSelection.favorite,
+            label: '仅显示收藏',
+            icon: Icons.favorite_border_rounded,
+            selected: favoriteSelected,
+          ),
+      ],
+      child: _ToolbarDropdown(
+        icon: favoriteSelected
+            ? Icons.favorite_rounded
+            : Icons.library_music_outlined,
+        label: favoriteSelected ? '仅显示收藏' : '全部歌曲',
+      ),
+    );
+  }
+}
+
+class _TrackFilterPopupItem extends PopupMenuItem<_TrackFilterSelection> {
+  _TrackFilterPopupItem({
+    required super.value,
+    required String label,
+    required IconData icon,
+    required bool selected,
+  }) : super(
+         child: _TrackMenuRow(label: label, icon: icon, selected: selected),
+       );
+}
+
+class _TrackDensityMenu extends StatelessWidget {
+  const _TrackDensityMenu({required this.value, required this.onChanged});
+
+  final MusicTrackTableDensity value;
+  final ValueChanged<MusicTrackTableDensity> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<MusicTrackTableDensity>(
+      tooltip: '调整显示密度',
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        for (final density in MusicTrackTableDensity.values)
+          PopupMenuItem(
+            value: density,
+            child: _TrackMenuRow(
+              label: density == MusicTrackTableDensity.comfortable
+                  ? '舒适'
+                  : '紧凑',
+              icon: density == MusicTrackTableDensity.comfortable
+                  ? Icons.view_agenda_outlined
+                  : Icons.density_small_rounded,
+              selected: density == value,
+            ),
+          ),
+      ],
+      child: const SizedBox(
+        width: 154,
+        child: _ToolbarDropdown(icon: Icons.view_list_rounded, label: '显示密度'),
+      ),
+    );
+  }
+}
+
+class _ToolbarDropdown extends StatelessWidget {
+  const _ToolbarDropdown({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.button),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 18,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TrackMenuRow extends StatelessWidget {
@@ -989,58 +1340,6 @@ class _TrackMenuRow extends StatelessWidget {
   }
 }
 
-class _TrackFilterMenuRow extends StatelessWidget {
-  const _TrackFilterMenuRow({
-    required this.label,
-    required this.icon,
-    required this.selected,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      SizedBox(
-        width: 20,
-        child: Center(
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Expanded(child: Text(label)),
-      IgnorePointer(child: Checkbox(value: selected, onChanged: (_) {})),
-    ],
-  );
-}
-
-enum _TrackMenuActionType { sort, toggleFilter, clearFilters }
-
-class _TrackMenuAction {
-  const _TrackMenuAction.sort(this.sortOption)
-    : type = _TrackMenuActionType.sort,
-      filterOption = null;
-
-  const _TrackMenuAction.toggleFilter(this.filterOption)
-    : type = _TrackMenuActionType.toggleFilter,
-      sortOption = null;
-
-  const _TrackMenuAction.clearFilters()
-    : type = _TrackMenuActionType.clearFilters,
-      sortOption = null,
-      filterOption = null;
-
-  final _TrackMenuActionType type;
-  final TrackSortOption? sortOption;
-  final TrackFilterOption? filterOption;
-}
-
 class _ArtistFilterMenu extends StatefulWidget {
   const _ArtistFilterMenu({required this.state});
 
@@ -1059,8 +1358,8 @@ class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
 
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final trigger = triggerContext.findRenderObject() as RenderBox;
-    final triggerRect = trigger.localToGlobal(Offset.zero, ancestor: overlay) &
-        trigger.size;
+    final triggerRect =
+        trigger.localToGlobal(Offset.zero, ancestor: overlay) & trigger.size;
     final anchor = Rect.fromCenter(
       center: Offset(triggerRect.right, triggerRect.center.dy),
       width: 1,
@@ -1086,11 +1385,7 @@ class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
   List<PopupMenuEntry<_ArtistMenuAction>> _menuItems(LibraryState state) {
     final selectedSort = state.artistSortOption ?? ArtistSortOption.name;
     final items = <PopupMenuEntry<_ArtistMenuAction>>[
-      const PopupMenuItem(
-        enabled: false,
-        height: 36,
-        child: Text('排序方式'),
-      ),
+      const PopupMenuItem(enabled: false, height: 36, child: Text('排序方式')),
     ];
 
     for (final option in ArtistSortOption.values) {
@@ -1112,11 +1407,7 @@ class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
 
     items.addAll([
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        enabled: false,
-        height: 36,
-        child: Text('音乐风格'),
-      ),
+      const PopupMenuItem(enabled: false, height: 36, child: Text('音乐风格')),
       PopupMenuItem(
         value: const _ArtistMenuAction.genre(null),
         mouseCursor: SystemMouseCursors.click,
@@ -1202,10 +1493,6 @@ IconData _trackSortIcon(TrackSortOption option) => switch (option) {
 
 String _trackFilterLabel(TrackFilterOption option) => switch (option) {
   TrackFilterOption.favorite => '仅显示收藏',
-};
-
-IconData _trackFilterIcon(TrackFilterOption option) => switch (option) {
-  TrackFilterOption.favorite => Icons.favorite_border_rounded,
 };
 
 String _artistSortLabel(ArtistSortOption option) => switch (option) {

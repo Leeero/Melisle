@@ -102,7 +102,7 @@ void main() {
     expect(find.text('全部歌曲'), findsOneWidget);
     expect(find.text('质量'), findsOneWidget);
     expect(find.text('FLAC'), findsOneWidget);
-    expect(find.byType(CachedArtwork), findsNothing);
+    expect(find.byType(CachedArtwork), findsOneWidget);
 
     final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await gesture.addPointer(
@@ -130,16 +130,90 @@ void main() {
       ),
     );
 
-    expect(find.text('标题'), findsOneWidget);
-    expect(find.text('歌手'), findsOneWidget);
+    expect(find.text('歌曲 / 艺术家'), findsOneWidget);
     expect(find.text('质量'), findsNothing);
     expect(
-      tester.getSize(find.byKey(const ValueKey('track-row-play-track-1'))).height,
-      44,
+      tester
+          .getSize(find.byKey(const ValueKey('track-row-play-track-1')))
+          .height,
+      greaterThanOrEqualTo(56),
     );
   });
 
-  testWidgets('current track uses a distinct playing indicator', (tester) async {
+  testWidgets('library table limits playback tap to the song identity area', (
+    tester,
+  ) async {
+    var playCount = 0;
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          libraryStyle: true,
+          showActionBar: false,
+          onTrackTap: (_, _) => playCount++,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text(_track.albumTitle));
+    await tester.pump();
+    expect(playCount, 0);
+
+    await tester.tap(find.text(_track.title));
+    await tester.pump();
+    expect(playCount, 1);
+  });
+
+  testWidgets('library table exposes one playback action per track', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          libraryStyle: true,
+          showActionBar: false,
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    final playAction = tester.getSemantics(
+      find.byKey(const ValueKey('track-row-play-track-1')),
+    );
+    expect(playAction.label, contains('播放《夜曲》'));
+    expect(
+      playAction.getSemanticsData().hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('library table supports compact display density', (tester) async {
+    await tester.pumpWidget(
+      _buildWidget(
+        MusicTrackTable(
+          tracks: const [_track],
+          libraryStyle: true,
+          showActionBar: false,
+          density: MusicTrackTableDensity.compact,
+          onTrackTap: (_, _) {},
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('track-row-play-track-1')))
+          .height,
+      lessThan(56),
+    );
+  });
+
+  testWidgets('current track uses a distinct playing indicator', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildWidget(
         MusicTrackTable(
@@ -153,7 +227,6 @@ void main() {
     expect(find.byIcon(Icons.graphic_eq_rounded), findsOneWidget);
     expect(find.text('1'), findsNothing);
   });
-
 }
 
 Widget _buildWidget(Widget child) {

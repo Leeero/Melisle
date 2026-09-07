@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:cross_platform_music_player/presentation/navigation/popup_route_coordinator.dart';
-import 'package:cross_platform_music_player/presentation/widgets/layout/desktop_page_toolbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/mini_player_bar.dart';
 import 'package:cross_platform_music_player/shared/constants/app_constants.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -20,6 +19,14 @@ class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   final PopupRouteCoordinator popupRouteCoordinator;
 
+  static const _rootLocations = [
+    '/home',
+    '/search',
+    '/library',
+    '/favorites',
+    '/settings',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = navigationShell.currentIndex;
@@ -29,26 +36,23 @@ class AppShell extends StatelessWidget {
       AppLayoutSize.largeDesktop ||
       AppLayoutSize.desktop => _ExpandedShellScaffold(
         navigationShell: navigationShell,
-        onSelected: _go,
+        onSelected: (index) => _go(context, index),
       ),
       AppLayoutSize.medium => _MediumShellScaffold(
         navigationShell: navigationShell,
-        onSelected: _go,
+        onSelected: (index) => _go(context, index),
       ),
       AppLayoutSize.compact => _CompactShellScaffold(
         navigationShell: navigationShell,
         selectedIndex: selectedIndex,
-        onSelected: _go,
+        onSelected: (index) => _go(context, index),
       ),
     };
   }
 
-  void _go(int index) {
+  void _go(BuildContext context, int index) {
     popupRouteCoordinator.dismissPopups();
-    navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
-    );
+    context.go(_rootLocations[index]);
   }
 }
 
@@ -73,20 +77,8 @@ class _ExpandedShellScaffold extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                _ShellSidebar(
-                  onSelected: onSelected,
-                  compact: false,
-                ),
-                Expanded(
-                  child: _ShellContentSurface(
-                    body: Column(
-                      children: [
-                        const DesktopPageToolbar(),
-                        Expanded(child: navigationShell),
-                      ],
-                    ),
-                  ),
-                ),
+                _ShellSidebar(onSelected: onSelected, compact: false),
+                Expanded(child: _ShellContentSurface(body: navigationShell)),
               ],
             ),
           ),
@@ -119,20 +111,8 @@ class _MediumShellScaffold extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                _ShellSidebar(
-                  onSelected: onSelected,
-                  compact: true,
-                ),
-                Expanded(
-                  child: _ShellContentSurface(
-                    body: Column(
-                      children: [
-                        const DesktopPageToolbar(),
-                        Expanded(child: navigationShell),
-                      ],
-                    ),
-                  ),
-                ),
+                _ShellSidebar(onSelected: onSelected, compact: true),
+                Expanded(child: _ShellContentSurface(body: navigationShell)),
               ],
             ),
           ),
@@ -216,10 +196,7 @@ class _ShellContentSurface extends StatelessWidget {
 }
 
 class _ShellSidebar extends StatefulWidget {
-  const _ShellSidebar({
-    required this.onSelected,
-    this.compact = false,
-  });
+  const _ShellSidebar({required this.onSelected, this.compact = false});
 
   final ValueChanged<int> onSelected;
   final bool compact;
@@ -273,141 +250,191 @@ class _ShellSidebarState extends State<_ShellSidebar> {
                   bottom: 20,
                 ),
                 child: compact
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [_ShellLogo(colorScheme: colorScheme)],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _ShellLogo(colorScheme: colorScheme),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${AppConstants.appEnglishName} ${AppConstants.appName}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '个人音乐服务器',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                    ? _ShellLogo(colorScheme: colorScheme)
+                    : const _ShellBrandLockup(),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!compact) const _SidebarGroupLabel('聆听'),
+                      _ShellNavButton(
+                        icon: Icons.home_rounded,
+                        label: '首页',
+                        compact: compact,
+                        selected: path == '/home',
+                        onTap: () => onSelected(0),
                       ),
-              ),
-              _ShellNavButton(
-                icon: Icons.home_rounded,
-                label: '首页',
-                compact: compact,
-                selected: path == '/home',
-                onTap: () => onSelected(0),
-              ),
-              const SizedBox(height: 2),
-              _ShellNavButton(
-                icon: Icons.library_music_rounded,
-                label: '媒体库',
-                compact: compact,
-                selected:
-                    path == '/library' ||
-                    path.startsWith('/album/') ||
-                    path.startsWith('/artist/'),
-                trailing: compact
-                    ? null
-                    : Icon(
-                        _libraryExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 20,
+                      const SizedBox(height: 2),
+                      _ShellNavButton(
+                        icon: Icons.search_rounded,
+                        label: '搜索',
+                        compact: compact,
+                        selected: path == '/search',
+                        onTap: () => onSelected(1),
                       ),
-                onTap: () => setState(
-                  () => _libraryExpanded = !_libraryExpanded,
+                      if (!compact) const _SidebarGroupLabel('音乐库'),
+                      _ShellNavButton(
+                        icon: Icons.library_music_rounded,
+                        label: '媒体库',
+                        compact: compact,
+                        selected:
+                            path == '/library' ||
+                            path.startsWith('/album/') ||
+                            path.startsWith('/artist/'),
+                        trailing: compact
+                            ? null
+                            : Icon(
+                                _libraryExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                size: 20,
+                              ),
+                        onTap: () => setState(
+                          () => _libraryExpanded = !_libraryExpanded,
+                        ),
+                      ),
+                      if (!compact && _libraryExpanded) ...[
+                        const SizedBox(height: 2),
+                        _SidebarSubNavButton(
+                          label: '歌曲',
+                          selected: path == '/library' && libraryTab == null,
+                          onTap: () {
+                            onSelected(2);
+                            context.go('/library');
+                          },
+                        ),
+                        _SidebarSubNavButton(
+                          label: '专辑',
+                          selected:
+                              path.startsWith('/album/') ||
+                              libraryTab == 'albums',
+                          onTap: () {
+                            onSelected(2);
+                            context.go('/library?tab=albums');
+                          },
+                        ),
+                        _SidebarSubNavButton(
+                          label: '艺术家',
+                          selected:
+                              path.startsWith('/artist/') ||
+                              libraryTab == 'artists',
+                          onTap: () {
+                            onSelected(2);
+                            context.go('/library?tab=artists');
+                          },
+                        ),
+                      ],
+                      _ShellNavButton(
+                        icon: Icons.favorite_border_rounded,
+                        label: '收藏',
+                        compact: compact,
+                        selected: path == '/favorites',
+                        onTap: () => onSelected(3),
+                      ),
+                      const SizedBox(height: 2),
+                      _ShellNavButton(
+                        icon: Icons.queue_music_rounded,
+                        label: '歌单',
+                        compact: compact,
+                        selected: path.startsWith('/playlists'),
+                        onTap: () {
+                          onSelected(2);
+                          context.go('/playlists');
+                        },
+                      ),
+                      if (!compact) const _SidebarGroupLabel('系统'),
+                      _ShellNavButton(
+                        icon: Icons.download_rounded,
+                        label: '下载',
+                        compact: compact,
+                        selected: path == '/downloads',
+                        onTap: () => context.go('/downloads'),
+                      ),
+                      const SizedBox(height: 2),
+                      _ShellNavButton(
+                        icon: Icons.history_rounded,
+                        label: '历史',
+                        compact: compact,
+                        selected: path == '/history',
+                        onTap: () => context.go('/history'),
+                      ),
+                      const SizedBox(height: 2),
+                      _ShellNavButton(
+                        icon: Icons.settings_rounded,
+                        label: '设置',
+                        compact: compact,
+                        selected: path == '/settings',
+                        onTap: () => onSelected(4),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              if (!compact && _libraryExpanded) ...[
-                const SizedBox(height: 2),
-                _SidebarSubNavButton(
-                  label: '歌曲',
-                  selected: path == '/library' && libraryTab == null,
-                  onTap: () {
-                    onSelected(2);
-                    context.go('/library');
-                  },
-                ),
-                _SidebarSubNavButton(
-                  label: '专辑',
-                  selected: path.startsWith('/album/') ||
-                      libraryTab == 'albums',
-                  onTap: () {
-                    onSelected(2);
-                    context.go('/library?tab=albums');
-                  },
-                ),
-                _SidebarSubNavButton(
-                  label: '歌手',
-                  selected: path.startsWith('/artist/') ||
-                      libraryTab == 'artists',
-                  onTap: () {
-                    onSelected(2);
-                    context.go('/library?tab=artists');
-                  },
-                ),
-              ],
-              _ShellNavButton(
-                icon: Icons.favorite_border_rounded,
-                label: '收藏',
-                compact: compact,
-                selected: path == '/favorites',
-                onTap: () => onSelected(3),
-              ),
-              const SizedBox(height: 2),
-              _ShellNavButton(
-                icon: Icons.queue_music_rounded,
-                label: '歌单',
-                compact: compact,
-                selected: path.startsWith('/playlists'),
-                onTap: () {
-                  onSelected(2);
-                  context.go('/playlists');
-                },
-              ),
-              const SizedBox(height: 10),
-              _ShellNavButton(
-                icon: Icons.download_rounded,
-                label: '下载',
-                compact: compact,
-                selected: path == '/downloads',
-                onTap: () {
-                  onSelected(4);
-                  context.go('/downloads');
-                },
-              ),
-              const SizedBox(height: 2),
-              _ShellNavButton(
-                icon: Icons.history_rounded,
-                label: '历史',
-                compact: compact,
-                selected: path == '/history',
-                onTap: () {
-                  onSelected(0);
-                  context.go('/history');
-                },
-              ),
-              const Spacer(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShellBrandLockup extends StatelessWidget {
+  const _ShellBrandLockup();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              AppConstants.appEnglishName,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontFamily: 'Righteous',
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                AppConstants.appName,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarGroupLabel extends StatelessWidget {
+  const _SidebarGroupLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 7),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).muted,
+          letterSpacing: 0.2,
         ),
       ),
     );

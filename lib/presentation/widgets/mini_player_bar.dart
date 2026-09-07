@@ -32,64 +32,55 @@ class MiniPlayerBar extends StatelessWidget {
         final width = MediaQuery.sizeOf(context).width;
         final isWide = AppBreakpoints.usesDesktopShellWidth(width);
         if (track == null) {
-          return _MiniPlayerFrame(
-            isWide: isWide,
-            child: const _IdleMiniPlayer(),
+          return AnimatedSize(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : AppMotion.normal,
+            curve: AppMotion.gentle,
+            alignment: Alignment.bottomCenter,
+            child: const SizedBox.shrink(key: ValueKey('mini-player-hidden')),
           );
         }
         final artworkSourceContext = ArtworkSourceContext.track(track);
         final trackTitle = MediaDisplayText.trackTitle(track.title);
         final artistName = MediaDisplayText.artistName(track.artistName);
 
-        return _MiniPlayerFrame(
-          isWide: isWide,
-          child: isWide
-              ? _WideMiniPlayer(
-                  trackTitle: trackTitle,
-                  artistName: artistName,
-                  artworkUrl: track.artworkUrl,
-                  sourceContext: artworkSourceContext,
-                  qualityLabel: _qualityLabel(track),
-                )
-              : _CompactMiniPlayer(
-                  trackTitle: trackTitle,
-                  artistName: artistName,
-                  artworkUrl: track.artworkUrl,
-                  sourceContext: artworkSourceContext,
-                ),
+        return AnimatedSize(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : AppMotion.normal,
+          curve: AppMotion.enter,
+          alignment: Alignment.bottomCenter,
+          child: _MiniPlayerFrame(
+            key: const ValueKey('mini-player-visible'),
+            isWide: isWide,
+            child: isWide
+                ? _WideMiniPlayer(
+                    trackTitle: trackTitle,
+                    artistName: artistName,
+                    artworkUrl: track.artworkUrl,
+                    sourceContext: artworkSourceContext,
+                    qualityLabel: _qualityLabel(track),
+                  )
+                : _CompactMiniPlayer(
+                    trackTitle: trackTitle,
+                    artistName: artistName,
+                    artworkUrl: track.artworkUrl,
+                    sourceContext: artworkSourceContext,
+                  ),
+          ),
         );
       },
     );
   }
 }
 
-class _IdleMiniPlayer extends StatelessWidget {
-  const _IdleMiniPlayer();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      label: '迷你播放器：未在播放',
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.music_note_rounded, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: AppSpacingTokens.inlineGap),
-          Text(
-            '未在播放',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MiniPlayerFrame extends StatelessWidget {
-  const _MiniPlayerFrame({required this.isWide, required this.child});
+  const _MiniPlayerFrame({
+    super.key,
+    required this.isWide,
+    required this.child,
+  });
 
   final bool isWide;
   final Widget child;
@@ -547,14 +538,17 @@ class _MiniFavoriteButton extends StatelessWidget {
           ),
           mouseCursor: SystemMouseCursors.click,
           tooltip: isFavorite ? '取消收藏' : '收藏',
-          style: AppActionButtonStyle.icon(
-            context,
-            selected: isFavorite,
-            size: 44,
-            iconSize: 20,
-          ).copyWith(
-            backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-          ),
+          style:
+              AppActionButtonStyle.icon(
+                context,
+                selected: isFavorite,
+                size: 44,
+                iconSize: 20,
+              ).copyWith(
+                backgroundColor: const WidgetStatePropertyAll(
+                  Colors.transparent,
+                ),
+              ),
           icon: Icon(
             isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
           ),

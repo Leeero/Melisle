@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/utils/detail_route_navigation.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
@@ -71,6 +72,16 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
           body: SafeArea(
             child: CustomScrollView(
               slivers: [
+                if (isWide)
+                  SliverPadding(
+                    padding: AppPageLayout.pagePadding(context, bottom: 0),
+                    sliver: SliverToBoxAdapter(
+                      child: AppDetailBackNav(
+                        label: '返回上一页',
+                        onPressed: () => _goBackToLibrary(context),
+                      ),
+                    ),
+                  ),
                 if (!isWide)
                   SliverPadding(
                     padding: AppPageLayout.pagePadding(
@@ -393,9 +404,5 @@ double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
 }
 
 void _goBackToLibrary(BuildContext context) {
-  if (Navigator.of(context).canPop()) {
-    Navigator.of(context).maybePop();
-    return;
-  }
-  context.go('/library');
+  popDetailRouteOrGo(context, '/library?tab=artists');
 }

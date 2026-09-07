@@ -20,6 +20,8 @@ typedef LibraryTrackItemBuilder =
       bool isCurrent,
     );
 
+enum LibraryAlbumGridDensity { compact, comfortable }
+
 class LibraryTrackSliver extends StatelessWidget {
   const LibraryTrackSliver({
     super.key,
@@ -29,6 +31,9 @@ class LibraryTrackSliver extends StatelessWidget {
     required this.onTrackTap,
     required this.desktopTrailingBuilder,
     required this.mobileItemBuilder,
+    this.onPlayAll,
+    this.onShuffleAll,
+    this.density = MusicTrackTableDensity.comfortable,
   });
 
   final LibraryState state;
@@ -37,6 +42,9 @@ class LibraryTrackSliver extends StatelessWidget {
   final ValueChanged<int> onTrackTap;
   final MusicTrackTableTrailingBuilder desktopTrailingBuilder;
   final LibraryTrackItemBuilder mobileItemBuilder;
+  final VoidCallback? onPlayAll;
+  final VoidCallback? onShuffleAll;
+  final MusicTrackTableDensity density;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +70,7 @@ class LibraryTrackSliver extends StatelessWidget {
                 libraryStyle: true,
                 onTrackTap: (index, _) => onTrackTap(index),
                 trailingBuilder: desktopTrailingBuilder,
+                density: density,
               ),
             )
           else ...[
@@ -88,42 +97,87 @@ class LibraryAlbumSliver extends StatelessWidget {
     super.key,
     required this.state,
     required this.horizontalPadding,
+    this.density = LibraryAlbumGridDensity.comfortable,
   });
 
   final LibraryState state;
   final double horizontalPadding;
+  final LibraryAlbumGridDensity density;
 
   @override
   Widget build(BuildContext context) {
     if (state.albums.isEmpty) {
       return const AppSliverStateView.message(message: '当前还没有专辑。');
     }
-    final width = MediaQuery.sizeOf(context).width;
     final compact = AppBreakpoints.isCompact(context);
-    return _LibraryGridSliver(
-      horizontalPadding: horizontalPadding,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: libraryGridCount(width),
-        mainAxisSpacing: compact ? 14 : 18,
-        crossAxisSpacing: compact ? 12 : 18,
-        // Two text lines below a square artwork need extra vertical room on
-        // desktop as well; otherwise fractional text metrics can overflow.
-        childAspectRatio: compact ? 0.75 : 0.69,
-      ),
-      childCount: state.albums.length,
-      itemBuilder: (context, index) {
-        final album = state.albums[index];
-        return MusicAlbumGridCard(
-          album: album,
-          onTap: () => context.push('/album/${album.id}', extra: album),
-          artworkRadius: compact
-              ? AppRadiusTokens.mobileMd
-              : AppRadiusTokens.coverGrid,
-          compact: compact,
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final mainAxisSpacing = compact ? 18.0 : 28.0;
+        final crossAxisSpacing = compact ? 12.0 : 20.0;
+        final availableWidth =
+            constraints.crossAxisExtent - horizontalPadding * 2;
+        final crossAxisCount = libraryAlbumGridCount(
+          availableWidth,
+          compactViewport: compact,
+          density: density,
+          gap: crossAxisSpacing,
+        );
+        final artworkWidth =
+            (availableWidth - crossAxisSpacing * (crossAxisCount - 1)) /
+            crossAxisCount;
+        final metadataExtent = compact
+            ? 62.0
+            : density == LibraryAlbumGridDensity.compact
+            ? 68.0
+            : 78.0;
+
+        return _LibraryGridSliver(
+          horizontalPadding: horizontalPadding,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: mainAxisSpacing,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisExtent: artworkWidth + metadataExtent,
+          ),
+          childCount: state.albums.length,
+          itemBuilder: (context, index) {
+            final album = state.albums[index];
+            return MusicAlbumGridCard(
+              album: album,
+              onTap: () => context.push('/album/${album.id}', extra: album),
+              artworkRadius: compact
+                  ? AppRadiusTokens.mobileMd
+                  : AppRadiusTokens.coverGrid,
+              compact: compact,
+              dense: density == LibraryAlbumGridDensity.compact,
+            );
+          },
         );
       },
     );
   }
+}
+
+int libraryAlbumGridCount(
+  double availableWidth, {
+  required bool compactViewport,
+  required LibraryAlbumGridDensity density,
+  required double gap,
+}) {
+  final minTileWidth = compactViewport
+      ? 148.0
+      : density == LibraryAlbumGridDensity.compact
+      ? 148.0
+      : 190.0;
+  final maxColumns = compactViewport
+      ? 2
+      : density == LibraryAlbumGridDensity.compact
+      ? 7
+      : 6;
+  return ((availableWidth + gap) / (minTileWidth + gap)).floor().clamp(
+    2,
+    maxColumns,
+  );
 }
 
 class LibraryArtistSliver extends StatelessWidget {
@@ -144,9 +198,7 @@ class LibraryArtistSliver extends StatelessWidget {
         sliver: AppSliverStateView.message(message: '当前还没有歌手。'),
       );
     }
-    final width = MediaQuery.sizeOf(context).width;
     final compact = AppBreakpoints.isCompact(context);
-    final desktop = AppBreakpoints.usesDesktopToolbar(context);
     final artists = sortLibraryArtists(state.artists);
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(
@@ -167,25 +219,42 @@ class LibraryArtistSliver extends StatelessWidget {
                 );
               },
             )
-          : SliverGrid.builder(
-              itemCount: artists.length,
-              itemBuilder: (context, index) {
-                final artist = artists[index];
-                return MusicArtistGridCard(
-                  artist: artist,
-                  onTap: () =>
-                      context.push('/artist/${artist.id}', extra: artist),
+          : SliverLayoutBuilder(
+              builder: (context, constraints) {
+                return SliverGrid.builder(
+                  itemCount: artists.length,
+                  itemBuilder: (context, index) {
+                    final artist = artists[index];
+                    return MusicArtistGridCard(
+                      artist: artist,
+                      onTap: () =>
+                          context.push('/artist/${artist.id}', extra: artist),
+                    );
+                  },
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: libraryArtistGridCount(
+                      constraints.crossAxisExtent,
+                    ),
+                    mainAxisSpacing: libraryArtistGridMainAxisSpacing,
+                    crossAxisSpacing: libraryArtistGridCrossAxisSpacing,
+                    mainAxisExtent: libraryArtistGridMainAxisExtent,
+                  ),
                 );
               },
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: libraryGridCount(width),
-                mainAxisSpacing: desktop ? 32 : 24,
-                crossAxisSpacing: desktop ? 24 : 32,
-                mainAxisExtent: desktop ? 212 : 206,
-              ),
             ),
     );
   }
+}
+
+const double libraryArtistGridMainAxisSpacing = 28;
+const double libraryArtistGridCrossAxisSpacing = 20;
+const double libraryArtistGridMainAxisExtent = 236;
+
+int libraryArtistGridCount(double availableWidth) {
+  return ((availableWidth + libraryArtistGridCrossAxisSpacing) /
+          (146 + libraryArtistGridCrossAxisSpacing))
+      .floor()
+      .clamp(3, 6);
 }
 
 List<MusicArtist> sortLibraryArtists(List<MusicArtist> artists) =>
@@ -221,6 +290,8 @@ class _MobileArtistRow extends StatelessWidget {
                   size: 64,
                   borderRadius: AppRadiusTokens.full,
                   semanticLabel: '$name 头像',
+                  placeholderBuilder: (_) =>
+                      const MusicArtistArtworkPlaceholder(size: 64),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

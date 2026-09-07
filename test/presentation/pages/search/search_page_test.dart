@@ -24,17 +24,24 @@ import 'package:cross_platform_music_player/presentation/widgets/music/music_art
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('SearchPage_initialEmptyState_showsSearchPrompt', (tester) async {
+  testWidgets('SearchPage_initialState_showsDiscoveryShortcuts', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildSearchPage(repository: _FakeMusicRepository()),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('搜索音乐库'), findsOneWidget);
+    expect(find.text('开始探索'), findsOneWidget);
+    expect(find.text('最近播放'), findsOneWidget);
+    expect(find.text('我的收藏'), findsOneWidget);
+    expect(find.text('浏览专辑'), findsOneWidget);
+    expect(find.text('浏览艺术家'), findsOneWidget);
     expect(find.text('热门发现'), findsNothing);
     expect(find.text('周杰伦'), findsNothing);
     expect(find.text('搜索分类'), findsNothing);
@@ -45,10 +52,7 @@ void main() {
 
   testWidgets('SearchPage_emptyResults_showsHelpfulMessage', (tester) async {
     await tester.pumpWidget(
-      _buildSearchPage(
-        repository: _FakeMusicRepository(),
-        initialQuery: '不存在',
-      ),
+      _buildSearchPage(repository: _FakeMusicRepository(), initialQuery: '不存在'),
     );
     await tester.pumpAndSettle();
 
@@ -155,9 +159,7 @@ void main() {
     expect(find.text('暂无相关专辑'), findsOneWidget);
   });
 
-  testWidgets('SearchPage_recentSearchChip_submitsSearch', (
-    tester,
-  ) async {
+  testWidgets('SearchPage_recentSearchChip_submitsSearch', (tester) async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(database.close);
     await database.touchSearchHistory('夜曲');
@@ -174,15 +176,12 @@ void main() {
     expect(repository.queries, contains('夜曲'));
   });
 
-  testWidgets('SearchPage_hasNoInlineSearchField', (
-    tester,
-  ) async {
+  testWidgets('SearchPage_hasPersistentSearchField', (tester) async {
     await tester.pumpWidget(
       _buildSearchPage(repository: _FakeMusicRepository()),
     );
 
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('搜索'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('SearchPage_loadingState_keepsLightweightFeedback', (

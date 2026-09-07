@@ -88,7 +88,7 @@ void main() {
     });
 
     test('keeps the V3-46 desktop shell dimensions', () {
-      expect(AppSpacingTokens.desktopSidebarWidth, 220);
+      expect(AppSpacingTokens.desktopSidebarWidth, 224);
       expect(AppSpacingTokens.desktopToolbarHeight, 72);
       expect(AppSpacingTokens.desktopMiniPlayerHeight, 92);
     });

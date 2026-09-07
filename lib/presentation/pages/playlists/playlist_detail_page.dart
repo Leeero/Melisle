@@ -6,6 +6,7 @@ import 'package:cross_platform_music_player/presentation/blocs/favorites/favorit
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlist_detail_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/playlists/playlist_detail_state.dart';
+import 'package:cross_platform_music_player/presentation/utils/detail_route_navigation.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/blurred_cover_background.dart';
@@ -20,7 +21,6 @@ import 'package:cross_platform_music_player/presentation/widgets/track_actions_s
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   const PlaylistDetailPage({
@@ -93,6 +93,15 @@ class _PlaylistDetailView extends StatelessWidget {
   ) {
     return [
       SliverPadding(
+        padding: AppPageLayout.pagePadding(context, bottom: 0),
+        sliver: SliverToBoxAdapter(
+          child: AppDetailBackNav(
+            label: '返回上一页',
+            onPressed: () => _goBackToPlaylists(context),
+          ),
+        ),
+      ),
+      SliverPadding(
         padding: AppPageLayout.pagePadding(
           context,
           bottom: AppPageLayout.sectionGap,
@@ -110,6 +119,17 @@ class _PlaylistDetailView extends StatelessWidget {
           ),
         ),
       ),
+      if (state.status == PlaylistDetailStatus.success &&
+          state.tracks.isNotEmpty)
+        SliverPadding(
+          padding: AppPageLayout.sectionPadding(
+            context,
+            bottom: AppSpacingTokens.inlineGap,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: _DesktopPlaylistTrackHeading(count: state.tracks.length),
+          ),
+        ),
       switch (state.status) {
         PlaylistDetailStatus.loading => const AppSliverStateView.loading(),
         PlaylistDetailStatus.failure => AppSliverStateView.message(
@@ -145,7 +165,7 @@ class _PlaylistDetailView extends StatelessWidget {
             bottom: AppPageLayout.contentBottomInset,
           ),
           sliver: const SliverToBoxAdapter(
-            child: Center(child: CircularProgressIndicator()),
+            child: _PlaylistLoadMoreIndicator(),
           ),
         ),
     ];
@@ -214,6 +234,34 @@ class _PlaylistDetailView extends StatelessWidget {
           ),
         ),
     ];
+  }
+}
+
+class _DesktopPlaylistTrackHeading extends StatelessWidget {
+  const _DesktopPlaylistTrackHeading({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Text(
+          '歌曲',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: AppSpacingTokens.inlineGapCompact),
+        Text(
+          '$count 首',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -743,7 +791,7 @@ class _PlaylistHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PLAYLIST',
+                      '歌单',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -769,7 +817,7 @@ class _PlaylistHero extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '$trackCountLabel 首歌曲',
+                      '$trackCountLabel 首歌曲 · 已添加到你的音乐库',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.start,
@@ -780,19 +828,37 @@ class _PlaylistHero extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    Row(
-                      children: [
-                        _PlaylistDesktopActions(
-                          enabled: tracksCount > 0 && !isLoading,
-                          isLoading: isLoading,
-                          onPlayAll: onPlayAll,
-                          onShuffleAll: onShuffleAll,
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLow.withValues(
+                          alpha: 0.56,
                         ),
-                        if (playlist != null) ...[
-                          const SizedBox(width: AppSpacingTokens.inlineGap),
-                          _PlaylistFavoriteButton(playlist: playlist!),
-                        ],
-                      ],
+                        borderRadius: BorderRadius.circular(
+                          AppRadiusTokens.md,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(
+                          AppSpacingTokens.compactGap,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _PlaylistDesktopActions(
+                              enabled: tracksCount > 0 && !isLoading,
+                              isLoading: isLoading,
+                              onPlayAll: onPlayAll,
+                              onShuffleAll: onShuffleAll,
+                            ),
+                            if (playlist != null) ...[
+                              const SizedBox(
+                                width: AppSpacingTokens.inlineGap,
+                              ),
+                              _PlaylistFavoriteButton(playlist: playlist!),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -801,6 +867,35 @@ class _PlaylistHero extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _PlaylistLoadMoreIndicator extends StatelessWidget {
+  const _PlaylistLoadMoreIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: '正在加载更多歌曲',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: AppSpacingTokens.inlineGap),
+          Text(
+            '正在加载更多歌曲',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -881,11 +976,7 @@ class _PlaylistFavoriteButton extends StatelessWidget {
 }
 
 void _goBackToPlaylists(BuildContext context) {
-  if (Navigator.of(context).canPop()) {
-    Navigator.of(context).maybePop();
-    return;
-  }
-  context.go('/playlists');
+  popDetailRouteOrGo(context, '/library?tab=playlists');
 }
 
 int _playlistTrackCount(MusicPlaylist? playlist, int loadedCount) {

@@ -74,11 +74,13 @@ class QueuePanel extends StatefulWidget {
     this.scrollController,
     this.showDragHandle = false,
     this.closeOnPlay = false,
+    this.onClose,
   });
 
   final ScrollController? scrollController;
   final bool showDragHandle;
   final bool closeOnPlay;
+  final VoidCallback? onClose;
 
   @override
   State<QueuePanel> createState() => _QueuePanelState();
@@ -120,6 +122,7 @@ class _QueuePanelState extends State<QueuePanel> {
             onLocateCurrent: state.currentIndex < 0
                 ? null
                 : () => _locateCurrent(state.currentIndex),
+            onClose: widget.onClose,
           ),
           Divider(
             height: 1,
@@ -270,11 +273,13 @@ class _QueueHeader extends StatelessWidget {
     required this.count,
     required this.onClear,
     required this.onLocateCurrent,
+    required this.onClose,
   });
 
   final int count;
   final VoidCallback? onClear;
   final VoidCallback? onLocateCurrent;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -349,6 +354,21 @@ class _QueueHeader extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.my_location_rounded),
                 ),
+                if (onClose != null)
+                  IconButton(
+                    onPressed: onClose,
+                    tooltip: '关闭播放队列',
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size.square(44),
+                      minimumSize: const Size.square(44),
+                      maximumSize: const Size.square(44),
+                      iconSize: 20,
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.center,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
               ],
             ),
           ),

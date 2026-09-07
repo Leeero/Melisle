@@ -10,8 +10,11 @@ import 'package:cross_platform_music_player/domain/repositories/settings_reposit
 import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/home/home_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/home/home_state.dart';
+import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/home/home_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/artwork_hover_overlay.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -51,15 +54,137 @@ void main() {
     expect(find.byKey(const ValueKey('home-loading-sections')), findsOneWidget);
   });
 
+  testWidgets('桌面首页使用发现型首屏且当前曲目仅保留轻量标识', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    await _setViewport(tester, const ui.Size(1280, 720));
+    await _pumpHome(
+      tester,
+      cubit,
+      const HomeState(
+        status: HomeStatus.success,
+        recentlyPlayed: _tracks,
+        albums: _albums,
+      ),
+      capture: true,
+      themeMode: ThemeMode.dark,
+    );
+
+    expect(find.byKey(const ValueKey('home-discovery-hero')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ambient-home-hero')), findsNothing);
+    expect(find.byKey(const ValueKey('home-recent-desktop')), findsOneWidget);
+    expect(find.text('为你发现'), findsOneWidget);
+    expect(find.text('最近播放'), findsOneWidget);
+    expect(find.text('打开专辑'), findsOneWidget);
+    expect(find.text('正在聆听'), findsNothing);
+    expect(find.text('展开独立播放器'), findsNothing);
+    final openAlbumAction = find.byKey(
+      const ValueKey('home-open-album-action'),
+    );
+    final browseAlbumsAction = find.byKey(
+      const ValueKey('home-browse-albums-action'),
+    );
+    expect(tester.getSize(openAlbumAction).height, 48);
+    expect(tester.getSize(browseAlbumsAction).height, 48);
+    expect(
+      tester
+          .getCenter(
+            find.descendant(
+              of: openAlbumAction,
+              matching: find.byIcon(Icons.album_rounded),
+            ),
+          )
+          .dy,
+      closeTo(
+        tester
+            .getCenter(
+              find.descendant(of: openAlbumAction, matching: find.text('打开专辑')),
+            )
+            .dy,
+        0.1,
+      ),
+    );
+    expect(
+      tester
+          .getCenter(
+            find.descendant(
+              of: browseAlbumsAction,
+              matching: find.byIcon(Icons.arrow_forward_rounded),
+            ),
+          )
+          .dy,
+      closeTo(
+        tester
+            .getCenter(
+              find.descendant(
+                of: browseAlbumsAction,
+                matching: find.text('浏览全部专辑'),
+              ),
+            )
+            .dy,
+        0.1,
+      ),
+    );
+    expect(
+      find.byKey(const ValueKey('home-current-track-track-1')),
+      findsOneWidget,
+    );
+    expect(find.text('正在播放'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _capture(tester, 'discovery-home-1280x720-dark');
+  });
+
+  testWidgets('桌面最近播放卡片悬停仅强调封面和标题', (tester) async {
+    final cubit = _TestHomeCubit();
+    addTearDown(cubit.close);
+    await _setViewport(tester, const ui.Size(1280, 720));
+    await _pumpHome(
+      tester,
+      cubit,
+      const HomeState(
+        status: HomeStatus.success,
+        recentlyPlayed: _tracks,
+        albums: _albums,
+      ),
+    );
+
+    final card = find
+        .ancestor(
+          of: find.text(_tracks.first.title),
+          matching: find.byType(InkWell),
+        )
+        .first;
+    final mouse = await tester.createGesture(kind: ui.PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(card));
+    await tester.pumpAndSettle();
+
+    final overlay = find.descendant(
+      of: card,
+      matching: find.byType(ArtworkHoverOverlay),
+    );
+    expect(tester.widget<ArtworkHoverOverlay>(overlay).visible, isTrue);
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.byIcon(Icons.play_arrow_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.widget<InkWell>(card).hoverColor, Colors.transparent);
+    await mouse.removePointer();
+  });
+
   testWidgets('移动首页覆盖最新添加、最常播放、随机内容和长标题', (tester) async {
     final cubit = _TestHomeCubit();
     addTearDown(cubit.close);
     await _setViewport(tester, const ui.Size(390, 844), textScale: 1.3);
     await _pumpHome(tester, cubit, _successState);
     expect(find.text('首页'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-discovery-card')), findsOneWidget);
+    expect(find.text('为你发现'), findsOneWidget);
     expect(find.text('最新添加'), findsOneWidget);
     expect(find.text('最常播放'), findsOneWidget);
-    expect(find.text('随机探索'), findsOneWidget);
+    expect(find.text('随机探索'), findsNothing);
     expect(find.textContaining('用于验证超长标题'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -100,7 +225,15 @@ Future<void> _pumpHome(
   cubit.show(state);
   final resolver = CustomMediaSourceResolver();
   final settingsCubit = AppSettingsCubit(_SettingsRepository(), resolver);
+  final playerCubit = _TestPlayerCubit(
+    PlayerViewState(
+      queue: state.recentlyPlayed,
+      isPlaying: state.recentlyPlayed.isNotEmpty,
+      duration: state.recentlyPlayed.firstOrNull?.duration ?? Duration.zero,
+    ),
+  );
   addTearDown(settingsCubit.close);
+  addTearDown(playerCubit.close);
   await tester.pumpWidget(
     RepositoryProvider<CustomMediaSourceResolver>.value(
       value: resolver,
@@ -108,6 +241,7 @@ Future<void> _pumpHome(
         providers: [
           BlocProvider<HomeCubit>.value(value: cubit),
           BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          BlocProvider<PlayerCubit>.value(value: playerCubit),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),
@@ -160,6 +294,13 @@ class _TestHomeCubit extends HomeCubit {
         _Repository(),
       );
   void show(HomeState state) => emit(state);
+}
+
+class _TestPlayerCubit extends Cubit<PlayerViewState> implements PlayerCubit {
+  _TestPlayerCubit(super.initialState);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Repository implements MusicRepository {

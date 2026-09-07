@@ -12,6 +12,7 @@ import 'package:cross_platform_music_player/presentation/blocs/library/library_s
 import 'package:cross_platform_music_player/presentation/pages/library/library_filter_views.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -119,6 +120,88 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('album density changes the responsive desktop column count', (
+    tester,
+  ) async {
+    final albums = List.generate(
+      7,
+      (index) => MusicAlbum(
+        id: 'album-$index',
+        title: '专辑 $index',
+        artistName: '歌手 $index',
+        artworkUrl: '',
+        trackCount: 10,
+      ),
+    );
+    final state = LibraryState(
+      status: LibraryStatus.success,
+      currentFilter: LibraryFilter.albums,
+      albums: albums,
+      hasMore: false,
+    );
+
+    await _pumpSliver(
+      tester,
+      LibraryAlbumSliver(state: state, horizontalPadding: 40),
+      size: const Size(1200, 900),
+    );
+    final comfortableGrid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+    expect(
+      (comfortableGrid.gridDelegate
+              as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      5,
+    );
+
+    await _pumpSliver(
+      tester,
+      LibraryAlbumSliver(
+        state: state,
+        horizontalPadding: 40,
+        density: LibraryAlbumGridDensity.compact,
+      ),
+      size: const Size(1200, 900),
+    );
+    final compactGrid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+    expect(
+      (compactGrid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      6,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('album card opens from its text area', (tester) async {
+    var tapCount = 0;
+    await _pumpSliver(
+      tester,
+      SliverToBoxAdapter(
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 220,
+            height: 290,
+            child: MusicAlbumGridCard(
+              album: const MusicAlbum(
+                id: 'album',
+                title: '整卡可点击专辑',
+                artistName: '测试歌手',
+                artworkUrl: '',
+                trackCount: 8,
+              ),
+              onTap: () => tapCount++,
+            ),
+          ),
+        ),
+      ),
+      size: const Size(375, 812),
+    );
+
+    await tester.tap(find.text('整卡可点击专辑'));
+    await tester.pump();
+    expect(tapCount, 1);
+  });
+
   testWidgets('renders the compact artists view as rows', (tester) async {
     await _pumpSliver(
       tester,
@@ -148,6 +231,7 @@ void main() {
   testWidgets('renders the desktop artist directory as a compact avatar grid', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await _pumpSliver(
       tester,
       LibraryArtistSliver(
@@ -199,20 +283,25 @@ void main() {
     final hoverColor = Theme.of(tester.element(firstArtistCard)).hoverWash;
     expect(idleHoverColor.a, 0);
     expect(idleHoverColor.withValues(alpha: 1), hoverColor);
-    expect(tester.getSize(hoverContainerFinder).height, lessThan(212));
+    expect(
+      tester.getSize(hoverContainerFinder).height,
+      lessThanOrEqualTo(libraryArtistGridMainAxisExtent),
+    );
     final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
     expect(
       (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
           .crossAxisCount,
-      7,
+      6,
     );
     expect(
       tester
           .widgetList<CachedArtwork>(find.byType(CachedArtwork))
-          .every((artwork) => artwork.size == 112),
+          .every((artwork) => artwork.size == 132),
       isTrue,
     );
+    expect(find.bySemanticsLabel(RegExp(r'^打开歌手')), findsNWidgets(3));
     expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
   testWidgets('renders the playlists view', (tester) async {

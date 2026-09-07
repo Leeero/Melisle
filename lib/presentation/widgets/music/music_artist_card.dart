@@ -29,17 +29,15 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
     final colorScheme = theme.colorScheme;
     final artist = widget.artist;
     final displayName = MediaDisplayText.artistName(artist.name);
+    final itemCount = MediaDisplayText.artistItemCount(artist);
     final compact = widget.compact;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final desktop = AppBreakpoints.usesDesktopToolbar(context);
         final narrow = constraints.maxWidth < 118 || compact;
-        final artworkSize = desktop
-            ? 112.0
-            : compact
+        final artworkSize = compact
             ? 84.0
-            : 96.0;
+            : (constraints.maxWidth - 16).clamp(104.0, 132.0).toDouble();
         final titleStyle = theme.textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurface,
           fontSize: compact ? 13 : 14,
@@ -57,16 +55,19 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
         return Align(
           alignment: Alignment.topCenter,
           child: Semantics(
-            label: '打开歌手《$displayName》',
+            label: '打开歌手《$displayName》，$itemCount',
             button: true,
             onTap: widget.onTap,
+            excludeSemantics: true,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               onEnter: (_) => setState(() => _hovered = true),
               onExit: (_) => setState(() => _hovered = false),
               child: AnimatedContainer(
                 width: constraints.maxWidth,
-                duration: AppMotion.micro,
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : AppMotion.micro,
                 curve: AppMotion.enter,
                 decoration: BoxDecoration(
                   borderRadius: cardRadius,
@@ -110,10 +111,12 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                               borderRadius: artworkSize / 2,
                               semanticLabel: '$displayName 头像',
                               placeholderBuilder: (_) =>
-                                  _ArtistArtworkPlaceholder(size: artworkSize),
+                                  MusicArtistArtworkPlaceholder(
+                                    size: artworkSize,
+                                  ),
                             ),
                           ),
-                          SizedBox(height: desktop ? 12 : (narrow ? 7 : 10)),
+                          SizedBox(height: narrow ? 7 : 12),
                           Text(
                             displayName,
                             maxLines: 2,
@@ -123,7 +126,7 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            MediaDisplayText.artistItemCount(artist),
+                            itemCount,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -143,8 +146,8 @@ class _MusicArtistGridCardState extends State<MusicArtistGridCard> {
   }
 }
 
-class _ArtistArtworkPlaceholder extends StatelessWidget {
-  const _ArtistArtworkPlaceholder({required this.size});
+class MusicArtistArtworkPlaceholder extends StatelessWidget {
+  const MusicArtistArtworkPlaceholder({super.key, required this.size});
 
   final double size;
 

@@ -4,6 +4,7 @@ import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.d
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_state.dart';
+import 'package:cross_platform_music_player/presentation/utils/detail_route_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -72,7 +73,7 @@ class _SettingsOverview extends StatelessWidget {
       child: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: desktop ? 820 : 1120),
+          constraints: BoxConstraints(maxWidth: desktop ? 960 : 1120),
           child: desktop
               ? const _DesktopSettingsLayout()
               : const _CompactSettingsLayout(),
@@ -91,17 +92,37 @@ class _CompactSettingsLayout extends StatelessWidget {
       key: ValueKey('settings-compact-layout'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SettingsSection(title: '当前服务器', child: _CompactServerStatus()),
+        _SettingsSection(
+          title: '账户与服务器',
+          description: '查看当前连接和登录账号。',
+          child: _CompactServerStatus(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '常用偏好', child: _CommonPreferencesCard()),
+        _SettingsSection(
+          title: '播放偏好',
+          description: '音质、曲间间隔和外观。',
+          child: _CommonPreferencesCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '媒体与设备', child: _SecondarySettingsCard()),
+        _SettingsSection(
+          title: '媒体与设备',
+          description: '歌词、封面和下载管理。',
+          child: _SecondarySettingsCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '存储', child: _StorageCard()),
+        _SettingsSection(
+          title: '存储',
+          description: '管理本地缓存和空间。',
+          child: _StorageCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '关于', child: _AboutCard()),
+        _SettingsSection(
+          title: '关于',
+          description: '查看应用与版本信息。',
+          child: _AboutCard(),
+        ),
         SizedBox(height: 14),
-        _LogoutCard(),
+        _SettingsSection(title: '账户操作', child: _LogoutCard()),
       ],
     );
   }
@@ -116,18 +137,41 @@ class _DesktopSettingsLayout extends StatelessWidget {
       key: ValueKey('settings-desktop-layout'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SettingsSection(title: '当前服务器', child: _ServerCard()),
+        _SettingsSection(
+          title: '账户与服务器',
+          description: '查看当前连接和登录账号。',
+          child: _ServerCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '常用偏好', child: _CommonPreferencesCard()),
+        _SettingsSection(
+          title: '播放偏好',
+          description: '音质、曲间间隔和外观。',
+          child: _CommonPreferencesCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
         _SettingsSection(
           title: '媒体与设备',
+          description: '歌词、封面、菜单栏和下载管理。',
           child: _SecondarySettingsCard(desktop: true),
         ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '存储', child: _StorageCard()),
+        _SettingsSection(
+          title: '存储',
+          description: '管理本地缓存和空间。',
+          child: _StorageCard(),
+        ),
         SizedBox(height: AppPageLayout.sectionGap),
-        _SettingsSection(title: '关于', child: _AboutCard()),
+        _SettingsSection(
+          title: '关于',
+          description: '查看应用与版本信息。',
+          child: _AboutCard(),
+        ),
+        SizedBox(height: AppPageLayout.sectionGap),
+        _SettingsSection(
+          title: '账户操作',
+          description: '退出后需要重新连接服务器。',
+          child: _LogoutCard(),
+        ),
       ],
     );
   }
@@ -148,10 +192,11 @@ class CustomMediaSourcesPage extends StatelessWidget {
         buildWhen: (a, b) => a.isLoading != b.isLoading,
         builder: (context, state) {
           if (state.isLoading) {
-            return const AppContentPage(
-              header: AppPageHeader(
+            return AppContentPage(
+              header: const AppPageHeader(
                 title: '歌词与封面',
                 automaticImplyLeading: false,
+                leading: _SettingsDetailBackButton(),
               ),
               body: AppBodyStateView.loading(),
             );
@@ -165,6 +210,7 @@ class CustomMediaSourcesPage extends StatelessWidget {
               description: compact ? null : '配置自定义媒体来源地址。',
               titleMaxWidth: compact ? 220 : 300,
               automaticImplyLeading: false,
+              leading: const _SettingsDetailBackButton(),
               trailing: compact
                   ? null
                   : FilledButton.icon(
@@ -179,19 +225,42 @@ class CustomMediaSourcesPage extends StatelessWidget {
                     ),
             ),
             body: ListView(
-              padding: AppPageLayout.sectionPadding(
-                context,
-                bottom: AppPageLayout.contentBottomInset,
+              padding: EdgeInsets.fromLTRB(
+                AppPageLayout.horizontalPadding(context),
+                0,
+                AppPageLayout.horizontalPadding(context),
+                AppPageLayout.contentBottomInset,
               ),
               children: [
-                const _CustomMediaSourcesOverviewCard(),
-                const SizedBox(height: 14),
-                const _CustomMediaSourcesCard(showIntro: false),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 960),
+                    child: const Column(
+                      children: [
+                        _CustomMediaSourcesOverviewCard(),
+                        SizedBox(height: 14),
+                        _CustomMediaSourcesCard(showIntro: false),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           );
         },
       ),
+    );
+  }
+}
+
+class _SettingsDetailBackButton extends StatelessWidget {
+  const _SettingsDetailBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBackButton(
+      onPressed: () => popDetailRouteOrGo(context, '/settings'),
     );
   }
 }
@@ -261,15 +330,6 @@ class _ServerCard extends StatelessWidget {
                   label: connected ? '已连接' : '未连接',
                   emphasized: connected,
                 ),
-              ),
-              _SettingsDivider(colorScheme: colorScheme),
-              _HoverableListTile(
-                leading: const _SettingRowIcon(
-                  icon: Icons.logout_rounded,
-                  danger: true,
-                ),
-                title: Text('退出登录', style: TextStyle(color: colorScheme.error)),
-                onTap: () => _showLogoutConfirmation(context),
               ),
             ],
           ),
@@ -344,6 +404,7 @@ class _LogoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return _SettingsGroupSurface(
+      danger: true,
       child: _HoverableListTile(
         leading: const _SettingRowIcon(
           icon: Icons.logout_rounded,
@@ -483,10 +544,15 @@ String _backendApiLabel(AuthSession session) {
 }
 
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.title, required this.child});
+  const _SettingsSection({
+    required this.title,
+    required this.child,
+    this.description,
+  });
 
   final String title;
   final Widget child;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -496,17 +562,20 @@ class _SettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSectionTitleRow(
-          title: title,
-          padding: EdgeInsets.zero,
-          titleStyle: theme.textTheme.labelMedium?.copyWith(
-            color: theme.muted,
-            fontSize: 12,
-            fontWeight: compact ? FontWeight.w600 : FontWeight.w700,
-            letterSpacing: compact ? 0 : 0.32,
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
-        SizedBox(height: compact ? 8 : 10),
+        if (description != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            description!,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.muted),
+          ),
+        ],
+        SizedBox(height: compact ? 10 : 12),
         child,
       ],
     );
@@ -514,10 +583,15 @@ class _SettingsSection extends StatelessWidget {
 }
 
 class _SettingsGroupSurface extends StatelessWidget {
-  const _SettingsGroupSurface({required this.child, this.padding});
+  const _SettingsGroupSurface({
+    required this.child,
+    this.padding,
+    this.danger = false,
+  });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -532,17 +606,20 @@ class _SettingsGroupSurface extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Color.alphaBlend(
-            colorScheme.surface.withValues(alpha: compact ? 0.96 : 0.72),
-            compact
-                ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.18)
-                : theme.hoverWash.withValues(alpha: 0.12),
-          ),
+          color: danger
+              ? colorScheme.errorContainer.withValues(
+                  alpha: compact ? 0.38 : 0.20,
+                )
+              : Color.alphaBlend(
+                  colorScheme.surface.withValues(alpha: compact ? 0.96 : 0.72),
+                  compact
+                      ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.18)
+                      : theme.hoverWash.withValues(alpha: 0.12),
+                ),
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(
-              alpha: compact ? 0.70 : 0.56,
-            ),
+            color: (danger ? colorScheme.error : colorScheme.outlineVariant)
+                .withValues(alpha: compact ? 0.70 : 0.56),
             width: compact ? 0.75 : 1,
           ),
         ),

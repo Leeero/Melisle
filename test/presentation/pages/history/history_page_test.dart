@@ -3,16 +3,20 @@ import 'dart:ui' as ui;
 
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:cross_platform_music_player/domain/repositories/settings_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/audio/audio_player_handler.dart';
+import 'package:cross_platform_music_player/infrastructure/media/custom_media_source_resolver.dart';
 import 'package:cross_platform_music_player/presentation/blocs/history/history_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/history/history_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
-import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
+import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/history/history_page.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:just_audio/just_audio.dart';
 
 void main() {
   group('HistoryPage screenshots', () {
@@ -45,23 +49,33 @@ Future<void> _pumpHistory(
 }) async {
   final historyCubit = _MockHistoryCubit()..show(state);
   final playerCubit = _MockPlayerCubit();
+  final mediaSourceResolver = CustomMediaSourceResolver();
+  final settingsCubit = AppSettingsCubit(
+    _MockSettingsRepository(),
+    mediaSourceResolver,
+  );
   addTearDown(() {
     historyCubit.close();
     playerCubit.close();
+    settingsCubit.close();
   });
   await tester.pumpWidget(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider<HistoryCubit>.value(value: historyCubit),
-        BlocProvider<PlayerCubit>.value(value: playerCubit),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: themeMode,
-        home: const RepaintBoundary(
-          key: ValueKey('history-capture'),
-          child: HistoryPage(),
+    RepositoryProvider<CustomMediaSourceResolver>.value(
+      value: mediaSourceResolver,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<HistoryCubit>.value(value: historyCubit),
+          BlocProvider<PlayerCubit>.value(value: playerCubit),
+          BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode,
+          home: RepaintBoundary(
+            key: const ValueKey('history-capture'),
+            child: HistoryPage(cubit: historyCubit),
+          ),
         ),
       ),
     ),
@@ -138,7 +152,7 @@ final _mockTracks = [
 
 // Mock HistoryCubit
 class _MockHistoryCubit extends Cubit<HistoryState> implements HistoryCubit {
-  _MockHistoryCubit() : super(const HistoryState());
+  _MockHistoryCubit() : super(const HistoryState.initial());
 
   void show(HistoryState state) => emit(state);
 
@@ -147,38 +161,34 @@ class _MockHistoryCubit extends Cubit<HistoryState> implements HistoryCubit {
 
   @override
   Future<void> loadMore() async {}
+
+  @override
+  Future<List<MusicTrack>> fetchAllTracks({int limit = 500}) async =>
+      state.tracks.take(limit).toList();
 }
 
 // Mock PlayerCubit
 class _MockPlayerCubit extends PlayerCubit {
   _MockPlayerCubit()
-      : super(
-          repository: _MockMusicRepository(),
-          controller: _MockAudioPlayerHandler(),
-        );
+    : super(
+        repository: _MockMusicRepository(),
+        controller: _MockAudioPlayerHandler(),
+      );
 
-  @override
   Future<void> play() async {}
 
-  @override
   Future<void> pause() async {}
 
-  @override
   Future<void> toggle() async {}
 
-  @override
   Future<void> seekTo(Duration position) async {}
 
-  @override
   Future<void> seekToProgress(double progress) async {}
 
-  @override
   Future<void> playTrack(MusicTrack track) async {}
 
-  @override
   Future<void> playAlbum(String albumId, {int startIndex = 0}) async {}
 
-  @override
   Future<void> playPlaylist(String playlistId, {int startIndex = 0}) async {}
 
   @override
@@ -190,13 +200,11 @@ class _MockPlayerCubit extends PlayerCubit {
   @override
   Future<void> addToQueue(MusicTrack track) async {}
 
-  @override
   Future<void> removeFromQueue(int index) async {}
 
   @override
   Future<void> clearQueue() async {}
 
-  @override
   Future<void> reorderQueue(int oldIndex, int newIndex) async {}
 
   @override
@@ -205,7 +213,6 @@ class _MockPlayerCubit extends PlayerCubit {
   @override
   Future<void> toggleShuffle() async {}
 
-  @override
   Future<void> cycleRepeatMode() async {}
 }
 
@@ -215,7 +222,42 @@ class _MockMusicRepository implements MusicRepository {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
+class _MockSettingsRepository implements SettingsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
 class _MockAudioPlayerHandler implements AudioPlayerHandler {
+  @override
+  Future<void> Function()? onSkipNext;
+
+  @override
+  Future<void> Function()? onSkipPrevious;
+
+  @override
+  Future<void> Function(int index)? onSkipToIndex;
+
+  @override
+  Stream<Duration> get positionStream => const Stream.empty();
+
+  @override
+  Stream<Duration?> get durationStream => const Stream.empty();
+
+  @override
+  Stream<PlayerState> get playerStateStream => const Stream.empty();
+
+  @override
+  Stream<PlaybackFailure> get playbackErrorStream => const Stream.empty();
+
+  @override
+  Stream<String> get trackCompletionStream => const Stream.empty();
+
+  @override
+  Stream<double> get volumeStream => const Stream.empty();
+
+  @override
+  Future<void> dispose() async {}
+
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
 }

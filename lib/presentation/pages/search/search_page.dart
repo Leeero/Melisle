@@ -58,20 +58,57 @@ class SearchPage extends StatelessWidget {
   }
 }
 
-class _SearchView extends StatelessWidget {
+class _SearchView extends StatefulWidget {
   const _SearchView();
+
+  @override
+  State<_SearchView> createState() => _SearchViewState();
+}
+
+class _SearchViewState extends State<_SearchView> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocBuilder<SearchCubit, SearchState>(
         builder: (context, state) {
+          if (_searchController.text != state.query) {
+            _searchController.value = TextEditingValue(
+              text: state.query,
+              selection: TextSelection.collapsed(offset: state.query.length),
+            );
+          }
           return AppContentPage(
+            header: AppSearchField(
+              controller: _searchController,
+              dense: true,
+              showCancelAction: false,
+              hintText: '搜索歌曲、专辑、歌手、歌单',
+              semanticLabel: '搜索音乐',
+              onChanged: context.read<SearchCubit>().submit,
+              onSubmitted: context.read<SearchCubit>().submit,
+              onClear: () {
+                _searchController.clear();
+                context.read<SearchCubit>().submit('');
+              },
+            ),
             body: _SearchResultsView(
               state: state,
-              onRecentSelected: (query) => context
-                  .read<SearchCubit>()
-                  .submit(query.trim()),
+              onRecentSelected: (query) =>
+                  context.read<SearchCubit>().submit(query.trim()),
             ),
           );
         },
@@ -189,7 +226,10 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SearchResultsHeader(query: widget.query),
+                  _SearchResultsHeader(
+                    query: widget.query,
+                    results: widget.results,
+                  ),
                   const SizedBox(height: 18),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -248,10 +288,7 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
                       !_hasResultsForScope(widget.results, _scope))
                     _SearchScopeEmptyState(scope: _scope)
                   else
-                    _WideSearchResults(
-                      results: widget.results,
-                      scope: _scope,
-                    ),
+                    _WideSearchResults(results: widget.results, scope: _scope),
                 ],
               ),
             ),
@@ -263,17 +300,38 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
 }
 
 class _SearchResultsHeader extends StatelessWidget {
-  const _SearchResultsHeader({required this.query});
+  const _SearchResultsHeader({required this.query, required this.results});
 
   final String query;
+  final SearchResults results;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '搜索 “$query”',
-      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
+    final summary = [
+      if (results.tracks.isNotEmpty) '${results.tracks.length} 首歌曲',
+      if (results.albums.isNotEmpty) '${results.albums.length} 张专辑',
+      if (results.artists.isNotEmpty) '${results.artists.length} 位歌手',
+      if (results.playlists.isNotEmpty) '${results.playlists.length} 个歌单',
+    ].join(' · ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '搜索 “$query”',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -718,7 +776,9 @@ class _CompactSearchTrackRowState extends State<_CompactSearchTrackRow> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacingTokens.inlineGap),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacingTokens.inlineGap,
+                ),
                 child: Row(
                   children: [
                     SizedBox(
@@ -1172,25 +1232,25 @@ class _SearchAlbumGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: albums.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _searchResultGridCount(
-          MediaQuery.sizeOf(context).width,
+    return LayoutBuilder(
+      builder: (context, constraints) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: albums.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _searchResultGridCount(constraints.maxWidth),
+          mainAxisSpacing: 22,
+          crossAxisSpacing: 18,
+          childAspectRatio: 0.67,
         ),
-        mainAxisSpacing: 22,
-        crossAxisSpacing: 18,
-        childAspectRatio: 0.67,
+        itemBuilder: (context, index) {
+          final album = albums[index];
+          return MusicAlbumGridCard(
+            album: album,
+            onTap: () => context.push('/album/${album.id}', extra: album),
+          );
+        },
       ),
-      itemBuilder: (context, index) {
-        final album = albums[index];
-        return MusicAlbumGridCard(
-          album: album,
-          onTap: () => context.push('/album/${album.id}', extra: album),
-        );
-      },
     );
   }
 }
@@ -1202,25 +1262,25 @@ class _SearchArtistGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: artists.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _searchResultGridCount(
-          MediaQuery.sizeOf(context).width,
+    return LayoutBuilder(
+      builder: (context, constraints) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: artists.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _searchResultGridCount(constraints.maxWidth),
+          mainAxisSpacing: 22,
+          crossAxisSpacing: 18,
+          childAspectRatio: 0.7,
         ),
-        mainAxisSpacing: 22,
-        crossAxisSpacing: 18,
-        childAspectRatio: 0.7,
+        itemBuilder: (context, index) {
+          final artist = artists[index];
+          return MusicArtistGridCard(
+            artist: artist,
+            onTap: () => context.push('/artist/${artist.id}', extra: artist),
+          );
+        },
       ),
-      itemBuilder: (context, index) {
-        final artist = artists[index];
-        return MusicArtistGridCard(
-          artist: artist,
-          onTap: () => context.push('/artist/${artist.id}', extra: artist),
-        );
-      },
     );
   }
 }
@@ -1234,30 +1294,30 @@ class _SearchPlaylistGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompact = AppBreakpoints.isCompact(context);
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: playlists.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _searchResultGridCount(
-          MediaQuery.sizeOf(context).width,
+    return LayoutBuilder(
+      builder: (context, constraints) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: playlists.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _searchResultGridCount(constraints.maxWidth),
+          mainAxisSpacing: 22,
+          crossAxisSpacing: 18,
+          childAspectRatio: 0.67,
         ),
-        mainAxisSpacing: 22,
-        crossAxisSpacing: 18,
-        childAspectRatio: 0.67,
+        itemBuilder: (context, index) {
+          final playlist = playlists[index];
+          return MusicPlaylistGridCard(
+            playlist: playlist,
+            onTap: () =>
+                context.push('/playlists/${playlist.id}', extra: playlist),
+            artworkRadius: isCompact
+                ? AppRadiusTokens.mobileMd
+                : AppRadiusTokens.coverGrid,
+            compact: isCompact,
+          );
+        },
       ),
-      itemBuilder: (context, index) {
-        final playlist = playlists[index];
-        return MusicPlaylistGridCard(
-          playlist: playlist,
-          onTap: () =>
-              context.push('/playlists/${playlist.id}', extra: playlist),
-          artworkRadius: isCompact
-              ? AppRadiusTokens.mobileMd
-              : AppRadiusTokens.coverGrid,
-          compact: isCompact,
-        );
-      },
     );
   }
 }
@@ -1433,6 +1493,18 @@ class _SearchStartView extends StatelessWidget {
       child: SearchEmptyView(
         recentQueries: queries,
         onQuerySelected: onSelected,
+        onDestinationSelected: (destination) {
+          switch (destination) {
+            case SearchDiscoveryDestination.history:
+              context.push('/history');
+            case SearchDiscoveryDestination.favorites:
+              context.push('/favorites');
+            case SearchDiscoveryDestination.albums:
+              context.push('/library?tab=albums');
+            case SearchDiscoveryDestination.artists:
+              context.push('/library?tab=artists');
+          }
+        },
         onQueryRemoved: context.read<SearchCubit>().removeRecent,
         onClearRecent: queries.isEmpty
             ? null

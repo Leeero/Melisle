@@ -11,10 +11,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HistoryPage extends StatelessWidget {
-  const HistoryPage({super.key});
+  const HistoryPage({super.key, this.cubit});
+
+  final HistoryCubit? cubit;
 
   @override
   Widget build(BuildContext context) {
+    final providedCubit = cubit;
+    if (providedCubit != null) {
+      return BlocProvider<HistoryCubit>.value(
+        value: providedCubit,
+        child: const _HistoryView(),
+      );
+    }
     return BlocProvider(
       create: (context) => HistoryCubit(context.read<AppDatabase>())..load(),
       child: const _HistoryView(),
@@ -78,10 +87,7 @@ class _HistoryView extends StatelessWidget {
         }
         return false;
       },
-      child: _HistoryTrackList(
-        state: state,
-        currentTrackId: currentTrackId,
-      ),
+      child: _HistoryTrackList(state: state, currentTrackId: currentTrackId),
     );
   }
 }
@@ -93,9 +99,14 @@ class _HistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: PlayAllButton(
+    final countLabel = state.status == HistoryStatus.loading
+        ? '正在载入最近播放记录'
+        : '${state.tracks.length} 首最近播放';
+    return AppPageHeader(
+      title: '播放历史',
+      description: countLabel,
+      automaticImplyLeading: false,
+      trailing: PlayAllButton(
         onPressed: state.tracks.isEmpty
             ? null
             : () => _playAllHistory(context, state),
@@ -124,6 +135,7 @@ class _HistoryTrackList extends StatelessWidget {
         AppPageLayout.contentBottomInset,
       ),
       children: [
+        const AppSectionTitleRow(title: '最近播放'),
         MusicTrackTable(
           tracks: state.tracks,
           currentTrackId: currentTrackId,
@@ -149,12 +161,28 @@ class _HistoryLoadFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.isLoadingMore) {
-      return Padding(
-        padding: EdgeInsets.all(AppSpacingTokens.sectionPadding),
-        child: Center(
-          child: SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+      return Semantics(
+        label: '正在加载更多播放历史',
+        liveRegion: true,
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacingTokens.sectionPadding),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '正在加载更多',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

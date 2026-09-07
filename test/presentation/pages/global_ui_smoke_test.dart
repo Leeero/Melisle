@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
@@ -8,6 +10,8 @@ import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_sync_state.dart';
+import 'package:cross_platform_music_player/domain/entities/lyric_timeline.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
@@ -22,6 +26,7 @@ import 'package:cross_platform_music_player/infrastructure/media/custom_media_so
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/downloads/downloads_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/favorites/favorites_cubit.dart';
+import 'package:cross_platform_music_player/presentation/blocs/library/library_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
@@ -33,11 +38,14 @@ import 'package:cross_platform_music_player/presentation/pages/settings/settings
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
+import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -180,8 +188,8 @@ void main() {
       build: () => harness.wrap(const DownloadsPage()),
       verify: (_) {
         expect(find.byType(AppContentPage), findsOneWidget);
-        expect(find.text('下载管理'), findsNothing);
-        expect(find.text('管理离线缓存、下载任务和本地存储。'), findsNothing);
+        expect(find.text('下载'), findsOneWidget);
+        expect(find.text('管理离线音乐、下载任务与本地存储'), findsOneWidget);
         expect(find.text('已下载'), findsOneWidget);
         expect(find.text('下载中'), findsOneWidget);
         expect(
@@ -266,6 +274,39 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('LibraryPage_loadingState_doesNotOverflowInShortDesktop', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1080, 720);
+    tester.view.devicePixelRatio = 1;
+
+    for (final filter in const [
+      LibraryFilter.tracks,
+      LibraryFilter.albums,
+      LibraryFilter.artists,
+    ]) {
+      final repository = _DelayedLibraryRepository();
+      final playerCubit = _FakeQueuePlayerCubit();
+      addTearDown(playerCubit.close);
+
+      await tester.pumpWidget(
+        _wrapLibrary(repository, playerCubit, initialFilter: filter),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('library-loading-scroll-view')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+
+      repository.complete(filter);
+      await tester.pump();
+    }
+  });
+
   testWidgets('LibraryPage_emptyState_keepsFourCategoriesAcrossBreakpoints', (
     tester,
   ) async {
@@ -301,7 +342,7 @@ void main() {
     );
   });
 
-  testWidgets('LibraryPage_desktopUsesSidebarFilterWithoutTabsOrSearch', (
+  testWidgets('LibraryPage_desktopUsesSongToolbarWithoutDuplicateTabs', (
     tester,
   ) async {
     addTearDown(tester.view.resetPhysicalSize);
@@ -335,13 +376,103 @@ void main() {
     await tester.pumpWidget(_wrapLibrary(repository, playerCubit));
     await tester.pumpAndSettle();
 
-    expect(find.bySemanticsLabel('搜索歌曲'), findsNothing);
+    expect(find.bySemanticsLabel('搜索歌曲'), findsOneWidget);
+    expect(find.text('全部歌曲'), findsOneWidget);
+    expect(find.text('默认顺序'), findsOneWidget);
+    expect(find.text('显示密度'), findsOneWidget);
     expect(find.text('歌曲'), findsOneWidget);
     expect(find.text('专辑'), findsNothing);
     expect(find.text('歌手'), findsNothing);
     expect(find.text('歌单'), findsNothing);
     expect(find.text('很长的专辑名称用于验证媒体库布局'), findsNothing);
     expect(find.text('很长的歌手名称用于验证媒体库布局'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('LibraryPage_desktopAlbumViewUsesSearchAndDensityToolbar', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    final repository = _FakeMusicRepository(
+      libraryAlbums: const [
+        MusicAlbum(
+          id: 'album-1',
+          title: '专辑视图测试',
+          artistName: '测试歌手',
+          artworkUrl: '',
+          trackCount: 10,
+        ),
+      ],
+    );
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await tester.pumpWidget(
+      _wrapLibrary(
+        repository,
+        playerCubit,
+        initialFilter: LibraryFilter.albums,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('搜索专辑'), findsOneWidget);
+    expect(find.text('大封面'), findsOneWidget);
+    expect(find.text('专辑视图测试'), findsOneWidget);
+    expect(find.text('歌曲'), findsNothing);
+
+    await tester.tap(find.text('大封面'));
+    await tester.pumpAndSettle();
+    expect(find.text('紧凑网格'), findsOneWidget);
+    await tester.tap(find.text('紧凑网格'));
+    await tester.pumpAndSettle();
+    expect(find.text('紧凑网格'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('LibraryPage_desktopArtistViewUsesDirectoryToolbar', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    final repository = _FakeMusicRepository(
+      libraryArtists: const [
+        MusicArtist(
+          id: 'artist-1',
+          name: '艺术家视图测试',
+          artworkUrl: '',
+          albumCount: 12,
+        ),
+      ],
+      libraryGenres: const [Genre(id: 'jazz', name: '爵士')],
+    );
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await tester.pumpWidget(
+      _wrapLibrary(
+        repository,
+        playerCubit,
+        initialFilter: LibraryFilter.artists,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('搜索歌手'), findsOneWidget);
+    expect(find.text('默认顺序'), findsOneWidget);
+    expect(find.text('全部风格'), findsOneWidget);
+    expect(find.text('艺术家视图测试'), findsOneWidget);
+
+    await tester.tap(find.text('全部风格'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('爵士'));
+    await tester.pumpAndSettle();
+    expect(find.text('爵士'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -363,14 +494,33 @@ void main() {
   });
 
   testWidgets(
-    'PlayerPage_desktopSmoke_usesThreeColumnLayoutAndPersistentQueue',
+    'PlayerPage_desktopSmoke_usesArtworkLyricLayoutAndPersistentQueue',
     (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      tester.view.physicalSize = const Size(1280, 900);
+      const windowManagerChannel = MethodChannel('window_manager');
+      final windowManagerCalls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(windowManagerChannel, (call) async {
+            windowManagerCalls.add(call);
+            return null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(windowManagerChannel, null),
+      );
+      tester.view.physicalSize = const Size(1280, 820);
       tester.view.devicePixelRatio = 1;
 
       final tracks = _playlistTracks();
+      final lyricTimeline = LyricTimeline.fromLines(const [
+        LyricLine(start: Duration(seconds: 54), text: '风穿过古老的松林'),
+        LyricLine(start: Duration(minutes: 1, seconds: 2), text: '低声诉说着远方'),
+        LyricLine(start: Duration(minutes: 1, seconds: 12), text: '星光落在寂静的湖面'),
+        LyricLine(start: Duration(minutes: 1, seconds: 22), text: '我听见你温柔的回声'),
+        LyricLine(start: Duration(minutes: 1, seconds: 32), text: '夜色把时间慢慢收起'),
+        LyricLine(start: Duration(minutes: 1, seconds: 42), text: '留下此刻的温度'),
+      ], duration: tracks.first.duration);
       final repository = _FakeMusicRepository(playlistTracks: tracks);
       final database = AppDatabase.forTesting(NativeDatabase.memory());
       final playerCubit = _FakeQueuePlayerCubit(
@@ -380,6 +530,12 @@ void main() {
           isPlaying: true,
           position: const Duration(minutes: 1, seconds: 18),
           duration: tracks.first.duration,
+          lyricSyncState: LyricSyncState(
+            timeline: lyricTimeline,
+            activeIndex: 2,
+            playbackPosition: const Duration(minutes: 1, seconds: 18),
+            effectivePosition: const Duration(minutes: 1, seconds: 18),
+          ),
         ),
       );
       final favoritesCubit = FavoritesCubit(repository);
@@ -415,15 +571,41 @@ void main() {
               BlocProvider<DownloadsCubit>.value(value: downloadsCubit),
               BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
             ],
-            child: const MaterialApp(home: PlayerPage()),
+            child: MaterialApp(
+              theme: AppTheme.dark(),
+              home: const RepaintBoundary(
+                key: ValueKey('player-capture'),
+                child: PlayerPage(),
+              ),
+            ),
           ),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('正在播放'), findsOneWidget);
+      if (Platform.isMacOS) {
+        expect(
+          windowManagerCalls.any(
+            (call) =>
+                call.method == 'setTitleBarStyle' &&
+                (call.arguments
+                        as Map<Object?, Object?>)['windowButtonVisibility'] ==
+                    false,
+          ),
+          isTrue,
+        );
+      }
+
+      final initialLayoutException = tester.takeException();
+      expect(
+        initialLayoutException,
+        isNull,
+        reason: initialLayoutException is FlutterError
+            ? initialLayoutException.toStringDeep()
+            : initialLayoutException?.toString(),
+      );
+      expect(find.text('正在播放'), findsWidgets);
       expect(find.text('夜曲'), findsWidgets);
       expect(find.text('红豆'), findsNothing);
       expect(find.text('HI-RES'), findsOneWidget);
@@ -431,6 +613,10 @@ void main() {
       expect(find.byTooltip('收起播放页'), findsOneWidget);
       expect(find.byTooltip('更多操作'), findsOneWidget);
       expect(find.byTooltip('播放队列'), findsWidgets);
+      expect(
+        tester.getCenter(find.byType(LoadingPlayPauseButton)).dx,
+        closeTo(640, 0.01),
+      );
 
       await tester.tap(find.byTooltip('播放队列').first);
       await tester.pump();
@@ -446,6 +632,35 @@ void main() {
 
       expect(find.text('红豆'), findsNothing);
 
+      tester.view.physicalSize = const Size(1440, 1024);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+      await _capturePlayer(tester, 'player-1440x1024-dark');
+      expect(
+        tester.getCenter(find.byType(LoadingPlayPauseButton)).dx,
+        closeTo(720, 0.01),
+      );
+
+      await tester.tap(find.byTooltip('播放队列'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+
+      expect(find.text('红豆'), findsOneWidget);
+      expect(find.byTooltip('关闭播放队列'), findsOneWidget);
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('desktop-inline-queue')))
+            .width,
+        420,
+      );
+      expect(tester.takeException(), isNull);
+      await _capturePlayer(tester, 'player-1440x1024-dark-queue-open');
+
+      await tester.tap(find.byTooltip('关闭播放队列'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(find.text('红豆'), findsNothing);
+
       await tester.tap(find.byTooltip('更多操作'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 320));
@@ -454,6 +669,21 @@ void main() {
       expect(find.text('添加到当前队列'), findsOneWidget);
       expect(find.text('播放音质'), findsOneWidget);
       expect(find.text('睡眠定时'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      if (Platform.isMacOS) {
+        expect(
+          windowManagerCalls.any(
+            (call) =>
+                call.method == 'setTitleBarStyle' &&
+                (call.arguments
+                        as Map<Object?, Object?>)['windowButtonVisibility'] ==
+                    true,
+          ),
+          isTrue,
+        );
+      }
     },
   );
 
@@ -590,6 +820,24 @@ void main() {
   });
 }
 
+Future<void> _capturePlayer(WidgetTester tester, String name) async {
+  if (Platform.environment['CAPTURE_PLAYER_SCREENSHOTS'] != 'true') return;
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('player-capture')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (bytes == null) throw StateError('Unable to encode player screenshot');
+    final directory = Directory('design-reference/screenshots/actual');
+    await directory.create(recursive: true);
+    await File(
+      '${directory.path}/$name.png',
+    ).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  });
+}
+
 Future<void> _pumpForSizes(
   WidgetTester tester, {
   required Widget Function() build,
@@ -639,7 +887,11 @@ Future<void> _pumpMobile(
   verify();
 }
 
-Widget _wrapLibrary(MusicRepository repository, PlayerCubit playerCubit) {
+Widget _wrapLibrary(
+  MusicRepository repository,
+  PlayerCubit playerCubit, {
+  LibraryFilter initialFilter = LibraryFilter.tracks,
+}) {
   final mediaSourceResolver = CustomMediaSourceResolver();
   return MultiRepositoryProvider(
     providers: [
@@ -657,7 +909,9 @@ Widget _wrapLibrary(MusicRepository repository, PlayerCubit playerCubit) {
                 ..load(),
         ),
       ],
-      child: const MaterialApp(home: Scaffold(body: LibraryPage())),
+      child: MaterialApp(
+        home: Scaffold(body: LibraryPage(initialFilter: initialFilter)),
+      ),
     ),
   );
 }
@@ -858,12 +1112,14 @@ class _FakeMusicRepository implements MusicRepository {
     this.libraryAlbums = const [],
     this.libraryArtists = const [],
     this.libraryPlaylists = const [],
+    this.libraryGenres = const [],
   });
 
   final List<MusicTrack> playlistTracks;
   final List<MusicAlbum> libraryAlbums;
   final List<MusicArtist> libraryArtists;
   final List<MusicPlaylist> libraryPlaylists;
+  final List<Genre> libraryGenres;
 
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
@@ -894,7 +1150,7 @@ class _FakeMusicRepository implements MusicRepository {
   }) async => libraryArtists;
 
   @override
-  Future<List<Genre>> fetchGenres() async => [];
+  Future<List<Genre>> fetchGenres() async => libraryGenres;
 
   @override
   Future<List<MusicPlaylist>> fetchPlaylists({
@@ -990,9 +1246,27 @@ class _FakeMusicRepository implements MusicRepository {
 }
 
 class _DelayedLibraryRepository extends _FakeMusicRepository {
-  _DelayedLibraryRepository() : _tracksCompleter = Completer();
+  _DelayedLibraryRepository()
+    : _tracksCompleter = Completer(),
+      _albumsCompleter = Completer(),
+      _artistsCompleter = Completer();
 
   final Completer<PaginatedResult<MusicTrack>> _tracksCompleter;
+  final Completer<List<MusicAlbum>> _albumsCompleter;
+  final Completer<List<MusicArtist>> _artistsCompleter;
+
+  void complete(LibraryFilter filter) {
+    switch (filter) {
+      case LibraryFilter.tracks:
+        completeTracks();
+      case LibraryFilter.albums:
+        _albumsCompleter.complete(const []);
+      case LibraryFilter.artists:
+        _artistsCompleter.complete(const []);
+      case LibraryFilter.playlists:
+        throw ArgumentError.value(filter, 'filter');
+    }
+  }
 
   void completeTracks({List<MusicTrack> tracks = const []}) {
     if (_tracksCompleter.isCompleted) return;
@@ -1008,6 +1282,25 @@ class _DelayedLibraryRepository extends _FakeMusicRepository {
     String? searchQuery,
   }) {
     return _tracksCompleter.future;
+  }
+
+  @override
+  Future<List<MusicAlbum>> fetchAlbums({
+    int limit = 100,
+    int startIndex = 0,
+    String? searchQuery,
+  }) {
+    return _albumsCompleter.future;
+  }
+
+  @override
+  Future<List<MusicArtist>> fetchArtists({
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) {
+    return _artistsCompleter.future;
   }
 }
 

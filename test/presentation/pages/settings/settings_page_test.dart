@@ -36,8 +36,8 @@ void main() {
         find.byKey(const ValueKey('settings-desktop-layout')),
         findsNothing,
       );
-      expect(find.text('当前服务器'), findsOneWidget);
-      expect(find.text('常用偏好'), findsOneWidget);
+      expect(find.text('账户与服务器'), findsOneWidget);
+      expect(find.text('播放偏好'), findsOneWidget);
       expect(find.text('媒体与设备'), findsOneWidget);
       expect(find.text('存储'), findsOneWidget);
       expect(find.text('关于'), findsOneWidget);
@@ -56,7 +56,7 @@ void main() {
         findsNothing,
       );
       expect(find.text('媒体与设备'), findsOneWidget);
-      expect(find.text('当前服务器'), findsOneWidget);
+      expect(find.text('账户与服务器'), findsOneWidget);
       expect(find.text('存储'), findsOneWidget);
       expect(find.text('关于'), findsOneWidget);
       expect(

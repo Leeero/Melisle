@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/domain/repositories/music_repository
 import 'package:cross_platform_music_player/presentation/blocs/album/album_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/album/album_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
+import 'package:cross_platform_music_player/presentation/utils/detail_route_navigation.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
@@ -61,6 +62,19 @@ class _AlbumDetailView extends StatelessWidget {
               SafeArea(
                 child: CustomScrollView(
                   slivers: [
+                    if (isWide)
+                      SliverPadding(
+                        padding: AppPageLayout.pagePadding(
+                          context,
+                          bottom: 0,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: AppDetailBackNav(
+                            label: '返回上一页',
+                            onPressed: () => _goBackToLibrary(context),
+                          ),
+                        ),
+                      ),
                     if (!isWide)
                       SliverPadding(
                         padding: AppPageLayout.pagePadding(
@@ -350,11 +364,7 @@ Future<void> _playAlbumFromIndex(BuildContext context, int startIndex) async {
 }
 
 void _goBackToLibrary(BuildContext context) {
-  if (Navigator.of(context).canPop()) {
-    Navigator.of(context).maybePop();
-    return;
-  }
-  context.go('/library');
+  popDetailRouteOrGo(context, '/library?tab=albums');
 }
 
 int _trackCountLabel(MusicAlbum? album, int tracksCount) {

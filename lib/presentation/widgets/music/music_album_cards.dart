@@ -2,6 +2,7 @@ import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/hover_scale.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/artwork_hover_overlay.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ class MusicAlbumGridCard extends StatefulWidget {
     this.artworkRadius = AppRadiusTokens.coverGrid,
     this.scaleOnHover = 1.012,
     this.compact = false,
+    this.dense = false,
   });
 
   final MusicAlbum album;
@@ -20,12 +22,16 @@ class MusicAlbumGridCard extends StatefulWidget {
   final double artworkRadius;
   final double scaleOnHover;
   final bool compact;
+  final bool dense;
 
   @override
   State<MusicAlbumGridCard> createState() => _MusicAlbumGridCardState();
 }
 
 class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
+  bool _hovered = false;
+  bool _focused = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -40,10 +46,12 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
     ].join(' · ');
     final textTheme = theme.textTheme;
     final compact = widget.compact;
+    final dense = widget.dense;
+    final compactTypography = compact || dense;
     final contentPadding = compact
         ? const EdgeInsets.symmetric(horizontal: 4)
         : EdgeInsets.zero;
-    final titleStyle = compact
+    final titleStyle = compactTypography
         ? textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurface,
             fontSize: 13,
@@ -51,34 +59,42 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
             height: 1.22,
           )
         : textTheme.titleMedium;
-    final subtitleStyle = compact
+    final subtitleStyle = compactTypography
         ? textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
             fontSize: 12,
             height: 1.18,
           )
         : textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant);
+    final active = _hovered || _focused;
 
     return Semantics(
       label: '打开专辑《$displayTitle》',
       button: true,
       child: HoverScale(
         scale: widget.scaleOnHover,
-        translateY: -2.0,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: contentPadding,
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(widget.artworkRadius),
-                    onTap: widget.onTap,
-                    mouseCursor: SystemMouseCursors.click,
+        translateY: 0,
+        enabled: !MediaQuery.disableAnimationsOf(context),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onTap,
+            onHover: (hovered) => setState(() => _hovered = hovered),
+            onFocusChange: (focused) => setState(() => _focused = focused),
+            borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+            mouseCursor: SystemMouseCursors.click,
+            hoverColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: contentPadding,
+                  child: AspectRatio(
+                    aspectRatio: 1,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(
@@ -100,57 +116,76 @@ class _MusicAlbumGridCardState extends State<MusicAlbumGridCard> {
                         borderRadius: BorderRadius.circular(
                           widget.artworkRadius,
                         ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return CachedArtwork(
-                              imageUrl: album.artworkUrl,
-                              size: constraints.maxWidth,
-                              borderRadius: 0,
-                              semanticLabel: '《$displayTitle》专辑封面',
-                              placeholderBuilder: (_) =>
-                                  _AlbumArtworkPlaceholder(
-                                    size: constraints.maxWidth,
-                                  ),
-                            );
-                          },
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return CachedArtwork(
+                                  imageUrl: album.artworkUrl,
+                                  size: constraints.maxWidth,
+                                  borderRadius: 0,
+                                  semanticLabel: '《$displayTitle》专辑封面',
+                                  placeholderBuilder: (_) =>
+                                      _AlbumArtworkPlaceholder(
+                                        size: constraints.maxWidth,
+                                      ),
+                                );
+                              },
+                            ),
+                            ArtworkHoverOverlay(
+                              visible: active,
+                              icon: Icons.arrow_forward_rounded,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            SizedBox(
-              height: compact
-                  ? AppSpacingTokens.compactGap
-                  : AppSpacingTokens.inlineGapCompact,
-            ),
-            Padding(
-              padding: contentPadding,
-              child: Tooltip(
-                message: displayTitle,
-                child: Text(
-                  displayTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
+                SizedBox(
+                  height: compactTypography
+                      ? AppSpacingTokens.compactGap
+                      : AppSpacingTokens.inlineGapCompact,
                 ),
-              ),
-            ),
-            SizedBox(height: compact ? 1 : 2),
-            Padding(
-              padding: contentPadding,
-              child: Tooltip(
-                message: metadata,
-                child: Text(
-                  metadata,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: subtitleStyle,
+                Padding(
+                  padding: contentPadding,
+                  child: Tooltip(
+                    message: displayTitle,
+                    child: AnimatedDefaultTextStyle(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : AppMotion.fast,
+                      style: titleStyle!.copyWith(
+                        color: active ? colorScheme.primary : titleStyle.color,
+                        fontWeight: active
+                            ? FontWeight.w600
+                            : titleStyle.fontWeight,
+                      ),
+                      child: Text(
+                        displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(height: compactTypography ? 1 : 2),
+                Padding(
+                  padding: contentPadding,
+                  child: Tooltip(
+                    message: metadata,
+                    child: Text(
+                      metadata,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: subtitleStyle,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -184,9 +219,7 @@ class _AlbumArtworkPlaceholder extends StatelessWidget {
                 Text(
                   '无封面',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.78,
-                    ),
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
                   ),
                 ),
               ],

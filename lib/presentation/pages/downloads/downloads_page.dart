@@ -45,6 +45,11 @@ class _DownloadsPageState extends State<DownloadsPage> {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
 
     return AppContentPage(
+      header: const AppPageHeader(
+        title: '下载',
+        description: '管理离线音乐、下载任务与本地存储',
+        automaticImplyLeading: false,
+      ),
       body: BlocListener<DownloadsCubit, DownloadsState>(
         listenWhen: (prev, curr) =>
             prev.completedTrackIds.length != curr.completedTrackIds.length ||
@@ -71,7 +76,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    AppPageLayout.contentTopInset(context),
+                    0,
                     horizontalPadding,
                     AppPageLayout.contentBottomInset,
                   ),
@@ -556,31 +561,47 @@ class _DownloadOverview extends StatelessWidget {
         ? state.cachedBytes
         : fallbackBytes;
 
-    return Wrap(
-      spacing: AppSpacingTokens.sectionGap,
-      runSpacing: AppSpacingTokens.compactGap,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(text: '本地占用  '),
-              TextSpan(
-                text: _formatBytes(totalBytes),
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(
-                text: '  ·  ${_storageDescription(rows.length, activityCount)}',
-              ),
-            ],
-          ),
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.muted),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.66),
         ),
-        const _DownloadQualityMenu(),
-      ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacingTokens.contentGap,
+          vertical: AppSpacingTokens.inlineGap,
+        ),
+        child: Wrap(
+          spacing: AppSpacingTokens.sectionGap,
+          runSpacing: AppSpacingTokens.compactGap,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: '本地占用  '),
+                  TextSpan(
+                    text: _formatBytes(totalBytes),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text:
+                        '  ·  ${_storageDescription(rows.length, activityCount)}',
+                  ),
+                ],
+              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.muted),
+            ),
+            const _DownloadQualityMenu(),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1116,11 +1137,19 @@ class _JobRow extends StatelessWidget {
             ),
       progress: ClipRRect(
         borderRadius: BorderRadius.circular(999),
-        child: LinearProgressIndicator(
-          value: job.progress,
-          minHeight: 4,
-          backgroundColor: colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.64,
+        child: Semantics(
+          label: job.progress == null
+              ? '下载进度未知'
+              : '下载进度 ${(job.progress! * 100).round()}%',
+          value: job.progress == null
+              ? null
+              : '${(job.progress! * 100).round()}%',
+          child: LinearProgressIndicator(
+            value: job.progress,
+            minHeight: 4,
+            backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.64,
+            ),
           ),
         ),
       ),
@@ -1215,17 +1244,28 @@ class _DownloadTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DownloadSectionDivider(
-      child: Column(
-        children: [
-          const _DownloadTableHeader(),
-          for (final row in rows)
-            _DownloadTableRow(
-              record: row,
-              fileMissing: missingTrackIds.contains(row.trackId),
-              onDelete: () => onDelete(row),
-            ),
-        ],
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.desktopMd),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.64),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          children: [
+            const _DownloadTableHeader(),
+            for (final row in rows)
+              _DownloadTableRow(
+                record: row,
+                fileMissing: missingTrackIds.contains(row.trackId),
+                onDelete: () => onDelete(row),
+              ),
+          ],
+        ),
       ),
     );
   }

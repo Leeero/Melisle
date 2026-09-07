@@ -86,9 +86,7 @@ void main() {
     expect(find.text('lisi@2024'), findsOneWidget);
   });
 
-  testWidgets('login keeps the V3 card stable across loading and failure', (
-    tester,
-  ) async {
+  testWidgets('login split layout remains stable', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -135,8 +133,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Melisle 乐岛'), findsOneWidget);
-    expect(find.text('连接您的个人音乐服务器'), findsOneWidget);
+    expect(find.text('Melisle'), findsOneWidget);
+    expect(find.text('乐岛'), findsOneWidget);
+    expect(find.text('把自己的音乐，\n带回日常聆听。'), findsOneWidget);
+    expect(find.text('欢迎来到乐岛'), findsOneWidget);
+    expect(find.text('连接音乐源'), findsOneWidget);
     expect(find.text('音乐源'), findsNothing);
     expect(
       find.text('自动识别 Emby、Navidrome 或 Subsonic/OpenSubsonic'),
@@ -144,19 +145,26 @@ void main() {
     );
     expect(find.text('连接服务器'), findsOneWidget);
     expect(find.text('等待登录'), findsNothing);
-    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('v3-login-split')), findsOneWidget);
+    expect(find.byKey(const ValueKey('v3-login-card')), findsNothing);
+    expect(find.byKey(const ValueKey('v3-login-brand-panel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('v3-login-form-panel')), findsOneWidget);
     expect(
-      tester.getSize(find.byKey(const ValueKey('v3-login-card'))).width,
-      480,
+      find.byKey(const ValueKey('v3-login-brand-artwork')),
+      findsOneWidget,
     );
     expect(
-      tester.getCenter(find.byKey(const ValueKey('v3-login-card'))).dx,
-      720,
+      tester.getSize(find.byKey(const ValueKey('v3-login-brand-panel'))).width,
+      greaterThan(
+        tester.getSize(find.byKey(const ValueKey('v3-login-form-panel'))).width,
+      ),
     );
-    expect(
-      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(64, 64),
-    );
+    await _captureLogin(tester, 'login-desktop-light-1440x900-idle');
+    await settingsCubit.setThemeMode(ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await _captureLogin(tester, 'login-desktop-dark-1440x900-idle');
+    await settingsCubit.setThemeMode(ThemeMode.light);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('连接服务器'));
     await tester.pump();
@@ -171,49 +179,127 @@ void main() {
     await tester.tap(find.text('连接服务器'));
     await tester.pump();
 
-    expect(find.text('正在连接…'), findsOneWidget);
+    expect(find.text('正在自动识别…'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.byKey(const ValueKey('v3-login-submit')))
           .onPressed,
       isNull,
     );
-    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(64, 64),
-    );
+    expect(find.byKey(const ValueKey('v3-login-split')), findsOneWidget);
+    expect(find.byKey(const ValueKey('v3-login-card')), findsNothing);
 
     loginCompleter.completeError(Exception('network unavailable'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('network unavailable'), findsOneWidget);
-    expect(find.text('重新连接'), findsOneWidget);
-    expect(find.text('连接您的个人音乐服务器'), findsOneWidget);
+    expect(find.text('登录失败，请稍后重试。'), findsOneWidget);
+    expect(find.textContaining('network unavailable'), findsNothing);
+    expect(find.text('重新自动识别'), findsOneWidget);
+    expect(find.text('手动指定服务类型'), findsOneWidget);
+    expect(find.text('欢迎来到乐岛'), findsOneWidget);
     expect(
       find.text('自动识别 Emby、Navidrome 或 Subsonic/OpenSubsonic'),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('v3-login-split')), findsOneWidget);
+
+    await tester.tap(find.text('手动指定服务类型'));
+    await tester.pumpAndSettle();
     expect(
-      tester.getSize(find.byKey(const ValueKey('v3-login-logo'))),
-      const Size(64, 64),
+      find.byKey(const ValueKey('v3-login-manual-backend-panel')),
+      findsOneWidget,
     );
+    expect(find.text('Navidrome / Subsonic'), findsOneWidget);
+    expect(find.text('Emby'), findsOneWidget);
+    expect(find.text('恢复自动识别'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('v3-login-submit')))
+          .onPressed,
+      isNull,
+    );
+    tester.view.physicalSize = const Size(1280, 820);
+    await tester.pumpAndSettle();
+    final desktopFormScrollView = find.descendant(
+      of: find.byKey(const ValueKey('v3-login-form-panel')),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    expect(desktopFormScrollView, findsOneWidget);
+    expect(
+      tester
+          .state<ScrollableState>(desktopFormScrollView)
+          .position
+          .maxScrollExtent,
+      0,
+      reason: 'desktop manual recovery should fit without vertical scrolling',
+    );
+    tester.view.physicalSize = const Size(1440, 900);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Emby'));
+    await tester.pumpAndSettle();
+    expect(find.text('使用 Emby 重新连接'), findsOneWidget);
+    await _captureLogin(tester, 'login-desktop-light-manual-emby');
+    await tester.tap(find.text('使用 Emby 重新连接'));
+    await tester.pumpAndSettle();
+    expect(repository.lastPreferredBackendType, MusicBackendType.emby);
+    expect(find.text('登录失败，请稍后重试。'), findsOneWidget);
+    expect(find.textContaining('network unavailable'), findsNothing);
+
+    await tester.tap(find.text('恢复自动识别'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('v3-login-manual-backend-panel')),
+      findsNothing,
+    );
+    expect(find.text('重新自动识别'), findsOneWidget);
     await _captureLogin(tester, 'login-desktop-light-1440x900');
     await settingsCubit.setThemeMode(ThemeMode.dark);
     await tester.pumpAndSettle();
     await _captureLogin(tester, 'login-desktop-dark-1440x900');
+
+    tester.view.physicalSize = const Size(900, 800);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('v3-login-split')), findsNothing);
+    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('v3-login-card'))).width,
+      480,
+    );
+    expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(390, 844);
     tester.platformDispatcher.textScaleFactorTestValue = 1.3;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('v3-login-split')), findsNothing);
+    expect(find.byKey(const ValueKey('v3-login-card')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('v3-login-card'))).width,
-      374,
+      358,
     );
-    expect(find.textContaining('network unavailable'), findsOneWidget);
+    expect(find.text('登录失败，请稍后重试。'), findsOneWidget);
+    expect(find.textContaining('network unavailable'), findsNothing);
     expect(tester.takeException(), isNull);
+    await tester.tap(find.text('手动指定服务类型'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('v3-login-manual-backend-panel')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await _captureLogin(
+      tester,
+      'login-mobile-dark-manual-backend-390x844-scale-1.3',
+    );
+    await tester.ensureVisible(find.text('恢复自动识别'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('恢复自动识别'));
+    await tester.pumpAndSettle();
     await _captureLogin(tester, 'login-mobile-dark-390x844-scale-1.3');
     await settingsCubit.setThemeMode(ThemeMode.light);
     await tester.pumpAndSettle();
@@ -350,8 +436,8 @@ void main() {
     expect(tester.takeException(), isNull, reason: '768');
     expect(find.byKey(const ValueKey('shell-medium')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-compact')), findsOneWidget);
-    expect(find.byKey(const ValueKey('shell-toolbar')), findsOneWidget);
-    expect(find.text('历史'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-toolbar')), findsNothing);
+    expect(find.text('历史'), findsNothing);
 
     final homeFocus = tester.widget<Focus>(
       find.byKey(const ValueKey('shell-nav-focus-首页')),
@@ -379,10 +465,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-desktop')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-sidebar-wide')), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('shell-toolbar-settings')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('shell-toolbar-settings')), findsNothing);
+    expect(find.byKey(const ValueKey('shell-nav-surface-设置')), findsOneWidget);
     expect(find.byTooltip('收起侧边栏'), findsNothing);
     expect(find.text('歌曲'), findsOneWidget);
     final songSubNavFinder = find.byKey(const ValueKey('shell-sub-nav-歌曲'));
@@ -427,6 +511,21 @@ void main() {
     await _captureAppShell(tester, 'app-shell-1440x900');
     expect(tester.takeException(), isNull, reason: '1440');
 
+    final shellRouter = GoRouter.of(
+      tester.element(find.byKey(const ValueKey('shell-desktop'))),
+    );
+    shellRouter.go('/downloads');
+    await tester.pumpAndSettle();
+    shellRouter.go('/home');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('shell-nav-surface-设置')));
+    await tester.pumpAndSettle();
+
+    expect(shellRouter.routeInformationProvider.value.uri.path, '/settings');
+    expect(find.byKey(const ValueKey('shell-nav-surface-设置')), findsOneWidget);
+    expect(find.text('下载管理'), findsOneWidget);
+
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
 
@@ -442,7 +541,7 @@ void main() {
           ? layoutException.toStringDeep()
           : layoutException?.toString(),
     );
-    expect(find.text('搜索歌曲、专辑、歌手、歌单'), findsOneWidget);
+    expect(find.text('开始探索'), findsOneWidget);
 
     await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
@@ -794,7 +893,7 @@ void main() {
     },
   );
 
-  testWidgets('mini player remains visible without a track', (tester) async {
+  testWidgets('mini player collapses without a track', (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final playerCubit = _MiniPlayerCubit(const PlayerViewState());
@@ -814,8 +913,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(MiniPlayerBar), findsOneWidget);
-      expect(tester.getSize(find.byType(MiniPlayerBar)).height, isNonZero);
-      expect(find.text('未在播放'), findsOneWidget);
+      expect(tester.getSize(find.byType(MiniPlayerBar)).height, 0);
+      expect(find.text('未在播放'), findsNothing);
     }
   });
 
@@ -1291,11 +1390,13 @@ class _ControllablePlayerCubit extends PlayerCubit {
   void update(PlayerViewState next) => emit(next);
 }
 
-class _FakeMusicRepository implements MusicRepository {
+class _FakeMusicRepository
+    implements MusicRepository, BackendSelectableLoginRepository {
   _FakeMusicRepository({this.session, this.loginCompleter});
 
   final AuthSession? session;
   final Completer<AuthSession>? loginCompleter;
+  MusicBackendType? lastPreferredBackendType;
 
   @override
   Future<List<MusicAlbum>> fetchLatestAlbums({int limit = 12}) async => [];
@@ -1358,6 +1459,17 @@ class _FakeMusicRepository implements MusicRepository {
     required String password,
   }) =>
       loginCompleter?.future ?? Future.value(session ?? _authenticatedSession);
+
+  @override
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  }) {
+    lastPreferredBackendType = backendType;
+    return login(serverUrl: serverUrl, username: username, password: password);
+  }
 
   @override
   Future<void> logout() async {}
