@@ -185,10 +185,26 @@ void main() {
       expect(second.single.id, first.single.id);
       expect(nextPage.single.id, isNot(first.single.id));
     });
+
+    test('手动指定服务类型时将登录请求透传给可选能力', () async {
+      final delegate = _CountingMusicRepository();
+      final repository = CachedMusicRepository(delegate: delegate);
+
+      final session = await repository.loginWithBackend(
+        serverUrl: 'https://emby.example.com',
+        username: 'manual-user',
+        password: 'manual-password',
+        backendType: MusicBackendType.emby,
+      );
+
+      expect(delegate.lastPreferredBackendType, MusicBackendType.emby);
+      expect(session.backendType, MusicBackendType.emby);
+    });
   });
 }
 
-class _CountingMusicRepository extends Fake implements MusicRepository {
+class _CountingMusicRepository extends Fake
+    implements MusicRepository, BackendSelectableLoginRepository {
   _CountingMusicRepository({AuthSession? session}) : _session = session;
 
   AuthSession? _session;
@@ -200,6 +216,7 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
       <({int limit, int startIndex, String? searchQuery})>[];
   bool failFetchTracks = false;
   bool failFetchTracksWithReceiveTimeout = false;
+  MusicBackendType? lastPreferredBackendType;
 
   @override
   Future<AuthSession?> restoreSession() async => _session;
@@ -215,6 +232,24 @@ class _CountingMusicRepository extends Fake implements MusicRepository {
       userId: username,
       userName: username,
       accessToken: password,
+    );
+    return _session!;
+  }
+
+  @override
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  }) async {
+    lastPreferredBackendType = backendType;
+    _session = AuthSession(
+      serverUrl: serverUrl,
+      userId: username,
+      userName: username,
+      accessToken: password,
+      backendType: backendType,
     );
     return _session!;
   }

@@ -121,6 +121,17 @@ abstract class MusicRepository {
   Future<SearchResults> search(String query);
 }
 
+/// Optional login capability for repositories that can route credentials to a
+/// user-selected backend after automatic detection fails.
+abstract interface class BackendSelectableLoginRepository {
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  });
+}
+
 /// Optional capability for protocols that support synchronized playlist
 /// favorites. It is intentionally separate from [MusicRepository] because
 /// Subsonic-compatible servers do not standardize playlist favorites.

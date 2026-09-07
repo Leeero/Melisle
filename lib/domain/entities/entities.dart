@@ -1,6 +1,7 @@
 export 'audio_quality.dart';
 export 'auth_session.dart';
 export 'genre.dart';
+export 'login_failure.dart';
 export 'lyric_line.dart';
 export 'lyric_sync_engine.dart';
 export 'lyric_sync_state.dart';

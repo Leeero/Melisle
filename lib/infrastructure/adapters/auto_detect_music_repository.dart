@@ -1,7 +1,10 @@
+import 'dart:developer' as developer;
+
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
+import 'package:cross_platform_music_player/domain/entities/login_failure.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
@@ -12,6 +15,7 @@ import 'package:cross_platform_music_player/domain/entities/search_results.dart'
 import 'package:cross_platform_music_player/domain/entities/track_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/track_filter_option.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
+import 'package:dio/dio.dart';
 
 class AutoDetectMusicRepository
     implements
@@ -19,7 +23,8 @@ class AutoDetectMusicRepository
         TrackSortingRepository,
         TrackFilteringRepository,
         ArtistSortingRepository,
-        PlaylistFavoritesRepository {
+        PlaylistFavoritesRepository,
+        BackendSelectableLoginRepository {
   AutoDetectMusicRepository({
     required MusicRepository embyRepository,
     required MusicRepository navidromeRepository,
@@ -55,7 +60,7 @@ class AutoDetectMusicRepository
     required String username,
     required String password,
   }) async {
-    Object? navidromeError;
+    LoginFailure? navidromeFailure;
     try {
       final session = await _navidromeRepository.login(
         serverUrl: serverUrl,
@@ -64,8 +69,9 @@ class AutoDetectMusicRepository
       );
       _activeRepository = _navidromeRepository;
       return session;
-    } catch (error) {
-      navidromeError = error;
+    } catch (error, stackTrace) {
+      _logLoginFailure('Navidrome', error, stackTrace);
+      navidromeFailure = _classifyLoginFailure(error);
     }
 
     try {
@@ -76,13 +82,96 @@ class AutoDetectMusicRepository
       );
       _activeRepository = _embyRepository;
       return session;
-    } catch (embyError) {
-      throw StateError(
-        '未能识别服务器类型或登录失败。'
-        'Navidrome 探测结果：$navidromeError；'
-        'Emby 登录结果：$embyError',
+    } catch (error, stackTrace) {
+      _logLoginFailure('Emby', error, stackTrace);
+      throw _combineLoginFailures(
+        navidromeFailure,
+        _classifyLoginFailure(error),
       );
     }
+  }
+
+  @override
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  }) async {
+    final repository = switch (backendType) {
+      MusicBackendType.emby => _embyRepository,
+      MusicBackendType.navidrome => _navidromeRepository,
+    };
+    try {
+      final session = await repository.login(
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+      );
+      _activeRepository = repository;
+      return session;
+    } catch (error, stackTrace) {
+      _logLoginFailure(backendType.name, error, stackTrace);
+      throw _classifyLoginFailure(error);
+    }
+  }
+
+  LoginFailure _classifyLoginFailure(Object error) {
+    if (error is LoginFailure) return error;
+
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        return const LoginFailure(LoginFailureReason.invalidCredentials);
+      }
+
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.connectionError:
+        case DioExceptionType.badCertificate:
+          return const LoginFailure(LoginFailureReason.serverUnreachable);
+        case DioExceptionType.badResponse:
+          return const LoginFailure(LoginFailureReason.unsupportedServer);
+        case DioExceptionType.cancel:
+        case DioExceptionType.unknown:
+          return const LoginFailure(LoginFailureReason.unknown);
+      }
+    }
+
+    if (error is FormatException) {
+      return const LoginFailure(LoginFailureReason.unsupportedServer);
+    }
+
+    return const LoginFailure(LoginFailureReason.unknown);
+  }
+
+  LoginFailure _combineLoginFailures(
+    LoginFailure navidromeFailure,
+    LoginFailure embyFailure,
+  ) {
+    final reasons = {navidromeFailure.reason, embyFailure.reason};
+    if (reasons.contains(LoginFailureReason.invalidCredentials)) {
+      return const LoginFailure(LoginFailureReason.invalidCredentials);
+    }
+    if (reasons.length == 1 &&
+        reasons.single == LoginFailureReason.serverUnreachable) {
+      return const LoginFailure(LoginFailureReason.serverUnreachable);
+    }
+    if (reasons.length == 1 && reasons.single == LoginFailureReason.unknown) {
+      return const LoginFailure(LoginFailureReason.unknown);
+    }
+    return const LoginFailure(LoginFailureReason.unsupportedServer);
+  }
+
+  void _logLoginFailure(String backend, Object error, StackTrace stackTrace) {
+    developer.log(
+      '$backend login failed',
+      name: 'AutoDetectMusicRepository',
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   @override

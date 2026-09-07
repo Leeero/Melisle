@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:cross_platform_music_player/application/usecases/fetch_playlists.dart';
 import 'package:cross_platform_music_player/application/usecases/login_with_emby.dart';
 import 'package:cross_platform_music_player/application/usecases/logout.dart';
 import 'package:cross_platform_music_player/application/usecases/restore_session.dart';
+import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
+import 'package:cross_platform_music_player/domain/entities/login_failure.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/dev_login_credentials.dart';
 import 'package:cross_platform_music_player/presentation/blocs/auth/auth_state.dart';
 import 'package:flutter/foundation.dart';
@@ -53,6 +56,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String serverUrl,
     required String username,
     required String password,
+    MusicBackendType? preferredBackendType,
   }) async {
     emit(AuthState.loading(session: state.session));
 
@@ -61,12 +65,30 @@ class AuthCubit extends Cubit<AuthState> {
         serverUrl: serverUrl,
         username: username,
         password: password,
+        preferredBackendType: preferredBackendType,
       );
       emit(AuthState.authenticated(session));
       _prefetchPlaylists();
-    } catch (error) {
-      emit(AuthState.failure('登录失败：$error'));
+    } on LoginFailure catch (failure) {
+      emit(AuthState.failure(_loginFailureMessage(failure.reason)));
+    } catch (error, stackTrace) {
+      developer.log(
+        'Unexpected login failure',
+        name: 'AuthCubit',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      emit(const AuthState.failure('登录失败，请稍后重试。'));
     }
+  }
+
+  String _loginFailureMessage(LoginFailureReason reason) {
+    return switch (reason) {
+      LoginFailureReason.serverUnreachable => '无法连接到服务器，请检查服务器地址或网络连接。',
+      LoginFailureReason.invalidCredentials => '用户名或密码错误，请检查后重试。',
+      LoginFailureReason.unsupportedServer => '无法识别服务器类型，请确认地址和手动选择的服务类型。',
+      LoginFailureReason.unknown => '登录失败，请稍后重试。',
+    };
   }
 
   void _prefetchPlaylists() {

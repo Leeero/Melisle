@@ -1,6 +1,7 @@
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
+import 'package:cross_platform_music_player/domain/entities/login_failure.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
@@ -10,6 +11,7 @@ import 'package:cross_platform_music_player/domain/entities/genre.dart';
 import 'package:cross_platform_music_player/domain/entities/search_results.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/infrastructure/adapters/auto_detect_music_repository.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -78,6 +80,121 @@ void main() {
       expect(emby.loginCalls, 1);
     });
 
+    test('loginWithBackend 指定 Navidrome 时不探测 Emby', () async {
+      final navidrome = _StubMusicRepository(
+        loginSession: const AuthSession(
+          serverUrl: 'https://music.example.com',
+          userId: 'test-user-id',
+          userName: 'test-user',
+          accessToken: 'secret',
+          backendType: MusicBackendType.navidrome,
+        ),
+      );
+      final emby = _StubMusicRepository(loginError: StateError('unused'));
+      final repository = AutoDetectMusicRepository(
+        embyRepository: emby,
+        navidromeRepository: navidrome,
+      );
+
+      final session = await repository.loginWithBackend(
+        serverUrl: 'https://music.example.com',
+        username: 'test-user',
+        password: 'secret',
+        backendType: MusicBackendType.navidrome,
+      );
+
+      expect(session.backendType, MusicBackendType.navidrome);
+      expect(navidrome.loginCalls, 1);
+      expect(emby.loginCalls, 0);
+    });
+
+    test('loginWithBackend 指定 Emby 时不探测 Navidrome', () async {
+      final navidrome = _StubMusicRepository(loginError: StateError('unused'));
+      final emby = _StubMusicRepository(
+        loginSession: const AuthSession(
+          serverUrl: 'https://emby.example.com',
+          userId: 'user-1',
+          userName: 'test-user',
+          accessToken: 'emby-token',
+          backendType: MusicBackendType.emby,
+        ),
+      );
+      final repository = AutoDetectMusicRepository(
+        embyRepository: emby,
+        navidromeRepository: navidrome,
+      );
+
+      final session = await repository.loginWithBackend(
+        serverUrl: 'https://emby.example.com',
+        username: 'test-user',
+        password: 'password',
+        backendType: MusicBackendType.emby,
+      );
+
+      expect(session.backendType, MusicBackendType.emby);
+      expect(navidrome.loginCalls, 0);
+      expect(emby.loginCalls, 1);
+    });
+
+    test('login 将连接异常转换为安全的结构化失败', () async {
+      final navidrome = _StubMusicRepository(
+        loginError: _connectionError('invalid.example.test'),
+      );
+      final emby = _StubMusicRepository(
+        loginError: _connectionError('invalid.example.test'),
+      );
+      final repository = AutoDetectMusicRepository(
+        embyRepository: emby,
+        navidromeRepository: navidrome,
+      );
+
+      await expectLater(
+        repository.login(
+          serverUrl: 'https://invalid.example.test',
+          username: 'user',
+          password: 'password',
+        ),
+        throwsA(
+          isA<LoginFailure>()
+              .having(
+                (failure) => failure.reason,
+                'reason',
+                LoginFailureReason.serverUnreachable,
+              )
+              .having(
+                (failure) => failure.toString(),
+                'safe message',
+                isNot(contains('invalid.example.test')),
+              ),
+        ),
+      );
+    });
+
+    test('loginWithBackend 同样不会泄漏底层连接异常', () async {
+      final repository = AutoDetectMusicRepository(
+        embyRepository: _StubMusicRepository(
+          loginError: _connectionError('invalid.example.test'),
+        ),
+        navidromeRepository: _StubMusicRepository(),
+      );
+
+      await expectLater(
+        repository.loginWithBackend(
+          serverUrl: 'https://invalid.example.test',
+          username: 'user',
+          password: 'password',
+          backendType: MusicBackendType.emby,
+        ),
+        throwsA(
+          isA<LoginFailure>().having(
+            (failure) => failure.reason,
+            'reason',
+            LoginFailureReason.serverUnreachable,
+          ),
+        ),
+      );
+    });
+
     test('restoreSession 按会话 backendType 选择正确后端', () async {
       final navidrome = _StubMusicRepository(
         restoreSessionValue: const AuthSession(
@@ -125,6 +242,14 @@ void main() {
       expect(emby.fetchTracksCalls, 0);
     });
   });
+}
+
+DioException _connectionError(String host) {
+  return DioException(
+    requestOptions: RequestOptions(path: 'https://$host'),
+    type: DioExceptionType.connectionError,
+    message: 'Failed host lookup: $host',
+  );
 }
 
 class _StubMusicRepository implements MusicRepository {

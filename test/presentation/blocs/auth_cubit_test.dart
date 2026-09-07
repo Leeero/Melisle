@@ -5,6 +5,7 @@ import 'package:cross_platform_music_player/application/usecases/restore_session
 import 'package:cross_platform_music_player/domain/entities/audio_quality.dart';
 import 'package:cross_platform_music_player/domain/entities/auth_session.dart';
 import 'package:cross_platform_music_player/domain/entities/genre.dart';
+import 'package:cross_platform_music_player/domain/entities/login_failure.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
@@ -77,18 +78,93 @@ void main() {
       expect(cubit.state.status, AuthStatus.unauthenticated);
       await cubit.close();
     });
+
+    test('forwards the preferred backend for manual recovery login', () async {
+      final repository = _AuthRepositoryFake();
+      final cubit = AuthCubit(
+        loginWithEmby: LoginWithEmby(repository),
+        restoreSession: RestoreSession(repository),
+        logout: Logout(repository),
+        fetchPlaylists: FetchPlaylists(repository),
+      );
+
+      await cubit.login(
+        serverUrl: 'https://emby.example.test',
+        username: 'manual-user',
+        password: 'manual-password',
+        preferredBackendType: MusicBackendType.emby,
+      );
+
+      expect(repository.lastPreferredBackendType, MusicBackendType.emby);
+      expect(cubit.state.status, AuthStatus.authenticated);
+      await cubit.close();
+    });
+
+    test(
+      'shows an actionable message without leaking connection details',
+      () async {
+        final repository = _AuthRepositoryFake(
+          loginError: const LoginFailure(LoginFailureReason.serverUnreachable),
+        );
+        final cubit = AuthCubit(
+          loginWithEmby: LoginWithEmby(repository),
+          restoreSession: RestoreSession(repository),
+          logout: Logout(repository),
+          fetchPlaylists: FetchPlaylists(repository),
+        );
+
+        await cubit.login(
+          serverUrl: 'https://invalid.example.test',
+          username: 'user',
+          password: 'password',
+        );
+
+        expect(cubit.state.status, AuthStatus.failure);
+        expect(cubit.state.errorMessage, '无法连接到服务器，请检查服务器地址或网络连接。');
+        expect(cubit.state.errorMessage, isNot(contains('DioException')));
+        await cubit.close();
+      },
+    );
+
+    test('hides unexpected technical login errors', () async {
+      final repository = _AuthRepositoryFake(
+        loginError: StateError('secret technical detail'),
+      );
+      final cubit = AuthCubit(
+        loginWithEmby: LoginWithEmby(repository),
+        restoreSession: RestoreSession(repository),
+        logout: Logout(repository),
+        fetchPlaylists: FetchPlaylists(repository),
+      );
+
+      await cubit.login(
+        serverUrl: 'https://invalid.example.test',
+        username: 'user',
+        password: 'password',
+      );
+
+      expect(cubit.state.errorMessage, '登录失败，请稍后重试。');
+      expect(
+        cubit.state.errorMessage,
+        isNot(contains('secret technical detail')),
+      );
+      await cubit.close();
+    });
   });
 }
 
-class _AuthRepositoryFake implements MusicRepository {
-  _AuthRepositoryFake({this.lifecycleEvents});
+class _AuthRepositoryFake
+    implements MusicRepository, BackendSelectableLoginRepository {
+  _AuthRepositoryFake({this.lifecycleEvents, this.loginError});
 
   final List<String>? lifecycleEvents;
+  final Object? loginError;
   AuthSession? session;
   int loginCalls = 0;
   String? lastLoginServerUrl;
   String? lastLoginUsername;
   String? lastLoginPassword;
+  MusicBackendType? lastPreferredBackendType;
   int fetchPlaylistsCalls = 0;
   int? lastPlaylistLimit;
 
@@ -102,6 +178,7 @@ class _AuthRepositoryFake implements MusicRepository {
     required String password,
   }) async {
     loginCalls += 1;
+    if (loginError case final error?) throw error;
     lastLoginServerUrl = serverUrl;
     lastLoginUsername = username;
     lastLoginPassword = password;
@@ -112,6 +189,17 @@ class _AuthRepositoryFake implements MusicRepository {
       accessToken: password,
     );
     return session!;
+  }
+
+  @override
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  }) {
+    lastPreferredBackendType = backendType;
+    return login(serverUrl: serverUrl, username: username, password: password);
   }
 
   @override

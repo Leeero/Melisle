@@ -22,7 +22,8 @@ class CachedMusicRepository
         TrackSortingRepository,
         TrackFilteringRepository,
         ArtistSortingRepository,
-        PlaylistFavoritesRepository {
+        PlaylistFavoritesRepository,
+        BackendSelectableLoginRepository {
   CachedMusicRepository({
     required MusicRepository delegate,
     MusicRepositoryCachePolicy policy = const MusicRepositoryCachePolicy(),
@@ -66,6 +67,28 @@ class CachedMusicRepository
       username: username,
       password: password,
     );
+    _syncSessionScope(session);
+    return session;
+  }
+
+  @override
+  Future<AuthSession> loginWithBackend({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required MusicBackendType backendType,
+  }) async {
+    final delegate = _delegate;
+    if (delegate is! BackendSelectableLoginRepository) {
+      throw UnsupportedError('当前音乐仓库不支持手动指定服务类型。');
+    }
+    final session = await (delegate as BackendSelectableLoginRepository)
+        .loginWithBackend(
+          serverUrl: serverUrl,
+          username: username,
+          password: password,
+          backendType: backendType,
+        );
     _syncSessionScope(session);
     return session;
   }
@@ -335,8 +358,7 @@ class CachedMusicRepository
   Future<bool> supportsPlaylistFavorites() {
     final delegate = _delegate;
     if (delegate is! PlaylistFavoritesRepository) return Future.value(false);
-    final playlistFavoritesDelegate =
-        delegate as PlaylistFavoritesRepository;
+    final playlistFavoritesDelegate = delegate as PlaylistFavoritesRepository;
     return playlistFavoritesDelegate.supportsPlaylistFavorites();
   }
 
@@ -349,8 +371,7 @@ class CachedMusicRepository
     if (delegate is! PlaylistFavoritesRepository) {
       return Future.error(UnsupportedError('当前服务器不支持收藏歌单。'));
     }
-    final playlistFavoritesDelegate =
-        delegate as PlaylistFavoritesRepository;
+    final playlistFavoritesDelegate = delegate as PlaylistFavoritesRepository;
     return _cached(
       'favoritePlaylists',
       ttl: _policy.listTtl,
@@ -368,8 +389,7 @@ class CachedMusicRepository
     if (delegate is! PlaylistFavoritesRepository) {
       throw UnsupportedError('当前服务器不支持收藏歌单。');
     }
-    final playlistFavoritesDelegate =
-        delegate as PlaylistFavoritesRepository;
+    final playlistFavoritesDelegate = delegate as PlaylistFavoritesRepository;
     await playlistFavoritesDelegate.setPlaylistFavorite(playlistId, value);
     _clearCache();
   }
