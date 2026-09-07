@@ -2,7 +2,51 @@
 
 > 听见每一份热爱。
 
-乐岛（Melisle）是一个使用 Flutter 构建的跨平台自托管音乐播放器，面向 Android、iOS、macOS 和 Windows。当前应用以统一的 `MusicRepository` 抽象接入远端音乐服务，并在本地维护设置、播放历史、搜索历史和离线下载记录。
+[![Release](https://img.shields.io/github/v/release/Leeero/melisle?display_name=tag&sort=semver)](https://github.com/Leeero/melisle/releases/latest)
+[![Build and Release](https://github.com/Leeero/melisle/actions/workflows/master-release.yml/badge.svg)](https://github.com/Leeero/melisle/actions/workflows/master-release.yml)
+[![GitHub stars](https://img.shields.io/github/stars/Leeero/melisle?style=flat)](https://github.com/Leeero/melisle/stargazers)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
+
+乐岛（Melisle）是一款使用 Flutter 构建的跨平台自托管音乐播放器，让 Emby、Navidrome 和 Subsonic/OpenSubsonic 音乐库拥有接近现代流媒体客户端的浏览与聆听体验。
+
+它面向 Android、iOS、macOS 和 Windows，以统一的 `MusicRepository` 抽象屏蔽后端差异，并在本地维护设置、播放历史、搜索历史和离线下载记录。项目采用 PolyForm Noncommercial 许可证公开源代码，允许个人和其他非商业用途。
+
+[下载最新版本](https://github.com/Leeero/melisle/releases/latest) · [报告问题](https://github.com/Leeero/melisle/issues/new/choose) · [参与贡献](CONTRIBUTING.md)
+
+## 界面预览
+
+以下截图来自 macOS 客户端的真实运行环境，展示浅色主题下的主要页面。
+
+| 首页 | 歌曲媒体库 |
+| --- | --- |
+| ![乐岛首页：个性推荐、最近播放与最新添加](readme-assets/home.png) | ![乐岛歌曲媒体库：搜索、筛选、排序与歌曲列表](readme-assets/library-songs.png) |
+| 个性推荐、最近播放与最新添加 | 搜索、筛选、排序与歌曲列表 |
+
+| 歌单 | 正在播放 |
+| --- | --- |
+| ![乐岛歌单页面：歌单搜索与封面网格](readme-assets/playlists.png) | ![乐岛正在播放页面：专辑封面、同步歌词与播放控制](readme-assets/now-playing.png) |
+| 歌单搜索与封面网格 | 专辑封面、同步歌词与播放控制 |
+
+## 核心特性
+
+- **统一连接自托管音乐库**：支持 Emby、Navidrome 及 Subsonic/OpenSubsonic API 兼容服务，自动探测失败时可手动选择服务类型。
+- **完整的聆听体验**：播放队列、循环与随机模式、同步歌词、歌词偏移、封面氛围和睡眠定时器。
+- **跨平台与桌面集成**：覆盖 Android、iOS、macOS 和 Windows，并支持系统媒体控制、桌面托盘与键盘快捷键。
+- **离线与音质控制**：支持自定义下载目录、下载队列、本地文件优先播放以及多档在线和下载音质。
+- **面向大型音乐库**：提供歌曲、专辑、歌手、歌单、收藏、历史与全局搜索，并支持排序、筛选和分页加载。
+
+## 下载
+
+预构建版本发布在 [GitHub Releases](https://github.com/Leeero/melisle/releases/latest)：
+
+| 平台 | 产物 | 使用说明 |
+| --- | --- | --- |
+| Android | `.apk` | 下载后允许系统安装来自浏览器或文件管理器的应用 |
+| Windows | `.exe` | 运行安装程序完成安装 |
+| macOS | `.dmg` | 打开镜像并安装；未签名版本可能需要在系统设置中手动允许 |
+| iOS | `.ipa` | 构建产物未签名，不能直接安装，需要使用自己的 Apple ID 重新签名 |
+
+> 乐岛不提供音乐内容或服务器。使用前需要准备自己的 Emby、Navidrome 或 Subsonic/OpenSubsonic 兼容服务。
 
 ## 当前状态
 
@@ -10,7 +54,7 @@
 | --- | --- |
 | 可运行平台 | Android / iOS / macOS / Windows |
 | 当前可用后端 | Emby API、Navidrome / Subsonic API 兼容服务 |
-| 登录方式 | 同一登录入口输入服务器、用户名、密码或 API Token，应用自动探测后端类型 |
+| 登录方式 | 输入服务器、用户名、密码或 API Token；默认自动探测，也可在失败后手动选择后端类型 |
 | 未完成后端 | WebDAV / NAS 目前只有仓库骨架，尚未接入启动流程 |
 | UI 语言 | 简体中文 |
 | 许可证 | PolyForm Noncommercial 1.0.0，源码可见但禁止商用 |
@@ -97,7 +141,10 @@ flutter run -d ios
 flutter run -d android
 ```
 
-## iOS 设备自行打包安装
+<details>
+<summary><strong>iOS 设备自行签名与安装</strong></summary>
+
+### iOS 设备自行打包安装
 
 当前项目没有通过 App Store 或 TestFlight 分发，GitHub Releases 中的 iOS 产物也是无签名构建，普通 iPhone / iPad 不能直接安装 `.ipa`。iOS 用户只能在自己的 Mac 上使用自己的 Apple ID 通过 Xcode / Flutter 自行签名、打包并安装到自己的设备。
 
@@ -171,6 +218,7 @@ flutter doctor
 3. 确认 `Runner` target 的签名配置无报错。
 4. 点击 Run 按钮，等待 Xcode 构建并安装。
 
+</details>
 
 ## 开发登录
 
@@ -256,7 +304,8 @@ iOS 产物未签名，不能直接作为已签名发行包安装。若需要正�
 
 ## 设计文档
 
-- `design.md`：当前 UI 设计规范。
+- [PRODUCT.md](PRODUCT.md)：产品定位、品牌个性、设计原则与无障碍目标。
+- [design-qa.md](design-qa.md)：最新界面实现的设计验收记录。
 
 ## 许可证
 
