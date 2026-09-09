@@ -34,6 +34,7 @@ class MusicTrackTable extends StatelessWidget {
     this.bareMoreAction = false,
     this.actionBarTrailing,
     this.density = MusicTrackTableDensity.comfortable,
+    this.trackActionsContext = TrackActionsContext.generic,
   });
 
   final List<MusicTrack> tracks;
@@ -52,6 +53,7 @@ class MusicTrackTable extends StatelessWidget {
   final bool bareMoreAction;
   final Widget? actionBarTrailing;
   final MusicTrackTableDensity density;
+  final TrackActionsContext trackActionsContext;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +92,7 @@ class MusicTrackTable extends StatelessWidget {
                 hideHoverPlayControl: hideHoverPlayControl,
                 bareMoreAction: bareMoreAction,
                 density: density,
+                trackActionsContext: trackActionsContext,
               ),
           ],
         ),
@@ -337,6 +340,7 @@ class _MusicTrackTableRow extends StatefulWidget {
     required this.hideHoverPlayControl,
     required this.bareMoreAction,
     required this.density,
+    required this.trackActionsContext,
   });
 
   final int index;
@@ -350,6 +354,7 @@ class _MusicTrackTableRow extends StatefulWidget {
   final bool hideHoverPlayControl;
   final bool bareMoreAction;
   final MusicTrackTableDensity density;
+  final TrackActionsContext trackActionsContext;
 
   @override
   State<_MusicTrackTableRow> createState() => _MusicTrackTableRowState();
@@ -363,7 +368,11 @@ class _MusicTrackTableRowState extends State<_MusicTrackTableRow> {
 
   Future<void> _showMenu(MusicTrack track) async {
     setState(() => _menuOpen = true);
-    await showTrackActionsSheet(context, track);
+    await showTrackActionsSheet(
+      context,
+      track,
+      source: widget.trackActionsContext,
+    );
     if (mounted) setState(() => _menuOpen = false);
   }
 

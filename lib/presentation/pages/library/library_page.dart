@@ -19,6 +19,7 @@ import 'package:cross_platform_music_player/presentation/widgets/layout/app_skel
 import 'package:cross_platform_music_player/presentation/widgets/layout/fade_slide_transition.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_library_track_row.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -268,7 +269,7 @@ class _LibraryViewState extends State<_LibraryView> {
           StaggeredFadeSlide(
             index: index,
             delay: const Duration(milliseconds: 30),
-            child: _MobileLibraryTrackRow(
+            child: MusicLibraryTrackRow(
               track: track,
               index: index,
               isCurrent: isCurrent,

@@ -32,6 +32,7 @@ class AppDetailHeroFrame extends StatelessWidget {
     this.padding = const EdgeInsets.all(22),
     this.spacing = 24,
     this.compactGap = 20,
+    this.compactHorizontal = false,
   });
 
   final Widget Function(BuildContext context, bool isWide) coverBuilder;
@@ -39,6 +40,7 @@ class AppDetailHeroFrame extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double spacing;
   final double compactGap;
+  final bool compactHorizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +54,16 @@ class AppDetailHeroFrame extends StatelessWidget {
           final cover = coverBuilder(context, isWide);
           final content = contentBuilder(context, isWide);
           if (!isWide) {
+            if (compactHorizontal) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  cover,
+                  SizedBox(width: compactGap),
+                  Expanded(child: content),
+                ],
+              );
+            }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

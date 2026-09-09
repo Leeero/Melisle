@@ -734,14 +734,15 @@ void main() {
         ),
       ),
       verify: () {
-        expect(find.text('播放'), findsOneWidget);
+        expect(find.text('播放全部'), findsOneWidget);
         expect(find.text('加入队列'), findsNothing);
         expect(find.text('歌曲'), findsOneWidget);
         expect(find.text('夜曲'), findsOneWidget);
         expect(find.text('红豆'), findsOneWidget);
-        expect(find.byTooltip('播放歌曲'), findsNWidgets(3));
-        expect(find.byTooltip('收藏'), findsNWidgets(3));
-        expect(find.byTooltip('加入队列'), findsNWidgets(3));
+        expect(find.byTooltip('播放歌曲'), findsNothing);
+        expect(find.byTooltip('收藏'), findsNothing);
+        expect(find.byTooltip('加入队列'), findsNothing);
+        expect(find.byTooltip('更多操作'), findsNWidgets(3));
       },
     );
   });

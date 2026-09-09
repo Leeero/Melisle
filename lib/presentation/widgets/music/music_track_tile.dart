@@ -87,7 +87,9 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompact(context);
     if (widget.style == MusicTrackTileStyle.list ||
-        (compact && widget.style == MusicTrackTileStyle.row)) {
+        (compact &&
+            (widget.style == MusicTrackTileStyle.row ||
+                widget.style == MusicTrackTileStyle.favorite))) {
       return _buildListTile(context, selected: widget.isCurrent);
     }
 
@@ -124,8 +126,8 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
             ),
           ]
         : (isCard && theme.brightness == Brightness.light
-            ? AppShadowTokens.card
-            : <BoxShadow>[]);
+              ? AppShadowTokens.card
+              : <BoxShadow>[]);
 
     return Semantics(
       label: '播放《${widget.title}》',
@@ -240,6 +242,10 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
   Widget _buildListTile(BuildContext context, {required bool selected}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final compactUnified =
+        AppBreakpoints.isCompact(context) &&
+        (widget.style == MusicTrackTileStyle.favorite ||
+            widget.style == MusicTrackTileStyle.row);
     final backgroundColor = selected
         ? theme.selectedWash
         : _pressed
@@ -254,24 +260,28 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+              color: colorScheme.outlineVariant.withValues(
+                alpha: compactUnified ? 0.42 : 0.72,
+              ),
             ),
           ),
         ),
         child: AnimatedContainer(
           duration: AppMotion.micro,
           curve: AppMotion.enter,
-          constraints: const BoxConstraints(minHeight: 52),
+          constraints: BoxConstraints(minHeight: compactUnified ? 70 : 52),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: selected || _pressed
+            borderRadius: !compactUnified && (selected || _pressed)
                 ? BorderRadius.circular(AppRadiusTokens.mobileSm)
                 : BorderRadius.zero,
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+              borderRadius: compactUnified
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(AppRadiusTokens.mobileSm),
               onTap: () {
                 widget.onTap();
               },
@@ -284,8 +294,13 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
               splashColor: colorScheme.primary.withValues(alpha: 0.06),
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacingTokens.compactGap,
+                padding: EdgeInsets.symmetric(
+                  horizontal: compactUnified
+                      ? AppSpacingTokens.pageHorizontalCompact
+                      : 0,
+                  vertical: compactUnified
+                      ? AppSpacingTokens.inlineGap
+                      : AppSpacingTokens.compactGap,
                 ),
                 child: Row(
                   children: [
@@ -318,10 +333,11 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
                     if (widget.extraTrailing != null) ...[
                       const SizedBox(width: 8),
                       widget.extraTrailing!,
-                    ] else if (widget.onMore != null) ...[
+                    ],
+                    if (widget.onMore != null) ...[
                       const SizedBox(width: 8),
                       _MoreButton(onPressed: widget.onMore!),
-                    ] else ...[
+                    ] else if (widget.extraTrailing == null) ...[
                       const SizedBox(width: 8),
                       SizedBox.square(
                         dimension: 44,
@@ -350,11 +366,19 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
     final compactRow =
         AppBreakpoints.isCompact(context) &&
         widget.style == MusicTrackTileStyle.row;
+    final compactFavorite =
+        AppBreakpoints.isCompact(context) &&
+        widget.style == MusicTrackTileStyle.favorite;
     final titleStyle = switch (widget.style) {
       MusicTrackTileStyle.card => theme.textTheme.titleMedium,
       MusicTrackTileStyle.favorite => theme.textTheme.bodyMedium?.copyWith(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
+        color: compactFavorite && selected
+            ? colorScheme.primary
+            : colorScheme.onSurface,
+        fontSize: compactFavorite ? 15 : 14,
+        fontWeight: compactFavorite && selected
+            ? FontWeight.w600
+            : FontWeight.w500,
       ),
       MusicTrackTileStyle.row =>
         compactRow

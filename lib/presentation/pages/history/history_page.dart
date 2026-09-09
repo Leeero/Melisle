@@ -5,8 +5,10 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_library_track_row.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
-import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
+import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
+import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -105,15 +107,17 @@ class _HistoryHeader extends StatelessWidget {
     return AppPageHeader(
       title: '播放历史',
       description: countLabel,
-      automaticImplyLeading: false,
-      trailing: PlayAllButton(
-        onPressed: state.tracks.isEmpty
-            ? null
-            : () => _playAllHistory(context, state),
-        onShufflePressed: state.tracks.isEmpty
-            ? null
-            : () => _playAllHistory(context, state, shuffled: true),
-      ),
+      automaticImplyLeading: true,
+      trailing: AppBreakpoints.usesWideContent(context)
+          ? PlayAllButton(
+              onPressed: state.tracks.isEmpty
+                  ? null
+                  : () => _playAllHistory(context, state),
+              onShufflePressed: state.tracks.isEmpty
+                  ? null
+                  : () => _playAllHistory(context, state, shuffled: true),
+            )
+          : null,
     );
   }
 }
@@ -127,6 +131,64 @@ class _HistoryTrackList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final horizontalPadding = AppPageLayout.horizontalPadding(context);
+    if (!AppBreakpoints.usesWideContent(context)) {
+      return ListView.builder(
+        padding: EdgeInsets.only(bottom: AppPageLayout.contentBottomInset),
+        itemCount: state.tracks.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                0,
+                horizontalPadding,
+                10,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PlayAllButton(
+                    variant: PlayAllButtonVariant.compact,
+                    expanded: true,
+                    onPressed: state.tracks.isEmpty
+                        ? null
+                        : () => _playAllHistory(context, state),
+                    onShufflePressed: state.tracks.isEmpty
+                        ? null
+                        : () => _playAllHistory(context, state, shuffled: true),
+                  ),
+                  const SizedBox(height: 20),
+                  const AppSectionTitleRow(title: '最近播放'),
+                ],
+              ),
+            );
+          }
+          if (index == state.tracks.length + 1) {
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: _HistoryLoadFooter(state: state),
+            );
+          }
+          final trackIndex = index - 1;
+          final track = state.tracks[trackIndex];
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            child: MusicLibraryTrackRow(
+              track: track,
+              index: trackIndex,
+              isCurrent: track.id == currentTrackId,
+              onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                context,
+                tracks: state.tracks,
+                startIndex: trackIndex,
+              ),
+              onLongPress: () => showTrackActionsSheet(context, track),
+              onMore: () => showTrackActionsSheet(context, track),
+            ),
+          );
+        },
+      );
+    }
     return ListView(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,

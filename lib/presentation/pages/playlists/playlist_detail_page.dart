@@ -16,6 +16,7 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_sn
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -151,6 +152,7 @@ class _PlaylistDetailView extends StatelessWidget {
                       currentTrackId: currentTrackId,
                       showActionBar: false,
                       playlistStyle: true,
+                      trackActionsContext: TrackActionsContext.playlist,
                       onTrackTap: (index, _) =>
                           _playPlaylistFromIndex(context, index),
                     ),
@@ -164,9 +166,7 @@ class _PlaylistDetailView extends StatelessWidget {
             top: AppSpacingTokens.compactGap,
             bottom: AppPageLayout.contentBottomInset,
           ),
-          sliver: const SliverToBoxAdapter(
-            child: _PlaylistLoadMoreIndicator(),
-          ),
+          sliver: const SliverToBoxAdapter(child: _PlaylistLoadMoreIndicator()),
         ),
     ];
   }
@@ -317,55 +317,64 @@ class _MobilePlaylistHero extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxCoverSize = constraints.maxWidth - 64;
-        final coverSize = maxCoverSize.clamp(132.0, 164.0).toDouble();
+        final coverSize = constraints.maxWidth < 350 ? 96.0 : 108.0;
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _MobilePlaylistArtwork(
-              imageUrl: playlist?.artworkUrl ?? '',
-              size: coverSize,
-              semanticLabel: '《$title》歌单封面',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MobilePlaylistArtwork(
+                  imageUrl: playlist?.artworkUrl ?? '',
+                  size: coverSize,
+                  semanticLabel: '《$title》歌单封面',
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontSize: 20,
+                          height: 1.18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$tracksCount 首歌曲',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (playlist != null)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: _PlaylistFavoriteButton(playlist: playlist!),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: colorScheme.onSurface,
-                fontSize: 22,
-                height: 1.15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              '$tracksCount 首歌曲',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             PlayAllButton(
               variant: PlayAllButtonVariant.compact,
+              expanded: true,
               isLoading: isBusy,
               onPressed: hasLoadedTracks && !isBusy ? onPlayAll : null,
-              onShufflePressed:
-                  hasLoadedTracks && !isBusy ? onShuffleAll : null,
+              onShufflePressed: hasLoadedTracks && !isBusy
+                  ? onShuffleAll
+                  : null,
             ),
-            if (playlist != null) ...[
-              const SizedBox(height: AppSpacingTokens.inlineGap),
-              _PlaylistFavoriteButton(playlist: playlist!),
-            ],
           ],
         );
       },
@@ -396,24 +405,12 @@ class _MobilePlaylistArtwork extends StatelessWidget {
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.46),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.musicRose.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.20 : 0.15,
-            ),
-            blurRadius: 32,
-            offset: const Offset(0, 15),
-          ),
-        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacingTokens.compactGap),
-        child: CachedArtwork(
-          imageUrl: imageUrl,
-          size: size,
-          borderRadius: AppRadiusTokens.mobileLg - 2,
-          semanticLabel: semanticLabel,
-        ),
+      child: CachedArtwork(
+        imageUrl: imageUrl,
+        size: size,
+        borderRadius: AppRadiusTokens.mobileLg,
+        semanticLabel: semanticLabel,
       ),
     );
   }
@@ -440,24 +437,38 @@ class _MobilePlaylistTrackSliver extends StatelessWidget {
     );
 
     return SliverPadding(
-      padding: AppPageLayout.sectionPadding(
-        context,
+      padding: EdgeInsets.only(
         bottom: isLoadingMore ? AppSpacingTokens.contentGap : bottomInset,
       ),
       sliver: SliverMainAxisGroup(
         slivers: [
           SliverToBoxAdapter(
-            child: _MobilePlaylistSectionHeader(count: tracks.length),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacingTokens.pageHorizontalCompact,
+              ),
+              child: _MobilePlaylistSectionHeader(count: tracks.length),
+            ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final track = tracks[index];
-              return _MobilePlaylistTrackRow(
-                track: track,
-                index: index,
-                selected: track.id == currentTrackId,
+              return MusicTrackTile.row(
+                artworkUrl: track.artworkUrl,
+                title: MediaDisplayText.trackTitle(track.title),
+                subtitle: _trackSubtitle(track),
+                isCurrent: track.id == currentTrackId,
                 onTap: () => onTrackTap(index),
-                onLongPress: () => showTrackActionsSheet(context, track),
+                onLongPress: () => showTrackActionsSheet(
+                  context,
+                  track,
+                  source: TrackActionsContext.playlist,
+                ),
+                onMore: () => showTrackActionsSheet(
+                  context,
+                  track,
+                  source: TrackActionsContext.playlist,
+                ),
               );
             }, childCount: tracks.length),
           ),
@@ -833,9 +844,7 @@ class _PlaylistHero extends StatelessWidget {
                         color: colorScheme.surfaceContainerLow.withValues(
                           alpha: 0.56,
                         ),
-                        borderRadius: BorderRadius.circular(
-                          AppRadiusTokens.md,
-                        ),
+                        borderRadius: BorderRadius.circular(AppRadiusTokens.md),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(
@@ -851,9 +860,7 @@ class _PlaylistHero extends StatelessWidget {
                               onShuffleAll: onShuffleAll,
                             ),
                             if (playlist != null) ...[
-                              const SizedBox(
-                                width: AppSpacingTokens.inlineGap,
-                              ),
+                              const SizedBox(width: AppSpacingTokens.inlineGap),
                               _PlaylistFavoriteButton(playlist: playlist!),
                             ],
                           ],

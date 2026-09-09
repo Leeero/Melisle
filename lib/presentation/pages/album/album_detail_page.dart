@@ -11,6 +11,7 @@ import 'package:cross_platform_music_player/presentation/utils/player_navigation
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_track_tile.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/play_all_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -64,10 +65,7 @@ class _AlbumDetailView extends StatelessWidget {
                   slivers: [
                     if (isWide)
                       SliverPadding(
-                        padding: AppPageLayout.pagePadding(
-                          context,
-                          bottom: 0,
-                        ),
+                        padding: AppPageLayout.pagePadding(context, bottom: 0),
                         sliver: SliverToBoxAdapter(
                           child: AppDetailBackNav(
                             label: '返回上一页',
@@ -118,10 +116,12 @@ class _AlbumDetailView extends StatelessWidget {
                         ),
                       ),
                       _ => SliverPadding(
-                        padding: AppPageLayout.sectionPadding(
-                          context,
-                          bottom: bottomInset,
-                        ),
+                        padding: isWide
+                            ? AppPageLayout.sectionPadding(
+                                context,
+                                bottom: bottomInset,
+                              )
+                            : EdgeInsets.only(bottom: bottomInset),
                         sliver: state.tracks.isEmpty
                             ? const AppSliverStateView.message(
                                 message: '当前专辑还没有曲目。',
@@ -132,6 +132,8 @@ class _AlbumDetailView extends StatelessWidget {
                                   tracks: state.tracks,
                                   currentTrackId: currentTrackId,
                                   showActionBar: false,
+                                  trackActionsContext:
+                                      TrackActionsContext.album,
                                   onTrackTap: (index, _) =>
                                       _playAlbumFromIndex(context, index),
                                 ),
@@ -142,12 +144,25 @@ class _AlbumDetailView extends StatelessWidget {
                                   index,
                                 ) {
                                   final track = state.tracks[index];
-                                  return _AlbumMobileTrackRow(
-                                    index: index,
-                                    track: track,
+                                  return MusicTrackTile.row(
+                                    artworkUrl: track.artworkUrl,
+                                    title: MediaDisplayText.trackTitle(
+                                      track.title,
+                                    ),
+                                    subtitle: _albumTrackSubtitle(track),
                                     isCurrent: track.id == currentTrackId,
-                                    onPlay: () =>
+                                    onTap: () =>
                                         _playAlbumFromIndex(context, index),
+                                    onLongPress: () => showTrackActionsSheet(
+                                      context,
+                                      track,
+                                      source: TrackActionsContext.album,
+                                    ),
+                                    onMore: () => showTrackActionsSheet(
+                                      context,
+                                      track,
+                                      source: TrackActionsContext.album,
+                                    ),
                                   );
                                 }, childCount: state.tracks.length),
                               ),
@@ -189,16 +204,64 @@ class _AlbumHero extends StatelessWidget {
           constraints.maxWidth,
         );
 
+        if (!isWide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _AlbumHeroArtwork(
+                    imageUrl: album?.artworkUrl ?? '',
+                    size: 108,
+                    semanticLabel: '《$displayTitle》封面',
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _AlbumHeroSummary(
+                      album: album,
+                      tracksCount: tracksCount,
+                      totalDuration: totalDuration,
+                      isLoading: isLoading,
+                      isWide: false,
+                      displayTitle: displayTitle,
+                      showActions: false,
+                      alignStart: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              PlayAllButton(
+                variant: PlayAllButtonVariant.compact,
+                expanded: true,
+                isLoading: isLoading,
+                onPressed: isLoading || tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.playTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                        startIndex: 0,
+                      ),
+                onShufflePressed: isLoading || tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.shuffleTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                      ),
+              ),
+            ],
+          );
+        }
+
         return AppDetailHeroFrame(
-          padding: isWide
-              ? const EdgeInsets.only(bottom: 24)
-              : const EdgeInsets.fromLTRB(0, 16, 0, 24),
+          padding: isWide ? const EdgeInsets.only(bottom: 24) : EdgeInsets.zero,
           compactGap: 16,
           spacing: 24,
           coverBuilder: (context, isWide) {
             return _AlbumHeroArtwork(
               imageUrl: album?.artworkUrl ?? '',
-              size: isWide ? 240 : 200,
+              size: isWide ? 240 : 108,
               semanticLabel: '《$displayTitle》封面',
             );
           },
@@ -226,6 +289,8 @@ class _AlbumHeroSummary extends StatelessWidget {
     required this.displayTitle,
     required this.totalDuration,
     required this.isLoading,
+    this.showActions = true,
+    this.alignStart = false,
   });
 
   final MusicAlbum? album;
@@ -234,6 +299,8 @@ class _AlbumHeroSummary extends StatelessWidget {
   final String displayTitle;
   final Duration totalDuration;
   final bool isLoading;
+  final bool showActions;
+  final bool alignStart;
 
   @override
   Widget build(BuildContext context) {
@@ -242,10 +309,10 @@ class _AlbumHeroSummary extends StatelessWidget {
     final titleStyle = isWide
         ? theme.textTheme.headlineMedium
         : theme.textTheme.headlineSmall;
-    final horizontalAlignment = isWide
+    final horizontalAlignment = isWide || alignStart
         ? CrossAxisAlignment.start
         : CrossAxisAlignment.center;
-    final textAlign = isWide ? TextAlign.start : TextAlign.center;
+    final textAlign = isWide || alignStart ? TextAlign.start : TextAlign.center;
 
     return Column(
       crossAxisAlignment: horizontalAlignment,
@@ -273,41 +340,43 @@ class _AlbumHeroSummary extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        _AlbumArtistLine(album: album, centered: !isWide),
+        _AlbumArtistLine(album: album, centered: !isWide && !alignStart),
         const SizedBox(height: 6),
         _AlbumMetaLine(
           album: album,
           count: _trackCountLabel(album, tracksCount),
           duration: totalDuration,
-          centered: !isWide,
+          centered: !isWide && !alignStart,
         ),
-        SizedBox(height: isWide ? 24 : 20),
-        Wrap(
-          alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            PlayAllButton(
-              variant: isWide
-                  ? PlayAllButtonVariant.primary
-                  : PlayAllButtonVariant.compact,
-              isLoading: isLoading,
-              onPressed: isLoading || tracksCount == 0
-                  ? null
-                  : () => PlayerNavigation.playTracksAndOpenPlayer(
-                      context,
-                      tracks: context.read<AlbumCubit>().state.tracks,
-                      startIndex: 0,
-                    ),
-              onShufflePressed: isLoading || tracksCount == 0
-                  ? null
-                  : () => PlayerNavigation.shuffleTracksAndOpenPlayer(
-                      context,
-                      tracks: context.read<AlbumCubit>().state.tracks,
-                    ),
-            ),
-          ],
-        ),
+        if (showActions) ...[
+          SizedBox(height: isWide ? 24 : 20),
+          Wrap(
+            alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              PlayAllButton(
+                variant: isWide
+                    ? PlayAllButtonVariant.primary
+                    : PlayAllButtonVariant.compact,
+                isLoading: isLoading,
+                onPressed: isLoading || tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.playTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                        startIndex: 0,
+                      ),
+                onShufflePressed: isLoading || tracksCount == 0
+                    ? null
+                    : () => PlayerNavigation.shuffleTracksAndOpenPlayer(
+                        context,
+                        tracks: context.read<AlbumCubit>().state.tracks,
+                      ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -383,6 +452,11 @@ Duration _totalDuration(List<MusicTrack> tracks) {
   return tracks.fold(Duration.zero, (total, track) => total + track.duration);
 }
 
+String _albumTrackSubtitle(MusicTrack track) {
+  return '${MediaDisplayText.artistName(track.artistName)} · '
+      '${MediaDisplayText.albumTitle(track.albumTitle)}';
+}
+
 class _AlbumMobileToolbar extends StatelessWidget {
   const _AlbumMobileToolbar({required this.onBack});
 
@@ -438,85 +512,6 @@ class _AlbumMetaLine extends StatelessWidget {
       textAlign: centered ? TextAlign.center : TextAlign.start,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}
-
-class _AlbumMobileTrackRow extends StatelessWidget {
-  const _AlbumMobileTrackRow({
-    required this.index,
-    required this.track,
-    required this.isCurrent,
-    required this.onPlay,
-  });
-
-  final int index;
-  final MusicTrack track;
-  final bool isCurrent;
-  final Future<void> Function() onPlay;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final title = MediaDisplayText.trackTitle(track.title);
-    return Semantics(
-      label: '播放《$title》',
-      button: true,
-      selected: isCurrent,
-      child: Material(
-        color: isCurrent ? Theme.of(context).selectedWash : Colors.transparent,
-        child: InkWell(
-          onTap: onPlay,
-          onLongPress: () => showTrackActionsSheet(context, track),
-          child: SizedBox(
-            height: 52,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 40,
-                  child: Center(
-                    child: isCurrent
-                        ? Icon(
-                            Icons.graphic_eq_rounded,
-                            color: colors.primary,
-                            size: 20,
-                          )
-                        : Text(
-                            '${index + 1}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                  ),
-                ),
-                Expanded(
-                  child: Tooltip(
-                    message: title,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isCurrent ? colors.primary : colors.onSurface,
-                        fontWeight: isCurrent
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: '更多操作',
-                  onPressed: () => showTrackActionsSheet(context, track),
-                  icon: Icon(
-                    Icons.more_vert_rounded,
-                    color: isCurrent ? colors.primary : colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -10,12 +10,14 @@ class PlayAllButton extends StatelessWidget {
     this.onShufflePressed,
     this.isLoading = false,
     this.variant = PlayAllButtonVariant.compact,
+    this.expanded = false,
   });
 
   final VoidCallback? onPressed;
   final VoidCallback? onShufflePressed;
   final bool isLoading;
   final PlayAllButtonVariant variant;
+  final bool expanded;
 
   static const _label = '播放全部';
   static const _shuffleLabel = '随机播放';
@@ -49,9 +51,7 @@ class PlayAllButton extends StatelessWidget {
             dimension: 48,
             child: FilledButton(
               onPressed: enabled ? onPressed : null,
-              style: FilledButton.styleFrom(
-                padding: EdgeInsets.zero,
-              ),
+              style: FilledButton.styleFrom(padding: EdgeInsets.zero),
               child: _PlayAllButtonIcon(
                 isLoading: isLoading,
                 highContrast: true,
@@ -66,16 +66,23 @@ class PlayAllButton extends StatelessWidget {
       return playButton;
     }
 
+    final shuffleButton = _ShuffleAllButton(
+      onPressed: shuffleEnabled ? onShufflePressed : null,
+      variant: variant,
+    );
+    if (expanded) {
+      return Row(
+        children: [
+          Expanded(child: playButton),
+          const SizedBox(width: 10),
+          Expanded(child: shuffleButton),
+        ],
+      );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        playButton,
-        const SizedBox(width: 8),
-        _ShuffleAllButton(
-          onPressed: shuffleEnabled ? onShufflePressed : null,
-          variant: variant,
-        ),
-      ],
+      children: [playButton, const SizedBox(width: 8), shuffleButton],
     );
   }
 }

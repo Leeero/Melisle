@@ -87,6 +87,26 @@ class AppPageHeader extends StatelessWidget {
       );
     }
 
+    if (compact) {
+      return Row(
+        children: [
+          if (leadingWidget != null) ...[
+            leadingWidget,
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: AppPageTitleRow(
+              title: title,
+              description: description,
+              titleBadge: titleBadge,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ],
+      );
+    }
+
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: LayoutBuilder(
@@ -175,7 +195,11 @@ class AppBackButton extends StatelessWidget {
 }
 
 class AppDetailBackNav extends StatelessWidget {
-  const AppDetailBackNav({super.key, required this.onPressed, this.label = '返回'});
+  const AppDetailBackNav({
+    super.key,
+    required this.onPressed,
+    this.label = '返回',
+  });
 
   final VoidCallback onPressed;
   final String label;

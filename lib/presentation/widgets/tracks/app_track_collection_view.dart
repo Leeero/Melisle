@@ -23,6 +23,7 @@ class AppTrackCollectionView extends StatelessWidget {
     this.mobileHeader,
     this.desktopTrailingBuilder,
     this.footer,
+    this.edgeToEdgeMobileItems = false,
   });
 
   final List<MusicTrack> tracks;
@@ -34,6 +35,7 @@ class AppTrackCollectionView extends StatelessWidget {
   final AppTrackCollectionItemBuilder mobileItemBuilder;
   final ValueChanged<int> onTrackTap;
   final Widget? footer;
+  final bool edgeToEdgeMobileItems;
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +65,31 @@ class AppTrackCollectionView extends StatelessWidget {
     final footerCount = footer == null ? 0 : 1;
     return ListView.builder(
       controller: scrollController,
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
+      padding: EdgeInsets.fromLTRB(
+        edgeToEdgeMobileItems ? 0 : horizontalPadding,
+        0,
+        edgeToEdgeMobileItems ? 0 : horizontalPadding,
+        24,
+      ),
       itemCount: headerCount + tracks.length + footerCount,
       itemBuilder: (context, index) {
-        if (mobileHeader != null && index == 0) return mobileHeader!;
+        if (mobileHeader != null && index == 0) {
+          return edgeToEdgeMobileItems
+              ? Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: mobileHeader!,
+                )
+              : mobileHeader!;
+        }
         final trackIndex = index - headerCount;
-        if (trackIndex == tracks.length) return footer!;
+        if (trackIndex == tracks.length) {
+          return edgeToEdgeMobileItems
+              ? Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: footer!,
+                )
+              : footer!;
+        }
         return mobileItemBuilder(
           context,
           tracks[trackIndex],

@@ -19,19 +19,22 @@ import 'package:go_router/go_router.dart';
 ///   - 收藏 / 取消收藏
 enum TrackActionsPopoverStyle { standard, recentPlayback }
 
+enum TrackActionsContext { generic, album, artist, playlist }
+
 Future<void> showTrackActionsSheet(
   BuildContext context,
   MusicTrack track, {
   TrackActionsPopoverStyle popoverStyle = TrackActionsPopoverStyle.standard,
-}) {
+  TrackActionsContext source = TrackActionsContext.generic,
+}) async {
   if (AppBreakpoints.usesDesktopShell(context)) {
-    return _showTrackActionsPopover(context, track, popoverStyle);
+    return _showTrackActionsPopover(context, track, popoverStyle, source);
   }
 
   final title = MediaDisplayText.trackTitle(track.title);
   final artist = MediaDisplayText.artistName(track.artistName);
   final album = MediaDisplayText.albumTitle(track.albumTitle);
-  return showModalBottomSheet<void>(
+  final selected = await showModalBottomSheet<_TrackAction>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -43,7 +46,10 @@ Future<void> showTrackActionsSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (track.albumId != null && track.albumId!.isNotEmpty)
+            if (source != TrackActionsContext.album &&
+                source != TrackActionsContext.playlist &&
+                track.albumId != null &&
+                track.albumId!.isNotEmpty)
               AppOptionTile<_TrackAction>(
                 title: '查看专辑',
                 icon: Icons.album_rounded,
@@ -51,11 +57,12 @@ Future<void> showTrackActionsSheet(
                 groupValue: _TrackAction.none,
                 showRadio: false,
                 onSelected: (_) {
-                  Navigator.of(sheetCtx).pop();
-                  context.push('/album/${track.albumId}');
+                  Navigator.of(sheetCtx).pop(_TrackAction.album);
                 },
               ),
-            if (track.artistId != null && track.artistId!.isNotEmpty)
+            if (source != TrackActionsContext.artist &&
+                track.artistId != null &&
+                track.artistId!.isNotEmpty)
               AppOptionTile<_TrackAction>(
                 title: '查看歌手',
                 icon: Icons.person_rounded,
@@ -63,8 +70,7 @@ Future<void> showTrackActionsSheet(
                 groupValue: _TrackAction.none,
                 showRadio: false,
                 onSelected: (_) {
-                  Navigator.of(sheetCtx).pop();
-                  context.push('/artist/${track.artistId}');
+                  Navigator.of(sheetCtx).pop(_TrackAction.artist);
                 },
               ),
             AppOptionTile<_TrackAction>(
@@ -148,12 +154,26 @@ Future<void> showTrackActionsSheet(
       );
     },
   );
+
+  if (!context.mounted || selected == null) return;
+  switch (selected) {
+    case _TrackAction.album:
+      context.push('/album/${track.albumId}');
+    case _TrackAction.artist:
+      context.push('/artist/${track.artistId}');
+    case _TrackAction.none:
+    case _TrackAction.queue:
+    case _TrackAction.download:
+    case _TrackAction.favorite:
+      break;
+  }
 }
 
 Future<void> _showTrackActionsPopover(
   BuildContext context,
   MusicTrack track,
   TrackActionsPopoverStyle style,
+  TrackActionsContext source,
 ) async {
   final title = MediaDisplayText.trackTitle(track.title);
   final isFavorite = context.read<FavoritesCubit>().isFavorite(
@@ -253,7 +273,9 @@ Future<void> _showTrackActionsPopover(
           spacing: itemSpacing,
         ),
       ),
-      if (track.albumId?.isNotEmpty ?? false)
+      if (source != TrackActionsContext.album &&
+          source != TrackActionsContext.playlist &&
+          (track.albumId?.isNotEmpty ?? false))
         PopupMenuItem(
           value: _TrackAction.album,
           mouseCursor: SystemMouseCursors.click,
@@ -267,7 +289,8 @@ Future<void> _showTrackActionsPopover(
             spacing: itemSpacing,
           ),
         ),
-      if (track.artistId?.isNotEmpty ?? false)
+      if (source != TrackActionsContext.artist &&
+          (track.artistId?.isNotEmpty ?? false))
         PopupMenuItem(
           value: _TrackAction.artist,
           mouseCursor: SystemMouseCursors.click,

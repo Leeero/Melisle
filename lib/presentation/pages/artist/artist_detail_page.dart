@@ -158,18 +158,33 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                           if (_selectedTab == _ArtistDetailTab.tracks &&
                               state.topTracks.isNotEmpty) ...[
                             const SizedBox(width: 16),
-                            AppActionButton(
-                              icon: Icons.play_arrow_rounded,
-                              label: '播放全部',
-                              tone: AppActionButtonTone.primary,
-                              onPressed: () =>
-                                  PlayerNavigation.playAllAndOpenPlayer(
-                                    context,
-                                    loadedTracks: state.topTracks,
-                                    allLoaded: true,
-                                    fetchAll: () async => state.topTracks,
+                            if (isWide)
+                              AppActionButton(
+                                icon: Icons.play_arrow_rounded,
+                                label: '播放全部',
+                                tone: AppActionButtonTone.primary,
+                                onPressed: () =>
+                                    _playArtistTopTracks(context, state),
+                              )
+                            else
+                              Tooltip(
+                                message: '播放全部',
+                                child: SizedBox.square(
+                                  dimension: 44,
+                                  child: FilledButton(
+                                    onPressed: () =>
+                                        _playArtistTopTracks(context, state),
+                                    style: FilledButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      shape: const CircleBorder(),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 24,
+                                    ),
                                   ),
-                            ),
+                                ),
+                              ),
                           ],
                         ],
                       ),
@@ -199,13 +214,16 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
 
     return [
       SliverPadding(
-        padding: AppPageLayout.sectionPadding(context, bottom: 16),
+        padding: isWide
+            ? AppPageLayout.sectionPadding(context, bottom: 16)
+            : const EdgeInsets.only(bottom: 16),
         sliver: isWide
             ? SliverToBoxAdapter(
                 child: MusicTrackTable(
                   tracks: state.topTracks,
                   currentTrackId: currentTrackId,
                   showActionBar: false,
+                  trackActionsContext: TrackActionsContext.artist,
                   onTrackTap: (index, _) =>
                       PlayerNavigation.playTracksAndOpenPlayer(
                         context,
@@ -227,8 +245,16 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                       tracks: state.topTracks,
                       startIndex: index,
                     ),
-                    onLongPress: () => showTrackActionsSheet(context, track),
-                    onMore: () => showTrackActionsSheet(context, track),
+                    onLongPress: () => showTrackActionsSheet(
+                      context,
+                      track,
+                      source: TrackActionsContext.artist,
+                    ),
+                    onMore: () => showTrackActionsSheet(
+                      context,
+                      track,
+                      source: TrackActionsContext.artist,
+                    ),
                   );
                 }, childCount: state.topTracks.length),
               ),
@@ -253,21 +279,18 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
         ),
         sliver: isWide
             ? SliverGrid(
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 200,
-                      mainAxisSpacing: 22,
-                      crossAxisSpacing: 18,
-                      childAspectRatio: 0.74,
-                    ),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 200,
+                  mainAxisSpacing: 22,
+                  crossAxisSpacing: 18,
+                  childAspectRatio: 0.74,
+                ),
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final album = state.albums[index];
                   return MusicAlbumGridCard(
                     album: album,
-                    onTap: () => context.push(
-                      '/album/${album.id}',
-                      extra: album,
-                    ),
+                    onTap: () =>
+                        context.push('/album/${album.id}', extra: album),
                   );
                 }, childCount: state.albums.length),
               )
@@ -284,10 +307,8 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                         width: 126,
                         child: MusicAlbumGridCard(
                           album: album,
-                          onTap: () => context.push(
-                            '/album/${album.id}',
-                            extra: album,
-                          ),
+                          onTap: () =>
+                              context.push('/album/${album.id}', extra: album),
                         ),
                       );
                     },
@@ -325,15 +346,16 @@ class _ArtistHero extends StatelessWidget {
       padding: EdgeInsets.zero,
       spacing: 28,
       compactGap: 12,
+      compactHorizontal: true,
       coverBuilder: (context, isWide) {
         return ClipOval(
           child: SizedBox(
-            width: isWide ? 160 : 112,
-            height: isWide ? 160 : 112,
+            width: isWide ? 160 : 104,
+            height: isWide ? 160 : 104,
             child: artworkUrl.isNotEmpty
                 ? CachedArtwork(
                     imageUrl: artworkUrl,
-                    size: isWide ? 160 : 112,
+                    size: isWide ? 160 : 104,
                     borderRadius: 999,
                     semanticLabel: '${artist?.name ?? '未知歌手'}头像',
                   )
@@ -342,27 +364,25 @@ class _ArtistHero extends StatelessWidget {
         );
       },
       contentBuilder: (context, isWide) {
-        final alignment = isWide
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center;
+        final alignment = CrossAxisAlignment.start;
         return Column(
           crossAxisAlignment: alignment,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text(
+              artist?.name.trim().isNotEmpty ?? false ? artist!.name : '未知歌手',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
             Text(
               '$effectiveAlbumCount 张专辑 · $effectiveTrackCount 首歌曲',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              artist?.name.trim().isNotEmpty ?? false ? artist!.name : '未知歌手',
-              maxLines: isWide ? 2 : 3,
-              overflow: TextOverflow.ellipsis,
-              textAlign: isWide ? TextAlign.start : TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         );
@@ -401,6 +421,18 @@ double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
     return AppPageLayout.contentBottomInset;
   }
   return hasMiniPlayer ? 168 : 96;
+}
+
+Future<void> _playArtistTopTracks(
+  BuildContext context,
+  ArtistState state,
+) async {
+  await PlayerNavigation.playAllAndOpenPlayer(
+    context,
+    loadedTracks: state.topTracks,
+    allLoaded: true,
+    fetchAll: () async => state.topTracks,
+  );
 }
 
 void _goBackToLibrary(BuildContext context) {
