@@ -13,6 +13,7 @@ import 'package:cross_platform_music_player/domain/entities/lyric_line.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_sync_state.dart';
 import 'package:cross_platform_music_player/domain/entities/lyric_timeline.dart';
 import 'package:cross_platform_music_player/domain/entities/music_album.dart';
+import 'package:cross_platform_music_player/domain/entities/artist_sort_option.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_playlist.dart';
 import 'package:cross_platform_music_player/domain/entities/music_track.dart';
@@ -34,6 +35,7 @@ import 'package:cross_platform_music_player/presentation/pages/downloads/downloa
 import 'package:cross_platform_music_player/presentation/pages/library/library_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/player/player_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/playlists/playlist_detail_page.dart';
+import 'package:cross_platform_music_player/presentation/pages/artist/artist_detail_page.dart';
 import 'package:cross_platform_music_player/presentation/pages/settings/settings_page.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_modal.dart';
@@ -317,11 +319,17 @@ void main() {
     await _pumpForSizes(
       tester,
       build: () => _wrapLibrary(repository, playerCubit),
-      verify: (_) {
+      verify: (size) {
         expect(find.text('歌曲'), findsOneWidget);
-        expect(find.text('专辑'), findsOneWidget);
-        expect(find.text('歌手'), findsOneWidget);
-        expect(find.text('歌单'), findsOneWidget);
+        if (size.width < AppBreakpoints.desktopMinWidth) {
+          expect(find.text('专辑'), findsOneWidget);
+          expect(find.text('歌手'), findsOneWidget);
+          expect(find.text('歌单'), findsOneWidget);
+        } else {
+          expect(find.text('专辑'), findsNothing);
+          expect(find.text('歌手'), findsNothing);
+          expect(find.text('歌单'), findsNothing);
+        }
         expect(find.text('当前还没有歌曲。'), findsOneWidget);
       },
     );
@@ -476,6 +484,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('LibraryPage_mobileArtistViewUsesCompactToolbarAndAnchoredMenu', (
+    tester,
+  ) async {
+    final repository = _SortingFakeMusicRepository(
+      libraryArtists: const [
+        MusicArtist(id: 'artist-1', name: '???', artworkUrl: '', trackCount: 4),
+      ],
+    );
+    final playerCubit = _FakeQueuePlayerCubit();
+    addTearDown(playerCubit.close);
+
+    await _pumpMobile(
+      tester,
+      build: () => _wrapLibrary(
+        repository,
+        playerCubit,
+        initialFilter: LibraryFilter.artists,
+      ),
+      verify: () {
+        expect(find.text('1 位歌手'), findsOneWidget);
+        expect(find.text('未知歌手'), findsOneWidget);
+        expect(find.byTooltip('筛选与排序'), findsOneWidget);
+      },
+    );
+
+    final trigger = find.byTooltip('筛选与排序');
+    final search = find.bySemanticsLabel('搜索歌手');
+    expect(
+      tester.getCenter(trigger).dy,
+      closeTo(tester.getCenter(search).dy, 1),
+    );
+
+    await tester.tap(trigger);
+    await tester.pumpAndSettle();
+    final menu = find.text('排序方式');
+    expect(menu, findsOneWidget);
+    expect(
+      tester.getRect(menu).top,
+      greaterThan(tester.getRect(trigger).bottom),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('QueueSheet_emptyState_keepsResponsiveSheetStructure', (
     tester,
   ) async {
@@ -489,6 +540,71 @@ void main() {
         expect(find.text('播放队列'), findsOneWidget);
         expect(find.text('0 首歌曲'), findsOneWidget);
         expect(find.text('当前播放队列为空'), findsOneWidget);
+      },
+    );
+  });
+
+  testWidgets('ArtistDetailPage_mobileCleansMetadataAndLabelsPlayback', (
+    tester,
+  ) async {
+    const track = MusicTrack(
+      id: 'artist-track-1',
+      title: 'Moon River(???? http://blog.sina.com/example)',
+      artistName: '???',
+      albumTitle: 'TIMELESS HQCD [???]',
+      artworkUrl: '',
+      duration: Duration(minutes: 3, seconds: 20),
+    );
+    final repository = _ArtistDetailFakeMusicRepository(
+      topTracks: const [track],
+    );
+    final playerCubit = _FakeQueuePlayerCubit(
+      const PlayerViewState(queue: [track], currentIndex: 0),
+    );
+    final mediaSourceResolver = CustomMediaSourceResolver();
+    final settingsCubit = AppSettingsCubit(
+      _FakeSettingsRepository(),
+      mediaSourceResolver,
+    );
+    await settingsCubit.load();
+    addTearDown(playerCubit.close);
+    addTearDown(settingsCubit.close);
+
+    await _pumpMobile(
+      tester,
+      build: () => MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<MusicRepository>.value(value: repository),
+          RepositoryProvider<CustomMediaSourceResolver>.value(
+            value: mediaSourceResolver,
+          ),
+        ],
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<PlayerCubit>.value(value: playerCubit),
+            BlocProvider<AppSettingsCubit>.value(value: settingsCubit),
+          ],
+          child: const MaterialApp(
+            home: ArtistDetailPage(
+              artistId: 'artist-1',
+              artist: MusicArtist(
+                id: 'artist-1',
+                name: '???',
+                artworkUrl: '',
+                trackCount: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
+      verify: () {
+        expect(find.text('未知歌手'), findsOneWidget);
+        expect(find.text('Moon River'), findsOneWidget);
+        expect(find.text('TIMELESS HQCD'), findsOneWidget);
+        expect(find.text('播放全部'), findsOneWidget);
+        expect(find.textContaining('http://'), findsNothing);
+        expect(find.textContaining('???'), findsNothing);
+        expect(tester.takeException(), isNull);
       },
     );
   });
@@ -743,6 +859,11 @@ void main() {
         expect(find.byTooltip('收藏'), findsNothing);
         expect(find.byTooltip('加入队列'), findsNothing);
         expect(find.byTooltip('更多操作'), findsNWidgets(3));
+        final firstArtwork = tester.getRect(find.byType(CachedArtwork).at(1));
+        expect(
+          firstArtwork.left,
+          greaterThanOrEqualTo(AppSpacingTokens.pageHorizontalCompact),
+        );
       },
     );
   });
@@ -1244,6 +1365,36 @@ class _FakeMusicRepository implements MusicRepository {
 
   @override
   Future<SearchResults> search(String query) async => SearchResults.empty;
+}
+
+class _SortingFakeMusicRepository extends _FakeMusicRepository
+    implements ArtistSortingRepository {
+  _SortingFakeMusicRepository({required super.libraryArtists});
+
+  @override
+  Future<Set<ArtistSortOption>> fetchSupportedArtistSortOptions() async =>
+      const {ArtistSortOption.name, ArtistSortOption.dateAdded};
+
+  @override
+  Future<List<MusicArtist>> fetchSortedArtists({
+    required ArtistSortOption sortOption,
+    int limit = 60,
+    int startIndex = 0,
+    String? searchQuery,
+    String? genreId,
+  }) async => libraryArtists;
+}
+
+class _ArtistDetailFakeMusicRepository extends _FakeMusicRepository {
+  _ArtistDetailFakeMusicRepository({required this.topTracks});
+
+  final List<MusicTrack> topTracks;
+
+  @override
+  Future<List<MusicTrack>> fetchArtistTopTracks(
+    String artistId, {
+    int limit = 20,
+  }) async => topTracks;
 }
 
 class _DelayedLibraryRepository extends _FakeMusicRepository {

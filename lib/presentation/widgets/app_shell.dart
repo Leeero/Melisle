@@ -518,18 +518,19 @@ class _ShellBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final mobileColors = context.mobileTheme;
     final isDark = theme.brightness == Brightness.dark;
-    final selectedColor = colorScheme.primary;
+    final selectedColor = mobileColors.primary;
 
     return DecoratedBox(
       key: const ValueKey('shell-bottom-bar'),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.86),
+        color: mobileColors.surface.withValues(alpha: 0.94),
         border: Border(
           top: BorderSide(
             color: Color.alphaBlend(
-              colorScheme.primary.withValues(alpha: 0.14),
-              colorScheme.outlineVariant.withValues(alpha: 0.72),
+              mobileColors.primary.withValues(alpha: 0.10),
+              mobileColors.outlineVariant,
             ),
             width: 0.5,
           ),
@@ -634,7 +635,10 @@ class _ShellBottomButtonState extends State<_ShellBottomButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = widget.selected ? widget.selectedColor : theme.muted;
+    final mobileColors = context.mobileTheme;
+    final color = widget.selected
+        ? widget.selectedColor
+        : mobileColors.onSurfaceVariant;
 
     return Semantics(
       label: widget.label,
@@ -649,7 +653,7 @@ class _ShellBottomButtonState extends State<_ShellBottomButton> {
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
           child: AnimatedOpacity(
-            duration: AppMotion.micro,
+            duration: AppMotion.adaptive(context, AppMotion.fast),
             curve: AppMotion.standard,
             opacity: _pressed ? 0.62 : 1,
             child: SizedBox(

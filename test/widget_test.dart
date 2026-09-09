@@ -806,9 +806,17 @@ void main() {
         duration: Duration(minutes: 4),
         codec: 'flac',
       );
+      const nextTrack = MusicTrack(
+        id: 'next-track',
+        title: '下一首歌曲',
+        artistName: '下一首歌手',
+        albumTitle: '下一首专辑',
+        artworkUrl: '',
+        duration: Duration(minutes: 3),
+      );
       final repository = _FakeMusicRepository();
       final playerCubit = _MiniPlayerCubit(
-        const PlayerViewState(queue: [track], currentIndex: 0),
+        const PlayerViewState(queue: [track, nextTrack], currentIndex: 0),
       );
       final favoritesCubit = FavoritesCubit(repository);
       final mediaSourceResolver = CustomMediaSourceResolver();
@@ -836,13 +844,24 @@ void main() {
       );
       await tester.pump();
 
-      tester.view.physicalSize = const Size(390, 844);
+      tester.view.physicalSize = const Size(320, 700);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pump();
       expect(find.text('收藏'), findsOneWidget);
       expect(find.text('音量'), findsOneWidget);
       expect(find.text('音质'), findsOneWidget);
       expect(find.byTooltip('调节音量'), findsOneWidget);
       expect(find.byTooltip('选择音质'), findsOneWidget);
+      expect(find.text('下一首歌曲'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == '下一首：下一首歌曲，下一首歌手',
+        ),
+        findsOneWidget,
+      );
       expect(
         tester.getSize(find.byTooltip('调节音量')).shortestSide,
         greaterThanOrEqualTo(44),
@@ -853,7 +872,50 @@ void main() {
       );
       expect(tester.takeException(), isNull);
 
+      playerCubit.update(
+        const PlayerViewState(
+          queue: [track, nextTrack],
+          currentIndex: 0,
+          isLoading: true,
+        ),
+      );
+      await tester.pump();
+      expect(find.byTooltip('正在准备播放'), findsOneWidget);
+      expect(find.textContaining('...'), findsNothing);
+
+      playerCubit.update(
+        const PlayerViewState(
+          queue: [track, nextTrack],
+          currentIndex: 0,
+          errorMessage: '当前歌曲无法播放',
+        ),
+      );
+      await tester.pump();
+      expect(find.text('当前歌曲无法播放'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      playerCubit.update(
+        const PlayerViewState(queue: [track], currentIndex: 0),
+      );
+      await tester.pump();
+      expect(find.text('暂无歌词'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      tester.view.physicalSize = const Size(700, 320);
+      tester.platformDispatcher.textScaleFactorTestValue = 1;
+      playerCubit.update(
+        const PlayerViewState(queue: [track, nextTrack], currentIndex: 0),
+      );
+      await tester.pump();
+      expect(find.byTooltip('播放'), findsOneWidget);
+      expect(find.text('下一首歌曲'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
       tester.view.physicalSize = const Size(1440, 900);
+      tester.platformDispatcher.textScaleFactorTestValue = 1;
+      playerCubit.update(
+        const PlayerViewState(queue: [track], currentIndex: 0),
+      );
       await tester.pump();
 
       final summary = find.bySemanticsLabel('当前播放：底栏当前歌曲，歌手：底栏歌手');

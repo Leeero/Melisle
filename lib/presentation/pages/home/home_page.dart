@@ -16,6 +16,7 @@ import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.
 import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/artwork_hover_overlay.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/mobile_track_row.dart';
 import 'package:cross_platform_music_player/presentation/widgets/track_actions_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +54,9 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppBreakpoints.isCompact(context)
+          ? context.mobileTheme.scaffold
+          : null,
       body: SafeArea(
         child: BlocBuilder<HomeCubit, HomeState>(
           builder: (context, state) {
@@ -207,37 +211,26 @@ class _MobileHomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final discoveryAlbum = _homeDiscoveryAlbum(state);
-    final latestAlbums = state.albums
-        .where((album) => album.id != discoveryAlbum?.id)
-        .take(3)
-        .toList();
+    final shelfAlbums = <String, MusicAlbum>{
+      for (final album in [...state.albums, ...state.randomPicks])
+        album.id: album,
+    }.values.take(8).toList();
     return RefreshIndicator(
       onRefresh: context.read<HomeCubit>().load,
       child: ListView(
         padding: AppPageLayout.pagePadding(context),
         children: [
           const _MobileHomeTitle(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           if (state.errorMessage != null) ...[
             _HomeInlineError(message: state.errorMessage!),
             const SizedBox(height: 24),
           ],
-          if (discoveryAlbum != null) ...[
-            _MobileDiscoveryCard(album: discoveryAlbum),
-            const SizedBox(height: 32),
-          ],
           if (state.recentlyPlayed.isNotEmpty) ...[
-            _MobileRecentSection(tracks: state.recentlyPlayed.take(2).toList()),
-            const SizedBox(height: 32),
+            _MobileRecentSection(tracks: state.recentlyPlayed.take(5).toList()),
+            const SizedBox(height: 36),
           ],
-          if (state.mostPlayed.isNotEmpty)
-            _MobileMostPlayedSection(tracks: state.mostPlayed.take(3).toList()),
-          if (state.mostPlayed.isNotEmpty &&
-              (state.albums.isNotEmpty || state.randomPicks.isNotEmpty))
-            const SizedBox(height: 32),
-          if (latestAlbums.isNotEmpty)
-            _LatestAlbumsSection(albums: latestAlbums),
+          if (shelfAlbums.isNotEmpty) _MobileRecordShelf(albums: shelfAlbums),
         ],
       ),
     );
@@ -253,15 +246,30 @@ class _MobileHomeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '首页',
+    final colors = context.mobileTheme;
+    return Column(
       key: const ValueKey('v3-mobile-home-title'),
-      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-        fontSize: 31,
-        height: 41 / 31,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.62,
-      ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '乐岛',
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            color: colors.primary,
+            fontSize: AppTypographyTokens.mobileBrand,
+            height: 1.1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '属于你的音乐岛屿',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontSize: AppTypographyTokens.mobileBody,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -865,196 +873,6 @@ class _RecentArtwork extends StatelessWidget {
   }
 }
 
-class _LatestAlbumsSection extends StatelessWidget {
-  const _LatestAlbumsSection({required this.albums});
-
-  final List<MusicAlbum> albums;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(title: '最新添加'),
-        const SizedBox(height: 16),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: 0.50),
-            borderRadius: BorderRadius.circular(AppRadiusTokens.lg),
-            border: Border.all(
-              color: colors.outlineVariant.withValues(alpha: 0.35),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacingTokens.inlineGap),
-            child: Column(
-              children: [
-                for (final album in albums) _LatestAlbumRow(album: album),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LatestAlbumRow extends StatelessWidget {
-  const _LatestAlbumRow({required this.album});
-
-  final MusicAlbum album;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
-      onTap: () => context.push('/album/${album.id}', extra: album),
-      mouseCursor: SystemMouseCursors.click,
-      child: SizedBox(
-        height: AppSpacingTokens.listTileHeight.toDouble(),
-        child: Row(
-          children: [
-            CachedArtwork(
-              imageUrl: album.artworkUrl,
-              size: 40,
-              borderRadius: 4,
-              semanticLabel: '${MediaDisplayText.albumTitle(album.title)}封面',
-              sourceContext: ArtworkSourceContext.album(album),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    MediaDisplayText.albumTitle(album.title),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    MediaDisplayText.artistName(album.artistName),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '${album.trackCount} 首',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(width: 12),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileDiscoveryCard extends StatelessWidget {
-  const _MobileDiscoveryCard({required this.album});
-
-  final MusicAlbum album;
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.65,
-      child: Material(
-        key: const ValueKey('home-discovery-card'),
-        borderRadius: BorderRadius.circular(AppRadiusTokens.md),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => context.push('/album/${album.id}', extra: album),
-          mouseCursor: SystemMouseCursors.click,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) => CachedArtwork(
-                  imageUrl: album.artworkUrl,
-                  size: constraints.maxWidth,
-                  borderRadius: 0,
-                  semanticLabel:
-                      '${MediaDisplayText.albumTitle(album.title)}封面',
-                  sourceContext: ArtworkSourceContext.album(album),
-                ),
-              ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      AppColorTokens.overlayDarkHeavy,
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 18,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '为你发现',
-                            style: TextStyle(
-                              color: AppColorTokens.onDarkOverlayMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            MediaDisplayText.albumTitle(album.title),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColorTokens.onDarkOverlayStrong,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            MediaDisplayText.artistName(album.artistName),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColorTokens.onDarkOverlayMuted,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      child: const Icon(Icons.arrow_forward_rounded, size: 24),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MobileRecentSection extends StatelessWidget {
   const _MobileRecentSection({required this.tracks});
 
@@ -1074,46 +892,133 @@ class _MobileRecentSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var index = 0; index < tracks.length; index++) ...[
-              if (index > 0) const SizedBox(width: 16),
-              Expanded(
-                child: AspectRatio(
-                  aspectRatio: 0.76,
-                  child: _RecentArtworkCard(
-                    track: tracks[index],
-                    queue: tracks,
-                    index: index,
-                  ),
+        for (var index = 0; index < tracks.length; index++)
+          BlocSelector<PlayerCubit, PlayerViewState, String?>(
+            selector: (state) => state.currentTrack?.id,
+            builder: (context, currentTrackId) {
+              final track = tracks[index];
+              return MobileTrackRow(
+                title: MediaDisplayText.trackTitle(track.title),
+                subtitle: MediaDisplayText.artistName(track.artistName),
+                artworkUrl: track.artworkUrl,
+                selected: currentTrackId == track.id,
+                onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+                  context,
+                  tracks: tracks,
+                  startIndex: index,
                 ),
-              ),
-            ],
-          ],
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTrackDuration(track.duration),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.mobileTheme.onSurfaceVariant,
+                        fontSize: AppTypographyTokens.mobileTime,
+                      ),
+                    ),
+                    _HomeTrackActionsButton(track: track),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _MobileRecordShelf extends StatelessWidget {
+  const _MobileRecordShelf({required this.albums});
+
+  final List<MusicAlbum> albums;
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: '我的唱片架',
+          action: TextButton(
+            onPressed: () => context.go('/library?tab=albums'),
+            style: _clickCursorButtonStyle,
+            child: const Text('查看全部'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 196 + ((textScale - 1).clamp(0, 1) * 64),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: albums.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
+            itemBuilder: (context, index) =>
+                _MobileShelfAlbum(album: albums[index]),
+          ),
         ),
       ],
     );
   }
 }
 
-class _MobileMostPlayedSection extends StatelessWidget {
-  const _MobileMostPlayedSection({required this.tracks});
+class _MobileShelfAlbum extends StatelessWidget {
+  const _MobileShelfAlbum({required this.album});
 
-  final List<MusicTrack> tracks;
+  final MusicAlbum album;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(title: '最常播放'),
-        const SizedBox(height: 16),
-        for (var index = 0; index < tracks.length; index++)
-          _MostPlayedRow(index: index, track: tracks[index], queue: tracks),
-      ],
+    return Semantics(
+      button: true,
+      label: '打开专辑《${MediaDisplayText.albumTitle(album.title)}》',
+      child: SizedBox(
+        width: 136,
+        child: InkWell(
+          onTap: () => context.push('/album/${album.id}', extra: album),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CachedArtwork(
+                imageUrl: album.artworkUrl,
+                size: 136,
+                borderRadius: AppRadiusTokens.mobileMd,
+                semanticLabel: '${MediaDisplayText.albumTitle(album.title)}封面',
+                sourceContext: ArtworkSourceContext.album(album),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                MediaDisplayText.albumTitle(album.title),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.mobileTheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                MediaDisplayText.artistName(album.artistName),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.mobileTheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
+}
+
+String _formatTrackDuration(Duration value) {
+  if (value <= Duration.zero) return '--:--';
+  final minutes = value.inMinutes;
+  final seconds = value.inSeconds % 60;
+  return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 }
 
 class _DesktopMostPlayedSection extends StatelessWidget {

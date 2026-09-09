@@ -111,12 +111,16 @@ class _PlayerPageState extends State<PlayerPage> {
           }
 
           final artworkSourceContext = ArtworkSourceContext.track(track);
+          final compact = AppBreakpoints.isCompact(context);
           return Stack(
             fit: StackFit.expand,
             children: [
               BlurredCoverBackground(
                 imageUrl: track.artworkUrl,
                 sourceContext: artworkSourceContext,
+                artworkOpacity: compact ? 0.22 : 0.28,
+                blurSigma: compact ? 48 : 40,
+                protectionStrength: compact ? 0.96 : 0.92,
               ),
               SafeArea(
                 bottom: false,
@@ -165,6 +169,11 @@ class _MobileLayoutState extends State<_MobileLayout> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final artworkHeight = math.min(
+          constraints.maxHeight * (textScale > 1.3 ? 0.28 : 0.36),
+          textScale > 1.3 ? 220.0 : 300.0,
+        );
         return Column(
           children: [
             _PlayerTopBar(
@@ -175,14 +184,14 @@ class _MobileLayoutState extends State<_MobileLayout> {
             if (widget.state.errorMessage case final message?)
               _PlayerFailureNotice(message: message),
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacingTokens.playerHorizontalPadding,
                 ),
                 child: Column(
                   children: [
                     SizedBox(
-                      height: math.min(constraints.maxHeight * 0.36, 300),
+                      height: artworkHeight,
                       child: _MobileSwipeGestureRegion(
                         onSwipeEnd: (details) => _handleSwipe(context, details),
                         onSwipeCancel: _resetSwipe,
@@ -193,7 +202,11 @@ class _MobileLayoutState extends State<_MobileLayout> {
                     const SizedBox(height: 16),
                     _MobileTrackInfo(track: widget.track),
                     const SizedBox(height: 14),
-                    const Expanded(child: _MobileLyricView()),
+                    SizedBox(
+                      height: textScale > 1.3 ? 176 : 156,
+                      child: const _MobileLyricView(),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -313,7 +326,7 @@ class _MobileArtworkStage extends StatelessWidget {
         builder: (context, constraints) {
           final size = math
               .min(constraints.maxWidth, constraints.maxHeight)
-              .clamp(220.0, 280.0)
+              .clamp(120.0, 280.0)
               .toDouble();
           return DecoratedBox(
             decoration: BoxDecoration(
@@ -382,7 +395,9 @@ class _MobileLyricView extends StatelessWidget {
           p.lyricSyncState.timeline != c.lyricSyncState.timeline ||
           p.lyricSyncState.activeIndex != c.lyricSyncState.activeIndex ||
           p.isLyricsLoading != c.isLyricsLoading ||
-          p.lyricErrorMessage != c.lyricErrorMessage,
+          p.lyricErrorMessage != c.lyricErrorMessage ||
+          p.queue != c.queue ||
+          p.currentIndex != c.currentIndex,
       builder: (context, state) {
         if (state.isLyricsLoading && state.lyrics.isEmpty) {
           return const Center(child: CircularProgressIndicator());
@@ -392,14 +407,11 @@ class _MobileLyricView extends StatelessWidget {
           return _LyricLoadFailure(message: state.lyricErrorMessage!);
         }
         if (state.lyrics.isEmpty) {
-          return Center(
-            child: Text(
-              '暂无歌词',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          );
+          final nextIndex = state.currentIndex + 1;
+          final nextTrack = nextIndex < state.queue.length
+              ? state.queue[nextIndex]
+              : null;
+          return _NoLyricsPanel(nextTrack: nextTrack, nextIndex: nextIndex);
         }
 
         final theme = Theme.of(context);
@@ -437,6 +449,92 @@ class _MobileLyricView extends StatelessWidget {
   }
 }
 
+class _NoLyricsPanel extends StatelessWidget {
+  const _NoLyricsPanel({required this.nextTrack, required this.nextIndex});
+
+  final MusicTrack? nextTrack;
+  final int nextIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.mobileTheme;
+    if (nextTrack == null) {
+      return Center(
+        child: Text(
+          '暂无歌词',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      );
+    }
+
+    final track = nextTrack!;
+    return Semantics(
+      button: true,
+      label: '下一首：${track.title}，${track.artistName}',
+      child: Material(
+        color: colors.surfaceMuted.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+        child: InkWell(
+          onTap: () => context.read<PlayerCubit>().playIndex(nextIndex),
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileLg),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                CachedArtwork(
+                  imageUrl: track.artworkUrl,
+                  size: 54,
+                  borderRadius: AppRadiusTokens.mobileSm,
+                  sourceContext: ArtworkSourceContext.track(track),
+                  semanticLabel: '《${track.title}》封面',
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '下一首',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: colors.onSurfaceVariant),
+                      ),
+                      Text(
+                        track.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: colors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      Text(
+                        track.artistName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MobileTrackInfo extends StatelessWidget {
   const _MobileTrackInfo({required this.track});
 
@@ -448,7 +546,7 @@ class _MobileTrackInfo extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return AnimatedSwitcher(
-      duration: AppMotion.state,
+      duration: AppMotion.adaptive(context, AppMotion.state),
       child: Column(
         key: ValueKey(track.id),
         crossAxisAlignment: CrossAxisAlignment.center,

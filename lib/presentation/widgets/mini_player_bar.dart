@@ -141,21 +141,24 @@ class _MiniPlayerSurface extends StatelessWidget {
     }
 
     final failed = status == MiniPlayerPlaybackStatus.failed;
+    final mobileColors = context.mobileTheme;
     return SizedBox(
       height: AppSpacingTokens.mobileMiniPlayerHeight.toDouble(),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: failed ? colorScheme.errorContainer : colorScheme.surface,
+          color: failed ? colorScheme.errorContainer : mobileColors.surface,
           border: Border(
             top: BorderSide(
               color: failed
                   ? colorScheme.error.withValues(alpha: 0.28)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.42),
+                  : mobileColors.outlineVariant,
             ),
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacingTokens.mobilePageX,
+          ),
           child: child,
         ),
       ),

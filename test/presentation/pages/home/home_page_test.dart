@@ -174,17 +174,17 @@ void main() {
     await mouse.removePointer();
   });
 
-  testWidgets('移动首页覆盖最新添加、最常播放、随机内容和长标题', (tester) async {
+  testWidgets('移动首页避免重复播放器并展示最近播放和唱片架', (tester) async {
     final cubit = _TestHomeCubit();
     addTearDown(cubit.close);
-    await _setViewport(tester, const ui.Size(390, 844), textScale: 1.3);
+    await _setViewport(tester, const ui.Size(390, 844), textScale: 2);
     await _pumpHome(tester, cubit, _successState);
-    expect(find.text('首页'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-discovery-card')), findsOneWidget);
-    expect(find.text('为你发现'), findsOneWidget);
-    expect(find.text('最新添加'), findsOneWidget);
-    expect(find.text('最常播放'), findsOneWidget);
-    expect(find.text('随机探索'), findsNothing);
+    expect(find.text('乐岛'), findsOneWidget);
+    expect(find.text('属于你的音乐岛屿'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-continue-listening')), findsNothing);
+    expect(find.text('最近播放'), findsOneWidget);
+    expect(find.text('我的唱片架'), findsOneWidget);
+    expect(find.text('为你发现'), findsNothing);
     expect(find.textContaining('用于验证超长标题'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -365,6 +365,7 @@ const _successState = HomeState(
   status: HomeStatus.success,
   albums: _albums,
   randomPicks: _albums,
+  recentlyPlayed: _tracks,
   mostPlayed: _tracks,
 );
 const _viewports = [
