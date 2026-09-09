@@ -493,31 +493,74 @@ class _MobileExtrasBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          BlocBuilder<FavoritesCubit, FavoritesState>(
-            builder: (context, favState) {
-              final isFav = favState.entries[track.id] ?? track.isFavorite;
-              return FavoriteButton(
-                isFavorite: isFav,
-                onToggle: () => context.read<FavoritesCubit>().toggle(
-                  track.id,
-                  currentValue: isFav,
-                ),
-                size: 22,
-              );
-            },
+          Expanded(
+            child: BlocBuilder<FavoritesCubit, FavoritesState>(
+              builder: (context, favState) {
+                final isFav = favState.entries[track.id] ?? track.isFavorite;
+                return _MobileExtraAction(
+                  label: isFav ? '已收藏' : '收藏',
+                  child: FavoriteButton(
+                    isFavorite: isFav,
+                    onToggle: () => context.read<FavoritesCubit>().toggle(
+                      track.id,
+                      currentValue: isFav,
+                    ),
+                    size: 22,
+                  ),
+                );
+              },
+            ),
           ),
-          _PlayerExtraIconButton(
-            icon: Icons.volume_up_rounded,
-            tooltip: '调节音量',
-            onPressed: () => _showVolumeSheet(context),
+          Expanded(
+            child: _MobileExtraAction(
+              label: '音量',
+              child: _PlayerExtraIconButton(
+                icon: Icons.volume_up_rounded,
+                tooltip: '调节音量',
+                onPressed: () => _showVolumeSheet(context),
+              ),
+            ),
           ),
-          _PlayerExtraIconButton(
-            icon: Icons.tune_rounded,
-            tooltip: '播放设置',
-            onPressed: () => QualityPickerSheet.show(context),
+          Expanded(
+            child: _MobileExtraAction(
+              label: '音质',
+              child: _PlayerExtraIconButton(
+                icon: Icons.tune_rounded,
+                tooltip: '选择音质',
+                onPressed: () => QualityPickerSheet.show(context),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MobileExtraAction extends StatelessWidget {
+  const _MobileExtraAction({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        child,
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

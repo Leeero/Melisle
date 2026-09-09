@@ -85,8 +85,10 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
     final tapTargetSize = math.max(size, 44.0);
     final tooltip = _tooltip;
     final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
-    final backgroundColor = widget.backgroundColor ?? colorScheme.primaryContainer;
-    final foregroundColor = widget.foregroundColor ?? colorScheme.onPrimaryContainer;
+    final backgroundColor =
+        widget.backgroundColor ?? colorScheme.primaryContainer;
+    final foregroundColor =
+        widget.foregroundColor ?? colorScheme.onPrimaryContainer;
     final ringColor = colorScheme.primary;
 
     return Tooltip(
@@ -198,7 +200,7 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
   }
 
   IconData get _icon {
-    if (widget.isLoading) return Icons.more_horiz_rounded;
+    if (widget.isLoading) return Icons.play_arrow_rounded;
     if (widget.isPlaying) return Icons.pause_rounded;
     return Icons.play_arrow_rounded;
   }

@@ -9,7 +9,6 @@ import 'package:cross_platform_music_player/presentation/utils/media_display_tex
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
-import 'package:cross_platform_music_player/presentation/widgets/effects/glass_container.dart';
 import 'package:cross_platform_music_player/presentation/widgets/loading_play_pause_button.dart';
 import 'package:cross_platform_music_player/presentation/widgets/queue_sheet.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
@@ -142,30 +141,22 @@ class _MiniPlayerSurface extends StatelessWidget {
     }
 
     final failed = status == MiniPlayerPlaybackStatus.failed;
-    final paused = status == MiniPlayerPlaybackStatus.paused;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SizedBox(
-        height: AppSpacingTokens.mobileMiniPlayerHeight.toDouble(),
-        child: GlassContainer(
-          blurRadius: 24,
-          opacity: paused ? 0.70 : 0.85,
-          borderRadius: BorderRadius.circular(AppRadiusTokens.miniPlayer),
-          border: Border.all(
-            color: failed
-                ? colorScheme.error.withValues(alpha: 0.30)
-                : Colors.white.withValues(alpha: 0.10),
-          ),
-          tintColor: failed
-              ? colorScheme.errorContainer.withValues(alpha: 0.30)
-              : null,
-          child: Opacity(
-            opacity: paused ? 0.80 : 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: child,
+    return SizedBox(
+      height: AppSpacingTokens.mobileMiniPlayerHeight.toDouble(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: failed ? colorScheme.errorContainer : colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: failed
+                  ? colorScheme.error.withValues(alpha: 0.28)
+                  : colorScheme.outlineVariant.withValues(alpha: 0.42),
             ),
           ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: child,
         ),
       ),
     );
@@ -258,11 +249,12 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                   curve: AppMotion.standard,
                   scale: _pressed ? 0.992 : 1,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
                       Positioned(
                         left: 0,
                         right: 0,
-                        top: 0,
+                        top: 3,
                         child: _CompactProgressBar(
                           failed: failed,
                           loading: state.isLoading,
@@ -271,6 +263,7 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                         ),
                       ),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _CompactArtwork(
                             imageUrl: widget.artworkUrl,
@@ -322,24 +315,24 @@ class _CompactMiniPlayerState extends State<_CompactMiniPlayer> {
                           const SizedBox(width: 4),
                           if (failed)
                             const _MiniRetryButton()
-                          else
+                          else ...[
+                            const _MiniFavoriteButton(),
                             LoadingPlayPauseButton(
                               isLoading: state.isLoading,
                               isPlaying: state.isPlaying,
                               onPressed: context
                                   .read<PlayerCubit>()
                                   .togglePlayback,
-                              size: 36,
-                              iconSize: 20,
+                              size: 44,
+                              iconSize: 24,
                               loadingStrokeWidth: 2.0,
                             ),
+                          ],
                           _MiniControlButton(
-                            icon: Icons.skip_next_rounded,
-                            onPressed: state.isLoading
-                                ? null
-                                : context.read<PlayerCubit>().next,
+                            icon: Icons.queue_music_rounded,
+                            onPressed: () => _showMiniQueueSheet(context),
                             compact: true,
-                            tooltip: '下一曲',
+                            tooltip: '当前歌单',
                           ),
                         ],
                       ),
@@ -388,7 +381,7 @@ class _CompactArtwork extends StatelessWidget {
                 : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
             child: CachedArtwork(
               imageUrl: imageUrl,
-              size: 32,
+              size: 40,
               borderRadius: AppRadiusTokens.sm,
               sourceContext: sourceContext,
             ),
@@ -426,7 +419,7 @@ class _CompactProgressBar extends StatelessWidget {
         ? 0.0
         : (position.inMilliseconds / total).clamp(0.0, 1.0);
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+      borderRadius: BorderRadius.circular(AppRadiusTokens.full),
       child: SizedBox(
         height: 2,
         child: LinearProgressIndicator(
@@ -1064,7 +1057,7 @@ class _MiniControlButton extends StatefulWidget {
 class _MiniControlButtonState extends State<_MiniControlButton> {
   @override
   Widget build(BuildContext context) {
-    final size = widget.compact ? 28.0 : 36.0;
+    const size = 44.0;
     return IconButton(
       onPressed: widget.onPressed,
       mouseCursor: widget.onPressed == null
@@ -1076,9 +1069,9 @@ class _MiniControlButtonState extends State<_MiniControlButton> {
         tone: AppActionButtonTone.neutral,
         selected: widget.selected,
         size: size,
-        iconSize: widget.compact ? 14 : 16,
+        iconSize: widget.compact ? 18 : 20,
       ),
-      icon: Icon(widget.icon, size: widget.compact ? 14 : 16),
+      icon: Icon(widget.icon, size: widget.compact ? 18 : 20),
     );
   }
 }

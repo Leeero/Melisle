@@ -20,6 +20,7 @@ void main() {
 
     expect(find.byTooltip('正在准备播放'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
   });
 }

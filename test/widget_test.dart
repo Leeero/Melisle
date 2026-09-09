@@ -399,6 +399,30 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
 
+    await tester.tap(find.text('搜索').last);
+    await tester.pumpAndSettle();
+    final router = GoRouter.of(
+      tester.element(find.byKey(const ValueKey('shell-compact'))),
+    );
+    for (final destination in const [
+      (label: '最近播放', location: '/home/history'),
+      (label: '我的收藏', location: '/favorites'),
+      (label: '浏览专辑', location: '/library?tab=albums'),
+      (label: '浏览艺术家', location: '/library?tab=artists'),
+    ]) {
+      await tester.tap(find.text(destination.label));
+      await tester.pumpAndSettle();
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        destination.location,
+      );
+
+      await tester.tap(find.text('搜索').last);
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/search');
+      expect(find.text('开始探索'), findsOneWidget);
+    }
+
     playerCubit.update(
       PlayerViewState(
         queue: const [
@@ -426,7 +450,15 @@ void main() {
 
     GoRouter.of(
       tester.element(find.byKey(const ValueKey('shell-compact'))),
-    ).go('/history');
+    ).go('/home/history');
+    await tester.pumpAndSettle();
+    expect(find.text('播放历史'), findsOneWidget);
+
+    await tester.tap(find.text('搜索').last);
+    await tester.pumpAndSettle();
+    expect(find.text('开始探索'), findsOneWidget);
+
+    await tester.tap(find.text('首页').last);
     await tester.pumpAndSettle();
     expect(find.text('播放历史'), findsNothing);
 
@@ -758,7 +790,7 @@ void main() {
   });
 
   testWidgets(
-    'desktop player footer shows current track metadata on the left',
+    'player keeps labeled mobile extras and desktop footer metadata',
     (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -802,6 +834,26 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
+
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pump();
+      expect(find.text('收藏'), findsOneWidget);
+      expect(find.text('音量'), findsOneWidget);
+      expect(find.text('音质'), findsOneWidget);
+      expect(find.byTooltip('调节音量'), findsOneWidget);
+      expect(find.byTooltip('选择音质'), findsOneWidget);
+      expect(
+        tester.getSize(find.byTooltip('调节音量')).shortestSide,
+        greaterThanOrEqualTo(44),
+      );
+      expect(
+        tester.getSize(find.byTooltip('选择音质')).shortestSide,
+        greaterThanOrEqualTo(44),
+      );
+      expect(tester.takeException(), isNull);
+
+      tester.view.physicalSize = const Size(1440, 900);
       await tester.pump();
 
       final summary = find.bySemanticsLabel('当前播放：底栏当前歌曲，歌手：底栏歌手');
@@ -1183,7 +1235,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('收藏'), findsWidgets);
-    expect(find.text('0'), findsOneWidget);
+    expect(find.textContaining('0 首收藏歌曲'), findsOneWidget);
     expect(find.text('还没有收藏歌曲'), findsOneWidget);
     expect(find.text('在媒体库或播放页点亮爱心后，歌曲会集中显示在这里。'), findsOneWidget);
     expect(find.byTooltip('返回'), findsNothing);
