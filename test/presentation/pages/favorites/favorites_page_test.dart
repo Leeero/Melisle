@@ -115,13 +115,13 @@ Future<void> _pumpFavorites(
           themeMode: themeMode,
           home: const RepaintBoundary(
             key: ValueKey('favorites-capture'),
-            child: FavoritesPage(),
+            child: Scaffold(body: FavoritesPage()),
           ),
         ),
       ),
     ),
   );
-  await tester.pump();
+  await tester.pumpAndSettle();
 }
 
 Future<void> _setViewport(

@@ -1,96 +1,51 @@
-# Media Library Songs Design QA
+# Favorites Mobile Redesign QA
 
-## Comparison Target
+- Source visual truth: `/Users/lero/.codex/generated_images/01a07f04-6d29-7b80-8c79-e699712a8f2a/exec-c30b709a-5a38-415d-81b0-51490409cc3c.png`
+- Implementation screenshot: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/favorites-390x844-light-scale-1.0.png`
+- Desktop regression screenshot: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/favorites-1080x900-light-scale-1.0.png`
+- Combined comparison: `/tmp/melisle-favorites-design-qa.png`
+- Viewport: 390 x 844 CSS pixels, device pixel ratio 1
+- Source pixels: 853 x 1844, normalized to 390 x 844 for comparison
+- Implementation pixels: 390 x 844
+- State: light theme, favorite tracks loaded, no current mini-player shell in the isolated page harness
 
-- Selected revised visual: `/Users/lero/.codex/generated_images/01a056b4-c39c-74d0-aa12-983a69b9e061/exec-8178f2af-6b86-4375-9356-4579a639e776.png`
-- Native macOS implementation: `/Users/lero/Documents/MyData/Code/melisle/artifacts/design/ambient-listening-stage/library/library-implementation-macos-1200x768.jpg`
-- Side-by-side comparison: `/Users/lero/Documents/MyData/Code/melisle/artifacts/design/ambient-listening-stage/library/library-design-qa-comparison.png`
+## Full-view comparison evidence
 
-## Normalization
+The implementation matches the selected direction in the surfaces owned by the favorites page: compact two-button action row, continuous 68px artwork list, lightweight separators, background-free 44px favorite actions, a separate 44px more-actions trigger, semantic coral favorite color, and existing teal/blue desktop theme roles. The selected-row wash spans the full viewport while row content retains the 24px safe inset. The mobile list no longer uses a card per song. The 1080px capture remains on the pre-existing desktop table branch.
 
-- Source pixels: 1487 x 1058.
-- Native implementation pixels: 1199 x 768.
-- The source was proportionally scaled to 1079 x 768 and placed beside the native capture without cropping.
-- Both states use the desktop dark-theme Songs view. The implementation uses live library data and an idle player, so artwork, track count, row content, and current-playing state intentionally differ from the generated visual.
+The source mock includes search, overflow menus, mini player, and bottom navigation. Search and overflow were intentionally omitted because the user constrained the redesign to existing project functionality. Mini player and bottom navigation belong to `AppShell`, already exist in the application, and were not changed by this page refactor.
 
-## Verified Structure
+## Focused comparison evidence
 
-- The desktop page preserves the selected hierarchy: sidebar, title and playback actions, unified toolbar, table, and fixed bottom player.
-- The toolbar provides working song search, favorite filtering, sorting, and compact/comfortable display density.
-- Song identity combines artwork, title, and artist; album, quality, duration, favorite, and more actions remain independent columns.
-- Only the left song identity region starts playback. Album and row actions no longer trigger playback.
-- Hovering the song identity region replaces the index with a play icon; the current track uses an equalizer indicator.
-- Each library row exposes one playback semantics action, avoiding nested duplicate play buttons.
-- The generated visual's unsupported audio-quality filter was intentionally replaced with `全部歌曲 / 仅显示收藏`, matching the repository's real capabilities instead of presenting a non-functional control.
+The combined comparison was inspected at full resolution. A separate crop was unnecessary because the critical changed region—action toolbar plus the first two song rows—is readable at 390px and the implementation uses code-native Material icons and existing artwork rendering.
 
-## Iteration History
+## Required fidelity surfaces
 
-1. Initial native QA found an unbounded-width exception caused by the legacy combined sort/filter control remaining in the title action area. The duplicate control was removed and title actions were reduced to shuffle and play-all.
-2. Accessibility inspection found nested playback semantics on library rows. Outer-row playback semantics were disabled for library style, leaving the identity hotspot as the single playback action.
-3. Compact and comfortable density states were exercised; the comfortable state was restored for the final capture.
+- Fonts and typography: platform font and existing app text theme retained; title hierarchy is unchanged on desktop and compact list titles use 15px medium weight. The headless test environment lacks Chinese glyphs, so screenshot glyph boxes are an environment limitation rather than an app regression.
+- Spacing and layout rhythm: compact rows use 44px artwork, 12px content gap, 44px actions, and subtle row dividers. Desktop spacing remains unchanged.
+- Colors and visual tokens: CTA uses theme primary, shuffle uses theme secondary, favorites use `ThemeData.favoriteColor`, and selected backgrounds use existing theme extensions.
+- Image quality and asset fidelity: production continues to use `CachedArtwork`; deterministic QA screenshots use generated placeholders to avoid network/plugin dependencies in widget tests.
+- Copy and content: existing product copy and actions are retained. No unsupported QQ Music labels or capabilities were added.
 
-## Validation
+## Comparison history
 
-- Music track table and library filter widget tests: passed, 16 tests.
-- Desktop Songs toolbar smoke test: passed.
-- Playback hotspot and compact-density regression tests: passed.
-- Single playback semantics action regression test: passed.
-- Targeted Flutter analysis for the changed library files and tests: passed with no issues.
-- `git diff --check`: passed.
-
-## Residual Differences
-
-- The generated source uses curated placeholder data while the native capture uses the connected user's media library.
-- The source is a larger 1487 x 1058 composition; the native verification window is 1199 x 768, so the implementation shows fewer visible rows and slightly tighter horizontal spacing.
-- These differences do not alter the layout hierarchy, interaction model, or responsive behavior.
-
-final result: passed
-
----
-
-# Login Redesign Design QA
-
-## Comparison Target
-
-- Source visual truth: `/var/folders/60/sjbc7jwx6q35_rb5vhh6_h3m0000gn/T/codex-clipboard-d56777e0-1e12-49fa-aa4e-c73c063c6400.png`
-- Normalized source: `/Users/lero/Documents/MyData/Code/melisle/audit-output/2026-09-02-login-redesign/source-normalized.png`
-- Rendered implementation: `/Users/lero/Documents/MyData/Code/melisle/design-reference/screenshots/actual/login-desktop-dark-1440x900-idle.png`
-- Full-view comparison: `/Users/lero/Documents/MyData/Code/melisle/audit-output/2026-09-02-login-redesign/login-source-vs-implementation.png`
-- Focused form comparison: `/Users/lero/Documents/MyData/Code/melisle/audit-output/2026-09-02-login-redesign/login-form-focused.png`
-- Focused artwork comparison: `/Users/lero/Documents/MyData/Code/melisle/audit-output/2026-09-02-login-redesign/login-artwork-focused.png`
-
-## Normalization
-
-- Source pixels: 2556 × 1988.
-- Source was center-cropped to a 16:10 content frame and scaled to 1440 × 900.
-- Implementation pixels and logical viewport: 1440 × 900 at devicePixelRatio 1.
-- State: desktop, dark theme, unauthenticated, idle form.
-- The Flutter widget-test renderer substitutes deterministic Ahem glyphs for most product text. Typography hierarchy, wrapping, and occupied geometry are visible; production font family assignments and all Chinese copy are additionally covered by widget assertions.
+1. Initial capture rendered transparent pixels against black because the repaint boundary excluded the scaffold background.
+2. Fix: moved the repaint boundary outside the test scaffold and waited for page transitions to settle.
+3. Post-fix evidence: the 390 x 844 and 1080 x 900 captures show the correct light surface, compact mobile list, and unchanged desktop table.
 
 ## Findings
 
-- No actionable P0/P1/P2 differences remain.
-- Fonts and typography: brand wordmark uses the bundled Righteous face; product copy remains on the platform font stack. The hero/title/body hierarchy and line wrapping match the approved hybrid direction. The Ahem screenshot substitution is a capture-only limitation, not a production font change.
-- Spacing and layout rhythm: the implementation preserves the approved 52/48 desktop split, wider brand panel, centered 460px form, restrained borders, and full-height surfaces. Tablet and mobile intentionally return to the existing single-card structure.
-- Colors and tokens: both panels use existing semantic surface, primary, outline, error, and on-surface roles; no second color system or gradient was introduced.
-- Image quality and asset fidelity: the three prototype cover sources were imported as local 512px assets and use cover cropping, rounded masks, borders, and restrained shadows. No placeholder or code-drawn replacement remains.
-- Copy and content: the prototype's manual Navidrome/Subsonic/Emby selector was intentionally removed. The implementation states automatic recognition and keeps the generic `连接服务器` action, matching the repository's existing auto-detect behavior.
+No actionable P0, P1, or P2 differences remain within the agreed functional scope.
 
-## Comparison History
+## Follow-up polish
 
-1. Initial implementation used code-native decorative tiles in place of the reference cover artwork. This was treated as an asset-fidelity blocker.
-2. The tiles were replaced with the original `dawn-river`, `forest-echo`, and `night-city` cover sources, resized to 512px for the packaged app.
-3. Post-fix full-view and focused artwork comparisons confirm the source art direction, overlap, crop, and scale are preserved. No P0/P1/P2 findings remain.
+- P3: capture a simulator screenshot with real Chinese system fonts and the full `AppShell` when a signed-in backend is available.
+- P3: consider adding a dedicated tabbed-repository screenshot fixture so the mobile title and tabs are included in automated visual evidence.
 
-## Responsive and State Validation
+## Verification
 
-- 1440 × 900: split layout, idle/loading/failure, light/dark.
-- 900 × 800: centered 480px single-card layout without overflow.
-- 390 × 844 at text scale 1.3: 358px mobile card without overflow.
-- Primary interactions tested: validation, submit loading state, disabled CTA, password visibility control, and failure recovery label.
-
-## Follow-up Polish
-
-- P3: a native-window screenshot can be added later for pixel-level platform font antialiasing comparison; this does not block the layout handoff.
+- Favorites page tests: passed, 23 tests.
+- Targeted analysis of changed files: passed with no issues.
+- Full repository analysis: blocked by pre-existing unrelated errors in artwork color utilities and other page tests.
 
 final result: passed
