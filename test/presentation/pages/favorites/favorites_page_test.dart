@@ -14,6 +14,7 @@ import 'package:cross_platform_music_player/presentation/blocs/player/player_cub
 import 'package:cross_platform_music_player/presentation/blocs/player/player_view_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/settings/app_settings_cubit.dart';
 import 'package:cross_platform_music_player/presentation/pages/favorites/favorites_page.dart';
+import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -67,6 +68,33 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('移动端收藏歌曲使用内容边距和低强调取消收藏操作', (tester) async {
+    await _setViewport(tester, const ui.Size(390, 844));
+    await _pumpFavorites(
+      tester,
+      _successState,
+      currentTrack: _mockTracks.first,
+    );
+
+    expect(find.text('播放全部'), findsOneWidget);
+    expect(find.textContaining('播放全部（'), findsNothing);
+
+    final firstArtwork = tester.getRect(find.byType(CachedArtwork).first);
+    expect(
+      firstArtwork.left,
+      greaterThanOrEqualTo(AppSpacingTokens.pageHorizontalCompact),
+    );
+
+    final favoriteIcon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byTooltip('取消收藏').first,
+        matching: find.byIcon(Icons.favorite_rounded),
+      ),
+    );
+    expect(favoriteIcon.color, AppTheme.light().colorScheme.onSurfaceVariant);
+    expect(tester.takeException(), isNull);
   });
 }
 

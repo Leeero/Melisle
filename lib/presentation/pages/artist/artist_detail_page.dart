@@ -1,11 +1,13 @@
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_albums.dart';
 import 'package:cross_platform_music_player/application/usecases/fetch_artist_top_tracks.dart';
 import 'package:cross_platform_music_player/domain/entities/music_artist.dart';
+import 'package:cross_platform_music_player/domain/entities/music_track.dart';
 import 'package:cross_platform_music_player/domain/repositories/music_repository.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_cubit.dart';
 import 'package:cross_platform_music_player/presentation/blocs/artist/artist_state.dart';
 import 'package:cross_platform_music_player/presentation/blocs/player/player_cubit.dart';
 import 'package:cross_platform_music_player/presentation/utils/detail_route_navigation.dart';
+import 'package:cross_platform_music_player/presentation/utils/media_display_text.dart';
 import 'package:cross_platform_music_player/presentation/utils/player_navigation.dart';
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_action_button.dart';
@@ -86,7 +88,7 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                   SliverPadding(
                     padding: AppPageLayout.pagePadding(
                       context,
-                      bottom: AppSpacingTokens.inlineGap,
+                      bottom: AppSpacingTokens.compactGap,
                     ),
                     sliver: SliverToBoxAdapter(
                       child: AppDetailBackNav(
@@ -100,10 +102,7 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                           context,
                           bottom: AppPageLayout.sectionGap,
                         )
-                      : AppPageLayout.sectionPadding(
-                          context,
-                          bottom: AppPageLayout.sectionGap,
-                        ),
+                      : AppPageLayout.sectionPadding(context, bottom: 24),
                   sliver: SliverToBoxAdapter(
                     child: _ArtistHero(
                       artist: artist,
@@ -143,14 +142,16 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                               selectedValue: _selectedTab,
                               onChanged: (tab) =>
                                   setState(() => _selectedTab = tab),
-                              items: const [
+                              items: [
                                 AppTextTabItem<_ArtistDetailTab>(
                                   value: _ArtistDetailTab.tracks,
                                   label: '歌曲',
+                                  count: state.topTracks.length,
                                 ),
                                 AppTextTabItem<_ArtistDetailTab>(
                                   value: _ArtistDetailTab.albums,
                                   label: '专辑',
+                                  count: state.albums.length,
                                 ),
                               ],
                             ),
@@ -158,40 +159,25 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                           if (_selectedTab == _ArtistDetailTab.tracks &&
                               state.topTracks.isNotEmpty) ...[
                             const SizedBox(width: 16),
-                            if (isWide)
-                              AppActionButton(
-                                icon: Icons.play_arrow_rounded,
-                                label: '播放全部',
-                                tone: AppActionButtonTone.primary,
-                                onPressed: () =>
-                                    _playArtistTopTracks(context, state),
-                              )
-                            else
-                              Tooltip(
-                                message: '播放全部',
-                                child: SizedBox.square(
-                                  dimension: 44,
-                                  child: FilledButton(
-                                    onPressed: () =>
-                                        _playArtistTopTracks(context, state),
-                                    style: FilledButton.styleFrom(
-                                      padding: EdgeInsets.zero,
-                                      shape: const CircleBorder(),
-                                    ),
-                                    child: const Icon(
-                                      Icons.play_arrow_rounded,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                            AppActionButton(
+                              icon: Icons.play_arrow_rounded,
+                              label: '播放全部',
+                              tone: AppActionButtonTone.primary,
+                              onPressed: () =>
+                                  _playArtistTopTracks(context, state),
+                            ),
                           ],
                         ],
                       ),
                     ),
                   ),
                   if (_selectedTab == _ArtistDetailTab.tracks)
-                    ..._trackSlivers(state, currentTrackId, isWide)
+                    ..._trackSlivers(
+                      state,
+                      currentTrackId,
+                      isWide,
+                      hasMiniPlayer,
+                    )
                   else
                     ..._albumSlivers(state, isWide, hasMiniPlayer),
                 ],
@@ -207,6 +193,7 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
     ArtistState state,
     String? currentTrackId,
     bool isWide,
+    bool hasMiniPlayer,
   ) {
     if (state.topTracks.isEmpty) {
       return const [AppSliverStateView.message(message: '这位歌手暂无歌曲。')];
@@ -216,7 +203,12 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
       SliverPadding(
         padding: isWide
             ? AppPageLayout.sectionPadding(context, bottom: 16)
-            : const EdgeInsets.only(bottom: 16),
+            : const EdgeInsets.fromLTRB(
+                AppSpacingTokens.pageHorizontalCompact,
+                0,
+                AppSpacingTokens.pageHorizontalCompact,
+                0,
+              ),
         sliver: isWide
             ? SliverToBoxAdapter(
                 child: MusicTrackTable(
@@ -238,8 +230,8 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                   return MusicTrackTile.row(
                     isCurrent: track.id == currentTrackId,
                     artworkUrl: track.artworkUrl,
-                    title: track.title,
-                    subtitle: track.albumTitle,
+                    title: MediaDisplayText.trackTitle(track.title),
+                    subtitle: _artistTrackSubtitle(track),
                     onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
                       context,
                       tracks: state.topTracks,
@@ -259,6 +251,10 @@ class _ArtistDetailViewState extends State<_ArtistDetailView> {
                 }, childCount: state.topTracks.length),
               ),
       ),
+      if (!isWide)
+        SliverToBoxAdapter(
+          child: SizedBox(height: _contentBottomInset(context, hasMiniPlayer)),
+        ),
     ];
   }
 
@@ -341,6 +337,7 @@ class _ArtistHero extends StatelessWidget {
     final effectiveTrackCount = topTrackCount > 0
         ? topTrackCount
         : (artist?.trackCount ?? 0);
+    final displayName = MediaDisplayText.artistName(artist?.name);
 
     return AppDetailHeroFrame(
       padding: EdgeInsets.zero,
@@ -357,9 +354,9 @@ class _ArtistHero extends StatelessWidget {
                     imageUrl: artworkUrl,
                     size: isWide ? 160 : 104,
                     borderRadius: 999,
-                    semanticLabel: '${artist?.name ?? '未知歌手'}头像',
+                    semanticLabel: '$displayName头像',
                   )
-                : _ArtistAvatarPlaceholder(name: artist?.name),
+                : _ArtistAvatarPlaceholder(name: displayName),
           ),
         );
       },
@@ -370,7 +367,7 @@ class _ArtistHero extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              artist?.name.trim().isNotEmpty ?? false ? artist!.name : '未知歌手',
+              displayName,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -401,7 +398,7 @@ class _ArtistAvatarPlaceholder extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       image: true,
-      label: '${name?.trim().isNotEmpty ?? false ? name : '未知歌手'}头像不可用',
+      label: '${MediaDisplayText.artistName(name)}头像不可用',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
@@ -421,6 +418,18 @@ double _contentBottomInset(BuildContext context, bool hasMiniPlayer) {
     return AppPageLayout.contentBottomInset;
   }
   return hasMiniPlayer ? 168 : 96;
+}
+
+String _artistTrackSubtitle(MusicTrack track) {
+  final album = MediaDisplayText.albumTitle(track.albumTitle);
+  if (album != '未知专辑') return album;
+  if (track.duration <= Duration.zero) return '暂无专辑信息';
+  final minutes = track.duration.inMinutes;
+  final seconds = track.duration.inSeconds
+      .remainder(60)
+      .toString()
+      .padLeft(2, '0');
+  return '$minutes:$seconds';
 }
 
 Future<void> _playArtistTopTracks(

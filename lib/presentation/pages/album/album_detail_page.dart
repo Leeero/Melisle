@@ -80,8 +80,8 @@ class _AlbumDetailView extends StatelessWidget {
                           bottom: AppSpacingTokens.inlineGap,
                         ),
                         sliver: SliverToBoxAdapter(
-                          child: _AlbumMobileToolbar(
-                            onBack: () => _goBackToLibrary(context),
+                          child: AppDetailBackNav(
+                            onPressed: () => _goBackToLibrary(context),
                           ),
                         ),
                       ),
@@ -121,7 +121,12 @@ class _AlbumDetailView extends StatelessWidget {
                                 context,
                                 bottom: bottomInset,
                               )
-                            : EdgeInsets.only(bottom: bottomInset),
+                            : EdgeInsets.fromLTRB(
+                                AppSpacingTokens.pageHorizontalCompact,
+                                0,
+                                AppSpacingTokens.pageHorizontalCompact,
+                                bottomInset,
+                              ),
                         sliver: state.tracks.isEmpty
                             ? const AppSliverStateView.message(
                                 message: '当前专辑还没有曲目。',
@@ -455,37 +460,6 @@ Duration _totalDuration(List<MusicTrack> tracks) {
 String _albumTrackSubtitle(MusicTrack track) {
   return '${MediaDisplayText.artistName(track.artistName)} · '
       '${MediaDisplayText.albumTitle(track.albumTitle)}';
-}
-
-class _AlbumMobileToolbar extends StatelessWidget {
-  const _AlbumMobileToolbar({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: '返回',
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          const Expanded(
-            child: Text(
-              '专辑详情',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
 }
 
 class _AlbumMetaLine extends StatelessWidget {

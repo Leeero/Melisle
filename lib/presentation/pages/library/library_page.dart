@@ -16,7 +16,6 @@ import 'package:cross_platform_music_player/presentation/widgets/controls/app_ac
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_scope_tabs.dart';
 import 'package:cross_platform_music_player/presentation/widgets/controls/app_snackbar.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/app_skeleton.dart';
-import 'package:cross_platform_music_player/presentation/widgets/layout/fade_slide_transition.dart';
 import 'package:cross_platform_music_player/presentation/widgets/layout/page_layout.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_track_table.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_library_track_row.dart';
@@ -110,21 +109,25 @@ class _LibraryViewState extends State<_LibraryView> {
                     _playAllLibraryTracks(context, state, shuffled: true),
               )
             : null;
-        return AppContentPage(
-          header: _LibraryHeader(
-            state: state,
-            searchController: _searchController,
-            desktopTrackActions: desktopTrackActions,
-            trackDensity: _trackDensity,
-            onTrackDensityChanged: (density) {
-              setState(() => _trackDensity = density);
-            },
-            albumDensity: _albumDensity,
-            onAlbumDensityChanged: (density) {
-              setState(() => _albumDensity = density);
-            },
+        final compact = AppBreakpoints.isCompact(context);
+        return ColoredBox(
+          color: compact ? context.mobileTheme.scaffold : Colors.transparent,
+          child: AppContentPage(
+            header: _LibraryHeader(
+              state: state,
+              searchController: _searchController,
+              desktopTrackActions: desktopTrackActions,
+              trackDensity: _trackDensity,
+              onTrackDensityChanged: (density) {
+                setState(() => _trackDensity = density);
+              },
+              albumDensity: _albumDensity,
+              onAlbumDensityChanged: (density) {
+                setState(() => _albumDensity = density);
+              },
+            ),
+            body: _buildBody(context, state, horizontalPadding, currentTrackId),
           ),
-          body: _buildBody(context, state, horizontalPadding, currentTrackId),
         );
       },
     );
@@ -266,20 +269,16 @@ class _LibraryViewState extends State<_LibraryView> {
       desktopTrailingBuilder: (context, track, hovered) =>
           _LibraryTrackActions(track: track),
       mobileItemBuilder: (context, track, index, isCurrent) =>
-          StaggeredFadeSlide(
+          MusicLibraryTrackRow(
+            track: track,
             index: index,
-            delay: const Duration(milliseconds: 30),
-            child: MusicLibraryTrackRow(
-              track: track,
-              index: index,
-              isCurrent: isCurrent,
-              onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
-                context,
-                tracks: state.tracks,
-                startIndex: index,
-              ),
-              onMore: () => showTrackActionsSheet(context, track),
+            isCurrent: isCurrent,
+            onTap: () => PlayerNavigation.playTracksAndOpenPlayer(
+              context,
+              tracks: state.tracks,
+              startIndex: index,
             ),
+            onMore: () => showTrackActionsSheet(context, track),
           ),
     );
   }
@@ -462,19 +461,17 @@ String _artistIndexLabel(String name) {
   return '#';
 }
 
-String _librarySummaryLabel(LibraryState state) {
-  final trackCount = state.totalTrackCount ?? state.tracks.length;
-  final parts = <String>[
-    if (trackCount > 0) '$trackCount 首',
-    if (state.albums.isNotEmpty) '${state.albums.length} 专辑',
-    if (state.artists.isNotEmpty) '${state.artists.length} 歌手',
-    if (state.playlists.isNotEmpty) '${state.playlists.length} 歌单',
-  ];
-
-  if (state.status == LibraryStatus.loading && parts.isEmpty) {
-    return '正在整理你的媒体库。';
+String _mobileLibrarySummaryLabel(LibraryState state) {
+  if (state.status == LibraryStatus.loading && state.isCurrentFilterEmpty) {
+    return '正在加载';
   }
-  return parts.isEmpty ? '歌曲、专辑、歌手和歌单会按音乐源实时展示。' : parts.join(' · ');
+  return switch (state.currentFilter) {
+    LibraryFilter.tracks =>
+      '${_formatCount(state.totalTrackCount ?? state.tracks.length)} 首歌曲',
+    LibraryFilter.albums => '${state.albums.length} 张专辑',
+    LibraryFilter.artists => '${state.artists.length} 位歌手',
+    LibraryFilter.playlists => '${state.playlists.length} 个歌单',
+  };
 }
 
 String _libraryFilterLabel(LibraryFilter filter) => switch (filter) {
@@ -512,12 +509,6 @@ String _formatCount(int value) {
   return buffer.toString();
 }
 
-String _formatTrackDuration(Duration duration) {
-  final minutes = duration.inMinutes;
-  final seconds = duration.inSeconds % 60;
-  return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-}
-
 class _LibraryTrackFavoriteButton extends StatelessWidget {
   const _LibraryTrackFavoriteButton({required this.track});
 
@@ -540,7 +531,7 @@ class _LibraryTrackFavoriteButton extends StatelessWidget {
             AppSnackBar.show(context, isFavorite ? '已取消收藏' : '已收藏歌曲');
           } catch (_) {
             if (!context.mounted) return;
-            AppSnackBar.show(context, '操作失败，请重试');
+            AppSnackBar.show(context, '操作失败，请重试', tone: AppSnackBarTone.error);
           }
         },
         icon: AnimatedSwitcher(
@@ -629,162 +620,6 @@ class _LibraryTrackActions extends StatelessWidget {
   }
 }
 
-class _MobileLibraryTrackRow extends StatefulWidget {
-  const _MobileLibraryTrackRow({
-    required this.track,
-    required this.index,
-    required this.isCurrent,
-    required this.onTap,
-    required this.onMore,
-  });
-
-  final MusicTrack track;
-  final int index;
-  final bool isCurrent;
-  final Future<void> Function() onTap;
-  final VoidCallback onMore;
-
-  @override
-  State<_MobileLibraryTrackRow> createState() => _MobileLibraryTrackRowState();
-}
-
-class _MobileLibraryTrackRowState extends State<_MobileLibraryTrackRow> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final subtitle = [
-      widget.track.artistName,
-      widget.track.albumTitle,
-    ].where((item) => item.isNotEmpty).join(' · ');
-    final selected = widget.isCurrent;
-
-    return Semantics(
-      label: '播放《${widget.track.title}》',
-      button: true,
-      selected: selected,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-            ),
-          ),
-        ),
-        child: AnimatedContainer(
-          duration: AppMotion.micro,
-          curve: AppMotion.enter,
-          constraints: const BoxConstraints(minHeight: 52),
-          decoration: BoxDecoration(
-            color: selected
-                ? theme.selectedWash
-                : _pressed
-                ? theme.hoverWash
-                : Colors.transparent,
-            borderRadius: selected || _pressed
-                ? BorderRadius.circular(AppRadiusTokens.mobileSm)
-                : BorderRadius.zero,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
-              onTap: widget.onTap,
-              mouseCursor: SystemMouseCursors.click,
-              onHighlightChanged: (pressed) =>
-                  setState(() => _pressed = pressed),
-              hoverColor: Colors.transparent,
-              focusColor: colorScheme.primary.withValues(alpha: 0.08),
-              splashColor: colorScheme.primary.withValues(alpha: 0.06),
-              highlightColor: Colors.transparent,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacingTokens.compactGap,
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      child: Text(
-                        '${widget.index + 1}',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: selected
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant.withValues(
-                                  alpha: 0.78,
-                                ),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: selected
-                                  ? colorScheme.primary
-                                  : colorScheme.onSurface,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatTrackDuration(widget.track.duration),
-                      maxLines: 1,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    SizedBox.square(
-                      dimension: 44,
-                      child: IconButton(
-                        onPressed: widget.onMore,
-                        icon: const Icon(Icons.more_horiz_rounded, size: 20),
-                        tooltip: '更多操作',
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        style: AppActionButtonStyle.icon(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LibraryHeader extends StatelessWidget {
   const _LibraryHeader({
     required this.state,
@@ -806,7 +641,9 @@ class _LibraryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = AppBreakpoints.usesWideContent(context);
+    final isWide = AppBreakpoints.usesDesktopShellWidth(
+      MediaQuery.sizeOf(context).width,
+    );
     final cubit = context.read<LibraryCubit>();
     final tabs = AppScopeTabs<LibraryFilter>(
       semanticLabel: '媒体库分类',
@@ -837,7 +674,10 @@ class _LibraryHeader extends StatelessWidget {
     final artistFilterButton =
         state.currentFilter == LibraryFilter.artists &&
             state.supportedArtistSortOptions.isNotEmpty
-        ? _ArtistFilterMenu(state: state)
+        ? _ArtistFilterMenu(
+            state: state,
+            compact: AppBreakpoints.isCompact(context),
+          )
         : null;
     final headerTrailing = state.currentFilter == LibraryFilter.tracks
         ? desktopTrackActions
@@ -846,15 +686,13 @@ class _LibraryHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (AppBreakpoints.isCompact(context)) ...[
-          AppPageHeader(
-            title: '媒体库',
-            description: _librarySummaryLabel(state),
-            automaticImplyLeading: false,
-            hideTitleOnCompactWithCenter: false,
+        if (AppBreakpoints.isCompact(context))
+          _MobileLibraryHeader(
+            state: state,
+            search: search,
+            tabs: tabs,
+            artistFilterButton: artistFilterButton,
           ),
-          const SizedBox(height: 14),
-        ],
         if (isWide) ...[
           AppPageHeader(
             title: _libraryFilterLabel(state.currentFilter),
@@ -881,7 +719,7 @@ class _LibraryHeader extends StatelessWidget {
             const SizedBox(height: 24),
             _DesktopArtistToolbar(state: state, search: search),
           ],
-        ] else ...[
+        ] else if (!AppBreakpoints.isCompact(context)) ...[
           search,
           if (artistFilterButton != null) ...[
             const SizedBox(height: 12),
@@ -890,6 +728,72 @@ class _LibraryHeader extends StatelessWidget {
           const SizedBox(height: 12),
           tabs,
         ],
+      ],
+    );
+  }
+}
+
+class _MobileLibraryHeader extends StatelessWidget {
+  const _MobileLibraryHeader({
+    required this.state,
+    required this.search,
+    required this.tabs,
+    this.artistFilterButton,
+  });
+
+  final LibraryState state;
+  final Widget search;
+  final Widget tabs;
+  final Widget? artistFilterButton;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.mobileTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Text(
+                '媒体库',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: colors.onSurface,
+                  fontSize: AppTypographyTokens.mobilePageTitle,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                _mobileLibrarySummaryLabel(state),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        tabs,
+        const SizedBox(height: 10),
+        if (artistFilterButton == null)
+          search
+        else
+          Row(
+            children: [
+              Expanded(child: search),
+              const SizedBox(width: 10),
+              artistFilterButton!,
+            ],
+          ),
       ],
     );
   }
@@ -1342,9 +1246,10 @@ class _TrackMenuRow extends StatelessWidget {
 }
 
 class _ArtistFilterMenu extends StatefulWidget {
-  const _ArtistFilterMenu({required this.state});
+  const _ArtistFilterMenu({required this.state, this.compact = false});
 
   final LibraryState state;
+  final bool compact;
 
   @override
   State<_ArtistFilterMenu> createState() => _ArtistFilterMenuState();
@@ -1361,15 +1266,16 @@ class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
     final trigger = triggerContext.findRenderObject() as RenderBox;
     final triggerRect =
         trigger.localToGlobal(Offset.zero, ancestor: overlay) & trigger.size;
-    final anchor = Rect.fromCenter(
-      center: Offset(triggerRect.right, triggerRect.center.dy),
-      width: 1,
-      height: 1,
+    final anchor = Rect.fromLTRB(
+      triggerRect.left,
+      triggerRect.bottom + 8,
+      triggerRect.right,
+      triggerRect.bottom + 8,
     );
     final action = await showMenu<_ArtistMenuAction>(
       context: context,
       position: RelativeRect.fromRect(anchor, Offset.zero & overlay.size),
-      constraints: const BoxConstraints.tightFor(width: 240),
+      constraints: BoxConstraints.tightFor(width: widget.compact ? 208 : 240),
       items: _menuItems(widget.state),
     );
     if (!mounted || action == null) return;
@@ -1444,21 +1350,32 @@ class _ArtistFilterMenuState extends State<_ArtistFilterMenu> {
     final semanticLabel = selectedGenreName == null
         ? '歌手筛选与排序，当前未按风格筛选'
         : '歌手筛选与排序，当前风格$selectedGenreName';
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      child: TextButton.icon(
-        key: _triggerKey,
-        onPressed: _showMenu,
-        style: AppActionButtonStyle.text(context),
-        icon: Badge(
-          isLabelVisible: selectedGenre != null,
-          smallSize: 7,
-          child: const Icon(Icons.tune_rounded, size: 18),
-        ),
-        label: Text(buttonLabel),
-      ),
-    );
+    final button = widget.compact
+        ? SizedBox.square(
+            dimension: 48,
+            child: IconButton.filledTonal(
+              key: _triggerKey,
+              tooltip: '筛选与排序',
+              onPressed: _showMenu,
+              icon: Badge(
+                isLabelVisible: selectedGenre != null,
+                smallSize: 7,
+                child: const Icon(Icons.tune_rounded, size: 20),
+              ),
+            ),
+          )
+        : TextButton.icon(
+            key: _triggerKey,
+            onPressed: _showMenu,
+            style: AppActionButtonStyle.text(context),
+            icon: Badge(
+              isLabelVisible: selectedGenre != null,
+              smallSize: 7,
+              child: const Icon(Icons.tune_rounded, size: 18),
+            ),
+            label: Text(buttonLabel),
+          );
+    return Semantics(button: true, label: semanticLabel, child: button);
   }
 }
 

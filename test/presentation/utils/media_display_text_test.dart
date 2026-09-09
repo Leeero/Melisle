@@ -13,6 +13,7 @@ void main() {
       expect(MediaDisplayText.trackTitle('\u2062'), '未知歌曲');
       expect(MediaDisplayText.albumTitle(''), '未知专辑');
       expect(MediaDisplayText.artistName(null), '未知歌手');
+      expect(MediaDisplayText.artistName('???'), '未知歌手');
       expect(MediaDisplayText.playlistName('  '), '未命名歌单');
     });
 
@@ -23,6 +24,19 @@ void main() {
       expect(
         MediaDisplayText.artistName('Yannick Nézet-Séguin'),
         'Yannick Nézet-Séguin',
+      );
+    });
+
+    test('移除 URL、连续问号和清洗后的空括号', () {
+      expect(
+        MediaDisplayText.trackTitle(
+          'Moon River(???? http://blog.sina.com/example)',
+        ),
+        'Moon River',
+      );
+      expect(
+        MediaDisplayText.albumTitle('TIMELESS HQCD [???]'),
+        'TIMELESS HQCD',
       );
     });
 

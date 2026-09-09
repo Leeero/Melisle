@@ -127,32 +127,23 @@ class _TabbedFavoritesViewState extends State<_TabbedFavoritesView> {
                         SizedBox(height: compact ? 12 : 20),
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: compact
-                              ? _FavoritesMobileTabs(
-                                  selectedValue: _selectedTab,
-                                  trackCount: tracksState.tracks.length,
-                                  playlistCount:
-                                      playlistsState.playlists.length,
-                                  onChanged: (tab) =>
-                                      setState(() => _selectedTab = tab),
-                                )
-                              : AppTextTabs<_FavoritesTab>(
-                                  selectedValue: _selectedTab,
-                                  onChanged: (tab) =>
-                                      setState(() => _selectedTab = tab),
-                                  items: [
-                                    AppTextTabItem<_FavoritesTab>(
-                                      value: _FavoritesTab.tracks,
-                                      label: '歌曲',
-                                      count: tracksState.tracks.length,
-                                    ),
-                                    AppTextTabItem<_FavoritesTab>(
-                                      value: _FavoritesTab.playlists,
-                                      label: '歌单',
-                                      count: playlistsState.playlists.length,
-                                    ),
-                                  ],
-                                ),
+                          child: AppTextTabs<_FavoritesTab>(
+                            selectedValue: _selectedTab,
+                            onChanged: (tab) =>
+                                setState(() => _selectedTab = tab),
+                            items: [
+                              AppTextTabItem<_FavoritesTab>(
+                                value: _FavoritesTab.tracks,
+                                label: '歌曲',
+                                count: tracksState.tracks.length,
+                              ),
+                              AppTextTabItem<_FavoritesTab>(
+                                value: _FavoritesTab.playlists,
+                                label: '歌单',
+                                count: playlistsState.playlists.length,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     );
@@ -168,110 +159,6 @@ class _TabbedFavoritesViewState extends State<_TabbedFavoritesView> {
             _FavoritesView(showHeader: false),
             _FavoritePlaylistsView(),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FavoritesMobileTabs extends StatelessWidget {
-  const _FavoritesMobileTabs({
-    required this.selectedValue,
-    required this.trackCount,
-    required this.playlistCount,
-    required this.onChanged,
-  });
-
-  final _FavoritesTab selectedValue;
-  final int trackCount;
-  final int playlistCount;
-  final ValueChanged<_FavoritesTab> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _FavoritesMobileTab(
-          label: '歌曲',
-          count: trackCount,
-          selected: selectedValue == _FavoritesTab.tracks,
-          onTap: () => onChanged(_FavoritesTab.tracks),
-        ),
-        const SizedBox(width: 28),
-        _FavoritesMobileTab(
-          label: '歌单',
-          count: playlistCount,
-          selected: selectedValue == _FavoritesTab.playlists,
-          onTap: () => onChanged(_FavoritesTab.playlists),
-        ),
-      ],
-    );
-  }
-}
-
-class _FavoritesMobileTab extends StatelessWidget {
-  const _FavoritesMobileTab({
-    required this.label,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = selected
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '$label，共 $count 项',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadiusTokens.sm),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: label),
-                    TextSpan(
-                      text: ' $count',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 6),
-              AnimatedContainer(
-                duration: AppMotion.micro,
-                height: 3,
-                width: 24,
-                decoration: BoxDecoration(
-                  color: selected ? color : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadiusTokens.full),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -393,7 +280,8 @@ class _FavoritesViewState extends State<_FavoritesView> {
       currentTrackId: currentTrackId,
       horizontalPadding: horizontalPadding,
       scrollController: _scrollController,
-      edgeToEdgeMobileItems: compact,
+      edgeToEdgeMobileItems: false,
+      mobileBottomPadding: currentTrackId == null ? 96 : 168,
       mobileHeader: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -651,7 +539,7 @@ class _FavoritesMobilePlayToolbar extends StatelessWidget {
                   ? () => _playAllFavorites(context, state)
                   : null,
               icon: const Icon(Icons.play_arrow_rounded, size: 22),
-              label: Text('播放全部（${state.tracks.length}）'),
+              label: const Text('播放全部'),
               style:
                   AppActionButtonStyle.text(
                     context,
@@ -1086,7 +974,7 @@ Future<bool> _toggleFavorite(BuildContext context, MusicTrack track) async {
   );
   if (!context.mounted) return false;
   if (!wasUpdated) {
-    AppSnackBar.show(context, '取消收藏失败，请重试');
+    AppSnackBar.show(context, '取消收藏失败，请重试', tone: AppSnackBarTone.error);
     return false;
   }
   AppSnackBar.show(
@@ -1100,7 +988,7 @@ Future<bool> _toggleFavorite(BuildContext context, MusicTrack track) async {
       );
       if (!context.mounted) return;
       if (!restored) {
-        AppSnackBar.show(context, '恢复收藏失败，请重试');
+        AppSnackBar.show(context, '恢复收藏失败，请重试', tone: AppSnackBarTone.error);
         return;
       }
       await context.read<FavoritesListCubit>().load();
@@ -1198,10 +1086,9 @@ class _PulsingFavoriteButtonState extends State<_PulsingFavoriteButton>
   Widget build(BuildContext context) {
     const dimension = 44.0;
     final iconSize = widget.compact ? 18.0 : 22.0;
-    final theme = Theme.of(context);
     final mobile = AppBreakpoints.isCompact(context);
     final favoriteColor = mobile
-        ? theme.favoriteColor
+        ? widget.colorScheme.onSurfaceVariant
         : widget.colorScheme.primary;
 
     final reduceMotion = MediaQuery.disableAnimationsOf(context);

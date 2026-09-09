@@ -89,9 +89,7 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
     }
 
     if (state.status == PlaylistsStatus.failure && state.allPlaylists.isEmpty) {
-      return AppBodyStateView.message(
-        message: state.errorMessage ?? '加载歌单失败',
-      );
+      return AppBodyStateView.message(message: state.errorMessage ?? '加载歌单失败');
     }
 
     if (state.allPlaylists.isEmpty) {
@@ -131,11 +129,12 @@ class _PlaylistsViewState extends State<_PlaylistsView> {
               SliverLayoutBuilder(
                 builder: (context, constraints) {
                   final gap = isWide ? 20.0 : 14.0;
-                  final count = ((constraints.crossAxisExtent + gap) /
-                          (isWide ? 190 + gap : 148 + gap))
-                      .floor()
-                      .clamp(isWide ? 3 : 2, isWide ? 6 : 3)
-                      .toInt();
+                  final count =
+                      ((constraints.crossAxisExtent + gap) /
+                              (isWide ? 190 + gap : 148 + gap))
+                          .floor()
+                          .clamp(isWide ? 3 : 2, isWide ? 6 : 3)
+                          .toInt();
                   final artworkWidth =
                       (constraints.crossAxisExtent - gap * (count - 1)) / count;
                   return SliverGrid(
@@ -244,7 +243,11 @@ Future<void> _refreshPlaylists(
 
   final state = cubit.state;
   if (state.status == PlaylistsStatus.failure) {
-    AppSnackBar.show(context, state.errorMessage ?? '刷新歌单失败');
+    AppSnackBar.show(
+      context,
+      state.errorMessage ?? '刷新歌单失败',
+      tone: AppSnackBarTone.error,
+    );
     return;
   }
   AppSnackBar.show(context, '已刷新 ${state.allPlaylists.length} 个歌单');

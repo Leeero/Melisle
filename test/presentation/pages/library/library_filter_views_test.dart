@@ -13,6 +13,7 @@ import 'package:cross_platform_music_player/presentation/pages/library/library_f
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_artist_card.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/music_album_cards.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/music_library_track_row.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -23,6 +24,8 @@ void main() {
   testWidgets('renders the songs view with long text and no artwork', (
     tester,
   ) async {
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
     const track = MusicTrack(
       id: 'track',
       title: '这是一首用于验证超长标题不会破坏媒体库布局的歌曲',
@@ -40,19 +43,37 @@ void main() {
           hasMore: false,
         ),
         horizontalPadding: 20,
-        currentTrackId: null,
+        currentTrackId: track.id,
         onPlayAll: () {},
         onShuffleAll: () {},
         onTrackTap: (_) {},
         desktopTrailingBuilder: (_, _, _) => null,
-        mobileItemBuilder: (_, item, _, _) => ListTile(
-          title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text('${item.artistName} · ${item.albumTitle}'),
+        mobileItemBuilder: (_, item, index, isCurrent) => MusicLibraryTrackRow(
+          track: item,
+          index: index,
+          isCurrent: isCurrent,
+          onTap: () async {},
+          onMore: () {},
         ),
       ),
+      size: const Size(390, 844),
     );
 
     expect(find.text(track.title), findsOneWidget);
+    expect(find.byType(CachedArtwork), findsOneWidget);
+    expect(
+      tester.widget<CachedArtwork>(find.byType(CachedArtwork)).size,
+      AppSpacingTokens.mobileTrackArtwork,
+    );
+    expect(find.byTooltip('更多操作'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byType(MusicLibraryTrackRow))
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 

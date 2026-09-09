@@ -450,27 +450,32 @@ class _MobilePlaylistTrackSliver extends StatelessWidget {
               child: _MobilePlaylistSectionHeader(count: tracks.length),
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              final track = tracks[index];
-              return MusicTrackTile.row(
-                artworkUrl: track.artworkUrl,
-                title: MediaDisplayText.trackTitle(track.title),
-                subtitle: _trackSubtitle(track),
-                isCurrent: track.id == currentTrackId,
-                onTap: () => onTrackTap(index),
-                onLongPress: () => showTrackActionsSheet(
-                  context,
-                  track,
-                  source: TrackActionsContext.playlist,
-                ),
-                onMore: () => showTrackActionsSheet(
-                  context,
-                  track,
-                  source: TrackActionsContext.playlist,
-                ),
-              );
-            }, childCount: tracks.length),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacingTokens.pageHorizontalCompact,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final track = tracks[index];
+                return MusicTrackTile.row(
+                  artworkUrl: track.artworkUrl,
+                  title: MediaDisplayText.trackTitle(track.title),
+                  subtitle: _trackSubtitle(track),
+                  isCurrent: track.id == currentTrackId,
+                  onTap: () => onTrackTap(index),
+                  onLongPress: () => showTrackActionsSheet(
+                    context,
+                    track,
+                    source: TrackActionsContext.playlist,
+                  ),
+                  onMore: () => showTrackActionsSheet(
+                    context,
+                    track,
+                    source: TrackActionsContext.playlist,
+                  ),
+                );
+              }, childCount: tracks.length),
+            ),
           ),
         ],
       ),
@@ -970,7 +975,11 @@ class _PlaylistFavoriteButton extends StatelessWidget {
                             currentValue: isFavorite,
                           );
                       if (!updated && context.mounted) {
-                        AppSnackBar.show(context, '更新歌单收藏失败');
+                        AppSnackBar.show(
+                          context,
+                          '更新歌单收藏失败',
+                          tone: AppSnackBarTone.error,
+                        );
                       }
                     },
               icon: FavoriteIcon(isFavorite: isFavorite, size: 24),

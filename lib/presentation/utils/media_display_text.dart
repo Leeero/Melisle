@@ -5,6 +5,12 @@ abstract final class MediaDisplayText {
     r'[\u200B-\u200D\u2060-\u2064\uFEFF]',
   );
   static final RegExp _whitespace = RegExp(r'\s+');
+  static final RegExp _urls = RegExp(
+    r'https?://[^\s\)\]）】]+',
+    caseSensitive: false,
+  );
+  static final RegExp _questionRuns = RegExp(r'[?？]{2,}');
+  static final RegExp _emptyBrackets = RegExp(r'[\(\[（【]\s*[\)\]）】]');
 
   static String trackTitle(String? value) => _clean(value, '未知歌曲');
 
@@ -29,14 +35,28 @@ abstract final class MediaDisplayText {
   static String _clean(String? value, String fallback) {
     final normalized = (value ?? '')
         .replaceAll(_invisibleCharacters, '')
+        .replaceAll(_urls, ' ')
+        .replaceAll(_questionRuns, ' ')
+        .replaceAll(_emptyBrackets, ' ')
         .replaceAll(_whitespace, ' ')
         .trim();
     if (normalized.isEmpty ||
         normalized.contains('\uFFFD') ||
+        !_containsLetterOrDigit(normalized) ||
         _looksLikeLatin1Mojibake(normalized)) {
       return fallback;
     }
     return normalized;
+  }
+
+  static bool _containsLetterOrDigit(String value) {
+    return value.runes.any(
+      (rune) =>
+          (rune >= 0x30 && rune <= 0x39) ||
+          (rune >= 0x41 && rune <= 0x5A) ||
+          (rune >= 0x61 && rune <= 0x7A) ||
+          (rune >= 0x3400 && rune <= 0x9FFF),
+    );
   }
 
   static bool _looksLikeLatin1Mojibake(String value) {

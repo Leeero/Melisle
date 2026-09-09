@@ -274,53 +274,63 @@ class _MobileArtistRow extends StatelessWidget {
     return Semantics(
       button: true,
       label: '打开歌手《$name》',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 80),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacingTokens.listTileVPadding,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.42),
+              width: 0.5,
             ),
-            child: Row(
-              children: [
-                CachedArtwork(
-                  imageUrl: artist.artworkUrl,
-                  size: 64,
-                  borderRadius: AppRadiusTokens.full,
-                  semanticLabel: '$name 头像',
-                  placeholderBuilder: (_) =>
-                      const MusicArtistArtworkPlaceholder(size: 64),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        MediaDisplayText.artistItemCount(artist),
-                        maxLines: 1,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadiusTokens.mobileSm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 80),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacingTokens.listTileVPadding,
+              ),
+              child: Row(
+                children: [
+                  CachedArtwork(
+                    imageUrl: artist.artworkUrl,
+                    size: 64,
+                    borderRadius: AppRadiusTokens.full,
+                    semanticLabel: '$name 头像',
+                    placeholderBuilder: (_) =>
+                        const MusicArtistArtworkPlaceholder(size: 64),
                   ),
-                ),
-                const SizedBox.square(
-                  dimension: 44,
-                  child: Icon(Icons.chevron_right_rounded),
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          MediaDisplayText.artistItemCount(artist),
+                          maxLines: 1,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox.square(
+                    dimension: 44,
+                    child: Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
