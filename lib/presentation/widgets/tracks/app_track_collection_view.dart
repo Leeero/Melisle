@@ -24,6 +24,7 @@ class AppTrackCollectionView extends StatelessWidget {
     this.desktopTrailingBuilder,
     this.footer,
     this.edgeToEdgeMobileItems = false,
+    this.mobileBottomPadding = 24,
   });
 
   final List<MusicTrack> tracks;
@@ -36,6 +37,7 @@ class AppTrackCollectionView extends StatelessWidget {
   final ValueChanged<int> onTrackTap;
   final Widget? footer;
   final bool edgeToEdgeMobileItems;
+  final double mobileBottomPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +71,7 @@ class AppTrackCollectionView extends StatelessWidget {
         edgeToEdgeMobileItems ? 0 : horizontalPadding,
         0,
         edgeToEdgeMobileItems ? 0 : horizontalPadding,
-        24,
+        mobileBottomPadding,
       ),
       itemCount: headerCount + tracks.length + footerCount,
       itemBuilder: (context, index) {

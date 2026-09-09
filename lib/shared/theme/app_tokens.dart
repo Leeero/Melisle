@@ -177,6 +177,45 @@ abstract final class AppColorTokens {
   static const desaturatedGrey = Color(0xFF9E9E9E);
 }
 
+/// Mobile-only visual roles for the Quiet Record Library direction.
+///
+/// These values intentionally do not replace the cross-platform [ColorScheme].
+/// Compact layouts opt into them through [AppMobileTheme] so desktop surfaces
+/// keep the existing Tidal Blue V4 palette.
+abstract final class AppMobileColorTokens {
+  static const lightScaffold = Color(0xFFFAF8F3);
+  static const lightSurface = Color(0xFFFFFDFC);
+  static const lightSurfaceMuted = Color(0xFFEEF2EE);
+  static const lightPrimary = Color(0xFF0B6B58);
+  static const lightPrimaryPressed = Color(0xFF075545);
+  static const lightOnSurface = Color(0xFF15201C);
+  static const lightOnSurfaceVariant = Color(0xFF53645E);
+  static const lightOutlineVariant = Color(0xFFD9DFDA);
+  static const lightBrass = Color(0xFFA67C3D);
+
+  static const darkScaffold = AppColorTokens.darkScaffold;
+  static const darkSurface = AppColorTokens.darkSurface;
+  static const darkSurfaceMuted = AppColorTokens.darkSurfaceElevated;
+  static const darkPrimary = AppColorTokens.darkPrimary;
+  static const darkPrimaryPressed = AppColorTokens.darkPrimaryHover;
+  static const darkOnSurface = AppColorTokens.darkOnSurface;
+  static const darkOnSurfaceVariant = AppColorTokens.darkOnSurfaceVariant;
+  static const darkOutlineVariant = AppColorTokens.darkOutlineVariant;
+  static const darkBrass = Color(0xFFD2AD72);
+}
+
+abstract final class AppTypographyTokens {
+  static const double mobileBrand = 38;
+  static const double mobilePageTitle = 30;
+  static const double mobileSectionTitle = 22;
+  static const double mobileCurrentTrack = 18;
+  static const double mobileTrackTitle = 16;
+  static const double mobileBody = 15;
+  static const double mobileMetadata = 13;
+  static const double mobileLabel = 12;
+  static const double mobileTime = 13;
+}
+
 // ============================================================================
 // 圆角系统
 // ============================================================================
@@ -267,7 +306,7 @@ abstract final class AppSpacingTokens {
   static const double pageTopCompact = 24;
 
   /// 紧凑页面水平边距。
-  static const double mobilePageX = 24;
+  static const double mobilePageX = 20;
 
   /// 宽屏页面水平边距。
   static const double desktopPageX = 48;
@@ -298,6 +337,12 @@ abstract final class AppSpacingTokens {
 
   /// 列表项高度
   static const double listTileHeight = 60; // 56 → 60
+
+  /// Quiet Record Library 移动歌曲行高度。
+  static const double mobileTrackRowHeight = 68;
+
+  /// 移动歌曲行封面尺寸。
+  static const double mobileTrackArtwork = 48;
 
   /// 列表项内边距
   static const double listTilePadding = 16;
@@ -361,7 +406,7 @@ abstract final class AppSpacingTokens {
   static const double shellBottomInset = 0;
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 224;
-  static const double mobileTabContentHeight = 56;
+  static const double mobileTabContentHeight = 60;
   static const double desktopToolbarHeight = 72;
   static const double desktopMainContentPaddingX = 48; // 40 → 48
   static const double desktopMainContentPaddingY = 32; // 28 → 32

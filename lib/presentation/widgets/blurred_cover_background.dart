@@ -14,10 +14,16 @@ class BlurredCoverBackground extends StatelessWidget {
     super.key,
     required this.imageUrl,
     this.sourceContext,
+    this.artworkOpacity = 0.28,
+    this.blurSigma = 40,
+    this.protectionStrength = 0.92,
   });
 
   final String? imageUrl;
   final ArtworkSourceContext? sourceContext;
+  final double artworkOpacity;
+  final double blurSigma;
+  final double protectionStrength;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +42,9 @@ class BlurredCoverBackground extends StatelessWidget {
         return _ResolvedBlurredCoverBackground(
           primaryUrl: resolution.primaryUrl,
           fallbackUrl: resolution.hasFallback ? resolution.fallbackUrl : null,
+          artworkOpacity: artworkOpacity,
+          blurSigma: blurSigma,
+          protectionStrength: protectionStrength,
         );
       },
     );
@@ -46,10 +55,16 @@ class _ResolvedBlurredCoverBackground extends StatefulWidget {
   const _ResolvedBlurredCoverBackground({
     required this.primaryUrl,
     this.fallbackUrl,
+    required this.artworkOpacity,
+    required this.blurSigma,
+    required this.protectionStrength,
   });
 
   final String primaryUrl;
   final String? fallbackUrl;
+  final double artworkOpacity;
+  final double blurSigma;
+  final double protectionStrength;
 
   @override
   State<_ResolvedBlurredCoverBackground> createState() =>
@@ -169,9 +184,12 @@ class _ResolvedBlurredCoverBackgroundState
         if (hasImage)
           RepaintBoundary(
             child: Opacity(
-              opacity: 0.42,
+              opacity: widget.artworkOpacity.clamp(0.0, 1.0),
               child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+                imageFilter: ImageFilter.blur(
+                  sigmaX: widget.blurSigma,
+                  sigmaY: widget.blurSigma,
+                ),
                 child: Image.network(
                   resolvedImageUrl,
                   fit: BoxFit.cover,
@@ -189,8 +207,12 @@ class _ResolvedBlurredCoverBackgroundState
               colors: [
                 background.withValues(alpha: 0.08),
                 background.withValues(alpha: 0.42),
-                background.withValues(alpha: 0.82),
-                background.withValues(alpha: 0.98),
+                background.withValues(
+                  alpha: (widget.protectionStrength * 0.88).clamp(0.0, 1.0),
+                ),
+                background.withValues(
+                  alpha: widget.protectionStrength.clamp(0.0, 1.0),
+                ),
               ],
               stops: const [0.0, 0.34, 0.72, 1.0],
               begin: Alignment.topCenter,
@@ -205,8 +227,7 @@ class _ResolvedBlurredCoverBackgroundState
 
 class _PaletteMemoryCache {
   static const _maxEntries = 80;
-  static final LinkedHashMap<String, PaletteGenerator> _cache =
-      LinkedHashMap();
+  static final LinkedHashMap<String, PaletteGenerator> _cache = LinkedHashMap();
   static final Map<String, Future<PaletteGenerator>> _inFlight = {};
 
   static Future<PaletteGenerator> resolve(String imageUrl) {

@@ -26,10 +26,12 @@ class AppTextTabs<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final compact = AppBreakpoints.isCompact(context);
+    final mobileColors = context.mobileTheme;
 
     return Wrap(
-      spacing: 28,
-      runSpacing: 10,
+      spacing: compact ? 18 : 28,
+      runSpacing: compact ? 4 : 10,
       children: [
         for (final item in items)
           Semantics(
@@ -43,46 +45,58 @@ class AppTextTabs<T> extends StatelessWidget {
               focusColor: Colors.transparent,
               highlightColor: Colors.transparent,
               splashColor: Colors.transparent,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Text(
-                          item.label,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: selectedValue == item.value
-                                ? colors.onSurface
-                                : colors.onSurfaceVariant,
-                            fontWeight: selectedValue == item.value
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 4 : 2,
+                    vertical: compact ? 8 : 4,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Text(
+                            item.label,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: selectedValue == item.value
+                                  ? compact
+                                        ? mobileColors.onSurface
+                                        : colors.onSurface
+                                  : compact
+                                  ? mobileColors.onSurfaceVariant
+                                  : colors.onSurfaceVariant,
+                              fontWeight: selectedValue == item.value
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        if (item.count != null)
-                          Positioned(
-                            top: -8,
-                            right: -16,
-                            child: _TabCountBadge(count: item.count!),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    AnimatedContainer(
-                      duration: AppMotion.micro,
-                      height: 3,
-                      width: 22,
-                      decoration: BoxDecoration(
-                        color: selectedValue == item.value
-                            ? colors.primary
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(99),
+                          if (item.count != null)
+                            Positioned(
+                              top: -8,
+                              right: -16,
+                              child: _TabCountBadge(count: item.count!),
+                            ),
+                        ],
                       ),
-                    ),
-                  ],
+                      SizedBox(height: compact ? 4 : 7),
+                      AnimatedContainer(
+                        duration: AppMotion.adaptive(context, AppMotion.fast),
+                        height: compact ? 2 : 3,
+                        width: compact ? 18 : 22,
+                        decoration: BoxDecoration(
+                          color: selectedValue == item.value
+                              ? compact
+                                    ? mobileColors.primary
+                                    : colors.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

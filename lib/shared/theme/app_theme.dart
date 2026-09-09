@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cross_platform_music_player/shared/theme/app_mobile_theme.dart';
 import 'package:cross_platform_music_player/shared/theme/app_tokens.dart';
 
 /// Design-system theme for the Melisle (乐岛) Tidal Blue V4 design.
@@ -287,6 +288,9 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      extensions: <ThemeExtension<dynamic>>[
+        isDark ? const AppMobileTheme.dark() : const AppMobileTheme.light(),
+      ],
       colorScheme: colorScheme,
       textTheme: textTheme,
       scaffoldBackgroundColor: isDark ? _darkScaffold : _lightScaffold,

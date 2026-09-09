@@ -1,5 +1,6 @@
 import 'package:cross_platform_music_player/presentation/widgets/cached_artwork.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/meta_pill.dart';
+import 'package:cross_platform_music_player/presentation/widgets/music/mobile_track_row.dart';
 import 'package:cross_platform_music_player/presentation/widgets/music/playing_indicator.dart';
 import 'package:cross_platform_music_player/shared/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -246,6 +247,36 @@ class _MusicTrackTileState extends State<MusicTrackTile> {
         AppBreakpoints.isCompact(context) &&
         (widget.style == MusicTrackTileStyle.favorite ||
             widget.style == MusicTrackTileStyle.row);
+
+    if (compactUnified) {
+      return MobileTrackRow(
+        title: widget.title,
+        subtitle: widget.subtitle,
+        artworkUrl: widget.artworkUrl,
+        selected: selected,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.extraTrailing != null) widget.extraTrailing!,
+            if (widget.onMore != null)
+              _MoreButton(onPressed: widget.onMore!)
+            else if (widget.extraTrailing == null)
+              SizedBox.square(
+                dimension: 48,
+                child: Icon(
+                  selected ? Icons.graphic_eq_rounded : widget.idleIcon,
+                  size: 20,
+                  color: selected
+                      ? context.mobileTheme.primary
+                      : context.mobileTheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+      );
+    }
     final backgroundColor = selected
         ? theme.selectedWash
         : _pressed
@@ -440,7 +471,7 @@ class _MoreButton extends StatelessWidget {
       child: Tooltip(
         message: '更多操作',
         child: SizedBox.square(
-          dimension: 44,
+          dimension: 48,
           child: IconButton(
             onPressed: onPressed,
             icon: const Icon(Icons.more_horiz_rounded),

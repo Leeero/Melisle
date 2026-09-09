@@ -84,7 +84,12 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
     final size = widget.size;
     final tapTargetSize = math.max(size, 44.0);
     final tooltip = _tooltip;
-    final scale = _pressed ? 0.96 : (_hovered ? 1.035 : 1.0);
+    final reduceMotion = AppMotion.shouldReduce(context);
+    final scale = reduceMotion
+        ? 1.0
+        : _pressed
+        ? 0.96
+        : (_hovered ? 1.035 : 1.0);
     final backgroundColor =
         widget.backgroundColor ?? colorScheme.primaryContainer;
     final foregroundColor =
@@ -116,11 +121,11 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
                   widget.onPressed();
                 },
                 child: AnimatedScale(
-                  duration: AppMotion.micro,
+                  duration: AppMotion.adaptive(context, AppMotion.fast),
                   curve: AppMotion.standard,
                   scale: scale,
                   child: AnimatedContainer(
-                    duration: AppMotion.micro,
+                    duration: AppMotion.adaptive(context, AppMotion.fast),
                     curve: AppMotion.standard,
                     width: size,
                     height: size,
@@ -169,7 +174,7 @@ class _LoadingPlayPauseButtonState extends State<LoadingPlayPauseButton>
                             ),
                           ),
                         AnimatedSwitcher(
-                          duration: AppMotion.micro,
+                          duration: AppMotion.adaptive(context, AppMotion.fast),
                           child: Icon(
                             _icon,
                             key: ValueKey(

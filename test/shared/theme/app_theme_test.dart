@@ -41,6 +41,32 @@ void main() {
       }
     });
 
+    test('provides mobile palettes without replacing desktop colors', () {
+      final light = AppTheme.light();
+      final dark = AppTheme.dark();
+      final lightMobile = light.extension<AppMobileTheme>()!;
+      final darkMobile = dark.extension<AppMobileTheme>()!;
+
+      expect(light.scaffoldBackgroundColor, AppColorTokens.lightScaffold);
+      expect(lightMobile.scaffold, AppMobileColorTokens.lightScaffold);
+      expect(lightMobile.primary, AppMobileColorTokens.lightPrimary);
+      expect(darkMobile.scaffold, AppColorTokens.darkScaffold);
+      expect(darkMobile.primary, AppColorTokens.darkPrimary);
+
+      expect(
+        _contrast(lightMobile.scaffold, lightMobile.onSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(lightMobile.scaffold, lightMobile.onSurfaceVariant),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(darkMobile.scaffold, darkMobile.onSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
     test('separates status colors from music ambience colors', () {
       for (final theme in [AppTheme.light(), AppTheme.dark()]) {
         expect(theme.success, isNot(theme.colorScheme.primary));
@@ -61,23 +87,26 @@ void main() {
     });
   });
 
-  group('Stitch V3 layout tokens', () {
+  group('shared layout tokens', () {
     test('keeps canonical radius tokens shared by components', () {
       expect(AppRadiusTokens.xs, 4);
       expect(AppRadiusTokens.sm, 8);
       expect(AppRadiusTokens.md, 12);
       expect(AppRadiusTokens.lg, 16);
-      expect(AppRadiusTokens.xl, 24);
+      expect(AppRadiusTokens.xl, 20);
       expect(AppRadiusTokens.button, 8);
-      expect(AppRadiusTokens.miniPlayer, 14);
-      expect(AppRadiusTokens.miniPlayerArtwork, 10);
+      expect(AppRadiusTokens.miniPlayer, 16);
+      expect(AppRadiusTokens.miniPlayerArtwork, 12);
     });
 
     test('keeps the canonical mobile spacing and MiniPlayer height', () {
       expect(AppSpacingTokens.pageTopCompact, 24);
-      expect(AppSpacingTokens.pageHorizontalCompact, 24);
-      expect(AppSpacingTokens.mobilePageX, 24);
+      expect(AppSpacingTokens.pageHorizontalCompact, 20);
+      expect(AppSpacingTokens.mobilePageX, 20);
       expect(AppSpacingTokens.mobileMiniPlayerHeight, 64);
+      expect(AppSpacingTokens.mobileTrackRowHeight, 68);
+      expect(AppSpacingTokens.mobileTrackArtwork, 48);
+      expect(AppSpacingTokens.mobileTabContentHeight, 60);
     });
 
     test('keeps the canonical medium and wide page spacing', () {
@@ -105,31 +134,62 @@ void main() {
     });
   });
 
-  group('Stitch V3 typography and motion tokens', () {
-    test('uses fixed V3 type scale with zero letter spacing', () {
+  group('typography and motion tokens', () {
+    test('keeps the current product type scale and mobile semantic sizes', () {
       final text = AppTheme.light().textTheme;
 
-      expect(text.headlineMedium?.fontSize, 26);
-      expect(text.headlineMedium?.height, 34 / 26);
-      expect(text.titleLarge?.fontSize, 18);
-      expect(text.titleLarge?.height, 24 / 18);
+      expect(text.headlineMedium?.fontSize, 28);
+      expect(text.headlineMedium?.height, 1.25);
+      expect(text.titleLarge?.fontSize, 20);
+      expect(text.titleLarge?.height, 1.3);
       expect(text.bodyMedium?.fontSize, 15);
-      expect(text.bodyMedium?.height, 22 / 15);
+      expect(text.bodyMedium?.height, 1.5);
       expect(text.bodySmall?.fontSize, 13);
-      expect(text.bodySmall?.height, 18 / 13);
-      expect(text.labelSmall?.fontSize, 12);
-      expect(text.labelSmall?.height, 16 / 12);
-      expect(text.headlineMedium?.letterSpacing, 0);
+      expect(text.bodySmall?.height, 1.4);
+      expect(text.labelSmall?.fontSize, 11);
+      expect(AppTypographyTokens.mobilePageTitle, 30);
+      expect(AppTypographyTokens.mobileSectionTitle, 22);
+      expect(AppTypographyTokens.mobileTrackTitle, 16);
+      expect(AppTypographyTokens.mobileBody, 15);
+      expect(AppTypographyTokens.mobileLabel, 12);
     });
 
-    test('keeps V3 motion durations', () {
+    test('keeps the current motion durations', () {
       expect(AppMotion.tap, const Duration(milliseconds: 150));
-      expect(AppMotion.hover, const Duration(milliseconds: 200));
-      expect(AppMotion.state, const Duration(milliseconds: 300));
-      expect(AppMotion.page, const Duration(milliseconds: 320));
-      expect(AppMotion.sheet, const Duration(milliseconds: 300));
-      expect(AppMotion.overlay, const Duration(milliseconds: 420));
-      expect(AppMotion.lyrics, const Duration(milliseconds: 450));
+      expect(AppMotion.hover, const Duration(milliseconds: 150));
+      expect(AppMotion.state, const Duration(milliseconds: 250));
+      expect(AppMotion.page, const Duration(milliseconds: 350));
+      expect(AppMotion.sheet, const Duration(milliseconds: 250));
+      expect(AppMotion.overlay, const Duration(milliseconds: 500));
+      expect(AppMotion.lyrics, const Duration(milliseconds: 420));
+    });
+
+    testWidgets('turns optional motion off from one shared entry point', (
+      tester,
+    ) async {
+      Future<void> pump({required bool disableAnimations}) {
+        return tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: MediaQuery(
+              data: MediaQueryData(disableAnimations: disableAnimations),
+              child: Builder(
+                builder: (context) {
+                  expect(AppMotion.shouldReduce(context), disableAnimations);
+                  expect(
+                    AppMotion.adaptive(context, AppMotion.normal),
+                    disableAnimations ? Duration.zero : AppMotion.normal,
+                  );
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+        );
+      }
+
+      await pump(disableAnimations: false);
+      await pump(disableAnimations: true);
     });
   });
 

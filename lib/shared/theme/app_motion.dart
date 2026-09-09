@@ -1,10 +1,18 @@
-import 'package:flutter/animation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Melisle 动效系统
 ///
 /// 所有时长和曲线统一管理，确保一致的交互体验。
 /// 参考 Material Design 3 和 Apple HIG 的动效规范。
 abstract final class AppMotion {
+  static bool shouldReduce(BuildContext context) {
+    return MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  }
+
+  static Duration adaptive(BuildContext context, Duration duration) {
+    return shouldReduce(context) ? Duration.zero : duration;
+  }
+
   // ──────────────────── 时长 ────────────────────
 
   /// 100ms - 即时反馈（颜色变化、图标切换）

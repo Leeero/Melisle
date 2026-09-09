@@ -42,6 +42,8 @@ class AppScopeTabs<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final compactLayout = AppBreakpoints.isCompact(context);
+    final mobileColors = context.mobileTheme;
     final effectiveVariant =
         variant ??
         (AppBreakpoints.usesWideContent(context)
@@ -89,11 +91,13 @@ class AppScopeTabs<T> extends StatelessWidget {
           ? tabs
           : DecoratedBox(
               decoration: BoxDecoration(
-                color: colorScheme.outlineVariant.withValues(
-                  alpha: Theme.of(context).brightness == Brightness.dark
-                      ? 0.32
-                      : 0.58,
-                ),
+                color: compactLayout
+                    ? mobileColors.surfaceMuted
+                    : colorScheme.outlineVariant.withValues(
+                        alpha: Theme.of(context).brightness == Brightness.dark
+                            ? 0.32
+                            : 0.58,
+                      ),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Padding(padding: const EdgeInsets.all(2), child: tabs),
@@ -135,6 +139,8 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
         ? widget.selected
         : widget.selected || _hovered || _focused;
     final isUnderline = widget.variant == AppScopeTabsVariant.underline;
+    final compactLayout = AppBreakpoints.isCompact(context);
+    final mobileColors = context.mobileTheme;
 
     return Semantics(
       button: true,
@@ -160,10 +166,12 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
             onFocusChange: (value) => setState(() => _focused = value),
             onTap: widget.onPressed,
             child: AnimatedContainer(
-              duration: widget.compact ? Duration.zero : AppMotion.micro,
+              duration: widget.compact
+                  ? Duration.zero
+                  : AppMotion.adaptive(context, AppMotion.fast),
               curve: AppMotion.enter,
               constraints: BoxConstraints(minWidth: isUnderline ? 0 : 0),
-              height: isUnderline ? 40 : 34,
+              height: isUnderline ? 40 : (compactLayout ? 44 : 34),
               padding: EdgeInsets.symmetric(
                 horizontal: isUnderline
                     ? 0
@@ -184,7 +192,11 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                       widget.item.icon,
                       size: 18,
                       color: widget.selected
-                          ? colorScheme.primary
+                          ? compactLayout
+                                ? mobileColors.primary
+                                : colorScheme.primary
+                          : compactLayout
+                          ? mobileColors.onSurfaceVariant
                           : colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 7),
@@ -200,9 +212,15 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
                                 : theme.textTheme.labelMedium)
                             ?.copyWith(
                               color: widget.selected
-                                  ? colorScheme.onSurface
+                                  ? compactLayout
+                                        ? mobileColors.onSurface
+                                        : colorScheme.onSurface
                                   : active
-                                  ? colorScheme.onSurface
+                                  ? compactLayout
+                                        ? mobileColors.onSurface
+                                        : colorScheme.onSurface
+                                  : compactLayout
+                                  ? mobileColors.onSurfaceVariant
                                   : colorScheme.onSurfaceVariant,
                               fontWeight: widget.selected
                                   ? FontWeight.w600
@@ -221,6 +239,8 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
   BoxDecoration _decoration(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final compactLayout = AppBreakpoints.isCompact(context);
+    final mobileColors = context.mobileTheme;
 
     if (widget.variant == AppScopeTabsVariant.underline) {
       return BoxDecoration(
@@ -235,14 +255,18 @@ class _AppScopeTabState<T> extends State<_AppScopeTab<T>> {
 
     return BoxDecoration(
       color: widget.selected
-          ? colorScheme.surface
+          ? compactLayout
+                ? mobileColors.surface
+                : colorScheme.surface
           : (!widget.compact && (_hovered || _focused)
                 ? theme.hoverWash
                 : Colors.transparent),
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
         color: widget.selected
-            ? colorScheme.outlineVariant.withValues(alpha: 0.34)
+            ? compactLayout
+                  ? mobileColors.outlineVariant
+                  : colorScheme.outlineVariant.withValues(alpha: 0.34)
             : Colors.transparent,
       ),
       boxShadow: widget.selected
