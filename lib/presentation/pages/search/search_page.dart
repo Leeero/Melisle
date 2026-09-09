@@ -1518,18 +1518,12 @@ void _clearRecentSearches(BuildContext context, List<String> queries) {
   final previousQueries = List<String>.of(queries);
   final cubit = context.read<SearchCubit>();
   unawaited(cubit.clearRecent());
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: const Text('已清空最近搜索'),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: '撤销',
-          onPressed: () => unawaited(cubit.restoreRecent(previousQueries)),
-        ),
-      ),
-    );
+  AppSnackBar.show(
+    context,
+    '已清空最近搜索',
+    actionLabel: '撤销',
+    onAction: () => unawaited(cubit.restoreRecent(previousQueries)),
+  );
 }
 
 class _SearchStateScrollView extends StatelessWidget {

@@ -506,7 +506,7 @@ class _DownloadDirectoryPopoverState extends State<_DownloadDirectoryPopover> {
 
   Future<void> _chooseFolder(BuildContext context) async {
     if (!_supportsDirectoryPicker) {
-      AppSnackBar.show(context, '当前平台暂不支持选择文件夹');
+      AppSnackBar.show(context, '当前平台暂不支持选择文件夹', tone: AppSnackBarTone.info);
       return;
     }
 
@@ -519,7 +519,7 @@ class _DownloadDirectoryPopoverState extends State<_DownloadDirectoryPopover> {
     } catch (_) {
       if (!context.mounted) return;
       setState(() => _choosing = false);
-      AppSnackBar.show(context, '无法打开文件夹选择器');
+      AppSnackBar.show(context, '无法打开文件夹选择器', tone: AppSnackBarTone.error);
     }
   }
 
@@ -541,7 +541,11 @@ class _DownloadDirectoryPopoverState extends State<_DownloadDirectoryPopover> {
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _saving = false);
-      AppSnackBar.show(context, _formatDirectoryError(error));
+      AppSnackBar.show(
+        context,
+        _formatDirectoryError(error),
+        tone: AppSnackBarTone.error,
+      );
     }
   }
 }
@@ -1068,7 +1072,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
 
   Future<void> _chooseAndSave(BuildContext context) async {
     if (!_supportsDirectoryPicker) {
-      AppSnackBar.show(context, '当前平台暂不支持选择文件夹');
+      AppSnackBar.show(context, '当前平台暂不支持选择文件夹', tone: AppSnackBarTone.info);
       return;
     }
 
@@ -1083,7 +1087,7 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
     } catch (_) {
       if (!context.mounted) return;
       setState(() => _choosing = false);
-      AppSnackBar.show(context, '无法打开文件夹选择器');
+      AppSnackBar.show(context, '无法打开文件夹选择器', tone: AppSnackBarTone.error);
     }
   }
 
@@ -1105,7 +1109,11 @@ class _DownloadDirectoryRowState extends State<_DownloadDirectoryRow> {
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _saving = false);
-      AppSnackBar.show(context, _formatDirectoryError(error));
+      AppSnackBar.show(
+        context,
+        _formatDirectoryError(error),
+        tone: AppSnackBarTone.error,
+      );
     }
   }
 }
@@ -1633,13 +1641,13 @@ Future<void> _updateDownloadQuality(
     await context.read<DownloadsCubit>().setDownloadQuality(quality);
   } on Object {
     if (!context.mounted) return;
-    AppSnackBar.show(context, '下载音质保存失败，请稍后重试');
+    AppSnackBar.show(context, '下载音质保存失败，请稍后重试', tone: AppSnackBarTone.error);
   }
 }
 
 Future<void> _openDownloadDirectory(BuildContext context, String path) async {
   if (!_supportsOpenDownloadDirectory) {
-    AppSnackBar.show(context, '当前平台暂不支持打开下载目录');
+    AppSnackBar.show(context, '当前平台暂不支持打开下载目录', tone: AppSnackBarTone.info);
     return;
   }
 
@@ -1652,7 +1660,7 @@ Future<void> _openDownloadDirectory(BuildContext context, String path) async {
     }
   } on Object {
     if (!context.mounted) return;
-    AppSnackBar.show(context, '无法打开下载目录，请确认路径可访问');
+    AppSnackBar.show(context, '无法打开下载目录，请确认路径可访问', tone: AppSnackBarTone.error);
   }
 }
 
