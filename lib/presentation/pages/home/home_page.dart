@@ -582,7 +582,7 @@ class _DesktopRecentSection extends StatelessWidget {
         _SectionHeader(
           title: '最近播放',
           action: TextButton(
-            onPressed: () => context.push('/history'),
+            onPressed: () => context.push('/home/history'),
             style: _clickCursorButtonStyle,
             child: const Text('查看全部'),
           ),
@@ -1068,7 +1068,7 @@ class _MobileRecentSection extends StatelessWidget {
         _SectionHeader(
           title: '最近播放',
           action: TextButton(
-            onPressed: () => context.push('/history'),
+            onPressed: () => context.push('/home/history'),
             style: _clickCursorButtonStyle,
             child: const Text('查看全部'),
           ),

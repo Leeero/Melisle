@@ -1496,13 +1496,13 @@ class _SearchStartView extends StatelessWidget {
         onDestinationSelected: (destination) {
           switch (destination) {
             case SearchDiscoveryDestination.history:
-              context.push('/history');
+              context.go('/home/history');
             case SearchDiscoveryDestination.favorites:
-              context.push('/favorites');
+              context.go('/favorites');
             case SearchDiscoveryDestination.albums:
-              context.push('/library?tab=albums');
+              context.go('/library?tab=albums');
             case SearchDiscoveryDestination.artists:
-              context.push('/library?tab=artists');
+              context.go('/library?tab=artists');
           }
         },
         onQueryRemoved: context.read<SearchCubit>().removeRecent,

@@ -51,6 +51,7 @@ GoRouter createRouter(AuthCubit authCubit) {
     },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/history', redirect: (_, _) => '/home/history'),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => AppShell(
           navigationShell: navigationShell,
@@ -64,11 +65,13 @@ GoRouter createRouter(AuthCubit authCubit) {
                 path: '/home',
                 pageBuilder: (context, state) =>
                     _shellPage(authCubit, state, const HomePage()),
-              ),
-              GoRoute(
-                path: '/history',
-                pageBuilder: (context, state) =>
-                    _shellPage(authCubit, state, const HistoryPage()),
+                routes: [
+                  GoRoute(
+                    path: 'history',
+                    pageBuilder: (context, state) =>
+                        _shellPage(authCubit, state, const HistoryPage()),
+                  ),
+                ],
               ),
             ],
           ),
@@ -231,7 +234,7 @@ NoTransitionPage<void> _shellPage(
 ) {
   final sessionIdentity = identityHashCode(authCubit.state.session);
   return NoTransitionPage<void>(
-    key: ValueKey('${state.uri}#$sessionIdentity'),
+    key: ValueKey('${state.pageKey.value}#$sessionIdentity'),
     child: child,
   );
 }

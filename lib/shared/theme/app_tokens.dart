@@ -361,7 +361,7 @@ abstract final class AppSpacingTokens {
   static const double shellBottomInset = 0;
   static const double macOsTrafficLightInset = 28;
   static const double desktopSidebarWidth = 224;
-  static const double mobileTabContentHeight = 54;
+  static const double mobileTabContentHeight = 56;
   static const double desktopToolbarHeight = 72;
   static const double desktopMainContentPaddingX = 48; // 40 → 48
   static const double desktopMainContentPaddingY = 32; // 28 → 32

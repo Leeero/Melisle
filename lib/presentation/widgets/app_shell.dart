@@ -19,14 +19,6 @@ class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   final PopupRouteCoordinator popupRouteCoordinator;
 
-  static const _rootLocations = [
-    '/home',
-    '/search',
-    '/library',
-    '/favorites',
-    '/settings',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final selectedIndex = navigationShell.currentIndex;
@@ -52,7 +44,7 @@ class AppShell extends StatelessWidget {
 
   void _go(BuildContext context, int index) {
     popupRouteCoordinator.dismissPopups();
-    context.go(_rootLocations[index]);
+    navigationShell.goBranch(index, initialLocation: true);
   }
 }
 
@@ -146,12 +138,7 @@ class _CompactShellScaffold extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacingTokens.mobilePageX,
-              ),
-              child: MiniPlayerBar(),
-            ),
+            const MiniPlayerBar(),
             _ShellBottomBar(
               selectedIndex: selectedIndex,
               onSelected: onSelected,
@@ -357,8 +344,8 @@ class _ShellSidebarState extends State<_ShellSidebar> {
                         icon: Icons.history_rounded,
                         label: '历史',
                         compact: compact,
-                        selected: path == '/history',
-                        onTap: () => context.go('/history'),
+                        selected: path == '/home/history',
+                        onTap: () => context.go('/home/history'),
                       ),
                       const SizedBox(height: 2),
                       _ShellNavButton(
@@ -678,8 +665,8 @@ class _ShellBottomButtonState extends State<_ShellBottomButton> {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: color,
-                      fontSize: 10,
-                      height: 1,
+                      fontSize: 12,
+                      height: 1.1,
                       fontWeight: widget.selected
                           ? FontWeight.w600
                           : FontWeight.w500,
